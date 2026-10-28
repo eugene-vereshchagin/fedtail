@@ -429,7 +429,8 @@ class PlaceScreen(Screen):
                 widgets.append(w)
             else:
                 widgets.append(Label(f.label))
-                w = Input(value=str(f.value or ""), placeholder=f.label)
+                w = Input(value=str(f.value or ""), placeholder=f.label,
+                          password=f.kind == "secret")
                 widgets.append(w)
             self.form_widgets[f.name] = w
             if f.tip:

@@ -121,7 +121,7 @@ class FolderSyncTest(Devices):
         self.desk.mark_read(["1"])
         self.desk.sync_now()
         self.assertIsNone(self.phone.sync_now())  # someone's journal is there: no new key
-        self.assertIn("sync join", self.phone.sync_status()["last"]["error"])
+        self.assertIn("Sync → Key", self.phone.sync_status()["last"]["error"])
         self.assertTrue(any(n == "error" for n, _ in self.phone.events_seen))
         self.assertIsNone(self.phone.sync_key())
 
@@ -131,7 +131,7 @@ class FolderSyncTest(Devices):
         self.phone.sync_join(crypto.key_text(crypto.new_key()))  # the wrong one
         self.assertEqual(self.phone.sync_now(), (0, 0))
         self.assertEqual(self.phone.store.read_set(["1"]), set())
-        self.assertIn("sync join", self.phone.sync_status()["last"]["error"])
+        self.assertIn("Sync → Key", self.phone.sync_status()["last"]["error"])
         self.assertTrue(self.phone.sync_status()["key"])
 
     def test_thread_states_newest_wins(self):
@@ -330,7 +330,7 @@ class SyncLineTest(Devices):
             self.assertTrue(any(n == "sync_changed" for n, _ in self.desk.events_seen))
             self.assertIsNone(self.phone.sync_now())  # no key here yet
             self.assertEqual(syncline.bar(self.phone)[0], "⇅ !")
-            self.assertIn("sync join", syncline.bar(self.phone)[1])
+            self.assertIn("Sync → Key", syncline.bar(self.phone)[1])
         self.assertIn(str(self.tmp / "meet"), syncline.about(self.desk))
 
 

@@ -240,6 +240,8 @@ class PlaceDialog(QDialog):
         else:
             w = QLineEdit(str(f.value or ""))
             w.setPlaceholderText(f.label)
+            if f.kind == "secret":  # a password: dots, as everywhere
+                w.setEchoMode(QLineEdit.EchoMode.Password)
             self.form.addWidget(w)
             self.fields[f.name] = ("line", w)
         if f.tip:

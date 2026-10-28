@@ -652,7 +652,7 @@ const MENU_GROUPS = [
   ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "drafts", "slow", "stats", "requests", "activity"]],
   ["tender_menu", ["silence", "filtered"]],
   ["menu_people", ["trends", "suggestions", "directory", "collections", "remote"]],
-  ["accounts", ["accounts", "profile_edit", "server", "probe", "announcements", "merge"]],
+  ["accounts", ["accounts", "sync", "profile_edit", "server", "probe", "announcements", "merge"]],
   ["web_menu_look", ["settings", "theme", "notify", "push"]],
   ["debug_menu", ["log", "federation", "notify_test", "issue"]],
   ["help_title", ["help", "news", "keys", "about"]],
@@ -2095,6 +2095,7 @@ function renderForm(fields) {
       const inp = el(f.kind === "text" ? "textarea" : "input");
       inp.value = f.value || "";
       if (f.kind === "text") inp.rows = 4;
+      if (f.kind === "secret") { inp.type = "password"; inp.autocomplete = "new-password"; }
       lab.append(inp);
       get[f.name] = () => inp.value;
     }

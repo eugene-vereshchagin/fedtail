@@ -55,13 +55,15 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
-        "sync_login_first": "Синхронизация: нет токена для сервера синхронизации — "
-                            "выполни fedtail sync login",
+        "sync_login_first": "Синхронизация: нет входа на сервер синхронизации — "
+                            "≡ → Синхронизация → Вход (или fedtail sync login)",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
-                         "устройства — перенеси ключ: fedtail sync key там, "
-                         "fedtail sync join здесь",
+                         "устройства — перенеси ключ: ≡ → Синхронизация → Ключ "
+                         "(«Показать ключ» там, вставить здесь)",
+        "sync_need_key_pass": "Синхронизация: у аккаунта есть журнал, а ключ к нему лежит "
+                              "в нём под паролем — ≡ → Синхронизация → Ключ, введи пароль",
         "sync_other_key": "Синхронизация: в хранилище журнал с другим ключом — "
-                          "перенеси ключ командой fedtail sync join",
+                          "≡ → Синхронизация → Ключ",
         "sync_no_crypto": "Синхронизации нужен пакет cryptography (Debian: "
                           "python3-cryptography)",
         "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
@@ -142,6 +144,75 @@ _STRINGS = {
         "sent_background": "Отправляю в фоне…",
         "sent_background_failed": "Пост не ушёл: {err} — черновик сохранён",
         "held_info": "новых: {n} — «Обновить» покажет",
+        "sync_title": "Синхронизация",
+        "sync_tab_where": "Где",
+        "sync_tab_login": "Вход",
+        "sync_tab_key": "Ключ",
+        "sync_where_hint": "Устройства одного аккаунта обмениваются прочитанным, тредами, лентами "
+                           "и прочим через сервер синхронизации (fedtail-sync) или общую папку "
+                           "(Syncthing, сетевой диск). Укажи одно из двух — заработает сразу, без "
+                           "перезапуска.",
+        "sync_off_title": "Выключена",
+        "sync_off_line": "Ни сервер, ни папка не указаны.",
+        "sync_f_where": "Хранилище",
+        "sync_f_login": "Вход на сервер синхронизации",
+        "sync_f_key": "Ключ (id)",
+        "sync_f_pending": "Ждёт отправки",
+        "sync_f_last": "Последний раз",
+        "sync_now_btn": "Синхронизировать сейчас",
+        "sync_f_url": "Адрес сервера синхронизации",
+        "sync_f_url_tip": "https://sync.example — fedtail-sync; пусто — без сервера",
+        "sync_f_folder": "…или общая папка",
+        "sync_f_folder_tip": "Папка, которую видят все твои устройства; если указана, сервер не "
+                             "нужен",
+        "sync_save_where": "Сохранить и включить",
+        "sync_what_btn": "Что синхронизировать…",
+        "sync_saved_on": "Синхронизация включена",
+        "sync_saved_off": "Синхронизация выключена",
+        "sync_login_hint": "Серверу синхронизации нужно знать, чей это журнал: он спрашивает твой "
+                           "сервер «кто это» отдельным узким токеном (только read:accounts), не "
+                           "тем, которым читает fedtail. Откроется страница твоего сервера — "
+                           "разреши «fedtail sync» и вставь код сюда.",
+        "sync_login_folder": "С общей папкой вход не нужен.",
+        "sync_login_go": "Открыть страницу входа",
+        "sync_login_again": "Войти заново",
+        "sync_login_code_f": "Код со страницы",
+        "sync_key_hint": "Всё, что уходит в журнал, зашифровано ключом аккаунта: хранилище видит "
+                         "только непрозрачные байты. Ключ один на все твои устройства — его "
+                         "переносят с устройства на устройство.",
+        "sync_key_show_btn": "Показать ключ (скопировать)",
+        "sync_key_show_sure": "Ключ открывает всё, что синхронизируется. Скопировать его в буфер "
+                              "обмена?",
+        "sync_key_copied": "Ключ в буфере обмена — вставь его на другом устройстве (≡ → "
+                           "Синхронизация → Ключ)",
+        "sync_escrow_title": "Ключ под паролем в журнале",
+        "sync_escrow_line": "Положи ключ в сам журнал, зашифровав паролем: новое устройство "
+                            "достанет его одним паролем, даже если этого устройства нет под рукой. "
+                            "Пароль подбирать долго (scrypt), но выбери длинный.",
+        "sync_password": "Пароль",
+        "sync_password_again": "Ещё раз",
+        "sync_escrow_put": "Положить ключ в журнал под паролем",
+        "sync_escrow_done": "Ключ лежит в журнале под паролем — на новом устройстве: ≡ → "
+                            "Синхронизация → Ключ, пароль",
+        "sync_password_short": "Пароль короче {n} знаков — возьми подлиннее",
+        "sync_password_differ": "Пароли не совпали",
+        "sync_no_key_title": "Ключа на этом устройстве нет",
+        "sync_no_key_line": "Если это первое устройство — ключ сделается сам при первой "
+                            "синхронизации. Если журнал уже есть — вставь ключ с другого "
+                            "устройства (там: ≡ → Синхронизация → Ключ → «Показать ключ») или "
+                            "введи пароль, если ключ кладут в журнал.",
+        "sync_key_paste_f": "Ключ с другого устройства",
+        "sync_key_paste_tip": "Вида ABCD-EFGH-…; пробелы и регистр неважны",
+        "sync_password_take": "…или пароль ключа из журнала",
+        "sync_password_take_tip": "Ключ лежит в журнале под паролем — достаточно пароля",
+        "sync_take_btn": "Взять ключ",
+        "sync_take_what": "Вставь ключ или введи пароль",
+        "sync_password_wrong": "Пароль не подошёл",
+        "sync_fresh_btn": "Начать заново с новым ключом…",
+        "sync_fresh_sure": "Новый ключ: прежний журнал этому устройству больше не нужен (его "
+                           "записи будут молча пропускаться), а остальным твоим устройствам надо "
+                           "будет взять новый ключ. Сделать?",
+        "sync_fresh_done": "Новый ключ готов (id {kid}) — перенеси его на остальные устройства",
         "login_bad_server": "«{server}» не похоже на адрес сервера — нужно вроде "
                             "social.example (через точки, без пробелов)",
         "login_unreachable": "Не достучался до {host}: такого адреса нет или сервер не "
@@ -1438,12 +1509,15 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
-        "sync_login_first": "Sync: no token for the sync server — run fedtail sync login",
+        "sync_login_first": "Sync: not logged in to the sync server — ≡ → Sync → Login "
+                            "(or fedtail sync login)",
+        "sync_need_key_pass": "Sync: the account has a journal, and its key is in it under "
+                              "a password — ≡ → Sync → Key, type the password",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
-                         "device's key — carry the key over: fedtail sync key there, "
-                         "fedtail sync join here",
+                         "device's key — carry the key over: ≡ → Sync → Key "
+                         "(“Show the key” there, paste it here)",
         "sync_other_key": "Sync: the store holds a journal sealed by another key — "
-                          "carry the key over with fedtail sync join",
+                          "≡ → Sync → Key",
         "sync_no_crypto": "Sync needs the cryptography package (Debian: python3-cryptography)",
         "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
         "sync_full": "Sync: no room left on the server (quota)",
@@ -1518,6 +1592,74 @@ _STRINGS = {
         "sent_background": "Sending in the background…",
         "sent_background_failed": "The post didn't go: {err} — the draft is kept",
         "held_info": "{n} new — Refresh shows them",
+        "sync_title": "Sync",
+        "sync_tab_where": "Where",
+        "sync_tab_login": "Login",
+        "sync_tab_key": "Key",
+        "sync_where_hint": "The devices of one account trade what was read, threads, lanes and the "
+                           "rest through a sync server (fedtail-sync) or a shared folder "
+                           "(Syncthing, a network drive). Name one of the two — it works at once, "
+                           "no restart.",
+        "sync_off_title": "Off",
+        "sync_off_line": "Neither a server nor a folder is set.",
+        "sync_f_where": "Store",
+        "sync_f_login": "Logged in to the sync server",
+        "sync_f_key": "Key (id)",
+        "sync_f_pending": "Waiting to go",
+        "sync_f_last": "Last time",
+        "sync_now_btn": "Sync now",
+        "sync_f_url": "The sync server's address",
+        "sync_f_url_tip": "https://sync.example — fedtail-sync; empty — no server",
+        "sync_f_folder": "…or a shared folder",
+        "sync_f_folder_tip": "A folder all your devices see; with one, no server is needed",
+        "sync_save_where": "Save and turn on",
+        "sync_what_btn": "What to sync…",
+        "sync_saved_on": "Sync is on",
+        "sync_saved_off": "Sync is off",
+        "sync_login_hint": "The sync server needs to know whose journal it is: it asks your server "
+                           "“who is this” with a narrow token of its own (read:accounts only), not "
+                           "the one fedtail reads with. Your server's page opens — allow “fedtail "
+                           "sync” and paste the code here.",
+        "sync_login_folder": "A shared folder needs no login.",
+        "sync_login_go": "Open the login page",
+        "sync_login_again": "Log in again",
+        "sync_login_code_f": "The code from the page",
+        "sync_key_hint": "Everything that goes into the journal is sealed with the account's key: "
+                         "the store sees opaque bytes only. One key for all your devices — it is "
+                         "carried from one to another.",
+        "sync_key_show_btn": "Show the key (copy)",
+        "sync_key_show_sure": "The key opens everything that is synced. Copy it to the clipboard?",
+        "sync_key_copied": "The key is on the clipboard — paste it on the other device (≡ → Sync → "
+                           "Key)",
+        "sync_escrow_title": "The key under a password in the journal",
+        "sync_escrow_line": "Put the key into the journal itself, sealed by a password: a new "
+                            "device takes it with the password alone, even when this one isn't at "
+                            "hand. The password is slow to guess (scrypt), but pick a long one.",
+        "sync_password": "Password",
+        "sync_password_again": "Once more",
+        "sync_escrow_put": "Put the key into the journal under a password",
+        "sync_escrow_done": "The key is in the journal under a password — on a new device: ≡ → "
+                            "Sync → Key, the password",
+        "sync_password_short": "The password is shorter than {n} characters — take a longer one",
+        "sync_password_differ": "The passwords differ",
+        "sync_no_key_title": "No key on this device",
+        "sync_no_key_line": "The first device makes the key itself at the first sync. When there "
+                            "is a journal already — paste the key from another device (there: ≡ → "
+                            "Sync → Key → “Show the key”) or type the password, if the key was put "
+                            "into the journal.",
+        "sync_key_paste_f": "The key from another device",
+        "sync_key_paste_tip": "Like ABCD-EFGH-…; spaces and case don't matter",
+        "sync_password_take": "…or the password of the key in the journal",
+        "sync_password_take_tip": "The key is in the journal under a password — the password will "
+                                  "do",
+        "sync_take_btn": "Take the key",
+        "sync_take_what": "Paste the key or type the password",
+        "sync_password_wrong": "The password doesn't fit",
+        "sync_fresh_btn": "Start again with a new key…",
+        "sync_fresh_sure": "A new key: this device lets the old journal go (its entries pass "
+                           "silently), and your other devices will have to take the new key. Go "
+                           "on?",
+        "sync_fresh_done": "The new key is ready (id {kid}) — carry it to your other devices",
         "login_bad_server": "\"{server}\" doesn't look like a server's address — something "
                             "like social.example is needed (dots, no spaces)",
         "login_unreachable": "Couldn't reach {host}: no such address, or the server doesn't "

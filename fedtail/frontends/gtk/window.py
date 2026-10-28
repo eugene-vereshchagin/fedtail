@@ -303,6 +303,9 @@ class MainWindow(Gtk.ApplicationWindow):
         GLib.timeout_add_seconds(30, lambda: (self._slow_text(), True)[1])
         self.sync_label = Gtk.Label(xalign=1)
         self.sync_label.add_css_class("ft-muted")
+        click = Gtk.GestureClick()  # a click: ≡ → Sync
+        click.connect("released", lambda *_a: self.open_place("sync"))
+        self.sync_label.add_controller(click)
         bar.append(self.sync_label)
         corner = self._debug_corner()
         self.corner_label = None

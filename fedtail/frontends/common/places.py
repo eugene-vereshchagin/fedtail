@@ -29,6 +29,7 @@ from ...model import Account, Post, Share, real
 from . import timed
 from .lanesplace import LanePlaces
 from .placesmore import AccountPlaces, MorePlaces
+from .syncplace import SyncPlaces
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ PLACES = {
     "silence": "silence_title", "lists": "lists_header", "search": "search_title",
     "requests": "lane_requests", "activity": "lane_activity", "tags": "followed_tags",
     "scheduled": "scheduled_title", "drafts": "drafts_title", "stats": "stats_title",
+    "sync": "sync_title",
     "trends": "trends_title",
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
@@ -133,7 +135,7 @@ MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "schedu
         "slow", "stats",
         "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
-        "announcements", "profile_edit", "accounts",
+        "announcements", "profile_edit", "accounts", "sync",
         "settings", "lanes", "help", "news", "about", "issue", "federation", "log")
 
 
@@ -160,7 +162,7 @@ def _acc_id(a):
     return a.id if isinstance(a, Account) else str(a)
 
 
-class Places(MorePlaces, AccountPlaces, LanePlaces):
+class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
     """The places on one View.
 
     Args:

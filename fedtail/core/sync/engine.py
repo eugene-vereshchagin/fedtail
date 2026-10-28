@@ -291,14 +291,57 @@ class Sync:
         if not crypto.available():  # said before anything is made
             raise crypto.CryptoMissing("no cryptography")
         others, _cur, _more = backend.pull(None, self.device)
-        if others:  # someone's journal is there already: its key, not a new one
-            self._problem("key", _("sync_need_key"))
+        for blob in others:
+            if crypto.is_escrow(blob):
+                self._keep_escrow(blob)
+        if [b for b in others if not crypto.is_escrow(b)]:
+            # someone's journal is there already: its key, not a new one — from another
+            # device, or out of the journal with the password if it was put there
+            self._problem("key", _("sync_need_key_pass") if self.store.kv_get("sync.escrow")
+                          else _("sync_need_key"))
             return None
         key = crypto.new_key()
         crypto.save_key(key_path(self.paths), key)
         log.info("sync: a new key made (id %s): carry it to the other devices with "
                  "`fedtail sync key` → `fedtail sync join`", crypto.key_id(key).hex())
         return key
+
+    def _keep_escrow(self, blob):
+        import base64
+        self.store.kv_set("sync.escrow", base64.b64encode(bytes(blob)).decode())
+
+    def find_escrow(self):
+        """The key-under-a-password blob: the one seen, else looked for in the journal
+        from its start. → bytes or None."""
+        import base64
+        got = self.store.kv_get("sync.escrow")
+        if got:
+            return base64.b64decode(got)
+        backend = self.backend()
+        if backend is None:
+            return None
+        cursor = None
+        for _round in range(200):
+            blobs, cursor, more = backend.pull(cursor, self.device)
+            found = [b for b in blobs if crypto.is_escrow(b)]
+            if found:
+                self._keep_escrow(found[-1])
+                return bytes(found[-1])
+            if not more:
+                break
+        return None
+
+    def put_escrow(self, password):
+        """This device's key into the journal, sealed by the password."""
+        key = crypto.load_key(key_path(self.paths))
+        if key is None:
+            raise ValueError("no key")
+        backend = self.backend()
+        if backend is None:
+            raise RuntimeError(_("sync_login_first"))
+        blob = crypto.escrow_seal(key, password)
+        backend.push(blob, self.device)
+        self._keep_escrow(blob)
 
     # ---- out and in -----------------------------------------------------------------
     def _push(self, backend, key):
@@ -322,10 +365,16 @@ class Sync:
         got = 0
         for _round in range(50):
             blobs, cursor, more = backend.pull(cursor, self.device)
+            left = set(self.store.kv_get("sync.left_keys") or ())
             for blob in blobs:
+                if crypto.is_escrow(blob):  # the key under a password: kept, for a new device
+                    self._keep_escrow(blob)
+                    continue
                 try:
-                    if crypto.blob_key_id(blob) != mine:
-                        self._problem("other_key", _("sync_other_key"))
+                    kid = crypto.blob_key_id(blob)
+                    if kid != mine:
+                        if kid.hex() not in left:  # a key let go of on purpose: silent
+                            self._problem("other_key", _("sync_other_key"))
                         continue
                     payload = crypto.unseal(key, blob)
                 except crypto.BadBlob as e:
@@ -475,9 +524,54 @@ def shown_key(core):
     return crypto.key_text(key) if key else None
 
 
-def join(core, text):
-    """Take the account's key from another device. → its id (hex). ValueError: not one."""
-    key = crypto.key_from_text(text)
+def _take(core, key):
+    """This device's key from now on: the journal read from its start with it; the key
+    it had before (if any) let go of — its old blobs pass silently."""
+    old = crypto.load_key(key_path(core.paths))
+    if old is not None and old != key:
+        left = list(core.store.kv_get("sync.left_keys") or [])
+        if crypto.key_id(old).hex() not in left:
+            core.store.kv_set("sync.left_keys", (left + [crypto.key_id(old).hex()])[-20:])
     crypto.save_key(key_path(core.paths), key)
     core.store.kv_set("sync.cursor", None)  # the journal from its start, with this key
     return crypto.key_id(key).hex()
+
+
+def join(core, text):
+    """Take the account's key from another device. → its id (hex). ValueError: not one."""
+    return _take(core, crypto.key_from_text(text))
+
+
+def take_escrow(core, password):
+    """The key out of the journal with its password. → its id. ValueError: no such
+    blob in the journal; BadBlob: the password is wrong."""
+    sync = core.sync
+    blob = sync.find_escrow() if sync is not None else None
+    if blob is None:
+        raise ValueError("no key in the journal")
+    return _take(core, crypto.escrow_open(blob, password))
+
+
+def fresh_key(core):
+    """A new key for the account (the old one isn't at hand): the journal's blobs of the
+    other key are let go of — they pass silently from now on. → the new key's id."""
+    sync = core.sync
+    left = list(core.store.kv_get("sync.left_keys") or [])
+    if sync is not None:
+        backend = sync.backend()
+        cursor = None
+        for _round in range(200) if backend is not None else ():
+            blobs, cursor, more = backend.pull(cursor, sync.device)
+            for b in blobs:
+                if not crypto.is_escrow(b):
+                    try:
+                        kid = crypto.blob_key_id(b).hex()
+                    except crypto.BadBlob:
+                        continue
+                    if kid not in left:
+                        left.append(kid)
+            if not more:
+                break
+    core.store.kv_set("sync.left_keys", left[-20:])
+    core.store.kv_set("sync.escrow", None)  # it held the old key
+    return _take(core, crypto.new_key())

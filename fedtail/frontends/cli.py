@@ -212,6 +212,28 @@ def cmd_sync(core, out, args, stdin=None):
             raise SystemExit(_("sync_join_bad")) from None
         out.line(_("sync_join_ok", kid=kid))
         return
+    if what in ("keep", "unlock"):  # the key in the journal under a password, and back
+        import getpass
+
+        from ..core.sync import crypto
+        password = args.arg or getpass.getpass(_("sync_password") + ": ")
+        try:
+            if what == "keep":
+                if len(password) < 8:
+                    raise SystemExit(_("sync_password_short", n=8))
+                if not args.arg and getpass.getpass(_("sync_password_again") + ": ") != password:
+                    raise SystemExit(_("sync_password_differ"))
+                core.sync_put_escrow(password)
+                out.line(_("sync_escrow_done"))
+            else:
+                out.line(_("sync_join_ok", kid=core.sync_take_escrow(password)))
+        except crypto.BadBlob:
+            raise SystemExit(_("sync_password_wrong")) from None
+        except ValueError:
+            raise SystemExit(_("sync_join_bad")) from None
+        except RuntimeError as e:
+            raise SystemExit(str(e)) from None
+        return
     if what == "login":
         if not core.logged_in:
             raise SystemExit(_("cli_login_first"))
@@ -266,8 +288,9 @@ def parser():
     w.add_argument("--cw", help="content warning")
     w.add_argument("--lang", help="language code (ru, en, ka…)")
     y = sub.add_parser("sync", help="sync with your other devices")
-    y.add_argument("what", choices=["status", "key", "join", "login", "now"])
-    y.add_argument("arg", nargs="?", help="join: the key; login: the code (else asked)")
+    y.add_argument("what", choices=["status", "key", "join", "login", "now", "keep", "unlock"])
+    y.add_argument("arg", nargs="?", help="join: the key; login: the code; keep / unlock: "
+                                          "the password (else asked)")
     return p
 
 

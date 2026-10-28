@@ -2,6 +2,13 @@
 
 ## 0.21.0 — in progress
 
+- **Sync set up in the window, no terminal:** ≡ → Sync (or a click on "⇅") — where the
+  devices meet (written into config.toml and used at once, no restart), the login to the
+  sync server, the key: shown to copy, pasted from another device, **put into the journal
+  under a password and taken from there with the password alone** (when the device with
+  the key isn't at hand), or made anew. The same in Qt, GTK, the terminal, the web page
+  and the phone; `fedtail sync keep` / `unlock` in the terminal.
+
 - `fedtail --check`: what fedtail needs from the system — the must-haves, each
   interface's, the extras — what is there, what each gives, and one `sudo apt install …`
   (or pip) line for what is missing. At start, a missing must-have (or the interface's)

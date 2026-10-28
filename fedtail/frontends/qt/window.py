@@ -519,8 +519,11 @@ class MainWindow(QMainWindow):
         self.slow_label = QLabel()
         self.slow_label.setObjectName("muted")
         self.statusBar().addPermanentWidget(self.slow_label)
-        self.sync_label = QLabel()
+        from .card import ClickLabel
+        self.sync_label = ClickLabel()  # a click: ≡ → Sync
         self.sync_label.setObjectName("muted")
+        self.sync_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sync_label.clicked.connect(lambda: self.open_place("sync"))
         self.statusBar().addPermanentWidget(self.sync_label)
         self._sync_text()
         self._slow_text()
@@ -1047,6 +1050,7 @@ class MainWindow(QMainWindow):
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
         m.addAction(_("settings"), self.open_settings)
+        m.addAction(_("sync_title") + "…", lambda: self.open_place("sync"))
         m.addAction(_("le_title") + "…", lambda: self.open_place("lanes"))
         m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
         m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))

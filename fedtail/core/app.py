@@ -2258,6 +2258,54 @@ class Core(SocialMixin):
         from .sync import engine
         return engine.join(self, text)
 
+    def sync_put_escrow(self, password):
+        """This device's key into the journal under a password: another device takes it
+        with the password alone (sync_take_escrow)."""
+        if self.sync is None:
+            raise RuntimeError("sync is off")
+        self.sync.put_escrow(password)
+
+    def sync_take_escrow(self, password):
+        from .sync import engine
+        return engine.take_escrow(self, password)
+
+    def sync_fresh_key(self):
+        from .sync import engine
+        return engine.fresh_key(self)
+
+    def sync_has_escrow(self):
+        """Is the key in the journal under a password (seen, or found there now)?"""
+        try:
+            return self.sync is not None and self.sync.find_escrow() is not None
+        except Exception as e:  # noqa: BLE001 — the store away: not known, so no
+            log.info("sync: looking for the key in the journal: %s", e)
+            return False
+
+    def sync_setup(self, url=None, folder=None):
+        """Where the devices meet, from the window: written into config.toml (sync.url,
+        sync.folder) and used at once — sync started, moved or stopped without a
+        restart. None — that one unchanged."""
+        from . import config_edit
+        from .sync.engine import wanted
+        changes = {}
+        for key, value in (("url", url), ("folder", folder)):
+            if value is not None and str(value).strip() != str(self.cfg["sync"].get(key) or ""):
+                changes[("sync", key)] = str(value).strip()
+        if changes:
+            config_edit.save(self.paths.config_file, changes)
+            for (_s, key), value in changes.items():
+                self.cfg["sync"][key] = value
+        if self.sync is not None:
+            self.sync.stop()
+            self.sync = None
+        if wanted(self.cfg):
+            from .sync import Sync
+            self.sync = Sync(self)
+            if getattr(self, "_poller", None) is not None:
+                self.sync.start()
+        self.emit("sync_changed", None)
+        return self.sync is not None
+
     def sync_login_begin(self):
         from .sync import engine
         return engine.login_start(self.api_class, self.auth["server"])

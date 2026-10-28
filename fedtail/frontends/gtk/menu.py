@@ -55,6 +55,7 @@ class MainMenu:
         a("slow", lambda: win.open_place("slow"))
         a("drafts", lambda: win.open_place("drafts"))
         a("stats", lambda: win.open_place("stats"))
+        a("sync", lambda: win.open_place("sync"))
         a("log", lambda: win.open_place("log"))
         a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
@@ -172,6 +173,7 @@ class MainMenu:
 
         files = Gio.Menu()
         _item(files, _("settings"), "settings")
+        _item(files, _("sync_title") + "…", "sync")
         _item(files, _("le_title") + "…", "lanes")
         _item(files, _("open_config"), "config")
         _item(files, _("open_themes"), "themes")

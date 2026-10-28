@@ -420,6 +420,9 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
                 onValueChange = { values[f.name] = it },
                 label = if (f.label.isNotBlank()) { { Text(f.label) } } else null,
                 singleLine = f.kind != "text", minLines = if (f.kind == "text") 3 else 1,
+                visualTransformation = if (f.kind == "secret")
+                    androidx.compose.ui.text.input.PasswordVisualTransformation()
+                else androidx.compose.ui.text.input.VisualTransformation.None,
                 modifier = Modifier.fillMaxWidth())
             tip()
         }

@@ -186,6 +186,9 @@ class PlaceWindow:
             self.fields[f.name] = ("text", w)
         else:
             w = Gtk.Entry(text=str(f.value or ""), placeholder_text=f.label)
+            if f.kind == "secret":  # a password: dots, as everywhere
+                w.set_visibility(False)
+                w.set_input_purpose(Gtk.InputPurpose.PASSWORD)
             self.form.append(w)
             self.fields[f.name] = ("line", w)
         if f.tip:

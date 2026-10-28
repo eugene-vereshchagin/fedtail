@@ -110,6 +110,59 @@ def unseal(key, blob):
     return json.loads(data)
 
 
+# ---- the key kept in the journal under a password ("escrow") ------------------------
+# A device that knows the key may put it into the journal itself, sealed by a password:
+# a new device with only the password (and the login to the account) takes it from
+# there — no other device needs to be at hand. The store sees one more opaque blob.
+#
+#     blob = b"FTK1" | salt (16) | nonce (12) | AES-GCM(the key) with the first 20 as AAD
+#
+# The password is stretched with scrypt (n = 2**15, r = 8): slow to guess offline.
+
+ESCROW = b"FTK1"
+_SALT = 16
+SCRYPT = {"n": 2 ** 15, "r": 8, "p": 1, "maxmem": 64 * 1024 * 1024}
+MIN_PASSWORD = 8
+
+
+def _stretch(password, salt):
+    return hashlib.scrypt(password.encode("utf-8"), salt=salt, dklen=KEY_BYTES, **SCRYPT)
+
+
+def is_escrow(blob):
+    return isinstance(blob, (bytes, bytearray)) and blob[:len(ESCROW)] == ESCROW
+
+
+def escrow_seal(key, password):
+    """The key sealed by a password, as a blob for the journal."""
+    if len(password or "") < MIN_PASSWORD:
+        raise ValueError("password too short")
+    salt = os.urandom(_SALT)
+    head = ESCROW + salt
+    nonce = os.urandom(_NONCE)
+    return head + nonce + _aes(_stretch(password, salt)).encrypt(nonce, key, head)
+
+
+def escrow_open(blob, password):
+    """The key back from such a blob. BadBlob: not one, or the password is wrong."""
+    if not is_escrow(blob) or len(blob) < len(ESCROW) + _SALT + _NONCE + 16:
+        raise BadBlob("not a key blob")
+    head = blob[:len(ESCROW) + _SALT]
+    nonce = blob[len(head):len(head) + _NONCE]
+    body = blob[len(head) + _NONCE:]
+    try:
+        from cryptography.exceptions import InvalidTag
+    except ImportError as e:
+        raise CryptoMissing("sync needs the 'cryptography' package") from e
+    try:
+        key = _aes(_stretch(password or "", head[len(ESCROW):])).decrypt(nonce, body, head)
+    except InvalidTag as e:
+        raise BadBlob("wrong password") from e
+    if len(key) != KEY_BYTES:
+        raise BadBlob("not a key")
+    return key
+
+
 # ---- the key file: data dir / sync.key, the owner's only, never in a bug report ------
 
 def load_key(path):

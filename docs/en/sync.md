@@ -46,52 +46,63 @@ which threads. Losing every device with the key loses only the read marks: they 
 be recovered, and they aren't worth much.
 
 To the sync server fedtail never gives its own token (that one opens your whole account).
-`fedtail sync login` asks your fediverse server for a second one, limited to
+Logging in to the sync server asks your fediverse server for a second one, limited to
 `read:accounts` — it can only tell "who am I". The sync server checks it with your server
 and files your journal under that answer: no accounts or passwords of its own.
 
 ## Turning it on
 
-In every device's config — one line, the address its admin gave you:
+All of it is in the window: **≡ → Sync** (or a click on "⇅" in the status bar). Three
+tabs — the same in the Qt window, GTK, the terminal, the web page and the phone.
+
+1. **Where** — the sync server's address your admin gave you (`https://sync.example.org`),
+   or a folder all your devices see (`~/Sync/fedtail`). "Save and turn on" writes it into
+   config.toml (`sync.url` / `sync.folder`) and turns sync on at once, no restart. There
+   too — how it goes and "Sync now"; "What to sync…" opens the settings chapter with the
+   switches.
+2. **Login** (with a server only, once on each device) — "Open the login page": your
+   fediverse server's page opens, allow "fedtail sync" and paste the code from it.
+3. **Key** — one for all your devices. The first device makes it by itself at the first
+   sync. Each next one needs it carried over in one of two ways:
+   * **copied from another device**: there "Show the key (copy)", here — paste it into
+     "The key from another device" and "Take the key" (through a password manager, a chat
+     with yourself — it's a secret: whoever has the key and your token reads the journal);
+   * **by a password, with no other device at hand**: beforehand, on a device with the key —
+     "Put the key into the journal under a password". The key goes into the journal
+     itself, sealed by that password (scrypt, slow to guess — still, take a long one). On a
+     new device the "Key" tab shows a "password of the key in the journal" field — the
+     password will do.
+
+   Neither at hand (the key stayed home, you're at the office) — "Start again with a new
+   key…": this device makes a new key and lets the old one's entries pass silently; take
+   the new key on the others afterwards. What was read on the other devices before won't
+   come here — only what comes after.
+
+A device without the key that finds someone's journal in the store doesn't make a key of
+its own: it says the key is needed (and that it can be taken by a password, if it is in
+the journal).
+
+The status bar shows how it goes: "⇅ 21:40" — synced then (the tooltip: where, how much
+went out and came in), "⇅ …" — not yet, "⇅ !" — trouble (the tooltip says which), "⇅ off"
+— nowhere set. The window syncs by itself every `sync.interval_seconds` and a few seconds
+after you read something.
+
+### The same from a terminal
 
 ```toml
 [sync]
-url = "https://sync.example.org"
+url = "https://sync.example.org"   # or folder = "~/Sync/fedtail"
 ```
-
-or, instead of a server, a folder every device sees:
-
-```toml
-[sync]
-folder = "~/Sync/fedtail"
-```
-
-Nothing is looked up by itself: no address, no sync.
-
-With a **sync server**, on every device, once:
 
 ```sh
-fedtail sync login      # opens a page on your server: allow "fedtail sync", paste the code
+fedtail sync login              # log in to the sync server (the code from the page)
+fedtail sync now                # a round now; on the first device it makes the key too
+fedtail sync key                # show the key: XXXX-XXXX-…
+fedtail sync join XXXX-XXXX-…   # take the key on another device
+fedtail sync keep               # put the key into the journal under a password (asked twice)
+fedtail sync unlock             # take the key out of the journal by its password
+fedtail sync status             # where, the key's id, what waits to go, how last time went
 ```
-
-The **key**: the first device makes it at its first sync. Show it there and carry it to
-the others (by hand, a password manager, a QR app — it is a secret: whoever has it and
-your token can read your journal):
-
-```sh
-fedtail sync now        # on the first device: makes the key, sends what's there
-fedtail sync key        # shows it: XXXX-XXXX-…
-fedtail sync join XXXX-XXXX-…   # on every other device
-```
-
-`fedtail sync status` says where it syncs, the key's id, what's waiting to be sent and
-how the last round went. The window syncs by itself every `sync.interval_seconds` and a
-few seconds after you read something. The right of the status bar shows it: "⇅ 21:40" —
-synced then (hover for where, what went and came), "⇅ …" — not yet, "⇅ !" — a problem
-(hover for which), "⇅ off" — no address in the config. About has the same in a row.
-
-A device without the key that finds someone's journal already there doesn't make a key
-of its own: it asks for `fedtail sync join`.
 
 ## Running a fedtail-sync server
 
@@ -102,7 +113,7 @@ other servers. What it speaks is in [`syncserver/PROTOCOL.md`](/syncserver/PROTO
 
 ## Not yet
 
-* Carrying the key with a QR code from the window (now: `fedtail sync key` / `join`).
+* Carrying the key with a QR code (now: copy it, or a password through the journal).
 * Pictures of a draft travelling with it (now: they stay on the device they were added on).
 * WebDAV spoken directly (now: mounted as a folder).
 * Packing old journals into a snapshot (now: they just add up, within the quota).

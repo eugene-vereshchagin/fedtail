@@ -1394,9 +1394,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     // ---- sync with the other devices -----------------------------------------------------
     fun openSync() {
-        syncKeyShown = ""
-        places = places + Place.Sync
-        loadSync()
+        // the place every interface draws (common/syncplace.py): where, the login, the key
+        // — taken from another device, or out of the journal with its password
+        openPage("sync")
     }
 
     private fun loadSync() {
