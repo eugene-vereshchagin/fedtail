@@ -257,10 +257,7 @@ def run(args):
             t = time.perf_counter()
             if win is not None:
                 win.select_lane(lane.name)
-                app.processEvents()
-                # what a running loop does by itself: widgets let go are deleted
-                from PySide6.QtCore import QCoreApplication, QEvent
-                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+                pump(app)
             else:
                 LaneModel(view, lane.name).build(False)
             worst = max(worst, time.perf_counter() - t)
@@ -287,7 +284,7 @@ def run(args):
             new_posts(w, NEW_PER_ROUND, r * NEW_PER_ROUND)
             core.poll_once()
             if app is not None:
-                app.processEvents()
+                pump(app)
     timed(times, f"{args.hours:g} h of polling ({rounds} rounds)", day)
     if win is not None:
         timed(times, f"Home scrolled through {SCROLL_POSTS} posts",
@@ -345,6 +342,16 @@ def markdown(r):
     return "\n".join(lines) + "\n"
 
 
+def pump(app):
+    """Let the window run a moment, as its event loop would: events handled and the
+    widgets let go (deleteLater) deleted — processEvents() alone never deletes them, so
+    every card let go while polling and scrolling was counted (305 cards held, 48 shown:
+    6299 widgets where a running window has some 1300)."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+    app.processEvents()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
 # ---- the Qt window --------------------------------------------------------------------------
 def qt_window(app, core):
     from fedtail.frontends.qt import theme as themes
@@ -368,7 +375,7 @@ def qt_scroll(app, win):
     while seen < SCROLL_POSTS:
         before = bar.value()
         bar.setValue(before + bar.pageStep())
-        app.processEvents()
+        pump(app)
         seen += 3  # a page shows a few cards
         if bar.value() == before and before >= bar.maximum():
             break
@@ -376,7 +383,6 @@ def qt_scroll(app, win):
 
 def qt_unloaded(app, win):
     """Every lane but the one in front unloaded, as ui.unload_hidden_minutes does."""
-    from PySide6.QtCore import QCoreApplication, QEvent
     # Home in front, always: which lane was left there varied (1062 widgets left one
     # run, 1936 the next — 20 MB of noise between two runs of the same code)
     win.select_lane("home")
@@ -386,8 +392,7 @@ def qt_unloaded(app, win):
         if w is not front and w.view.order:
             w.hide()
             w._unload()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    app.processEvents()
+    pump(app)
     gc.collect()
     return memory()
 

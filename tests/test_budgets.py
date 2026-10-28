@@ -21,14 +21,17 @@ ROOT = Path(__file__).resolve().parent.parent
 RUN = bool(os.environ.get("FEDTAIL_BUDGETS"))
 
 # what the bench says the scenario holds (USS, MB) and takes (ms), at most
-CORE = {"memory": {"after.uss_mb": 90},
+# a new lane's fill linking stored posts instead of writing them anew (29.10): 90 → 75
+CORE = {"memory": {"after.uss_mb": 75},
         "time": {"open every lane (19)": 2000, "lanes' rules applied anew (all of them)": 2500}}
 # step 5 (only the cards near the screen: 29.10) took these down from 480 / 340 MB,
 # 6000 / 25 000 ms and 3000 widgets
-QT = {"memory": {"after.uss_mb": 280, "after_malloc_trim.uss_mb": 270},
+# the bench deleting what a running loop deletes, and the core above: 280 / 270 → 250 / 240,
+# 1600 → 1300 widgets
+QT = {"memory": {"after.uss_mb": 250, "after_malloc_trim.uss_mb": 240},
       "time": {"Qt window up, Home drawn": 2500, "open every lane (19)": 8000,
                "Home scrolled through 1000 posts": 1500},
-      "counts": {"qt.widgets": 1600, "qt.images_mb": 66}}
+      "counts": {"qt.widgets": 1300, "qt.images_mb": 66}}
 
 
 def bench(*args):
@@ -66,7 +69,8 @@ class OverTest(unittest.TestCase):
     def test_says_what_is_over(self):
         r = {"memory": {"after": {"uss_mb": 100}}, "time": [("  open every lane (19)", 10)],
              "counts": {"qt.widgets": 5}}
-        self.assertEqual(over(r, CORE), ["memory after.uss_mb: 100 MB, the ceiling 90"])
+        self.assertEqual(over(r, {"memory": {"after.uss_mb": 90}}),
+                         ["memory after.uss_mb: 100 MB, the ceiling 90"])
         self.assertEqual(over(r, {"counts": {"qt.widgets": 4}}), ["qt.widgets: 5, the ceiling 4"])
         self.assertEqual(over(r, {"time": {"open every lane (19)": 5}}),
                          ["time open every lane (19): 10 ms, the ceiling 5"])

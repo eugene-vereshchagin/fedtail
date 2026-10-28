@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Lighter core: a new free lane (or one whose rule changed) fills from the stored posts by
+  linking them, not writing every one back — the fill had held its posts three times over,
+  a 25 MB peak the process kept. The core alone, 4000 posts: 89.5 → 72.5 MB; every lane's
+  rule applied anew ~1.0 → 0.7 s.
+
 - Much lighter and quicker, the Qt window: a lane builds only the cards near the screen —
   a screen above and below; the other posts are a place of their height, built as the
   scroll comes near and let go when it's gone far (what was done to a card — a warning

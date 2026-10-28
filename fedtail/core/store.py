@@ -690,6 +690,17 @@ class Store:
         if not entries:
             return []
         self.put_statuses([st for _, st, _ in entries])
+        return self.link_items(source, entries)
+
+    def link_items(self, source, entries):
+        """put_items for posts stored already (a free lane takes them from its feeds,
+        core/custom.py): only the items, the posts aren't written again. Each entry's
+        status needs no more than its "id" and its boost's "id" (light_status). Rewriting
+        what was just read held every post three times over at once — parsed, its stored
+        text to compare, its text anew — 25 MB at a new lane's fill of 3000 posts, kept by
+        the process after (docs/en/dev/memory.md, "a new lane's fill")."""
+        if not entries:
+            return []
         new = []
         with self._tx() as db:
             # oldest first: where a post came in first is where it stays
@@ -702,6 +713,12 @@ class Store:
             if new:
                 self._bump(source)
         return new
+
+    @staticmethod
+    def light_status(st):
+        """As much of a status as link_items needs: its id and its boost's."""
+        boost = st.get("reblog")
+        return {"id": st["id"], "reblog": {"id": boost["id"]}} if boost else {"id": st["id"]}
 
     @staticmethod
     def _first_seen(db, source, item_id, st):

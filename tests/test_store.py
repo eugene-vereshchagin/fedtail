@@ -27,6 +27,30 @@ class IterItemsTest(unittest.TestCase):
             store.close()
 
 
+class LinkItemsTest(unittest.TestCase):
+    def test_a_stored_post_linked_not_written_again(self):
+        """A free lane takes its feeds' posts (core/custom.py): only the items go in;
+        the posts stay as stored, and a boost's first sight is the boosted post's."""
+        with tempfile.TemporaryDirectory() as d:
+            store = Store(Path(d) / "s.db")
+            boost = {"id": "b1", "created_at": "2026-01-02", "reblog": {"id": "p1",
+                                                                        "content": "x"}}
+            store.put_items("home", [("p2", {"id": "p2", "content": "y"}, "2026-01-01"),
+                                     ("b1", boost, "2026-01-02")])
+            version = store.status_version
+            light = [(st["id"], Store.light_status(st), created) for _i, st, created in
+                     [("p2", {"id": "p2", "content": "y"}, "2026-01-01"),
+                      ("b1", boost, "2026-01-02")]]
+            self.assertEqual(light[1][1], {"id": "b1", "reblog": {"id": "p1"}})
+            self.assertEqual(sorted(store.link_items("lane", light)), ["b1", "p2"])
+            self.assertEqual(store.link_items("lane", light), [])  # there already
+            self.assertEqual(store.status_version, version)
+            self.assertEqual([st.get("reblog", {}).get("content") or st["content"]
+                              for _i, st in store.items("lane", 5)], ["y", "x"])
+            self.assertEqual(store.first_seen("lane", ["p1"]), {"p1": "b1"})
+            store.close()
+
+
 def _st(sid, reply_to=None, author="a", **extra):
     return {"id": sid, "created_at": "2026-01-01T00:00:00.000Z", "in_reply_to_id": reply_to,
             "account": {"id": author, "acct": author}, **extra}

@@ -30,9 +30,9 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 |---|---|---|
 | 0 | **The bench**: a synthetic day — 10 000 posts, 20 lanes of rules, pictures, a day of polling; memory by parts (posts, lanes, the picture cache, the interface's widgets, modules; Qt's C++ side through its caches' sizes and object counts, tracemalloc doesn't see it); timings — the cold start to the first lane, opening a lane, scrolling 1000 posts, applying the lanes' rules; in a dev build these numbers in the log every few minutes; the first run's numbers here as the baseline | done: the baseline below |
 | 1 | **One store of posts**: one identity map in the core — one object per post for the whole program; lanes keep ids and order, no copies of posts; the same for accounts, attachments, threads | done: `Store._parse` — one read-only `Stored` per post while anyone holds it (weak), shared by every lane; `View.entry` — one `Post` per stored post (accounts and attachments live inside them) |
-| 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | — |
-| 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
-| 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
+| 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | measured, deferred: at most ~25 MB of the core's 61 (29.10) |
+| 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | measured, deferred: at most ~25 MB of the core's 61 (29.10) |
+| 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | measured, deferred: at most ~25 MB of the core's 61 (29.10) |
 | 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | Qt done: `qt/feedview.py` builds only the cards within a screen of the screen (the rest are places of their height); only the lanes opened last keep theirs (`ui.keep_hidden_lanes`). GTK — its own window of cards, as before |
 | 6 | **Pictures and media**: decoded right at the size shown (Qt: QImageReader.setScaledSize), the full size only when opened; one picture cache with a limit in MB (an option, a sensible default), LRU; thumbnails cached on disk; media off screen not decoded; video — still a preview only | partly: `media.image_cache_mb` (64 MB by default since 0.22, measured), `image_disk_mb`, `image_decode` |
 | 7 | **A lazy start**: heavy modules (language detection, spelling, sound, anything rare) imported at first use; the opossum's curtain drawn first, then the open lane, the rest in the background; every heavy operation (parsing, requests, language detection, the lanes' rules) off the GUI thread | partly: the curtain first (0.22) |
@@ -169,6 +169,23 @@ So the order of the plan holds for the core, but the window's weight is in the c
 
   `reading.build_at_once` is gone (said so, if a config still has it). The budgets
   (`tests/test_budgets.py`) moved down with it.
+* **A new lane's fill** (`store.link_items`, `core/custom.py`, 29.10). Where the core alone
+  was heavy: a free lane (and Unsorted) takes its feeds' posts, stored already, and wrote
+  them back through `put_items` — each one serialised anew, its stored text read in to
+  compare, and up to 3000 parsed posts a feed held by the fill — a peak of 25 MB in
+  Python, kept by the process after it. Now only the items are linked, by ids. 4000 posts,
+  the core alone: 89.5 → 72.5 MB, a round after a new lane 83 → 63 MB; every lane's rule
+  applied anew ~1000 → 700 ms; the Qt window 274 → 267 MB. Measured the wrong way first:
+  under `tracemalloc` the core looked 120 MB with 55 MB "outside Python" — the tracing's own
+  bookkeeping; the untraced numbers are the ones to read.
+* **The bench and deferred deletes**: `processEvents()` never deletes what was let go with
+  `deleteLater()`, so the cards let go while polling and scrolling stayed counted (305
+  cards held, 48 shown: 6299 widgets, 393 MB at 4000 posts); `membench.pump()` now does
+  what a running loop does, everywhere the bench lets the window run (1077 widgets).
+* **Steps 2–4, measured before doing**: the core alone at 2000 posts is 61 MB, of which
+  33 MB are the imports — steps 2–4 can win at most some 25 MB of it; the window is the
+  bulk (220 MB: widgets, fonts, pictures). Left until a profile of a real, long-running
+  window says the core's share has grown.
 
 ## Decisions
 

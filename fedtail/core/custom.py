@@ -18,6 +18,7 @@ import logging
 
 from . import atoms, lanes, presets
 from .model import real
+from .store import Store
 
 log = logging.getLogger(__name__)
 
@@ -373,6 +374,11 @@ def _entry(status):
     return status["id"], status, status.get("created_at", "")
 
 
+def _light(status):
+    """An entry for store.link_items: a stored post, by its ids only."""
+    return status["id"], Store.light_status(status), status.get("created_at", "")
+
+
 def route(store, customs, new_by_source, world):
     """Put the new items of the real sources into the free lanes that take them.
     new_by_source: {source: [item ids]} as the poll got them. Returns {stream: [new ids]}."""
@@ -387,9 +393,9 @@ def route(store, customs, new_by_source, world):
         for c in customs:
             if source not in c.feeds:
                 continue
-            taken = [_entry(st) for st in rows if c.takes(st, world, source)]
-            if taken:
-                out.setdefault(c.stream, []).extend(store.put_items(c.stream, taken))
+            taken = [_light(st) for st in rows if c.takes(st, world, source)]
+            if taken:  # stored already, the feed's: only linked into the lane
+                out.setdefault(c.stream, []).extend(store.link_items(c.stream, taken))
     return {k: v for k, v in out.items() if v}  # by stream, as new_by_source is
 
 
@@ -426,8 +432,8 @@ def unsorted(store, lanes_now, new_by_source, ctx, taken):
                 continue
             if any(lanes.keeps(x, st, ctx) for x in own):
                 continue
-            put.append(_entry(st))
-    return store.put_items(lanes.UNSORTED, put)
+            put.append(_light(st))
+    return store.link_items(lanes.UNSORTED, put)
 
 
 def backfill(store, custom, world, rows=BACKFILL_ROWS):
@@ -436,9 +442,9 @@ def backfill(store, custom, world, rows=BACKFILL_ROWS):
     taken = []
     for source in sorted(custom.feeds):
         for _item_id, st in store.iter_items(source, max_rows=rows):
-            if custom.takes(st, world, source):
-                taken.append(_entry(st))
-    store.put_items(custom.stream, taken)
+            if custom.takes(st, world, source):  # ids only: the posts may go meanwhile
+                taken.append(_light(st))
+    store.link_items(custom.stream, taken)
     store.kv_set(f"custom_rule:{custom.stream}", custom.digest)
     log.info("lane %s: %d posts from %s", custom.name, len(taken),
              ", ".join(sorted(custom.feeds)))
