@@ -157,7 +157,7 @@
     <string name="preview">Preview</string>
     <string name="open_warnings">Open every warning</string>
     <string name="scan_qr">Scan the QR code</string>
-    <string name="scan_prompt">Point the camera at the key's QR code on the other device</string>
+    <string name="scan_prompt">Point the camera at the key\'s QR code on the other device</string>
     <string name="edit_lane">Edit the lane</string>
     <string name="lanes_editor">Lanes…</string>
     <string name="mark_all_read">Mark all read</string>
