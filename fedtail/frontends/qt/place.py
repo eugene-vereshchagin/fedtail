@@ -88,7 +88,7 @@ class PlaceDialog(QDialog):
         self.said.setVisible(True)
         stamp = self._said_at = object()
         if not error:  # a "done" goes after a while; an error stays till the next press
-            QTimer.singleShot(8000, lambda: self._said_at is stamp and self.said.hide())
+            QTimer.singleShot(8000, self, lambda: self._said_at is stamp and self.said.hide())
 
     # ---- the page, built off the GUI thread (the place asks the server) ----------------
     def load(self):

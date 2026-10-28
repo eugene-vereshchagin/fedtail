@@ -220,7 +220,7 @@ QLabel#setSaved {{ color: {k('accent')}; font-weight: 600; }}
         v.addStretch(1)
         self.scroll.setWidget(page)
         self._drawn = self._what()
-        QTimer.singleShot(0, lambda: bar.setValue(keep))
+        QTimer.singleShot(0, self, lambda: bar.setValue(keep))
 
     def _what(self):
         return self.search.text().strip() or self.current

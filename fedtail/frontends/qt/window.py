@@ -574,7 +574,7 @@ class MainWindow(QMainWindow):
         self.notifier.clicked.connect(self._notification_clicked)
         self.notifier.failed.connect(lambda why: self.error(_("notify_failed", err=why)))
         if self.notifier.problem:
-            QTimer.singleShot(4000, lambda: self.statusBar().showMessage(
+            QTimer.singleShot(4000, self, lambda: self.statusBar().showMessage(
                 self.notifier.problem, 20000))
 
     def _build_sidebar(self):
@@ -1154,7 +1154,7 @@ class MainWindow(QMainWindow):
 
     def _after_connect(self, me):
         if self.core.new_options:
-            QTimer.singleShot(8500, lambda: self.statusBar().showMessage(
+            QTimer.singleShot(8500, self, lambda: self.statusBar().showMessage(
                 _("new_options", n=len(self.core.new_options)), 30_000))
         tip = f"{self.base_title} — @{self.ctx.view.acc(me).handle}"
         self.setWindowTitle(tip)
@@ -2197,7 +2197,7 @@ class MainWindow(QMainWindow):
         if self.core.me:
             self.open_from_outside(url)
         elif tries:
-            QTimer.singleShot(500, lambda: self.open_when_ready(url, tries - 1))
+            QTimer.singleShot(500, self, lambda: self.open_when_ready(url, tries - 1))
 
     def on_link(self, url):
         """A fedtail: link (or one to the outside): common/links.py decides what it does,
@@ -2682,7 +2682,7 @@ class MainWindow(QMainWindow):
         super().showEvent(e)
         if self.msg_tabs is not None and not self.msg_tabs.count() and self.lane_now:
             # shown from the tray with every tab closed: the lane in front gets its tab
-            QTimer.singleShot(0, lambda: self.msg_tabs.lane_opened(self.lane_now)
+            QTimer.singleShot(0, self, lambda: self.msg_tabs.lane_opened(self.lane_now)
                               if not self.msg_tabs.count() else None)
         if self.roster is not None and not self.roster.isVisible():
             self.roster.show()  # the roster comes with the window (and with the tray)

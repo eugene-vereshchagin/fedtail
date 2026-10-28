@@ -99,7 +99,7 @@ def run(core, instance, argv):
         win.roster.refresh_soon()
     else:
         win.show()
-    QTimer.singleShot(1500, lambda: _log_size(win))
+    QTimer.singleShot(1500, win, lambda: _log_size(win))
     QTimer.singleShot(0, win.start)
     try:
         return app.exec()

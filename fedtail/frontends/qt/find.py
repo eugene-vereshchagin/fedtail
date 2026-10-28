@@ -222,7 +222,7 @@ class FindBar(QWidget):
             self.view.scroll_to(key, "top")
             self._mark(key)
             # a lane just opened may still settle on its own reading place: be firm
-            QTimer.singleShot(150, lambda h=hit, k=key: self._settle(h, k))
+            QTimer.singleShot(150, self, lambda h=hit, k=key: self._settle(h, k))
         self._show_count()
 
     def _settle(self, hit, key):
@@ -253,7 +253,7 @@ class FindBar(QWidget):
                                    else _("find_count", i=self.pos + 1, n=len(self.hits)))
                 return
             # the lane grows when the core says so; then stand on the first new match
-            QTimer.singleShot(400, lambda: self._after_deeper(before))
+            QTimer.singleShot(400, self, lambda: self._after_deeper(before))
         self.win.bridge.call(self.win.core.deep_find(name, query), ok=done,
                              fail=lambda e: (self.deeper.setEnabled(True), self.win.error(e)))
 

@@ -970,7 +970,7 @@ class TalkWidget(QWidget):
         self.sent[post.id] = post
         self._key = None
         self.refresh()
-        QTimer.singleShot(0, lambda: self.view.scroll_to_end(True))
+        QTimer.singleShot(0, self, lambda: self.view.scroll_to_end(True))
 
     def refresh(self):
         from .card import make_spec
@@ -991,7 +991,7 @@ class TalkWidget(QWidget):
         self.empty.setVisible(not specs)
         if specs and self._key is not None and not getattr(self, "_placed", False):
             self._placed = True
-            QTimer.singleShot(0, lambda: self.view.scroll_to_end(True))
+            QTimer.singleShot(0, self, lambda: self.view.scroll_to_end(True))
 
     def _seen(self, ids):
         if self.win.cfg["read"]["mark_read"] != "manual":

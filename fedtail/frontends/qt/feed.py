@@ -1438,7 +1438,7 @@ class ThreadWidget(QWidget):
         base = self.info_text if self.loaded else _("loading")
         self.header.info.setText(base + (" · " + words if words and base else words))
         if step and step.get("stage") in ("done", "failed"):
-            QTimer.singleShot(8500, lambda: self.header.info.setText(self.info_text)
+            QTimer.singleShot(8500, self, lambda: self.header.info.setText(self.info_text)
                               if self.loaded else None)
 
     def _all_cw(self):
@@ -1843,7 +1843,7 @@ class AccountWidget(_PagedTab):
         self._account_asked = asked = time.monotonic()
         self.win.bridge.call(self.core.account(self.acc_id), ok=self._account,
                              fail=self._account_failed)
-        QTimer.singleShot(self.ACCOUNT_WAIT_MS, lambda: self._account_late(asked))
+        QTimer.singleShot(self.ACCOUNT_WAIT_MS, self, lambda: self._account_late(asked))
 
     def _account_late(self, asked):
         if self.acc is not None or getattr(self, "_account_asked", None) != asked:
@@ -2190,7 +2190,7 @@ class TagGroupWidget(_PagedTab):
         def done(name):
             self.save_btn.hide()
             self.win.statusBar().showMessage(_("tags_saved", tags=self.key), 6000)
-            QTimer.singleShot(300, lambda: self.win.select_lane(name))
+            QTimer.singleShot(300, self, lambda: self.win.select_lane(name))
         self.win.bridge.call(self.core.save_tag_group(self.spec), ok=done,
                              fail=lambda e: (self.save_btn.setEnabled(True), self.win.error(e)))
 
@@ -2407,7 +2407,7 @@ class ActivityWidget(QWidget):
         self.lay.addStretch(1)
         if oldest_first:
             if self.isVisible():
-                QTimer.singleShot(0, lambda r=first_new, v=kept: self._place(r, v))
+                QTimer.singleShot(0, self, lambda r=first_new, v=kept: self._place(r, v))
             else:  # built hidden (at start, or behind another lane): placed when shown
                 self._unplaced = (first_new, kept)
         if self.isVisible():
@@ -2568,7 +2568,7 @@ class ActivityWidget(QWidget):
         self._seen_timer.start()
         unplaced, self._unplaced = getattr(self, "_unplaced", None), None
         if unplaced:
-            QTimer.singleShot(0, lambda: self._place(*unplaced))
+            QTimer.singleShot(0, self, lambda: self._place(*unplaced))
 
     def apply_read(self, ids):
         pass
@@ -2676,7 +2676,7 @@ def tag_lanes_button(win, tag):
             win.statusBar().showMessage(
                 _("tags_saved", tags="#" + tag) if key == taglanes.OWN
                 else _("tags_added", tag=tag, lane=title), 6000)
-            QTimer.singleShot(300, lambda: win.select_lane(name))
+            QTimer.singleShot(300, win, lambda: win.select_lane(name))
         win.bridge.call(taglanes.apply(view, key, tag), ok=done, fail=win.error)
     return b
 
