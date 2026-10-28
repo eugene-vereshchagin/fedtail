@@ -462,6 +462,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Visibility: private by default, a reply never wider than the post | has | 0.1.0 | `post.default_visibility`, `post.reply_never_wider` | `visibility`, `/api/v1/preferences` | only in fedtail (never wider) |
 | Markdown | has | 0.1.0 | `post.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
 | Preview before sending | has | 0.14.0 | `post.preview` | own | Fedilab |
+| Formatting buttons | has | 0.22.0 | `post.format_bar` | own (Markdown) | Fedilab, Phanpy |
 | Content warning (CW) | has | 0.2.0 | `post.cw_field` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
@@ -494,6 +495,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Markdown.** `"auto"` — ask the server; GoToSocial and Akkoma understand Markdown, vanilla Mastodon doesn't.
 
 **Preview before sending.** The “👁 Preview” button in the panel: the Markdown already rendered (if the server understands it), the CW, visibility, language, each part of a chain, how many pictures; “Send” or “Edit” from there.
+
+**Formatting buttons.** A row of buttons over the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. By default — when the server understands Markdown.
 
 **Content warning (CW).** The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself.
 
@@ -851,6 +854,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
+| Formatting buttons in the editor | ✓ | ✓ | ◐ | ✓ | ✓ | post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab). |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |
 
 ### The server, settings, help, debugging

@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.22.0 (in progress):**
+
+- Formatting buttons
+
 **0.21.0:**
 
 - Free lanes: a lane you assemble yourself

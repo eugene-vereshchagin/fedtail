@@ -136,6 +136,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The compose panel and drafts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Visibility: private by default, a reply never wider than the post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Preview before sending | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Formatting buttons | ✓ |   |   |   | ✓ |   |   |   | ✓ |   |   |   |   |   |
 | Content warning (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Pictures: drag, paste, description, focus | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Shrinking pictures to the server's limit | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
@@ -243,4 +244,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **53** features of the 179 compared.
+Only in fedtail — **53** features of the 180 compared.

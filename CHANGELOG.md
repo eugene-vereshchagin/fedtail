@@ -2,6 +2,16 @@
 
 ## 0.22.0 — in progress
 
+- **Formatting buttons over the text** (`post.format_bar`): B, I, S, code (several lines —
+  a block), a link, a quote, a list — the Markdown marks put around the selection, pressed
+  again taken off; Ctrl+B, Ctrl+I, Ctrl+K. "auto" (the default) — when the server
+  understands Markdown. The windows, GTK, the web page, the phone; the terminal by the
+  buttons (its Ctrl keys belong to the text field).
+- Fixed: "Report a bug on GitHub…" said the interface the config wished, not the one
+  running (`fedtail --ui web` — "qt"), and from the phone "Linux <kernel>" with no model
+  and no Android; now the phone's model, Android and screen, and the interface that runs —
+  in the issue, the bug report and the log's session line.
+
 ## 0.21.0 — 2026-10-28
 
 Sync set up in the window step by step, "Commented posts" as on Point, a library of lane
