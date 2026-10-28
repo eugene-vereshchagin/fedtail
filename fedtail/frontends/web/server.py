@@ -1119,7 +1119,7 @@ class Web:
 
     def thread(self, sid):
         core = self.core
-        sid = one_id(sid)
+        sid = core.thread_jump(one_id(sid))  # from a threads lane: its first new comment
         items = core.thread(sid).result()
         posts = [n.post for n in items]
         short = core.short_ids(posts)

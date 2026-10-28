@@ -1668,6 +1668,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def open_thread(self, post):
         """A thread in a tab of its own; post: a Post, a Share or a post id."""
         root = real(post).id if not isinstance(post, str) else post
+        root = self.view.thread_jump(root)  # from a threads lane: its first new comment
         page = self.threads.get(root)
         if page is not None:
             self.tabs.set_current_page(self.tabs.page_num(page))

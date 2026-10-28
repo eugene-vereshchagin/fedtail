@@ -153,3 +153,19 @@ others.en = "Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipil
 clients = ["Fedilab", "Ivory", "Tuba"]
 details.ru = "`thread_from`: \"local\" — только то, что знает твой сервер; \"mixed\" — сразу, недостающее подтягивается с сервера автора и тред дорастает; \"remote\" — сначала сервер автора, тред открывается полным. `thread_recheck_minutes` — открытый тред сам переспрашивает о новых ответах. `thread_followed_only` — только ответы подписок и твои (и то, на что они отвечали). В треде `]` / `[` — по комментариям верхнего уровня, `-` — свернуть ветку (окно). `thread_progress` — в шапке треда «⇣ дотягиваю ответы: 3 из 12», потом сколько дотянул. `card.around_post` — пункт меню поста «Вокруг этого поста»: что было в Ленте прямо до и после него."
 details.en = "`thread_from`: \"local\" — only what your server knows; \"mixed\" — at once, the missing ones fetched from the author's server and the thread grows; \"remote\" — the author's server first, the thread opens whole. `thread_recheck_minutes` — an open thread asks about new replies by itself. `thread_followed_only` — only the replies of people you follow and yours (and what they answer). In a thread `]` / `[` — between top-level comments, `-` — fold a branch (the window). `thread_progress` — \"⇣ fetching replies: 3 of 12\" in the thread's head, then how many came. `card.around_post` — the post menu's \"Around this post\": what was in Home just before and after it."
+
+[[feature]]
+id = "commented-posts"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Посты с комментами: тред — одна карточка, открывается на первом новом"
+name.en = "Commented posts: a thread a card, opened at the first new comment"
+config.ru = "лента `commented` набора extra; `view = \"threads\"` у своей ленты"
+config.en = "the extra set's `commented` lane; `view = \"threads\"` on a lane of your own"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Point (подписки), Juick"
+others.en = "Point (subscriptions), Juick"
+details.ru = "Твои посты, треды, где комментировал (`subs.auto`), и подписанные руками — те, где есть новые комментарии: по карточке на тред, под ней «в разговоре N, новых M · последний — кто». Щелчок открывает тред сразу на первом новом комментарии. Прочитанный тред остаётся, пока ты в ленте, и уходит, когда вернёшься. Включается в редакторе лент (набор extra) или `view = \"threads\"` у своей ленты из правил."
+details.en = "Your posts, threads you commented in (`subs.auto`) and those followed by hand — the ones with new comments: a card a thread, under it \"N in the conversation, new: M · the last — who\". A click opens the thread right at the first new comment. A thread read stays while you're in the lane and goes when you come back. Turned on in the lane editor (the extra set), or `view = \"threads\"` on a lane of rules of your own."

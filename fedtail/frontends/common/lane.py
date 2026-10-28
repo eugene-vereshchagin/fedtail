@@ -168,6 +168,10 @@ class LaneModel:
         self.shown = None        # on_new = "hold": the item keys let in so far
         self.refreshes = getattr(view, "hand_refreshes", 0)
         self.conv_members = {}   # conversation top id -> member ids
+        # view = "threads" (a lane of rules): one card a thread, as on Point — the threads
+        # with new comments; one read while the lane is open stays till it is left
+        self.threads_view = getattr(lane, "view", "") == "threads"
+        self.threads_kept = set()
         self.media = MediaFilter()
         kept = view.choice(f"media.{name}") if hasattr(view, "choice") else None
         if isinstance(kept, dict):  # feed.remember_choices: as it was left
@@ -226,10 +230,10 @@ class LaneModel:
         self.separator = None
 
     def conversations_offered(self):
-        return self.name in CONVERSATION_LANES
+        return self.name in CONVERSATION_LANES and not self.threads_view
 
     def conversations(self):
-        return self.conversations_offered() and \
+        return self.threads_view or self.conversations_offered() and \
             bool(self.view.choice(f"conversations.{self.name}"))
 
     def set_conversations(self, on):
@@ -237,7 +241,9 @@ class LaneModel:
         self.separator = None
 
     def left(self):
-        """The lane went out of sight: "unread only" shows anew what's unread next time."""
+        """The lane went out of sight: "unread only" shows anew what's unread next time
+        (and a threads lane, the threads with new comments only)."""
+        self.threads_kept = set()
         if self.unread_only():
             self.kept = None
             return True
@@ -391,6 +397,17 @@ class LaneModel:
         """One card per conversation: its top post, with a line about the rest."""
         view = self.view
         groups = view.conversations(entries, unread)
+        if self.threads_view:  # the threads with new comments (and those read just now)
+            groups = [g for g in groups if g["unread"] or g["key"] in self.threads_kept]
+            self.threads_kept |= {g["key"] for g in groups}
+            jumps = {}
+            for g in groups:  # a click on the card: the thread, at its first new comment
+                first = next((m for m in g["members"] if m in unread), None)
+                if first:
+                    jumps[real(g["top"]).id] = first
+            remember = getattr(view, "thread_jumps", None)
+            if remember is not None:
+                remember(jumps)
         tops = [g["top"] for g in groups]
         more_short = view.short_ids(tops)
         self.conv_members = {g["top"].id: g["members"] for g in groups}

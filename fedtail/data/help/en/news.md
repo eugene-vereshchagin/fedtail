@@ -21,6 +21,7 @@ What's new in the latest versions, and the plans.
 - Rules: for a while, by name, at most N per author, by author, "Not in Home"
 - A thread with new replies shows on its card
 - Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post"
+- Commented posts: a thread a card, opened at the first new comment
 - New posts wait for Refresh
 - Language check, link → quote, sending in the background, scheduled → editor, Drafts
 - Unfollowed — gone from Home

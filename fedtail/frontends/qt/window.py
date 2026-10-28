@@ -1870,6 +1870,7 @@ class MainWindow(QMainWindow):
         post = self.ctx.view.by_id(sid)
         if post:
             sid = post.id  # a boost's id: the post inside
+        sid = self.ctx.view.thread_jump(sid)  # from a threads lane: its first new comment
         for w in self.extra_tabs():
             if isinstance(w, ThreadWidget) and sid in w.statuses:
                 self._front(w)

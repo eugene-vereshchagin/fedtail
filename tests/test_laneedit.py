@@ -79,7 +79,8 @@ class EditorTest(unittest.TestCase):
                 vals = {"title": ed.title(n),
                         "icon": t.get("icon", ""), "group": t.get("group", "personal"),
                         "source": lanesplace._words(t.get("source")),
-                        "read": t.get("read", "through"), "sort": t.get("sort", "arrival")}
+                        "read": t.get("read", "through"), "sort": t.get("sort", "arrival"),
+                        "view": t.get("view", "")}
                 for part in ("any", "none"):
                     for i, c in enumerate(t.get(part) or []):
                         vals[f"{part}.{i}"] = laneedit.cond_line(c)

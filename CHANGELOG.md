@@ -2,6 +2,12 @@
 
 ## 0.21.0 — in progress
 
+- **"Commented posts"** (the extra set's `commented`, as on Point): your posts, threads
+  you commented in and those followed by hand — the ones with new comments, a card a
+  thread with how many are new; a click opens the thread at the first new comment. Any
+  lane of rules can be shown so: `view = "threads"` (the editor's "Show: threads"). The
+  condition `state = "subscribed"` works now (it never matched before).
+
 - **Fixed: the window crashed on a flaky connection (mobile internet).** A picture came
   cut short or wasn't what its name said, and Qt handed it to every image plugin installed
   to guess its format — KDE's kimageformats among them, some of which read far past the

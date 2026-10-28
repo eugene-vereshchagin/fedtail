@@ -877,7 +877,7 @@ class Core(SocialMixin):
                 self.sync_conversations()  # read here = read on the server (social.py)
                 self._step("conversations")
             # followed threads: for their lane, and for Home's "threads with news"
-            if "subs" in self.lane_by_name or self._needs_threads():
+            if self._follows_threads() or self._needs_threads():
                 try:
                     sc = self.cfg["subs"]
                     new_by_source["subs"] = subs.check(
@@ -1257,9 +1257,16 @@ class Core(SocialMixin):
                     self.got = store.threads_with_news()
                 return sid in self.got
 
+        core = self
+
+        class _Subscribed:  # state = "subscribed": the post is in a followed thread
+            def __contains__(self, sid):
+                return core.store.sub_root_of(sid) is not None
+
         lc = self.cfg["lanes"]
         host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
         return atoms.World(me_id=self.me["id"] if self.me else "", my_host=host,
+                           subscribed=_Subscribed(),
                            following=self._following or set(),
                            followed_tags=getattr(self, "_followed_tag_names", None) or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
@@ -1563,6 +1570,16 @@ class Core(SocialMixin):
                     "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
                    for a in self.follow_requests or ()] + list(got)
         return got
+
+    def thread_jumps(self, jumps):
+        """A threads lane (view = "threads") drawn: {its card's post id: the thread's
+        first new comment} — opening one of those posts goes there (thread_jump)."""
+        self.__dict__.setdefault("_thread_jumps", {}).update(jumps)
+
+    def thread_jump(self, sid):
+        """Where a thread opened from this post should stand: its first new comment when
+        it was opened from a threads lane (once), else the post itself."""
+        return self.__dict__.get("_thread_jumps", {}).pop(str(sid), None) or sid
 
     def thread_news(self):
         """{root post id: unread replies} — the followed threads with something new
@@ -2410,9 +2427,15 @@ class Core(SocialMixin):
             return None
         return e
 
+    def _follows_threads(self):
+        """Is a lane shown that the followed threads feed — "subs", or a lane of rules
+        taking from them ("commented", view = "threads")?"""
+        return "subs" in self.lane_by_name or any(
+            "subs" in (lane.feeds or ()) or lane.source == "subs" for lane in self.lanes)
+
     def _auto_subscribe(self, my_statuses):
         """My new posts and comments: follow their threads (flags subs.auto)."""
-        if "subs" not in self.lane_by_name:
+        if not self._follows_threads():
             return
         want = set(self.cfg["subs"]["auto"])
         for st in my_statuses:

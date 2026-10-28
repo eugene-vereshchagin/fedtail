@@ -178,6 +178,7 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `filter_context` | the server's filters of this context (`home`, `public`, `notifications`, `thread`, `account`) hide or fold the lane's posts, whichever source they came by |
 | `per_author` | at most so many posts of one author — their newest (a noisy one doesn't drown the lane); 0 — any |
 | `bundle` | `"author"` — each author's posts together, the busiest first (a catch-up read person by person) |
+| `view` | `"threads"` — a card a thread (its post) with how many new comments, the threads with something new only; opening one goes to its first new comment (Point's way: the extra set's "Commented posts") |
 | `until` (of a condition) | the condition holds till then — a date `"2026-11-01"` or a moment; after it, as if it weren't there (a mute for a week in `none`, a lane for a trip) |
 | `text_in = "name"` (of a condition) | `text` looks in the author's name and @nick too (with `text_regex` — a regular expression) |
 | `author = "hidden_home"` | someone taken out of Home on their profile ("Not in Home", `people.home_hide`), still followed; every set's Home has it in `none` |

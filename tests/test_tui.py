@@ -198,6 +198,10 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             w.requests.append(fakes.acct("Q", "quinn@example.org"))
             core.poll_once()
             await self.wait(pilot, lambda: app.lane is not None)
+            # the first rounds drawn before a key comes (under a loaded machine a key
+            # pressed mid-redraw went to the lane being replaced)
+            await self.wait(pilot, lambda: not getattr(app, "_redraw_pending", False))
+            await pilot.pause(0.3)
             names = app._lane_names()
             first = app.lane
             await pilot.press("right_square_bracket")

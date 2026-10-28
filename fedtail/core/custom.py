@@ -120,7 +120,8 @@ class Custom:
                           sort=self.rule.sort,
                           window=self.rule.window.total_seconds() if self.rule.window else 0.0,
                           filter_context=self.rule.filter_context,
-                          per_author=self.rule.per_author, bundle=self.rule.bundle)
+                          per_author=self.rule.per_author, bundle=self.rule.bundle,
+                          view=self.rule.view)
 
     def takes(self, status, world, source):
         world = world or atoms.World()

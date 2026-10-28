@@ -496,6 +496,9 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         self.load()
 
     def load(self):
+        if not getattr(self, "_jumped", False):  # from a threads lane: its first new comment
+            self._jumped = True
+            self.status_id = self.app.core.thread_jump(self.status_id)
         self.later(self.app.core.thread(self.status_id), ok=self.fill)
 
     def action_top_comment(self, step):

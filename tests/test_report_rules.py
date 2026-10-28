@@ -96,3 +96,57 @@ class HiddenHomeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ThreadsViewTest(unittest.TestCase):
+    """view = "threads" (the extra set's "Commented posts", as on Point): a card a
+    thread with new comments, and a click opens it at the first of them."""
+
+    def test_a_card_a_thread_and_the_jump(self):
+        import tempfile
+        from pathlib import Path
+
+        from fedtail import i18n
+        from fedtail.core import auth, config, paths
+        from fedtail.core.app import Core
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        from tests import fakes
+        from tests.fakes import BOB, ME, FakeApi, status
+        i18n.setup("en")
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = w = fakes.World()
+        w.add(status("090", BOB, minute=0, vis="public"), home=True)
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "lanes": {"enabled": ["home", "commented"]}})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        core.cfg["subs"]["interval_minutes"] = 0  # checked every poll here
+        core.poll_once()  # the first run
+        root = w.add(status("100", ME, minute=1, vis="public"), home=True)
+        core.poll_once()  # my post: followed by itself (subs.auto = posts)
+        self.assertTrue(core.subscribed(root))
+        w.add(status("101", BOB, "100", "ME", minute=2), mention=True)  # to me
+        w.add(status("102", fakes.acct("A", "alice@example.org"), "101", "B", minute=3))
+        core.poll_once()
+        view = View(core)
+        lane = core.lane_by_name["commented"]
+        self.assertEqual(lane.view, "threads")
+        m = LaneModel(view, "commented")
+        specs = [s for s in m.build(False).specs if s.entry is not None]
+        self.assertEqual([s.entry.id for s in specs], ["100"])  # one card: the post
+        self.assertEqual(specs[0].extra["conversation"]["unread"], 2)
+        self.assertFalse(m.conversations_offered())  # always threads: no switch
+        self.assertEqual(view.thread_jump("100"), "101")  # the first new comment
+        self.assertEqual(view.thread_jump("100"), "100")  # once
+        core.mark_read(["101", "102"])
+        view._cache.clear()
+        self.assertEqual(len([s for s in m.build(True).specs if s.entry]), 1)  # kept now
+        m.left()
+        self.assertEqual([s for s in m.build(False).specs if s.entry], [])  # nothing new

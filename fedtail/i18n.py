@@ -32,6 +32,10 @@ _STRINGS = {
         "tip_local": "Вся твоя нода. Листается, без счётчика",
         "tip_bots": "Боты из тех, кого читаешь",
         "lane_network": "Сеть", "tip_network": "Федерация без людей своего сервера",
+        "lane_commented": "Посты с комментами",
+        "tip_commented": "Как на Point: твои посты, треды, на которые подписан, и те, где ты "
+                         "комментировал, — те, где есть новые комментарии; щелчок открывает "
+                         "тред на первом новом",
         "lane_stranger_mentions": "Упоминания чужих",
         "tip_stranger_mentions": "Упоминания от тех, кто не подписан ни на тебя, ни ты на них",
         "rss_local_only": "Это запись RSS-ленты, её нет ни на одном сервере: её можно "
@@ -587,6 +591,10 @@ _STRINGS = {
         "le_f_per_author_tip": "Сколько самых свежих постов одного человека оставлять; пусто "
                                "или 0 — сколько есть",
         "le_f_bundle": "Собрать вместе", "le_bundle_author": "по авторам",
+        "le_f_view": "Показывать", "le_view_posts": "посты", "le_view_threads": "треды",
+        "le_f_view_tip": "«треды» — по карточке на тред (его пост) с числом новых "
+                         "комментариев; только треды, где есть новое; щелчок — к первому "
+                         "новому",
         "le_f_window_tip": "Только посты последних: 6h, 12h, 2d; пусто — все",
         "le_f_filters": "Фильтры сервера", "le_fctx_home": "как в Ленте",
         "le_fctx_public": "как в публичных лентах", "le_fctx_notifications": "как в уведомлениях",
@@ -1485,6 +1493,10 @@ _STRINGS = {
         "tip_local": "Your whole server. Browse, no counter",
         "tip_bots": "Bots among those you follow",
         "lane_network": "Network", "tip_network": "Federated without your own server's people",
+        "lane_commented": "Commented posts",
+        "tip_commented": "As on Point: your posts, threads you follow and those you "
+                         "commented in — the ones with new comments; a click opens the "
+                         "thread at the first new one",
         "lane_stranger_mentions": "Strangers' mentions",
         "tip_stranger_mentions": "Mentions from people who neither follow you nor you them",
         "rss_local_only": "This is an RSS feed's item, no server has it: it can be opened "
@@ -2027,6 +2039,10 @@ _STRINGS = {
         "le_f_per_author_tip": "How many of one person's newest posts to keep; empty or 0 — "
                                "all of them",
         "le_f_bundle": "Put together", "le_bundle_author": "by author",
+        "le_f_view": "Show", "le_view_posts": "posts", "le_view_threads": "threads",
+        "le_f_view_tip": "\"threads\" — a card a thread (its post) with how many new "
+                         "comments; only the threads with something new; a click — to the "
+                         "first new one",
         "le_f_window_tip": "Only posts of the last: 6h, 12h, 2d; empty — all",
         "le_f_filters": "The server's filters", "le_fctx_home": "as in Home",
         "le_fctx_public": "as in public lanes", "le_fctx_notifications": "as in notifications",

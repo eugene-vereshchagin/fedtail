@@ -90,6 +90,7 @@ PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
     "set_active_lane", "set_state",
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
+    "thread_jumps", "thread_jump",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",

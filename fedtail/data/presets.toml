@@ -416,6 +416,18 @@ name = "requests"
 group = "personal"
 kind = "requests"
 
+# "Commented posts", as on Point: the threads followed (mine, those I commented in —
+# subs.auto — and those subscribed by hand) that have new comments, a card each; a
+# click opens the thread at its first new comment
+[[extra]]
+name = "commented"
+group = "personal"
+source = ["subs", "mentions"]  # the comments, and the replies to me among them
+view = "threads"
+icon = "subs"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
 # "The network": Federated without my own server's people — what other servers bring
 [[extra]]
 name = "network"

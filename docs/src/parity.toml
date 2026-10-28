@@ -564,6 +564,7 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
         "tip_bots", "tip_direct", "tip_federated", "tip_home", "tip_local", "tip_mentions",
         "tip_my_likes", "tip_my_posts", "tip_replies", "tip_requests", "tip_subs", "tip_unsorted",
         "tip_to_me", "tip_important", "tip_network", "tip_stranger_mentions",
+        "tip_commented",
         "to_end_tip", "unread_tip", "full_width_tip", "short_id_tip", "reactions_tip",
         "cw_add_tip", "compose_bigger_tip", "accounts_merge_tip", "debug_tracing_tip",
         "footer_profile_tip", "make_main_tip", "tender_arts_tip", "try_theme_tip",
