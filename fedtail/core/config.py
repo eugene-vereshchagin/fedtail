@@ -101,6 +101,7 @@ DEFAULTS = {
         "thread_recheck_minutes": 0,
         "thread_followed_only": False,
         "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
+        "open_at": "post",         # a thread opened from a card: at it, or "first_unread"
         "around_post": False,
         "why_home": False,
         "stats": False,            # "Statistics" in the ≡ menu: the week, day by day
@@ -326,6 +327,7 @@ DEFAULTS = {
 
 CHOICES = {
     ("feed", "thread_from"): {"local", "mixed", "remote"},
+    ("feed", "open_at"): {"post", "first_unread"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
     ("phone", "stream"): {"always", "wifi", "off"},
@@ -488,7 +490,7 @@ FILE_LAYOUT = (
                      "translate_all translate_auto translate_backend translate_url "
                      "translate_key")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
-                              "thread_followed_only thread_progress")
+                              "thread_followed_only thread_progress open_at")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "

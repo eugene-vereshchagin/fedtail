@@ -516,7 +516,8 @@ class PlaceScreen(Screen):
         e.stop()
         item = e.item
         if hasattr(item, "entry"):
-            self.app.push_screen(self.app.thread_screen(real(item.entry).id))
+            at = getattr(item, "open_at", None) or self.app.core.open_at()
+            self.app.push_screen(self.app.thread_screen(real(item.entry).id, at))
             return
         row = getattr(item, "row", None)
         if row is None:

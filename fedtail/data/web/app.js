@@ -444,7 +444,7 @@ function renderActions(p, inThread) {
         () => act("share", p));
   btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
       () => act("bookmark", p));
-  if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid));
+  if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at));
   if (p.url) {
     const a = link("↗", p.url);
     a.title = w("open_browser");
@@ -1572,7 +1572,9 @@ function watchThreadProgress(id, token, show) {
   setTimeout(tick, 300);
 }
 
-async function openThread(id) {
+// at: where it stands once drawn — "post", or "first_unread" (common/links.py THREAD_AT:
+// a card's open_at, a fedtail:threadnew/ link)
+async function openThread(id, at) {
   const token = showSide(w("web_thread"));
   // "loading…" with the opossum swinging beside it, as the windows have it
   const wait = loadingBox(w("thread_loading"));
@@ -1583,7 +1585,8 @@ async function openThread(id) {
     if (loading) wait.lastChild.textContent = w("thread_loading") + (text ? " " + text : "");
   });
   try {
-    const t = await api("/api/thread?id=" + encodeURIComponent(id));
+    const t = await api("/api/thread?id=" + encodeURIComponent(id) +
+                        "&at=" + encodeURIComponent(at || "post"));
     loading = false;
     if (state.side !== token) return;  // something else was opened meanwhile
     const body = $("#side-body");
@@ -1909,7 +1912,7 @@ function closeSide() { $("#side").hidden = true; state.side = null; $("#posts").
 // (common/places.py: the same place, the same buttons in the terminal) ------------------
 function openThing(o) {  // where an action leads
   if (!o) return;
-  if (o.thread) openThread(o.thread);
+  if (o.thread) openThread(o.thread, o.at);
   else if (o.account) openAccount(o.account);
   else if (o.url) window.open(o.url, "_blank", "noopener");
   else if (o.file) copyText(o.file);  // on the machine fedtail runs on: its path
@@ -2582,7 +2585,7 @@ async function runCommand(e) {
     if (r.message) toast(r.message);
     if (!r.ok) return;
     c.value = "";
-    if (r.open && r.open.thread) openThread(r.open.thread);
+    if (r.open && r.open.thread) openThread(r.open.thread, r.open.at);
     if (r.open && r.open.account) openAccount(r.open.account);
   } catch (err) { toast(err.message); }
   finally { c.disabled = false; if (!c.value) $("#posts").focus(); else c.focus(); }
@@ -2598,7 +2601,8 @@ document.addEventListener("click", async (e) => {
     const [kind, ...rest] = href.slice(8).split("/");
     const arg = decodeURIComponent(rest.join("/"));
     if (kind === "account") openAccount(arg);
-    else if (kind === "thread") openThread(arg);
+    else if (kind === "thread") openThread(arg, "post");
+    else if (kind === "threadnew") openThread(arg, "first_unread");
     else if (kind === "tag") openPlace("tag", arg);
     else if (kind === "help") {  // a page of the help, and a place on it
       const [page, anchor] = arg.split("#");
@@ -2657,8 +2661,8 @@ document.addEventListener("keydown", (e) => {
     j: () => setCursor(state.cursor + 1), k: () => setCursor(state.cursor - 1),
     ArrowDown: () => setCursor(state.cursor + 1), ArrowUp: () => setCursor(state.cursor - 1),
     r: () => p && compose(p), f: () => p && act("like", p), b: () => p && act("share", p),
-    m: () => p && act("bookmark", p), o: () => p && openThread(p.sid),
-    Enter: () => p && openThread(p.sid), n: () => compose(null),
+    m: () => p && act("bookmark", p), o: () => p && openThread(p.sid, p.open_at),
+    Enter: () => p && openThread(p.sid, p.open_at), n: () => compose(null),
     p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
     q: () => p && quoteReply(p), "/": () => openPlace("search"),
     ":": () => $("#cmd").focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),

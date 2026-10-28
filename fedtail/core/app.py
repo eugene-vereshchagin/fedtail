@@ -1590,15 +1590,12 @@ class Core(SocialMixin):
                    for a in self.follow_requests or ()] + list(got)
         return got
 
-    def thread_jumps(self, jumps):
-        """A threads lane (view = "threads") drawn: {its card's post id: the thread's
-        first new comment} — opening one of those posts goes there (thread_jump)."""
-        self.__dict__.setdefault("_thread_jumps", {}).update(jumps)
-
-    def thread_jump(self, sid):
-        """Where a thread opened from this post should stand: its first new comment when
-        it was opened from a threads lane (once), else the post itself."""
-        return self.__dict__.get("_thread_jumps", {}).pop(str(sid), None) or sid
+    def open_at(self, lane=None):
+        """Where a thread opened from a card of `lane` opens: "post" or "first_unread" —
+        the lane's own `open_at` (a lane of rules), else threads.open_at. No lane (a
+        profile, Activity, a thread's own cards): threads.open_at."""
+        own = getattr(self.lane_by_name.get(lane), "open_at", "") if lane else ""
+        return own or self.cfg["feed"].get("open_at") or "post"
 
     def thread_news(self):
         """{root post id: unread replies} — the followed threads with something new

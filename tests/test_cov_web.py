@@ -183,7 +183,7 @@ class WebHostTest(TmpDir):
         self.assertEqual(h.out["open"], {"account": "A"})
         h = web._WebHost(Host(found=mock.Mock(id="S")), False)
         h.resolve_link("https://x/1")
-        self.assertEqual(h.out["open"], {"thread": "S"})
+        self.assertEqual(h.out["open"], {"thread": "S", "at": "post"})
         h = web._WebHost(Host(fail=True), False)
         h.resolve_link("https://x/1")
         self.assertEqual(h.out["open"], {"url": "https://x/1"})

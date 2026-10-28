@@ -20,6 +20,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from . import actions
 from .lane import age_days, conversation_line
+from .links import thread_url
 
 
 def name_of(acc):
@@ -75,8 +76,9 @@ def thread_news_bit(spec):
     p = spec.post if spec is not None else None
     if not n or p is None:
         return None
-    return Bit("🔔 " + _("thread_news", n=n), f"fedtail:thread/{p.id}", _("thread_news_tip"),
-               kind="thread_news")
+    # it is about the news: always at the first of them (threads.open_at aside)
+    return Bit("🔔 " + _("thread_news", n=n), thread_url(p.id, "first_unread"),
+               _("thread_news_tip"), kind="thread_news")
 
 
 def newcomer_bit(post, parent):
@@ -123,7 +125,7 @@ def card_words(spec, cfg, date, in_thread=None):
             text += " · " + _("boost_time", when=date(entry.created))
         w.boosted = Bit(text, f"fedtail:account/{by.id}")
     if p.created:
-        w.meta.append(Bit(date(p.created), f"fedtail:thread/{p.id}", kind="time"))
+        w.meta.append(Bit(date(p.created), thread_url(p.id, spec.open_at), kind="time"))
     w.meta.append(Bit(actions.vis_word(p.visibility), tip=actions.vis_word(p.visibility),
                       kind="vis"))
     if p.edited:
@@ -158,7 +160,7 @@ def card_words(spec, cfg, date, in_thread=None):
                                 f"fedtail:thread/{mine.id}"))
     conv = conversation_line(spec)
     if conv is not None:
-        w.conversation = Bit("💬 " + conv[0], f"fedtail:thread/{conv[1]}")
+        w.conversation = Bit("💬 " + conv[0], thread_url(conv[1], spec.open_at))
     if cfg["feed"].get("emoji", True):
         reacted = sorted(((r.name, r.count) for r in p.reactions if r.count > 0),
                          key=lambda x: -x[1])

@@ -69,8 +69,8 @@ class TuiHost:
         elif url:
             self.app.notify(_("link_refused"))
 
-    def open_thread(self, sid):
-        self.app.push_screen(self.app.thread_screen(sid))
+    def open_thread(self, sid, at="post"):
+        self.app.push_screen(self.app.thread_screen(sid, at))
 
     def open_account(self, acc_id):
         self.app.push_screen(self.app.profile_screen(acc_id))

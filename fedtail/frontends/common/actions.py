@@ -15,7 +15,7 @@ from urllib.parse import quote as urlquote
 
 from ...i18n import _, current_language
 from ...model import Share, real
-from .links import make
+from .links import make, thread_url
 
 # words for a visibility in i18n: vis_public, vis_private (followers), vis_direct…
 VIS_KEY = {"followers": "private"}
@@ -80,8 +80,9 @@ class Button:
     who: str = ""
 
 
-def buttons(entry, ctx, unread=False):
-    """The buttons under a post, in order."""
+def buttons(entry, ctx, unread=False, open_at="post"):
+    """The buttons under a post, in order. open_at: where its thread opens (the card's
+    CardSpec.open_at)."""
     p = real(entry)
     sid = entry.id  # a boost: its own id (the window finds the post in it)
     n = lambda x: f" · {x}" if x else ""  # noqa: E731
@@ -109,8 +110,9 @@ def buttons(entry, ctx, unread=False):
         who = {"fav": ("favourited_by", p.counts.likes),
                "boost": ("reblogged_by", p.counts.shares)}.get(b.action)
         right = make(who[0], sid) if who and who[1] and ctx.supports(who[0]) else ""
-        done.append(Button(b.action, b.icons, b.glyph, b.label, b.count, b.active,
-                           make(b.action, sid), right))
+        url = thread_url(sid, open_at) if b.action == "thread" else make(b.action, sid)
+        done.append(Button(b.action, b.icons, b.glyph, b.label, b.count, b.active, url,
+                           right))
     return done
 
 

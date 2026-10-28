@@ -299,6 +299,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         if view.cfg["ui"].get("account_colors", True):  # a colour of its own, as the windows'
             from ..common.lane import account_color
             out["via"]["color"] = account_color(via)
+    # where its thread opens (CardSpec.open_at: the lane's, else threads.open_at)
+    out["open_at"] = spec.open_at if spec is not None else \
+        (view.open_at() if hasattr(view, "open_at") else "post")
     if spec is not None:
         out["words"] = words_json(view, spec, web_date)
         out["item"] = spec.key
@@ -358,8 +361,8 @@ class _WebHost:
     def open_url(self, url):
         self.out["open"] = {"url": url}
 
-    def open_thread(self, sid):
-        self.out["open"] = {"thread": sid}
+    def open_thread(self, sid, at="post"):
+        self.out["open"] = {"thread": sid, "at": at}
 
     def open_account(self, acc_id):
         self.out["open"] = {"account": acc_id}
@@ -1118,9 +1121,11 @@ class Web:
         self.core.set_state("lane", name)
         return {"ok": True}
 
-    def thread(self, sid):
+    def thread(self, sid, at="post"):
+        """The thread of `sid`; at: where it stands (common/links.py THREAD_AT) — the
+        page scrolls to "focus"."""
         core = self.core
-        sid = core.thread_jump(one_id(sid))  # from a threads lane: its first new comment
+        sid = one_id(sid)
         items = core.thread(sid).result()
         posts = [n.post for n in items]
         short = core.short_ids(posts)
@@ -1130,7 +1135,9 @@ class Web:
         for p in out:  # the post the thread was opened from: "you came from here"
             if p["sid"] == sid or p["id"] == sid:
                 p["came_from"] = _("came_from")
-        return {"focus": sid, "posts": out, "head": self.thread_head(posts, short)}
+        return {"focus": core.thread_focus(sid, items, at if at in ("post", "first_unread")
+                                           else "post"),
+                "posts": out, "head": self.thread_head(posts, short)}
 
     def thread_head(self, posts, short):
         """The head the windows put over a thread (qt/feed.py ThreadWidget,
@@ -2012,7 +2019,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/columns": lambda: self.web.columns(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
                   "/api/thread_progress": lambda: self.web.thread_progress(q.get("id", "")),
-                  "/api/thread": lambda: self.web.thread(q.get("id", "")),
+                  "/api/thread": lambda: self.web.thread(q.get("id", ""),
+                                                         q.get("at", "post")),
                   "/api/account": lambda: self.web.account(q.get("id", ""),
                                                            q.get("show") or None),
                   "/api/account_more": lambda: self.web.account_more(

@@ -33,6 +33,9 @@ class CardSpec:
     focus: bool = False
     in_thread: bool = False
     extra: dict = field(default_factory=dict)  # my_replies, short_id, separator, via…
+    # where its thread opens: "post" / "first_unread" (core.open_at: the lane's own, else
+    # threads.open_at) — the card's links say it (common/links.thread_url)
+    open_at: str = "post"
 
     @property
     def post(self):
@@ -47,6 +50,8 @@ def make_spec(view, key, entry, extra=None, **kw):
     via = view.via(entry)
     if via:
         extra["via"] = via
+    if "open_at" not in kw and hasattr(view, "open_at"):
+        kw["open_at"] = view.open_at()  # threads.open_at; a lane puts its own (build)
     return CardSpec(key=key, entry=entry, extra=extra, **kw)
 
 
@@ -337,6 +342,9 @@ class LaneModel:
                     if tag:
                         s.extra["via_tag"] = tag
         specs = self._with_events(specs)
+        at = view.open_at(self.name) if hasattr(view, "open_at") else "post"
+        for s in specs:
+            s.open_at = at
         if self.name in ("replies", "mentions", "to_me"):
             view.check_my_replies(posts)
         if unknown:
@@ -400,14 +408,6 @@ class LaneModel:
         if self.threads_view:  # the threads with new comments (and those read just now)
             groups = [g for g in groups if g["unread"] or g["key"] in self.threads_kept]
             self.threads_kept |= {g["key"] for g in groups}
-            jumps = {}
-            for g in groups:  # a click on the card: the thread, at its first new comment
-                first = next((m for m in g["members"] if m in unread), None)
-                if first:
-                    jumps[real(g["top"]).id] = first
-            remember = getattr(view, "thread_jumps", None)
-            if remember is not None:
-                remember(jumps)
         tops = [g["top"] for g in groups]
         more_short = view.short_ids(tops)
         self.conv_members = {g["top"].id: g["members"] for g in groups}

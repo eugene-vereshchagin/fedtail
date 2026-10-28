@@ -92,11 +92,13 @@ def render(shown):
 
 
 class PostItem(ListItem):
-    def __init__(self, entry, text, key=None):
+    def __init__(self, entry, text, key=None, open_at=None):
         self.body = Static(text, classes="post")  # kept: a picture comes in later
         super().__init__(self.body)
         self.entry = entry  # a Post or a Share
         self.key = key
+        self.open_at = open_at  # where its thread opens (CardSpec.open_at; None: the
+        # setting's — threads.open_at)
         self.text = text
         self.has_picture = False
         self.graphic = None
@@ -414,7 +416,9 @@ class PostsMixin(Ui):
     def action_open(self):
         st = self.current()
         if st:
-            self.app.push_screen(ThreadScreen(real(st).id))
+            item = self.current_item()
+            at = getattr(item, "open_at", None) or self.app.core.open_at()
+            self.app.push_screen(ThreadScreen(real(st).id, at))
 
     def action_profile(self):
         item = self.current_item()
@@ -478,9 +482,11 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
     ThreadScreen #posts { height: 1fr; }
     """
 
-    def __init__(self, status_id):
+    def __init__(self, status_id, at="post"):
         super().__init__()
         self.status_id = status_id
+        self.at = at  # where it stands once loaded (common/links.py THREAD_AT)
+        self.stand = None
         self.cw_open = False
         self.root = None
         self.nodes = []
@@ -496,9 +502,6 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         self.load()
 
     def load(self):
-        if not getattr(self, "_jumped", False):  # from a threads lane: its first new comment
-            self._jumped = True
-            self.status_id = self.app.core.thread_jump(self.status_id)
         self.later(self.app.core.thread(self.status_id), ok=self.fill)
 
     def action_top_comment(self, step):
@@ -522,6 +525,8 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         posts = [n.post for n in items_in]
         short = core.short_ids(posts)
         unread = core.unread(posts)
+        if self.stand is None:  # the first time: where it was asked to stand
+            self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
         for i, n in enumerate(items_in):
             pad = "  " * min(n.depth, 8)
@@ -535,7 +540,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             item = PostItem(n.post, text, key=n.post.id)
             item.depth = n.depth
             items.append(item)
-            if n.post.id == self.status_id:
+            if n.post.id == self.stand:
                 focus = i
         root = posts[0] if posts else None
         self.root = root
@@ -1065,7 +1070,7 @@ class FedtailApp(App, PostsMixin):
                 unread.add(e.id)
             shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
                               parent=sp.parent, spec=sp)
-            items.append(PostItem(e, render(shown), key=sp.key))
+            items.append(PostItem(e, render(shown), key=sp.key, open_at=sp.open_at))
         title = core.lane_title(name) or _("lane_" + name)
         line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=len(unread))}"
                                                 if unread else "", style="dim")
@@ -1493,8 +1498,8 @@ class FedtailApp(App, PostsMixin):
     def date_words(when):
         return when.astimezone().strftime("%d.%m.%Y %H:%M") if when else ""
 
-    def thread_screen(self, sid):
-        return ThreadScreen(sid)
+    def thread_screen(self, sid, at="post"):
+        return ThreadScreen(sid, at)
 
     def profile_screen(self, acc_id):
         return ProfileScreen(acc_id)

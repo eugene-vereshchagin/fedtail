@@ -1341,10 +1341,12 @@ class _Segmented(QWidget):
             b.setChecked(k == key)
 
 class ThreadWidget(QWidget):
-    def __init__(self, win, sid):
+    def __init__(self, win, sid, at="post"):
         super().__init__()
         self.win, self.core = win, win.ctx.view
         self.focus_id = sid
+        self.at = at  # where it stands once loaded: the post, or "first_unread"
+        self.items = []
         self.title = _("thread_loading")
         self.info_text = ""
         self.loaded = False
@@ -1464,6 +1466,9 @@ class ThreadWidget(QWidget):
     def _loaded(self, items):
         """items: [ThreadItem] in reading order, the root first."""
         self._plate(False)
+        if not self.loaded:  # the first time: where it was asked to stand
+            self.focus_id = self.core.thread_focus(self.focus_id, items, self.at)
+        self.items = items
         posts = [n.post for n in items]
         self.statuses = {p.id for p in posts}
         unread = self.core.unread(posts)

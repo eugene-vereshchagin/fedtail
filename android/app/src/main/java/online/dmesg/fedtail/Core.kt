@@ -108,7 +108,7 @@ object Core {
     suspend fun refresh() = obj("refresh")
     suspend fun pause(on: Boolean) = obj("pause", on)
     suspend fun network(wifi: Boolean) = obj("network", wifi)
-    suspend fun thread(id: String) = obj("thread", id)
+    suspend fun thread(id: String, at: String = "post") = obj("thread", id, at)
     suspend fun threadProgress(id: String) = obj("thread_progress", id)
     suspend fun post(body: JSONObject) = obj("post", body.toString())
     suspend fun act(action: String, id: String) = obj("act", action, id)

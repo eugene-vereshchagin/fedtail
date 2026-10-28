@@ -1868,17 +1868,18 @@ class MainWindow(QMainWindow):
             self.right_stack.setCurrentIndex(0)
         self.tabs.setCurrentIndex(i)
 
-    def open_thread(self, sid):
+    def open_thread(self, sid, at="post"):
+        """The thread of post `sid`, standing where `at` says (common/links.py
+        THREAD_AT: the link of the card says it): on the post, or its first unread."""
         post = self.ctx.view.by_id(sid)
         if post:
             sid = post.id  # a boost's id: the post inside
-        sid = self.ctx.view.thread_jump(sid)  # from a threads lane: its first new comment
         for w in self.extra_tabs():
             if isinstance(w, ThreadWidget) and sid in w.statuses:
                 self._front(w)
-                w.focus_on(sid)
+                w.focus_on(self.ctx.view.thread_focus(sid, w.items, at))
                 return
-        self._add_tab(ThreadWidget(self, sid), _("thread_loading"))
+        self._add_tab(ThreadWidget(self, sid, at), _("thread_loading"))
 
     def close_all_tabs(self):
         """Every tab of the messages window closed (ui.split_tabs = "close"): threads,

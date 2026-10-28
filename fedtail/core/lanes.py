@@ -36,9 +36,11 @@ class Lane:
     # bundle — "author": each author's posts together, the busiest author first
     per_author: int = 0
     bundle: str = ""
-    # view — "threads": one card a thread (its post), the threads with new comments only,
-    # a click opens the thread at the first new one (common/lane.py)
+    # view — "threads": one card a thread (its post), the threads with new comments only
+    # (common/lane.py); open_at — where a thread opened from a card opens ("post",
+    # "first_unread"; "" — threads.open_at: core.open_at)
     view: str = ""
+    open_at: str = ""
 
 
 @dataclass

@@ -692,7 +692,7 @@ def _author_word(word, have):
 
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
-             "window", "filter_context", "icon", "per_author", "bundle", "view"}
+             "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at"}
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
@@ -714,7 +714,9 @@ _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "d
                "bundle": {"", "author"},
                # "threads": one card a thread — its post, with how many new comments
                # (as on Point); a click opens it at the first of them
-               "view": {"", "threads"}}
+               "view": {"", "threads"},
+               # where a thread opened from its card opens; "" — threads.open_at
+               "open_at": {"", "post", "first_unread"}}
 
 
 @dataclass
@@ -736,6 +738,8 @@ class Rule:
     per_author: int = 0            # at most so many posts of one author (the newest); 0 — any
     bundle: str = ""               # "author": each author's posts together
     view: str = ""                 # "threads": one card a thread, the new comments counted
+    open_at: str = ""              # a thread from its card: "post" / "first_unread"; ""
+                                   # — as threads.open_at says
     warnings: list = field(default_factory=list)
 
     @classmethod

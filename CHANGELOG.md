@@ -2,6 +2,14 @@
 
 ## 0.21.0 — in progress
 
+- **Where a thread opens, one setting for everything:** `threads.open_at` — "post" (the
+  default) or "first_unread" (the first unread comment; none — the post); a lane of
+  rules may say its own (`open_at`, "A thread opens" in the lane editor — "Commented
+  posts" has "first_unread"); "🔔 N new in the thread" always goes to the first new one.
+  The card's links carry it (`fedtail:thread/` / `fedtail:threadnew/`), the thread finds
+  its place once loaded — the windows, GTK, the terminal, the web page and the phone
+  alike. It replaces the one-off jump "Commented posts" had.
+
 - fedtail's set of lanes: "Subscriptions" (every comment of the followed threads, one by
   one) is out of it, "Commented posts" (a card a thread with news) does that now; it
   stays in the extra set, and the notifications, sounds and the icon's number count

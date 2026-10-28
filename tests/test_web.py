@@ -485,7 +485,7 @@ class WebTest(TmpDir):
         got = json.loads(self.req("/api/link", {"url": "fedtail:copyhandle/bob%40x.example"})[2])
         self.assertEqual(got["copy"], "@bob@x.example")
         got = json.loads(self.req("/api/link", {"url": "fedtail:thread/002"})[2])
-        self.assertEqual(got["open"], {"thread": "002"})
+        self.assertEqual(got["open"], {"thread": "002", "at": "post"})
         self.assertEqual(self.req("/api/link", {"url": "fedtail:boom/002"})[0], 200)
         # how long a mute lasts: asked, then done with the pick ("3600" as a string too)
         got = json.loads(self.req("/api/link", {"url": "fedtail:mute/002"})[2])

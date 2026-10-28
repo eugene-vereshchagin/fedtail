@@ -790,7 +790,7 @@ class PostRow(QWidget):
         if self.theme.shape.get("actions_align") == "right":
             h.addStretch(1)
         buttons = actions.buttons(self.spec.entry, self._actions_ctx(),
-                                  unread=self.spec.unread)
+                                  unread=self.spec.unread, open_at=self.spec.open_at)
         from . import icons as pictures
         own = pictures.wanted(self.theme)  # the messengers' look (split, "additional")
         if own and style == "text":

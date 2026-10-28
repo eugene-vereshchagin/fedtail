@@ -108,6 +108,7 @@ data class LinkCard(
 
 data class PostItem(
     val key: String, val id: String, val sid: String, val alias: String, val name: String,
+    // where its thread opens: "post" / "first_unread" (CardSpec.open_at)
     val handle: String, val avatar: String, val created: String, val text: String,
     val warning: String, val sensitive: Boolean, val media: List<MediaItem>,
     val card: LinkCard?, val poll: String, val html: String, val url: String,
@@ -128,6 +129,7 @@ data class PostItem(
     val quoteWho: String = "",
     val quoteText: String = "",
     val nameHtml: String = "",       // the name with its :emoji: as pictures (if any)
+    val openAt: String = "post",
     val nameColor: String = "",      // people.nick_colors: my colour for their name
     val labels: String = "",         // the windows' marks: "old, 40 days", "bot", edited…
     val reactions: String = "",      // "👍 3 :blobcat: 2"
@@ -992,7 +994,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         return false
     }
 
-    fun openThread(postId: String) {
+    /** The thread of a post; at: where it stands once loaded — "post", or "first_unread"
+     *  (common/links.py THREAD_AT: a card's open_at, a fedtail:threadnew/ link). */
+    fun openThread(postId: String, at: String = "post") {
         threadCwOpen = false
         // three columns: the thread pane shows one thread — a new one takes its place
         val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
@@ -1001,10 +1005,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         threadHead = null
         watchThreadProgress(postId)
         viewModelScope.launch {
-            val got = Core.thread(postId)
+            val got = Core.thread(postId, at)
             Core.failed(got)?.let { message = it; back(); return@launch }
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
+            threadAimAt = got.optString("focus").takeIf { it.isNotBlank() && it != postId }
             threadOpening += 1
         }
     }
@@ -1202,6 +1207,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val arg = parts.getOrNull(1).orEmpty()
             when (parts[0]) {
                 "thread", "post" -> if (arg.isNotBlank()) openThread(arg)
+                "threadnew" -> if (arg.isNotBlank()) openThread(arg, "first_unread")
                 "account", "profile" -> if (arg.isNotBlank()) openProfile(arg)
                 // the rest the windows' way (common/links.py): a #tag's place, a fediverse
                 // address resolved here, a post's edits, its time…
@@ -1257,7 +1263,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
             got.optString("message").takeIf { it.isNotBlank() }?.let { message = it }
             got.optJSONObject("open")?.let { o ->
-                o.optString("thread").takeIf { it.isNotBlank() }?.let { openThread(it) }
+                o.optString("thread").takeIf { it.isNotBlank() }
+                    ?.let { openThread(it, o.optString("at").ifBlank { "post" }) }
             }
             Core.refresh()
         }
@@ -1610,7 +1617,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private fun openThing(o: JSONObject) {
         when {
-            str(o, "thread").isNotBlank() -> openThread(str(o, "thread"))
+            str(o, "thread").isNotBlank() ->
+                openThread(str(o, "thread"), str(o, "at").ifBlank { "post" })
             str(o, "account").isNotBlank() -> openProfile(str(o, "account"))
             str(o, "page") == "settings" ->  // its own screen, not the place's form
                 openSettings(str(o, "arg").ifBlank { str(o, "tab") })
@@ -2132,6 +2140,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         return PostItem(
             key = o.optString("item", o.optString("id")), id = o.optString("id"),
             sid = o.optString("sid", o.optString("id")),
+            openAt = o.optString("open_at").ifBlank { "post" },
             alias = str(o, "alias"),
             name = str(acc, "name").ifBlank { str(acc, "handle") },
             handle = str(acc, "handle"), avatar = str(acc, "avatar"),

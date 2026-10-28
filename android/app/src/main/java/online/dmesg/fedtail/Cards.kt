@@ -110,7 +110,7 @@ class CardActions(
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
-    open = { openThread(it.sid) }, reply = { compose(it) }, like = { act(it, "like") },
+    open = { openThread(it.sid, it.openAt) }, reply = { compose(it) }, like = { act(it, "like") },
     media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,

@@ -658,8 +658,12 @@ _STRINGS = {
         "le_f_bundle": "Собрать вместе", "le_bundle_author": "по авторам",
         "le_f_view": "Показывать", "le_view_posts": "посты", "le_view_threads": "треды",
         "le_f_view_tip": "«треды» — по карточке на тред (его пост) с числом новых "
-                         "комментариев; только треды, где есть новое; щелчок — к первому "
-                         "новому",
+                         "комментариев; только треды, где есть новое",
+        "le_f_open_at": "Тред открывается",
+        "le_open_at_setting": "как в настройках (threads.open_at)",
+        "le_open_at_post": "на посте", "le_open_at_first_unread": "на первом новом комменте",
+        "le_f_open_at_tip": "Где встаёт тред, открытый с карточки этой ленты; нет новых — "
+                            "на посте",
         "le_f_window_tip": "Только посты последних: 6h, 12h, 2d; пусто — все",
         "le_f_filters": "Фильтры сервера", "le_fctx_home": "как в Ленте",
         "le_fctx_public": "как в публичных лентах", "le_fctx_notifications": "как в уведомлениях",
@@ -2226,8 +2230,12 @@ _STRINGS = {
         "le_f_bundle": "Put together", "le_bundle_author": "by author",
         "le_f_view": "Show", "le_view_posts": "posts", "le_view_threads": "threads",
         "le_f_view_tip": "\"threads\" — a card a thread (its post) with how many new "
-                         "comments; only the threads with something new; a click — to the "
-                         "first new one",
+                         "comments; only the threads with something new",
+        "le_f_open_at": "A thread opens",
+        "le_open_at_setting": "as the settings say (threads.open_at)",
+        "le_open_at_post": "at the post", "le_open_at_first_unread": "at the first new comment",
+        "le_f_open_at_tip": "Where a thread opened from this lane's card stands; nothing new "
+                            "— at the post",
         "le_f_window_tip": "Only posts of the last: 6h, 12h, 2d; empty — all",
         "le_f_filters": "The server's filters", "le_fctx_home": "as in Home",
         "le_fctx_public": "as in public lanes", "le_fctx_notifications": "as in notifications",

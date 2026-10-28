@@ -11,7 +11,7 @@ The host is the window. It must have:
   status(text)                       a passing message (the status line)
   error(text)                        a failure to show
   confirm(title, text, then)         ask; then() only on yes (may answer later: GTK)
-  open_url(url) open_thread(id) open_account(id) open_tag(tag) resolve_link(url)
+  open_url(url) open_thread(id, at) open_account(id) open_tag(tag) resolve_link(url)
   copy_handle(handle) put_alias(alias)
   compose(reply_to=None, invite=False, edit=None, quote=None)
   show_history(post) report(post) open_reactions(post, kind) open_quotes(post)
@@ -55,6 +55,16 @@ def make(action, arg):
     return f"{PREFIX}{action}/{arg}"
 
 
+# where a thread opens (threads.open_at, a lane's open_at): the link says it —
+# fedtail:thread/<id> at that post, fedtail:threadnew/<id> at its first unread comment
+THREAD_AT = {"post": "thread", "first_unread": "threadnew"}
+
+
+def thread_url(pid, at="post"):
+    """The link opening the thread of post `pid`, standing where `at` says."""
+    return make(THREAD_AT.get(at, "thread"), pid)
+
+
 class Links:
     def __init__(self, view, host):
         self.view, self.host = view, host
@@ -76,8 +86,8 @@ class Links:
             self._ask(h, "open_tag", unquote(arg))
         elif action == "resolve":
             self._ask(h, "resolve_link", unquote(arg))
-        elif action == "thread":
-            h.open_thread(arg)
+        elif action in ("thread", "threadnew"):
+            h.open_thread(arg, "first_unread" if action == "threadnew" else "post")
         elif action == "account":
             self._ask(h, "open_account", arg)
         else:

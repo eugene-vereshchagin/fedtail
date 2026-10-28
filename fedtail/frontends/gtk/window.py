@@ -65,8 +65,8 @@ class Ctx:
     def open_url(self, url):
         self.win.open_url(url)
 
-    def open_thread(self, post):
-        self.win.open_thread(post)
+    def open_thread(self, post, at="post"):
+        self.win.open_thread(post, at)
 
     def status(self, text):
         self.win.status(text)
@@ -1668,10 +1668,10 @@ class MainWindow(Gtk.ApplicationWindow):
                 if real(card.entry).id == real(got).id:
                     card.update(real(got))
 
-    def open_thread(self, post):
-        """A thread in a tab of its own; post: a Post, a Share or a post id."""
+    def open_thread(self, post, at="post"):
+        """A thread in a tab of its own; post: a Post, a Share or a post id; at: where it
+        stands once drawn (common/links.py THREAD_AT) — the post or its first unread."""
         root = real(post).id if not isinstance(post, str) else post
-        root = self.view.thread_jump(root)  # from a threads lane: its first new comment
         page = self.threads.get(root)
         if page is not None:
             self.tabs.set_current_page(self.tabs.page_num(page))
@@ -1699,12 +1699,13 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.dock.follow(page)
             unread = self.view.unread(posts)
             short = self.view.short_ids(posts)
+            stand = self.view.thread_focus(root, items, at)
             focus = None
             for it in items:
                 card = Card(ctx, it.post.id, it.post, unread=it.post.id in unread,
                             short_id=short.get(it.post.id), depth=it.depth,
                             number=it.number)
-                if it.post.id == root:
+                if it.post.id == stand:
                     card.add_css_class("ft-focus")
                     if len(items) > 1:
                         card.mark(_("came_from"))  # as Qt: where the reader came from

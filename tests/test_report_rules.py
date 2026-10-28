@@ -143,8 +143,23 @@ class ThreadsViewTest(unittest.TestCase):
         self.assertEqual([s.entry.id for s in specs], ["100"])  # one card: the post
         self.assertEqual(specs[0].extra["conversation"]["unread"], 2)
         self.assertFalse(m.conversations_offered())  # always threads: no switch
-        self.assertEqual(view.thread_jump("100"), "101")  # the first new comment
-        self.assertEqual(view.thread_jump("100"), "100")  # once
+        # where its thread opens: the lane says "first_unread" — the card's links say it
+        self.assertEqual(specs[0].open_at, "first_unread")
+        self.assertEqual(view.open_at("commented"), "first_unread")
+        self.assertEqual(view.open_at("home"), "post")  # threads.open_at
+        from fedtail.frontends.common import actions
+        from fedtail.frontends.common.cardtext import card_words
+        w = card_words(specs[0], core.cfg, str)
+        self.assertEqual(w.meta[0].link, "fedtail:threadnew/100")
+        items = view.thread("100").result()
+        self.assertEqual(view.thread_focus("100", items, "first_unread"), "101")
+        self.assertEqual(view.thread_focus("100", items, "post"), "100")
+        home = [s for s in LaneModel(view, "home").build(False).specs if s.entry is not None]
+        self.assertTrue(all(s.open_at == "post" for s in home))
+        core.cfg["feed"]["open_at"] = "first_unread"  # the setting: every lane without its own
+        self.assertEqual(view.open_at("home"), "first_unread")
+        core.cfg["feed"]["open_at"] = "post"
+        del actions
         core.mark_read(["101", "102"])
         view._cache.clear()
         self.assertEqual(len([s for s in m.build(True).specs if s.entry]), 1)  # kept now

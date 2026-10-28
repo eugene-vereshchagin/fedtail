@@ -103,7 +103,7 @@ class ThreadNewsTest(unittest.TestCase):
         spec = CardSpec(key="1", entry=root, extra={"thread_news": 3})
         w = cardtext.card_words(spec, cfg, lambda d: "")
         self.assertIn("3", w.thread_news.text)
-        self.assertEqual(w.thread_news.link, "fedtail:thread/1")
+        self.assertEqual(w.thread_news.link, "fedtail:threadnew/1")  # at the first new
         self.assertIsNone(cardtext.card_words(CardSpec(key="1", entry=root), cfg,
                                               lambda d: "").thread_news)
 

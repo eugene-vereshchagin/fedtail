@@ -90,7 +90,7 @@ PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
     "set_active_lane", "set_state",
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
-    "thread_jumps", "thread_jump",
+    "open_at",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
@@ -434,6 +434,17 @@ class View:
         def made(nodes):
             return [ThreadItem(real(self.entry(n.status)), n.depth, n.number) for n in nodes]
         return _then(self._core.thread(post_id), made)
+
+    def thread_focus(self, sid, items, at="post"):
+        """The post a thread opened at `sid` stands on (common/links.py THREAD_AT): the
+        post itself, or with at = "first_unread" its first unread comment in reading
+        order (none unread — the post). items: [ThreadItem], as thread() gives them."""
+        if at == "first_unread" and items:
+            unread = self.unread([i.post for i in items[1:]])
+            first = next((i.post.id for i in items[1:] if i.post.id in unread), None)
+            if first:
+                return first
+        return sid
 
     def in_app_html(self, html):
         """HTML (a bio, a profile field) with fediverse links pointing into fedtail."""

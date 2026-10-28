@@ -938,10 +938,11 @@ def thread_progress(post_id):
     return _answer(lambda: _s["web"].thread_progress(post_id))
 
 
-def thread(post_id):
-    """The whole thread around a post: depth-first, each card with its /N and depth."""
+def thread(post_id, at="post"):
+    """The whole thread around a post: depth-first, each card with its /N and depth;
+    "focus" — where it stands (at: "post" / "first_unread", common/links.py THREAD_AT)."""
     def go():
-        got = _s["web"].thread(post_id)
+        got = _s["web"].thread(post_id, at or "post")
         _texts(got.get("posts", []))
         return got
     return _answer(go)

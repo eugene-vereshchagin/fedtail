@@ -13,6 +13,7 @@ from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
 from ..common.cardtext import newcomer_bit
+from ..common.links import thread_url
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
@@ -72,7 +73,7 @@ class Card(Gtk.Box):
     Post or Share; parent: the Post it answers, "missing" or None."""
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
-                 depth=0, number=None, my_replies=(), via=None):
+                 depth=0, number=None, my_replies=(), via=None, open_at=None):
         # vertical, the face laid over the column's left margin: GTK 4.18 takes a
         # horizontal box's least height as its children's at their least width — the
         # text wrapped word by word — above the natural one at the width it has, and
@@ -80,6 +81,9 @@ class Card(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.ctx, self.key = ctx, key
         self.entry = entry
+        # where its thread opens (CardSpec.open_at; none given — threads.open_at)
+        view = getattr(ctx, "view", None)
+        self.open_at = open_at or (view.open_at() if hasattr(view, "open_at") else "post")
         self.short_id = short_id
         self.via = via  # all accounts in one window: which of mine got it
         self.add_css_class("ft-card")
@@ -203,7 +207,7 @@ class Card(Gtk.Box):
         if p.author.color:  # people.nick_colors
             name = name.replace(f'foreground="{color}"', f'foreground="{p.author.color}"', 1)
         line = line.replace("{name}", name)
-        line = line.replace("{when}", part(f"fedtail:thread/{p.id}", when))
+        line = line.replace("{when}", part(thread_url(p.id, self.open_at), when))
         lab = _label(line, ("ft-chat-name",), markup=True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
         lab.connect("activate-link", self._link)
@@ -284,7 +288,8 @@ class Card(Gtk.Box):
             # the time (the thread), who sees it, "edited" — as Qt's header has them
             meta = []
             if p.created:
-                meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
+                meta.append(link_markup(thread_url(p.id, self.open_at),
+                                        ctx.theme.date(p.created)))
             from . import icons
             vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14)
             if vis_pic is None:  # the theme's picture of who sees it, or the word
@@ -424,7 +429,7 @@ class Card(Gtk.Box):
 
     def add_conversation(self, text, last_id):
         """A conversation card (common/lane.py conversation_line): the rest of it."""
-        lab = _label(link_markup(f"fedtail:thread/{last_id}", "💬 " + text), ("ft-ctx",),
+        lab = _label(link_markup(thread_url(last_id, self.open_at), "💬 " + text), ("ft-ctx",),
                      markup=True, wrap=True)
         lab.connect("activate-link", self._link)
         self.column.insert_child_after(lab, self.mine_box)
@@ -784,7 +789,8 @@ class Card(Gtk.Box):
         own = icons.wanted(self.ctx.theme)  # the messengers' look (split, "additional")
         if own and style == "text":
             style = "both"  # the split layout has pictures by the words, as messengers did
-        for bt in actions.buttons(self.entry, self._actx(), unread=bool(self.unread)):
+        for bt in actions.buttons(self.entry, self._actx(), unread=bool(self.unread),
+                                  open_at=self.open_at):
             short = bt.count.replace(" · ", "")
             pic = actions.action_picture(bt.action, bt.active) or bt.action
             img = icons.image(pic, self.ctx.theme)
