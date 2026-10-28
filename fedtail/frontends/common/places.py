@@ -74,6 +74,8 @@ class Field:
     kind: str = "line"
     choices: tuple = ()
     tip: str = ""  # what it means: under the field, or on hover
+    pictures: bool = False  # a choice of pictures (the values: iconpack's names) —
+    # the windows draw each beside its words
 
 
 @dataclass

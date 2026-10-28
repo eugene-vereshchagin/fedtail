@@ -60,3 +60,4 @@
 |---|---|---|
 | `docs_build.py` | собирает все генерируемые документы (возможности, сравнение, настройки, части, справку) и заново заполняет все вставки | `python3 tools/docs_build.py`, `--check` |
 | `config_doc.py` | справочник настроек из примеров конфига (его зовёт docs_build) | `python3 tools/config_doc.py` |
+| `lane_pictures.py` | рисует библиотеку картинок для лент (`fedtail/data/icons/lanes`, 16×16, цвета темы {c} {l} {d} {o}) | `python3 tools/lane_pictures.py` |

@@ -184,7 +184,7 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `author = "hidden_home"` | someone taken out of Home on their profile ("Not in Home", `people.home_hide`), still followed; every set's Home has it in `none` |
 | `read` | `through` (unread marks, counts, never jump) or `browse` (newest page, no counts — like Federated) |
 | `group` | the sidebar section: `standard`, `personal`, `lists`, `tags`, or a name of one's own |
-| `icon` | the lane's picture from the built-in set: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`; none — the one its name has (a set's lane), a list's for one's own |
+| `icon` | the lane's picture from the built-in set: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`, and the library (`fedtail/data/icons/lanes`, drawn by `tools/lane_pictures.py`, coloured by each theme): `important`, `commented`, `person`, `people`, `heart`, `fire`, `sparkle`, `bolt`, `news`, `megaphone`, `rss`, `search`, `link`, `quote`, `inbox`, `image`, `camera`, `film`, `music`, `palette`, `book`, `code`, `game`, `bulb`, `flask`, `wrench`, `chart`, `shield`, `clock`, `calendar`, `flag`, `pin`, `globe`, `mountain`, `sun`, `moon`, `cloud`, `leaf`, `paw`, `fish`, `car`, `plane`, `cup`, `food` (a theme's own file of that name wins); none — the one its name has (a set's lane), a list's for one's own |
 | `switch` (of a condition) | the condition is a switch: a chip over the lane with this word; `shown = false` — hidden by default (like today's "posts only") |
 
 The author's two lanes from the first talk:

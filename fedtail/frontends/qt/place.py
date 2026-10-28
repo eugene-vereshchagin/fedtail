@@ -196,8 +196,13 @@ class PlaceDialog(QDialog):
             if f.label:
                 self.form.addWidget(QLabel(f.label))
             w = QComboBox()
+            pics = getattr(f, "pictures", False) and self._pictures()
             for value, words in f.choices:
-                w.addItem(words, value)
+                ic = pics(value) if pics and value else None
+                if ic is not None and not ic.isNull():
+                    w.addItem(ic, words, value)
+                else:
+                    w.addItem(words, value)
             i = w.findData(f.value)
             if i < 0:
                 i = w.findData(str(f.value))
@@ -321,6 +326,14 @@ class PlaceDialog(QDialog):
         if out.refresh:
             self.cursor = ""
             self.load()
+
+    def _pictures(self):
+        """name → the theme's QIcon of that picture, or None without pictures."""
+        from . import icons as pictures
+        theme = getattr(self.win, "theme", None)
+        if theme is None or not pictures.pictures(theme):
+            return None
+        return lambda name: pictures.icon(name, theme, 16)
 
     def go(self, name, arg="", tab="", cursor=""):
         """Another place (or this one's tab, or its next rows) in this window."""

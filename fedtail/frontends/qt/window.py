@@ -133,13 +133,15 @@ class LaneItem(QWidget):
         h.setSpacing(10)
         from . import icons as pictures
         if pictures.pictures(theme):
-            icon = QLabel()
+            # its own label: `icon` is the picture the lane asks for (a lane of rules'),
+            # and a QLabel by that name passed for it — such lanes went without (28.10)
+            pic = QLabel()
             px = int(theme.shape.get("icon_size", 18) or 18)
             ic = pictures.icon(iconpack.lane_picture(name, icon), theme, px)
             if not ic.isNull():
-                icon.setPixmap(ic.pixmap(px, px))
-            icon.setFixedWidth(px)
-            h.addWidget(icon)
+                pic.setPixmap(ic.pixmap(px, px))
+            pic.setFixedWidth(px)
+            h.addWidget(pic)
         self.label = QLabel()
         self.label.setObjectName("laneName")
         h.addWidget(self.label, 1)

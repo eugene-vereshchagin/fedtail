@@ -182,3 +182,38 @@ class ThemesByLayoutTest(unittest.TestCase):
             self.assertEqual(themefile.by_layout({"ui": {}}), False)
         with mock.patch("fedtail.__version__", "0.19.0"):
             self.assertEqual(themefile.by_layout({"ui": {}}), True)
+
+
+class LaneLibraryTest(unittest.TestCase):
+    """The lanes' library (data/icons/lanes, tools/lane_pictures.py): every picture a
+    lane may wear is drawn, named in both languages, and found through any theme."""
+
+    def test_every_picture_is_there(self):
+        from fedtail import i18n
+        from fedtail.core import atoms
+        have = {p.stem for p in iconpack.LANES_DIR.glob("*.svg")}
+        self.assertEqual(have, set(atoms.LANE_LIBRARY))
+        for lang in ("ru", "en"):
+            i18n.setup(lang)
+            for name in atoms.LANE_ICONS:
+                self.assertNotEqual(i18n._("pic_" + name), "pic_" + name, (lang, name))
+        i18n.setup("en")
+        for theme in ("point", "juick", "qip-retro", "nord", "system"):
+            pset = iconpack.for_theme(_theme(theme))
+            for name in atoms.LANE_ICONS:
+                pic = iconpack.picture(pset, name, "#3366cc", bg="#ffffff")
+                self.assertIsNotNone(pic, (theme, name))
+                if pic.kind == "svg":
+                    self.assertNotRegex(pic.text, r"\{[cldo]\}", (theme, name))
+
+    def test_lanes_wear_their_own(self):
+        self.assertEqual(iconpack.lane_picture("important"), "important")  # not a star:
+        self.assertEqual(iconpack.lane_picture("commented"), "commented")  # Point's is one
+        self.assertEqual(iconpack.lane_picture("custom:x", "mountain"), "mountain")
+        self.assertEqual(iconpack.lane_picture("custom:x", "nope"), "list")
+        self.assertEqual(iconpack.lane_picture("home", object()), "home")  # not a name
+
+    def test_silhouette_keeps_what_lies_outside(self):
+        text = (iconpack.LANES_DIR / "sun.svg").read_text("utf-8")
+        out = iconpack.styled(text, "silhouette", "#c0392b", "#ffffff")
+        self.assertIn('stroke="#c0392b"', out)  # the rays: the shape's colour, not cut out

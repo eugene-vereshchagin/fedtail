@@ -2,6 +2,16 @@
 
 ## 0.21.0 — in progress
 
+- **Pictures for lanes, a library of 44** (`fedtail/data/icons/lanes`, drawn by
+  `tools/lane_pictures.py`): people, heart, fire, news, RSS, search, link, camera, film,
+  music, book, code, a gamepad, mountains, a fish, a car, a plane, a cup… — for one's own
+  lanes (the lane editor's "Picture" shows each with its name; `icon = "…"` in the file),
+  coloured by every theme's [pictures] style as its own pictures are; a theme's own file
+  of that name wins. "Commented posts" wears speech bubbles, "Important people" a bell —
+  it wore the star Point's theme draws for Bookmarks too.
+- Fixed: the windows' sidebar dropped the picture a lane of rules asks for (`icon`) —
+  the label's name hid it.
+
 - Fixed: ≡ → Sync → "What to sync…" drew the settings as a heap of bare fields inside the
   sync window; it opens the settings window at its Sync chapter now (Qt, GTK, the phone).
 

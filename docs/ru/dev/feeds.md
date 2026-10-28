@@ -182,7 +182,7 @@ fedtail выводит это сам, сравнивая свою базу с т
 | `author = "hidden_home"` | тот, кого убрали из Ленты в его профиле («Убрать из Ленты», `people.home_hide`), подписка остаётся; у Ленты каждого набора это в `none` |
 | `read` | `through` (метки непрочитанного, счётчики, без прыжков) или `browse` (свежая страница, без счётчиков — как Федеративная) |
 | `group` | раздел боковой панели: `standard`, `personal`, `lists`, `tags` или своё имя |
-| `icon` | картинка ленты из встроенного набора: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`; нет — та, что у её имени (лента набора), у своей — как у списка |
+| `icon` | картинка ленты из встроенного набора: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full` и библиотека (`fedtail/data/icons/lanes`, рисует `tools/lane_pictures.py`, красит каждая тема): `important`, `commented`, `person`, `people`, `heart`, `fire`, `sparkle`, `bolt`, `news`, `megaphone`, `rss`, `search`, `link`, `quote`, `inbox`, `image`, `camera`, `film`, `music`, `palette`, `book`, `code`, `game`, `bulb`, `flask`, `wrench`, `chart`, `shield`, `clock`, `calendar`, `flag`, `pin`, `globe`, `mountain`, `sun`, `moon`, `cloud`, `leaf`, `paw`, `fish`, `car`, `plane`, `cup`, `food` (файл с тем же именем у темы — главнее); нет — та, что у её имени (лента набора), у своей — как у списка |
 | `switch` (у условия) | условие-переключатель: чип над лентой с этим словом; `shown = false` — по умолчанию скрыто (как нынешнее «только посты») |
 
 Две ленты автора из первого разговора:

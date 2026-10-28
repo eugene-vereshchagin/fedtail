@@ -374,7 +374,8 @@ browse_keep = 200
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
 # name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
 # icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
-# bookmarks, my_likes, activity, requests, list, tags, star_full), any (conditions: a post goes in if it
+# bookmarks, my_likes, activity, requests, list, tags, star_full and the library: important,
+# commented, people, heart, fire, news, rss, mountain, fish, car… — the lane editor lists them), any (conditions: a post goes in if it
 # matches any of them; inside a condition every key must match), none (conditions that keep a
 # post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
 # favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,

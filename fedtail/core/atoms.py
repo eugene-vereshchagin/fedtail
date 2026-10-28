@@ -698,6 +698,15 @@ RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", 
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
               "mentions", "subs", "bookmarks", "my_likes", "activity", "requests", "list",
               "tags", "star_full")
+# the library of pictures for one's own lanes (data/icons/lanes, tools/lane_pictures.py)
+LANE_LIBRARY = ("bolt", "book", "bulb", "calendar", "camera", "car", "chart", "clock",
+                "cloud", "code", "commented", "cup", "film", "fire", "fish", "flag",
+                "flask", "food",
+                "game", "globe", "heart", "image", "important", "inbox", "leaf", "link",
+                "megaphone", "moon", "mountain", "music", "news", "palette", "paw",
+                "people", "person", "pin", "plane", "quote", "rss", "search", "shield",
+                "sparkle", "sun", "wrench")
+LANE_ICONS = tuple(dict.fromkeys(LANE_ICONS + LANE_LIBRARY))
 _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "density"},
                "read": {"through", "browse"}, "mode": {"lane", "catch_up"},
                "filter_context": {"home", "public", "notifications", "thread", "account"},
@@ -769,7 +778,8 @@ class Rule:
             if table["icon"] in LANE_ICONS:
                 rule.icon = table["icon"]
             else:
-                warnings.append(f"icon: {table['icon']!r} — one of {', '.join(LANE_ICONS)}")
+                warnings.append(f"icon: {table['icon']!r} — one of "
+                                f"{', '.join(sorted(LANE_ICONS))}")
         if "per_author" in table:
             v = table["per_author"]
             if isinstance(v, int) and not isinstance(v, bool) and v >= 0:

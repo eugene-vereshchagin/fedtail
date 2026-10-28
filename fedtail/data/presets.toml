@@ -86,7 +86,7 @@ name = "commented"
 group = "personal"
 source = ["subs", "mentions"]  # the comments, and the replies to me among them
 view = "threads"
-icon = "subs"
+icon = "commented"
 any = [{ state = "subscribed" }]
 none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 
@@ -403,7 +403,7 @@ name = "commented"
 group = "personal"
 source = ["subs", "mentions"]  # the comments, and the replies to me among them
 view = "threads"
-icon = "subs"
+icon = "commented"
 any = [{ state = "subscribed" }]
 none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 

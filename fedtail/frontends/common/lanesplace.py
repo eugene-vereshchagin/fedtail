@@ -230,11 +230,13 @@ class LanePlaces:
         for w in laneedit.problems(t):
             page.rows.append(Row("text", "⚠ " + w))
         title = ed.title(name)  # its own, or the built-in word it shows
-        icons = (("", "—"),) + tuple((i, i) for i in atoms.LANE_ICONS)
+        icons = (("", _("le_f_icon_none")),) + tuple(sorted(
+            ((i, _("pic_" + i)) for i in atoms.LANE_ICONS), key=lambda c: c[1].casefold()))
         sources = sorted(set(laneedit.SOURCES) | set(_words(t.get("source"))))
         form = [
             Field("title", _("le_f_title"), str(title or ""), tip=_("le_f_title_tip")),
-            Field("icon", _("le_f_icon"), str(t.get("icon") or ""), "choice", icons),
+            Field("icon", _("le_f_icon"), str(t.get("icon") or ""), "choice", icons,
+                  pictures=True),
             Field("group", _("le_f_group"), str(t.get("group") or "personal"), "choice",
                   tuple((g, _("grp_" + g)) for g in laneedit.GROUPS)),
             Field("source", _("le_f_source"), _words(t.get("source")), "checks",

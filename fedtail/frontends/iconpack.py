@@ -23,8 +23,9 @@ lacks comes from the themes it inherits (their folders), then from [pictures] fr
 theme whose set it borrows, and last from the fallback set (data/icons/fallback/) —
 an emergency only: no built-in theme needs it (tests/test_iconpack.py), and a theme of
 yours that does is told in the log. An SVG may leave its colours blank — {c} the colour,
-{l} its light top, {d} the outline — filled as [pictures] style says, from the theme's
-accent or [pictures.colors].
+{l} its light top, {d} the outline, {o} lines outside the shape (the outline's colour;
+silhouette, which cuts {d} lines out of a filled shape, draws them in its colour) —
+filled as [pictures] style says, from the theme's accent or [pictures.colors].
 """
 
 from __future__ import annotations
@@ -40,6 +41,9 @@ from .palette import Color, readable_on
 log = logging.getLogger(__name__)
 
 FALLBACK_DIR = Path(__file__).resolve().parent.parent / "data" / "icons" / "fallback"
+# the lanes' library (tools/lane_pictures.py): what one's own lane may wear, coloured by
+# each theme's [pictures] as its own; a theme's file of the same name wins
+LANES_DIR = Path(__file__).resolve().parent.parent / "data" / "icons" / "lanes"
 STYLES = ("gloss", "agent", "flat", "silhouette", "qip", "none")
 SOURCES = ("desktop", "own", "words")             # a theme's [shape] icons
 CHOICES = ("theme", "desktop", "own", "additional", "words")  # ui.icons
@@ -156,19 +160,34 @@ FREEDESKTOP = {
     "expand": ("view-fullscreen",),
     "status": ("user-online",),
     "nobody": (),
+    # the lanes' library: the desktop's where it has one alike, else fedtail's drawing
+    "important": ("notifications", "preferences-desktop-notification-bell"),
+    "commented": ("dialog-messages", "mail-thread-watch"),
+    "person": ("user-identity",), "people": ("system-users",), "heart": ("emblem-favorite",),
+    "news": ("news-subscribe", "application-rss+xml"), "rss": ("application-rss+xml",),
+    "search": ("edit-find", "system-search"), "link": ("insert-link",),
+    "image": ("image-x-generic",), "camera": ("camera-photo",), "film": ("video-x-generic",),
+    "music": ("audio-x-generic",), "book": ("accessories-dictionary",),
+    "code": ("text-x-script", "applications-development"), "game": ("input-gaming",),
+    "globe": ("globe", "applications-internet"), "clock": ("chronometer", "clock"),
+    "calendar": ("view-calendar", "x-office-calendar"), "chart": ("office-chart-bar",),
+    "flag": ("flag",), "pin": ("mark-location",), "inbox": ("mail-folder-inbox",),
+    "shield": ("security-high",), "wrench": ("tools", "applications-utilities"),
 }
 # a lane (sidebar, roster, a tab) by its name → its picture
 LANE = {"home": "home", "local": "local", "federated": "federated", "mentions": "mentions",
         "replies": "replies", "subs": "subs", "bots": "bots", "my_posts": "my_posts",
         "requests": "requests", "list": "list", "activity": "activity",
         "bookmarks": "bookmarks", "direct": "direct", "my_likes": "my_likes", "tags": "tags",
-        "to_me": "replies", "important": "star_full", "unsorted": "list", "custom": "list"}
+        "to_me": "replies", "important": "important", "commented": "commented",
+        "unsorted": "list", "custom": "list"}
 
 
 def lane_picture(name, icon=None):
     """The picture of a lane ("list:12" → "list"), or None. icon: the one the lane asks
     for itself (a lane of rules' `icon`, core.lane_icon) — over its name's."""
-    if icon and icon in set(LANE.values()):
+    from ..core.atoms import LANE_ICONS
+    if isinstance(icon, str) and icon in LANE_ICONS:
         return icon
     return LANE.get((name or "").split(":")[0])
 
@@ -228,7 +247,7 @@ def for_theme(theme):
     pics = getattr(theme, "pictures", None) or {}
     colors = pics.get("colors") or {}
     return Set(dirs=tuple(str(d) for d in getattr(theme, "icon_dirs", ()) or ())
-               + (str(FALLBACK_DIR),),
+               + (str(LANES_DIR), str(FALLBACK_DIR)),
                style=pics.get("style") if pics.get("style") in STYLES else "gloss",
                colors=tuple(sorted((str(k), str(v)) for k, v in colors.items())),
                color=str(pics.get("color") or ""))
@@ -284,7 +303,7 @@ def styled(text, style, base, bg=None):
         if filled and bg:
             back = bg if isinstance(bg, Color) else Color.parse(str(bg))
             return text.replace("{c}", base.name()).replace("{l}", light.name()) \
-                .replace("{d}", back.name())
+                .replace("{d}", back.name()).replace("{o}", base.name())
         dark = base
     elif style == "flat":
         text = _SHINE.sub("", text).replace('fill="url(#g)"', 'fill="{c}"')
@@ -301,7 +320,7 @@ def styled(text, style, base, bg=None):
             if abs(dark.lightness() - back.lightness()) < OUTLINE_CONTRAST:
                 dark = readable_on(back)
     return text.replace("{c}", base.name()).replace("{l}", light.name()) \
-        .replace("{d}", dark.name())
+        .replace("{d}", dark.name()).replace("{o}", dark.name())
 
 
 @dataclass(frozen=True)
