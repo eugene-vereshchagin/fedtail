@@ -303,7 +303,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     var syncInfo by mutableStateOf<JSONObject?>(null)
     var syncKeyShown by mutableStateOf("")
-    var syncLoginWaiting by mutableStateOf(false)
     var syncBusy by mutableStateOf(false)
 
     var loginServer by mutableStateOf("")
@@ -1435,24 +1434,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private fun loadSync() {
         viewModelScope.launch { syncInfo = Core.syncStatus() }
-    }
-
-    fun syncLogin(openBrowser: (String) -> Unit) {
-        viewModelScope.launch {
-            val got = Core.syncLoginBegin()
-            Core.failed(got)?.let { message = it; return@launch }
-            syncLoginWaiting = true
-            openBrowser(got.optString("url"))
-        }
-    }
-
-    fun syncLoginCode(code: String) {
-        viewModelScope.launch {
-            val got = Core.syncLoginFinish(code)
-            Core.failed(got)?.let { message = it; return@launch }
-            syncLoginWaiting = false
-            loadSync()
-        }
     }
 
     fun syncShowKey() {

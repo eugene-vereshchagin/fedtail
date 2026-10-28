@@ -13,4 +13,4 @@ The server side is fedtail-sync, a project of its own
 set it all up.
 """
 
-from .engine import Sync, load_auth, login_finish, login_start  # noqa: F401
+from .engine import Sync  # noqa: F401

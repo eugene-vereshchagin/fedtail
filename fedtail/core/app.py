@@ -2471,9 +2471,10 @@ class Core(SocialMixin):
         return engine.first_key(self)
 
     def sync_journal_there(self):
-        """Has another device written into the store already? (None — can't tell now.)"""
+        """Has another device written into the store already? (None — can't tell now; a
+        server can't ever: its journals are found by their keys.)"""
         from .sync import crypto
-        if self.sync is None:
+        if self.sync is None or self.sync.kind() == "server":
             return None
         try:
             backend = self.sync.backend()
@@ -2490,19 +2491,25 @@ class Core(SocialMixin):
         return engine.fresh_key(self)
 
     def sync_has_escrow(self):
-        """Is the key in the journal under a password (seen, or found there now)?"""
+        """Is the key in the journal under a password (seen, or found there now)? None:
+        can't be told — a server keeps it under what the password makes."""
+        if self.sync is not None and self.sync.kind() == "server":
+            return None
         try:
             return self.sync is not None and self.sync.find_escrow() is not None
         except Exception as e:  # noqa: BLE001 — the store away: not known, so no
             log.info("sync: looking for the key in the journal: %s", e)
             return False
 
-    def sync_setup(self, url=None, folder=None, webdav=None):
+    def sync_setup(self, url=None, folder=None, webdav=None, invite=None):
         """Where the devices meet, from the window: written into config.toml (sync.url,
         sync.folder, sync.webdav) and used at once — sync started, moved or stopped
-        without a restart. None — that one unchanged."""
+        without a restart; the server's invite code into the data folder (not the
+        config: it makes journals). None — that one unchanged."""
         from . import config_edit
-        from .sync.engine import wanted
+        from .sync.engine import save_invite, wanted
+        if invite is not None:
+            save_invite(self.paths, invite)
         changes = {}
         for key, value in (("url", url), ("folder", folder), ("webdav", webdav)):
             if value is not None and str(value).strip() != str(self.cfg["sync"].get(key) or ""):
@@ -2521,14 +2528,6 @@ class Core(SocialMixin):
                 self.sync.start()
         self.emit("sync_changed", None)
         return self.sync is not None
-
-    def sync_login_begin(self):
-        from .sync import engine
-        return engine.login_start(self.api_class, self.auth["server"])
-
-    def sync_login_end(self, pending, code):
-        from .sync import engine
-        engine.login_finish(self.api_class, self.paths, pending, code)
 
     def sync_webdav_login(self, user, password):
         """The WebDAV folder's user (config.toml) and password (the data folder, never the

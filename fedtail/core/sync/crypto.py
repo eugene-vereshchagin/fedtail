@@ -208,6 +208,30 @@ def escrow_open(blob, password):
     return key
 
 
+# ---- whose journal on a sync server (protocol 2): the key's ------------------------
+# The server files a journal under an id and checks a secret, both derived from the key
+# (the key itself never goes there): whoever has the key has the journal.
+
+def journal_id(key):
+    """32 hex digits: the journal's name on a sync server."""
+    import hmac
+    return hmac.new(key, b"fedtail-journal-id", hashlib.sha256).hexdigest()[:32]
+
+
+def journal_secret(key):
+    """64 hex digits: what proves a device has the key."""
+    import hmac
+    return hmac.new(key, b"fedtail-journal-secret", hashlib.sha256).hexdigest()
+
+
+def escrow_id(password, where):
+    """Where the key under a password is kept on a sync server: an id from the password
+    alone (a new device has nothing else), stretched as the password is, and different
+    for each server (`where`, its address)."""
+    salt = b"fedtail-escrow-id:" + str(where).rstrip("/").lower().encode("utf-8")
+    return _stretch(password or "", salt).hex()
+
+
 # ---- the key file: data dir / sync.key, the owner's only, never in a bug report ------
 
 def load_key(path):

@@ -8,10 +8,11 @@ all it knows) and keeps the pictures of drafts by name beside them (`media_kb`,
 they are sealed (crypto.py) — so any dumb store will do; adding one is a class here and
 an option in `[sync]` that says where it is (as `url` and `folder` do).
 
-* `HttpBackend` — fedtail-sync (its own repository, fedtail-syncserver) or anything speaking its two
-  calls. The device proves who it is with a token of the account limited to
-  `read:accounts` (never the main token: that one opens the whole account), and names
-  its server in `X-Fedtail-Instance` for the sync server to check the token there.
+* `HttpBackend` — fedtail-sync (its own repository, fedtail-syncserver), protocol 2: the
+  journal is the key's — the device names it by an id derived from the key and proves it
+  has the key by a secret derived from it too (the key never goes there); a journal not
+  there yet is made with the invite code the server's admin gave. No fediverse account
+  is asked anything.
 * `FolderBackend` — a folder: a mounted NAS share, WebDAV through davfs/rclone, a
   Syncthing folder. Each device writes only into its own subfolder, so two devices
   never write the same file.
@@ -47,14 +48,25 @@ class BackendError(Exception):
         self.kind = kind
 
 
+PROTOCOL = 2  # what fedtail-sync speaks with this fedtail (PROTOCOL.md)
+
+
 class HttpBackend:
-    def __init__(self, url, instance, token, session=None):
+    """key None: only what needs no journal — the server's hello, the key under a
+    password (escrow_get)."""
+
+    def __init__(self, url, key=None, invite="", session=None):
+        from . import crypto
         self.url = url.rstrip("/")
-        self.where = f"server {self.url} {instance}"
+        self.where = f"server {self.url}"
         self.s = session or requests.Session()
         self.s.headers["User-Agent"] = version.USER_AGENT
-        self.s.headers["Authorization"] = f"Bearer {token}"
-        self.s.headers["X-Fedtail-Instance"] = instance
+        if key is not None:
+            self.s.headers["Authorization"] = f"Bearer {crypto.journal_secret(key)}"
+            self.s.headers["X-Fedtail-Journal"] = crypto.journal_id(key)
+            self.where = f"server {self.url} {crypto.journal_id(key)}"
+        if invite:
+            self.s.headers["X-Fedtail-Invite"] = str(invite).strip()
 
     def _net(self, e):
         """Not got through: in words — no such name, refused, no answer, a bad
@@ -66,67 +78,62 @@ class HttpBackend:
         return neterr.words(e, urlsplit(self.url).hostname or self.url)
 
     def _check(self, r):
-        if r.status_code in (401, 403):
-            raise BackendError("auth", f"sync server: {r.status_code} (token refused)")
+        if r.status_code == 401:
+            raise BackendError("auth", "sync server: 401 (not this journal's key)")
+        if r.status_code == 403:
+            raise BackendError("invite", "sync server: 403 (an invite code is needed, or "
+                                         "it was taken back)")
         if r.status_code in (413, 507):
             raise BackendError("full", f"sync server: {r.status_code} (quota)")
         if r.status_code == 404:
-            raise BackendError("gone", "sync server: 404 (not a fedtail-sync here?)")
+            raise BackendError("gone", "sync server: 404 (not a fedtail-sync 0.22 here?)")
         if r.status_code >= 400:
             raise BackendError("other", f"sync server: HTTP {r.status_code}")
 
-    def push(self, blob, device):
-        """→ the blob's seq: its place in the account's journal (0 if not said)."""
+    def _call(self, method, path, **kw):
+        self.ready()
         try:
-            r = self.s.post(f"{self.url}/v1/blobs", data=blob, timeout=TIMEOUT,
-                            headers={"Content-Type": "application/octet-stream",
-                                     "X-Fedtail-Device": device})
+            return self.s.request(method, f"{self.url}/v2{path}", timeout=TIMEOUT, **kw)
         except requests.RequestException as e:
             raise BackendError("other", f"sync server: {self._net(e)}") from e
-        self._check(r)
-        try:
-            return int(r.json().get("seq") or 0)
-        except (ValueError, AttributeError, TypeError):
-            return 0
 
     def _hello(self):
-        """GET /v1, asked once: what this server does ({} when it couldn't say — asked
+        """GET /v2, asked once: what this server does ({} when it couldn't say — asked
         again next time)."""
         if getattr(self, "_said", None) is None:
             try:
-                r = self.s.get(f"{self.url}/v1", timeout=TIMEOUT)
+                r = self.s.get(f"{self.url}/v2", timeout=TIMEOUT)
                 said = r.json() if r.ok else {}
             except (requests.RequestException, ValueError):
                 return {}
             self._said = said if isinstance(said, dict) else {}
         return self._said
 
-    def can_compact(self):
-        return bool(self._hello().get("compact"))
+    def ready(self):
+        """A server that speaks another protocol is told, not talked to: an older
+        fedtail-sync (1) files journals by fediverse accounts."""
+        said = self._hello()
+        got = said.get("fedtail-sync")
+        if said and got != PROTOCOL:
+            raise BackendError("gone", f"sync server: protocol {got}, this fedtail speaks "
+                                       f"{PROTOCOL} — the server needs fedtail-sync 0.22+")
 
-    def compact(self, device, before):
-        """This device's blobs older than `before` (a seq) gone (PROTOCOL.md). → how many."""
-        if not _DEVICE.match(device) or not self.can_compact():
-            return 0
-        try:
-            r = self.s.delete(f"{self.url}/v1/devices/{device}", timeout=TIMEOUT,
-                              params={"before": int(before)})
-        except requests.RequestException as e:
-            raise BackendError("other", f"sync server: {self._net(e)}") from e
+    def push(self, blob, device):
+        """→ the blob's seq: its place in the journal (0 if not said)."""
+        r = self._call("POST", "/blobs", data=blob,
+                       headers={"Content-Type": "application/octet-stream",
+                                "X-Fedtail-Device": device})
         self._check(r)
         try:
-            return int(r.json().get("deleted") or 0)
+            return int(r.json().get("seq") or 0)
         except (ValueError, AttributeError, TypeError):
             return 0
 
     def pull(self, cursor, device):
         """→ (blobs, new cursor, more). The cursor is the server's last sequence seen."""
         after = int(cursor or 0)
-        try:
-            r = self.s.get(f"{self.url}/v1/blobs", timeout=TIMEOUT,
-                           params={"after": after, "limit": PAGE, "exclude": device})
-        except requests.RequestException as e:
-            raise BackendError("other", f"sync server: {self._net(e)}") from e
+        r = self._call("GET", "/blobs",
+                       params={"after": after, "limit": PAGE, "exclude": device})
         self._check(r)
         try:
             data = r.json()
@@ -136,7 +143,34 @@ class HttpBackend:
         last = max([seq for seq, _ in got] + [int(data.get("last") or 0), after])
         return [b for _, b in got], last, bool(data.get("more"))
 
-    # ---- the pictures of drafts (PROTOCOL.md: /v1/media) ---------------------------
+    def can_compact(self):
+        return bool(self._hello().get("compact"))
+
+    def compact(self, device, before):
+        """This device's blobs older than `before` (a seq) gone (PROTOCOL.md). → how many."""
+        if not _DEVICE.match(device) or not self.can_compact():
+            return 0
+        r = self._call("DELETE", f"/devices/{device}", params={"before": int(before)})
+        self._check(r)
+        try:
+            return int(r.json().get("deleted") or 0)
+        except (ValueError, AttributeError, TypeError):
+            return 0
+
+    # ---- the key under a password: /v2/escrow/<id> ---------------------------------
+    def escrow_put(self, eid, blob):
+        self._check(self._call("PUT", f"/escrow/{eid}", data=blob,
+                               headers={"Content-Type": "application/octet-stream"}))
+
+    def escrow_get(self, eid):
+        """The sealed key, or None — none under this id (the password is another)."""
+        r = self._call("GET", f"/escrow/{eid}")
+        if r.status_code == 404:
+            return None
+        self._check(r)
+        return r.content
+
+    # ---- the pictures of drafts (PROTOCOL.md: /v2/media) ---------------------------
     def media_kb(self):
         """The biggest picture the server keeps, in KB; 0 — it keeps none (an older one,
         or turned off)."""
@@ -148,10 +182,7 @@ class HttpBackend:
     def _media(self, method, name, **kw):
         if not _MEDIA_NAME.match(name):
             raise ValueError(name)
-        try:
-            return self.s.request(method, f"{self.url}/v1/media/{name}", timeout=TIMEOUT, **kw)
-        except requests.RequestException as e:
-            raise BackendError("other", f"sync server: {self._net(e)}") from e
+        return self._call(method, f"/media/{name}", **kw)
 
     def media_put(self, name, blob):
         r = self._media("PUT", name, data=blob,

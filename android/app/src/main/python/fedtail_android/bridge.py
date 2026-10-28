@@ -1395,27 +1395,6 @@ def sync_status():
     return _answer(go)
 
 
-def sync_login_begin():
-    """The sync server's own token (read:accounts only): → {"url"} — its page shows a
-    code, sync_login_finish takes it."""
-    def go():
-        pending = _core().sync_login_begin()
-        _s["sync_pending"] = pending
-        return {"url": pending["url"]}
-    return _answer(go)
-
-
-def sync_login_finish(code):
-    def go():
-        pending = _s.get("sync_pending")
-        if not pending:
-            raise RuntimeError("sync_login_begin() first")
-        _core().sync_login_end(pending, (code or "").strip())
-        _s["sync_pending"] = None
-        return {"instance": pending["instance"]}
-    return _answer(go)
-
-
 def sync_key():
     return _answer(lambda: {"key": _core().sync_key() or ""})
 

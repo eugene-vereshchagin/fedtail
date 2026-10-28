@@ -197,8 +197,24 @@ def cmd_post(core, out, args, stdin=None):
 
 
 def cmd_sync(core, out, args, stdin=None):
-    """`fedtail sync …`: the key, the sync server's token, a round now, how it stands."""
+    """`fedtail sync …`: the key, the invite code, a WebDAV login, a round now, how it
+    stands."""
     what = args.what
+    if what == "invite":  # the sync server's invite code, for the first device's journal
+        code = args.arg or (stdin or sys.stdin).readline()
+        core.sync_setup(invite=code.strip())
+        out.line(_("sync_invite_saved"))
+        return
+    if what == "first":
+        try:
+            kid = core.sync_first_key()
+        except ValueError:
+            raise SystemExit(_("sync_first_but_journal")) from None
+        except RuntimeError as e:
+            raise SystemExit(str(e)) from None
+        core.sync_setup()
+        out.line(_("sync_first_done", kid=kid))
+        return
     if what == "key":
         key = core.sync_key()
         out.line(_("sync_key_show") if key else _("sync_key_none"))
@@ -243,16 +259,8 @@ def cmd_sync(core, out, args, stdin=None):
             raise SystemExit(why)
         out.line(_("sync_webdav_ok"))
         return
-    if what == "login":
-        if not core.logged_in:
-            raise SystemExit(_("cli_login_first"))
-        pending = core.sync_login_begin()
-        out.line(_("sync_login_open", url=pending["url"]))
-        print(_("sync_login_code"), end="", file=out.stream, flush=True)
-        code = args.arg or (stdin or sys.stdin).readline()
-        core.sync_login_end(pending, code)
-        out.line(_("sync_login_ok", instance=pending["instance"]))
-        return
+    if what == "login":  # a sync server and a folder need none
+        raise SystemExit(_("sync_login_none"))
     if core.sync_status() is None:
         raise SystemExit(_("sync_off"))
     if what == "now":
@@ -297,9 +305,11 @@ def parser():
     w.add_argument("--cw", help="content warning")
     w.add_argument("--lang", help="language code (ru, en, ka…)")
     y = sub.add_parser("sync", help="sync with your other devices")
-    y.add_argument("what", choices=["status", "key", "join", "login", "now", "keep", "unlock"])
-    y.add_argument("arg", nargs="?", help="join: the key; login: the code (WebDAV: the "
-                                          "user); keep / unlock: the password (else asked)")
+    y.add_argument("what", choices=["status", "key", "join", "first", "invite", "login", "now",
+                                    "keep", "unlock"])
+    y.add_argument("arg", nargs="?", help="join: the key; invite: the server's code; login "
+                                          "(WebDAV): the user; keep / unlock: the password "
+                                          "(else asked)")
     return p
 
 

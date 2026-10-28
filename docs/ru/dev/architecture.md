@@ -558,10 +558,13 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `sync_status()` в «⇅ 21:40 / … / ! / выкл» строки состояния (Qt, GTK) и строку в
   «О программе». Бэкенды
   (backends.py): `HttpBackend` (fedtail-sync: свой репозиторий, fedtail-syncserver — один
-  файл на stdlib; токен из `data/sync_auth.json`, приложение с `read:accounts`, которое
-  делает `fedtail sync login`; URL только из `sync.url`) и `FolderBackend` (`sync.folder`,
-  по подпапке на устройство; заданы оба — ошибка конфига). Нет ключа, а в хранилище
-  чужие блобы → новый ключ не делается, ошибка просит `fedtail sync join`. Проблемы
+  файл на stdlib; протокол 2: журнал принадлежит ключу — `crypto.journal_id` /
+  `journal_secret` в заголовках, заводится по коду приглашения из `data/sync_invite.json`;
+  URL только из `sync.url`), `FolderBackend` (`sync.folder`) и `WebDavBackend`
+  (`sync.webdav`, пароль в `data/sync_webdav.json`) — оба последних один `TreeBackend` над
+  `LocalTree` или `DavTree`, по подпапке на устройство. В дереве: нет ключа, а там чужие
+  блобы → новый ключ не делается, ошибка просит `fedtail sync join`; на сервере без ключа
+  ничего не видно — он делается только по просьбе (`fedtail sync first`). Проблемы
   выходят по разу событиями `error` и остаются в kv `sync.last` (`fedtail sync status`).
 * **Короткие имена** — `store.aliases()`: пост со старым именем от счётчика (таблица
   `aliases`, 3–4 знака) сохраняет его; остальные получают `short_code(id)` (буква +

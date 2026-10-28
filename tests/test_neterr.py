@@ -62,8 +62,8 @@ class SyncServerSaysItTest(unittest.TestCase):
         err = _wrapped(requests.ConnectionError, socket.gaierror(
             -2, "Name or service not known"), "NameResolutionError")
         s.get.side_effect = err
-        s.post.side_effect = err
-        b = HttpBackend("https://fedsync.gmesg.online/", "https://me.example", "t", session=s)
+        s.request.side_effect = err
+        b = HttpBackend("https://fedsync.gmesg.online/", bytes(32), session=s)
         for call in (lambda: b.pull("", "d1"), lambda: b.push(b"x", "d1")):
             with self.assertRaises(BackendError) as got:
                 call()

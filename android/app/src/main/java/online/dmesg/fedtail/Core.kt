@@ -129,8 +129,6 @@ object Core {
     suspend fun configText() = obj("config_text")
     suspend fun configSave(text: String) = obj("config_save", text)
     suspend fun syncStatus() = obj("sync_status")
-    suspend fun syncLoginBegin() = obj("sync_login_begin")
-    suspend fun syncLoginFinish(code: String) = obj("sync_login_finish", code)
     suspend fun syncKey() = obj("sync_key")
     suspend fun syncJoin(text: String) = obj("sync_join", text)
     suspend fun syncNow() = obj("sync_now")

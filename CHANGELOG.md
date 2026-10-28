@@ -2,6 +2,17 @@
 
 ## 0.22.0 — in progress
 
+- Sync without logging in to the fediverse server: on a fedtail-sync server (protocol 2,
+  fedtail-syncserver 0.22) the journal is the key's — an id and a secret derived from it,
+  the key never sent. The first device makes the journal with an invite code the server's
+  admin gave (≡ → Sync → Where, `fedtail sync invite CODE`; kept in the data folder, not the
+  config); the others need only the key. The steps are where and the key; a login is left
+  for WebDAV alone. `fedtail sync first` makes the first key from a terminal (on a server
+  the key is never made by itself: nothing there can be seen without one). The key under a
+  password is kept on the server apart from the journal, under an id derived from the
+  password. A server of protocol 1 is told, not talked to; after updating both, every
+  device sends its state once more.
+
 - Fixed: a lane's funnel ("only video…") and a free lane's switches filtered the newest
   posts after the lane's window was cut — a handful of videos out of the newest few
   hundred, none of the many further down, and "Older" asked the server while the store had

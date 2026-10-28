@@ -547,10 +547,13 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `sync_status()` into the status bar's "⇅ 21:40 / … / ! / off" (Qt, GTK) and About's
   row. Backends
   (backends.py): `HttpBackend` (fedtail-sync: its own repository, fedtail-syncserver — one
-  stdlib file; token from `data/sync_auth.json`, a `read:accounts` app made by
-  `fedtail sync login`; URL from `sync.url` only) and `FolderBackend` (`sync.folder`, one
-  subfolder per device; both set is a config error). No key and a store
-  with others' blobs → no new key, the error asks for `fedtail sync join`. Problems go
+  stdlib file; protocol 2: the journal is the key's — `crypto.journal_id` / `journal_secret`
+  in the headers, the invite code from `data/sync_invite.json` makes it; URL from
+  `sync.url` only), `FolderBackend` (`sync.folder`) and `WebDavBackend` (`sync.webdav`, the
+  password in `data/sync_webdav.json`) — the last two one `TreeBackend` over a `LocalTree`
+  or a `DavTree`, one subfolder per device. In a tree, no key and a store with others'
+  blobs → no new key, the error asks for `fedtail sync join`; on a server nothing can be
+  seen without the key: it is made only when asked (`fedtail sync first`). Problems go
   out once as `error` events and stay in kv `sync.last` (`fedtail sync status`).
 * **Short names** — `store.aliases()`: a post with an old counter name (`aliases`
   table, 3–4 characters) keeps it; others get `short_code(id)` (a letter + base-36 of

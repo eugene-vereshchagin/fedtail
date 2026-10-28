@@ -59,8 +59,20 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
-        "sync_login_first": "Синхронизация: нет входа на сервер синхронизации — "
-                            "≡ → Синхронизация → Вход (или fedtail sync login)",
+        "sync_need_key_server": "Синхронизация: на этом устройстве ещё нет ключа — ≡ → "
+                                "Синхронизация → «Это моё первое устройство» или «Добавляю "
+                                "это устройство» (fedtail sync first / join)",
+        "sync_invite_needed": "Синхронизация: серверу нужен код приглашения для нового "
+                              "журнала (его даёт админ сервера) — ≡ → Синхронизация → Где, "
+                              "или fedtail sync invite КОД",
+        "sync_invite_saved": "Код приглашения сохранён: первое устройство создаст по нему журнал",
+        "sync_login_none": "Серверу синхронизации и общей папке вход не нужен: журнал "
+                           "определяется ключом (fedtail sync first / join). Вход — только "
+                           "для WebDAV",
+        "sync_login_server_short": "не нужен: журнал по ключу",
+        "sync_f_invite": "Код приглашения (первому устройству)",
+        "sync_f_invite_tip": "Даёт админ сервера синхронизации; нужен, только чтобы завести "
+                             "журнал — остальным устройствам хватит ключа",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
                          "устройства — перенеси ключ: там ≡ → Синхронизация → «Показать ключ», "
                          "здесь ≡ → Синхронизация → «Добавить к настроенным»",
@@ -71,7 +83,7 @@ _STRINGS = {
                           "≡ → Синхронизация → «Добавить к настроенным»",
         "sync_no_crypto": "Синхронизации нужен пакет cryptography (Debian: "
                           "python3-cryptography)",
-        "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
+        "sync_auth_refused": "Синхронизация: сервер не принял ключ этого журнала",
         "sync_full": "Синхронизация: место на сервере кончилось (квота)",
         "sync_failed": "Синхронизация не удалась: {why}",
         "net_no_name": "не нахожу сервер «{host}» — проверьте адрес (опечатка?) и DNS",
@@ -103,9 +115,6 @@ _STRINGS = {
                          "(fedtail sync join …) и никому не показывай:",
         "sync_join_ok": "ключ сохранён (id {kid})",
         "sync_join_bad": "это не ключ синхронизации",
-        "sync_login_open": "Открой в браузере и разреши «fedtail sync» (только «кто я»):\n{url}",
-        "sync_login_code": "Код со страницы: ",
-        "sync_login_ok": "готово: токен для синхронизации от {instance} сохранён",
         "sync_round": "отправлено {sent}, получено {got}",
         "sync_round_failed": "не получилось — причина в «последний раз» (fedtail sync status)",
         "filtered_title": "Отфильтрованные уведомления",
@@ -168,8 +177,6 @@ _STRINGS = {
         "sync_off_sure": "Выключить синхронизацию на этом устройстве? Ключ и вход остаются — "
                          "включишь снова, укажи то же место.",
         "sync_where_none": "Укажи сервер синхронизации, папку или WebDAV",
-        "sync_login_opened": "Страница входа открыта в браузере — разреши там «fedtail sync» и "
-                             "скопируй код",
         "sync_fork_hint": "Ключ шифрует всё, что уходит в журнал, и он один на все твои "
                           "устройства. Выбери, что это за устройство:",
         "sync_first_title": "Это моё первое устройство",
@@ -248,14 +255,6 @@ _STRINGS = {
         "sync_what_btn": "Что синхронизировать…",
         "sync_saved_on": "Синхронизация включена",
         "sync_saved_off": "Синхронизация выключена",
-        "sync_login_hint": "Серверу синхронизации нужно знать, чей это журнал: он спрашивает твой "
-                           "сервер «кто это» отдельным узким токеном (только read:accounts), не "
-                           "тем, которым читает fedtail. Откроется страница твоего сервера — "
-                           "разреши «fedtail sync» и вставь код сюда.",
-        "sync_login_folder": "С общей папкой вход не нужен.",
-        "sync_login_go": "Открыть страницу входа",
-        "sync_login_again": "Войти заново",
-        "sync_login_code_f": "Код со страницы",
         "sync_key_hint": "Ключ один на все твои устройства и открывает всё, что синхронизируется: "
                          "не показывай его никому. На новом устройстве: ≡ → Синхронизация → "
                          "«Добавить к настроенным» → «Сканировать» (телефон) или вставить текст.",
@@ -1876,17 +1875,28 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
-        "sync_login_first": "Sync: not logged in to the sync server — ≡ → Sync → Login "
-                            "(or fedtail sync login)",
         "sync_need_key_pass": "Sync: the account has a journal, and its key is in it under "
                               "a password — ≡ → Sync → “Add to those set up”, the password",
+        "sync_need_key_server": "Sync: this device has no key yet — ≡ → Sync → “This is my "
+                                "first device” or “Adding this device” (fedtail sync first / "
+                                "join)",
+        "sync_invite_needed": "Sync: the server needs an invite code for a new journal (its "
+                              "admin gives it) — ≡ → Sync → Where, or fedtail sync invite CODE",
+        "sync_invite_saved": "The invite code is kept: the first device makes the journal with it",
+        "sync_login_none": "A sync server and a shared folder need no login: the journal is "
+                           "the key's (fedtail sync first / join). Logging in is for WebDAV "
+                           "only",
+        "sync_login_server_short": "none needed: the journal is the key's",
+        "sync_f_invite": "Invite code (for the first device)",
+        "sync_f_invite_tip": "The sync server's admin gives it; needed only to make the "
+                             "journal — the other devices need just the key",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
                          "device's key — carry the key over: there ≡ → Sync → “Show the key”, "
                          "here ≡ → Sync → “Add to those set up”",
         "sync_other_key": "Sync: the store holds a journal sealed by another key — "
                           "≡ → Sync → “Add to those set up”",
         "sync_no_crypto": "Sync needs the cryptography package (Debian: python3-cryptography)",
-        "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
+        "sync_auth_refused": "Sync: the server refused this journal's key",
         "sync_full": "Sync: no room left on the server (quota)",
         "sync_failed": "Sync failed: {why}",
         "net_no_name": "cannot find the server \"{host}\" — check the address (a typo?) and DNS",
@@ -1918,10 +1928,6 @@ _STRINGS = {
                          "(fedtail sync join …) and show it to nobody:",
         "sync_join_ok": "key saved (id {kid})",
         "sync_join_bad": "that is not a sync key",
-        "sync_login_open": "Open this in a browser and allow \"fedtail sync\" (only \"who am I\"):"
-                           "\n{url}",
-        "sync_login_code": "The code from that page: ",
-        "sync_login_ok": "done: the sync token from {instance} is saved",
         "sync_round": "sent {sent}, got {got}",
         "sync_round_failed": "didn't work — the reason is under \"last time\" "
                              "(fedtail sync status)",
@@ -1979,8 +1985,6 @@ _STRINGS = {
         "sync_off_sure": "Turn sync off on this device? The key and the login stay — to turn it on "
                          "again, name the same place.",
         "sync_where_none": "Name a sync server, a folder or a WebDAV folder",
-        "sync_login_opened": "The login page is open in the browser — allow “fedtail sync” there "
-                             "and copy the code",
         "sync_fork_hint": "The key seals everything that goes into the journal, and it's one for "
                           "all your devices. Pick what this device is:",
         "sync_first_title": "This is my first device",
@@ -2056,14 +2060,6 @@ _STRINGS = {
         "sync_what_btn": "What to sync…",
         "sync_saved_on": "Sync is on",
         "sync_saved_off": "Sync is off",
-        "sync_login_hint": "The sync server needs to know whose journal it is: it asks your server "
-                           "“who is this” with a narrow token of its own (read:accounts only), not "
-                           "the one fedtail reads with. Your server's page opens — allow “fedtail "
-                           "sync” and paste the code here.",
-        "sync_login_folder": "A shared folder needs no login.",
-        "sync_login_go": "Open the login page",
-        "sync_login_again": "Log in again",
-        "sync_login_code_f": "The code from the page",
         "sync_key_hint": "One key for all your devices, and it opens everything that is synced: "
                          "show it to no one. On the new device: ≡ → Sync → “Add to those set up” → "
                          "“Scan” (the phone) or paste the text.",

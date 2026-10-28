@@ -1,10 +1,8 @@
 """Sync between an account's devices (core/sync) and the fedtail-sync server."""
 
 import io
-import json
 import threading
 import unittest
-import urllib.request
 from pathlib import Path
 
 from fedtail.core import auth, config, paths
@@ -497,57 +495,67 @@ class SyncLineTest(Devices):
 @unittest.skipIf(server_file() is None, "the fedtail-syncserver repository isn't here "
                  "(clone it beside this one, or set FEDTAIL_SYNCSERVER)")
 class ClientServerTest(TmpDir):
-    TOKENS = {("me.example", "t-me"): "1", ("me.example", "t-me2"): "1",
-              ("me.example", "t-you"): "2"}
+    """fedtail against the real fedtail-sync (its own repository): protocol 2 — the
+    journal is the key's, made with an invite code."""
 
     def setUp(self):
         super().setUp()
+        if server_file() is None:
+            self.skipTest("fedtail-syncserver is not checked out here")
         syncserver = load_server()
         self.mod = syncserver
         self.app = syncserver.Server(
-            {"db": str(self.tmp / "s.db"), "instances": ["me.example"], "quota_mb": 1,
-             "listen": "127.0.0.1:0",
-             "max_blob_kb": 64},
-            verify=lambda host, token: self.TOKENS.get((host, token)))
+            {"db": str(self.tmp / "s.db"), "quota_mb": 1, "listen": "127.0.0.1:0",
+             "max_blob_kb": 64})
+        self.code = self.app.invite_add("tests")
         self.httpd = syncserver.make_http_server(self.app)
         self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
         t = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         t.start()
         self.addCleanup(self.httpd.server_close)
         self.addCleanup(self.httpd.shutdown)
-
-    def call(self, method, path, token=None, body=None, instance="https://me.example",
-             device=""):
-        req = urllib.request.Request(self.url + path, data=body, method=method)
-        if token:
-            req.add_header("Authorization", f"Bearer {token}")
-            req.add_header("X-Fedtail-Instance", instance)
-        if device:
-            req.add_header("X-Fedtail-Device", device)
-        try:
-            with urllib.request.urlopen(req, timeout=5) as r:
-                return r.status, json.loads(r.read())
-        except urllib.error.HTTPError as e:
-            return e.code, json.loads(e.read())
+        self.addCleanup(self.app.db.close)
 
     @need_crypto
     def test_two_devices_through_the_server(self):
-        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
-        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
         key = crypto.new_key()
+        b1 = backends.HttpBackend(self.url, key, self.code)
+        b2 = backends.HttpBackend(self.url, key)  # the journal is there: no code needed
+        with self.assertRaises(backends.BackendError) as e:
+            b2.pull(None, "b" * 16)  # …but not yet: nobody made it
+        self.assertEqual(e.exception.kind, "invite")
         b1.push(crypto.seal(key, {"d": "a", "ops": [{"r": ["9"]}]}), "a" * 16)
         got, cur, more = b2.pull(None, "b" * 16)
         self.assertEqual(crypto.unseal(key, got[0])["ops"], [{"r": ["9"]}])
         self.assertEqual((cur, more), (1, False))
         self.assertEqual(b1.pull(None, "a" * 16)[0], [])  # its own: skipped
+        other = backends.HttpBackend(self.url, crypto.new_key(), "WRONG-CODE")
         with self.assertRaises(backends.BackendError) as e:
-            backends.HttpBackend(self.url, "https://me.example", "bad").pull(None, "c" * 16)
-        self.assertEqual(e.exception.kind, "auth")
+            other.pull(None, "c" * 16)
+        self.assertEqual(e.exception.kind, "invite")
+        self.app.invite_revoke("tests")  # taken back: the journal is gone with it
+        with self.assertRaises(backends.BackendError) as e:
+            backends.HttpBackend(self.url, key).pull(None, "b" * 16)
+        self.assertEqual(e.exception.kind, "invite")
+
+    @need_crypto
+    def test_the_key_under_a_password_through_the_server(self):
+        key = crypto.new_key()
+        b = backends.HttpBackend(self.url, key, self.code)
+        eid = crypto.escrow_id("correct horse battery", self.url)
+        self.assertEqual(eid, crypto.escrow_id("correct horse battery", self.url + "/"))
+        self.assertNotEqual(eid, crypto.escrow_id("correct horse battery", "https://x.test"))
+        b.escrow_put(eid, crypto.escrow_seal(key, "correct horse battery"))
+        keyless = backends.HttpBackend(self.url)
+        self.assertEqual(crypto.escrow_open(keyless.escrow_get(eid), "correct horse battery"),
+                         key)
+        self.assertIsNone(keyless.escrow_get(crypto.escrow_id("wrong one!", self.url)))
 
     @need_crypto
     def test_a_device_packs_its_journal_on_the_server(self):
-        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
-        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
+        key = crypto.new_key()
+        b1 = backends.HttpBackend(self.url, key, self.code)
+        b2 = backends.HttpBackend(self.url, key)
         self.assertTrue(b1.can_compact())
         a, b = "a" * 16, "b" * 16
         self.assertEqual([b1.push(f"old{i}".encode(), a) for i in range(3)], [1, 2, 3])
@@ -556,16 +564,16 @@ class ClientServerTest(TmpDir):
         self.assertEqual(b1.compact(a, snap), 3)
         self.assertEqual(b2.pull(None, b)[0], [b"snapshot"])  # theirs stay, mine packed
         self.assertEqual(b1.compact("../x", snap), 0)  # never a path of another kind
-        old = backends.HttpBackend(self.url, "https://me.example", "t-me")
-        old._said = {"fedtail-sync": 1}  # a server before 0.22: never asked to
+        old = backends.HttpBackend(self.url, key)
+        old._said = {"fedtail-sync": 2}  # a server that doesn't say "compact": never asked
         self.assertEqual(old.compact(a, snap), 0)
 
     @need_crypto
     def test_pictures_through_the_server(self):
-        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
-        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
-        self.assertEqual(b1.media_kb(), 4096)  # the server keeps them
         key = crypto.new_key()
+        b1 = backends.HttpBackend(self.url, key, self.code)
+        b2 = backends.HttpBackend(self.url, key)
+        self.assertEqual(b1.media_kb(), 4096)  # the server keeps them
         data = b"a picture" * 100
         name = crypto.media_name(key, data)
         b1.media_put(name, crypto.seal_media(key, data))
@@ -578,8 +586,44 @@ class ClientServerTest(TmpDir):
         with self.assertRaises(crypto.BadBlob):
             crypto.unseal_media(crypto.new_key(), crypto.seal_media(key, data))
         self.app.cfg["media_quota_mb"] = 0  # a server without pictures
-        self.assertEqual(backends.HttpBackend(self.url, "https://me.example",
-                                              "t-me").media_kb(), 0)
+        self.assertEqual(backends.HttpBackend(self.url, key).media_kb(), 0)
+
+    @need_crypto
+    def test_two_cores_through_the_server_with_no_login(self):
+        """The whole way, as the window goes: the address and the invite code, the first
+        device's key, the other device takes it — no fediverse login for sync."""
+        FakeApi.world = world = fakes.World()
+
+        def core(name):
+            cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                      "ui": {"language": "en"},
+                                      "sync": {"url": self.url}})
+            p = paths.resolve(name, config=str(self.tmp / f"{name}.toml"),
+                              data=str(self.tmp / name))
+            auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+            c = Core(cfg, p, api_class=FakeApi)
+            c._origin_json = lambda url: None
+            self.addCleanup(c.shutdown)
+            c.connect().result()
+            return c
+        desk, phone = core("desk"), core("phone")
+        self.assertIsNone(desk.sync_now())  # no key yet: says so, makes none by itself
+        self.assertIsNone(desk.sync_key())
+        desk.sync_first_key()
+        self.assertIsNone(desk.sync_now())  # no invite code: the journal isn't made
+        self.assertIn("invite", desk.sync_status()["last"]["error"])
+        desk.sync_setup(invite=self.code)
+        self.assertNotIn(self.code, desk.paths.config_file.read_text("utf-8")
+                         if desk.paths.config_file.exists() else "")
+        desk.mark_read(["101"])
+        self.assertTrue(desk.sync_now())
+        desk.sync_put_escrow("correct horse battery")
+        self.assertIsNone(phone.sync_has_escrow())  # a server: can't be told before
+        phone.sync_take_escrow("correct horse battery")
+        self.assertEqual(phone.sync_key(), desk.sync_key())
+        phone.sync_now()
+        self.assertEqual(phone.store.read_set(["101"]), {"101"})
+        del world
 
 
 class CliSyncTest(Devices):
@@ -610,14 +654,20 @@ class CliSyncTest(Devices):
 
 
 class LoginTest(Devices):
-    def test_the_sync_token_is_a_narrow_one(self):
+    def test_no_login_for_a_server_only_its_invite(self):
         out = io.StringIO()
-        cli.run(self.device("desk", self.world), ["sync", "login", "good"], stream=out)
-        self.assertIn("scope=read:accounts", out.getvalue())
-        self.assertIn(("fedtail sync", "read:accounts"), self.world.apps)
-        saved = engine.load_auth(engine.auth_path(self.desk.paths))
-        self.assertEqual(saved["token"], "tok-read-accounts")
-        self.assertNotEqual(saved["token"], auth.load(self.desk.paths.auth_file)["token"])
+        with self.assertRaises(SystemExit) as e:
+            cli.run(self.device("desk", self.world), ["sync", "login"], stream=out)
+        self.assertIn("need no login", str(e.exception.code))
+        cli.run(self.device("desk", self.world), ["sync", "invite", "ABCD-1234"], stream=out)
+        self.assertEqual(engine.load_invite(self.desk.paths), "ABCD-1234")
+        f = engine.invite_path(self.desk.paths)
+        import os
+        import stat
+        if os.name == "posix":
+            self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
+        self.desk.sync_setup(invite="")  # emptied: gone
+        self.assertFalse(f.exists())
 
 
 if __name__ == "__main__":

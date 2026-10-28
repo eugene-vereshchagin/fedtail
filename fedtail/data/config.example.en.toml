@@ -1209,11 +1209,14 @@ act_as = true
 # fediverse server: without an address below there is simply no sync (the status bar
 # and About say so). What travels is sealed with a key only your devices have: whatever
 # stores it sees no posts and no read marks. How to set it up: docs/en/sync.md; in short —
-# the address here, `fedtail sync login`, then `fedtail sync key` on the first device and
+# the address here (and, with a server, `fedtail sync invite CODE` on the first device),
+# then `fedtail sync first` on the first device, `fedtail sync key` there and
 # `fedtail sync join` on the others.
 #
 # url — the fedtail-sync server's address, as its admin gave it (say,
-# "https://sync.example.org"). Empty — no sync server.
+# "https://sync.example.org"). Empty — no sync server. No login: the journal is the key's;
+# the first device makes it with the invite code the admin gave (kept in the data folder,
+# not here).
 url = ""
 
 # Or, instead of a server, a folder every device sees: a NAS share, a Syncthing folder

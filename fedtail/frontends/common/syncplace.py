@@ -6,8 +6,9 @@ The place shows where the setup stands and the one next step:
 
   1. where   — the sync server's address, a shared folder or a WebDAV folder
                (config.toml, used at once);
-  2. login   — the sync server's narrow token: the browser's page, then its code; a WebDAV
-               folder's user and password; a folder needs none;
+  2. login   — a WebDAV folder's user and password; a sync server needs none (its
+               journal is the key's, made with the invite code given at step 1), nor a
+               folder;
   3. key     — the fork: "this is my first device" (the key is made here) or "I'm adding
                this device to those already syncing" (the key pasted from another
                device, or taken out of the journal with its password);
@@ -26,7 +27,6 @@ from ...i18n import _
 
 log = logging.getLogger(__name__)
 
-_LOGIN = {}  # profile → the sync login under way (core.sync_login_begin's pending)
 STEPS = ("where", "login", "key")
 
 
@@ -42,7 +42,7 @@ class SyncPlaces:
         st = v.sync_status()
         if st is None:
             return None, "where"
-        if st.get("backend") in ("server", "webdav") and not st.get("login"):
+        if st.get("backend") == "webdav" and not st.get("login"):
             return st, "login"
         if not st.get("key") and not v.sync_key():
             return st, "key"
@@ -55,9 +55,9 @@ class SyncPlaces:
         now = order.index(at) if at in order else len(order)
         s = self.view.cfg["sync"]
         said = {"where": s.get("folder") or s.get("webdav") or s.get("url") or "",
-                "login": (st or {}).get("login") or (
-                    _("sync_login_folder_short") if (st or {}).get("backend") == "folder"
-                    else ""),
+                "login": {"folder": _("sync_login_folder_short"),
+                          "server": _("sync_login_server_short")}.get(
+                    (st or {}).get("backend"), (st or {}).get("login") or ""),
                 "key": (st or {}).get("key") or ""}
         for i, step in enumerate(order):
             mark = "✓" if i < now else ("▶" if i == now else "·")
@@ -82,6 +82,7 @@ class SyncPlaces:
             page.hint = _("sync_where_hint")
             page.form = (Field("url", _("sync_f_url"), str(s.get("url") or ""),
                                tip=_("sync_f_url_tip")),
+                         Field("invite", _("sync_f_invite"), "", tip=_("sync_f_invite_tip")),
                          Field("folder", _("sync_f_folder"), str(s.get("folder") or ""),
                                tip=_("sync_f_folder_tip")),
                          Field("webdav", _("sync_f_webdav"), str(s.get("webdav") or ""),
@@ -98,20 +99,6 @@ class SyncPlaces:
                                tip=_("sync_webdav_password_tip")))
             page.submit = Btn(_("sync_next"), ("sync", "dav", ""), True)
             page.more = Btn(_("sync_back_where"), ("sync", "goto", "where"))
-            return page
-
-        if step == "login":
-            page.hint = _("sync_login_hint")
-            got = _LOGIN.get(v.paths.profile)
-            if got is None:
-                page.submit = Btn(_("sync_login_go"), ("sync", "login", ""), True)
-                page.more = Btn(_("sync_back_where"), ("sync", "goto", "where"))
-                return page
-            page.rows.append(Row("text", _("sync_login_opened"), got["url"], key="url",
-                                 buttons=(self._btn(_("open_browser"), "sync", "open"),)))
-            page.form = (Field("code", _("sync_login_code_f"), ""),)
-            page.submit = Btn(_("sync_next"), ("sync", "code", ""), True)
-            page.more = Btn(_("sync_login_again"), ("sync", "login", ""))
             return page
 
         if step == "key":  # the fork: the first device, or one more
@@ -135,7 +122,7 @@ class SyncPlaces:
             return page
 
         if step == "join":
-            escrow = st is not None and v.sync_has_escrow()
+            escrow = st is not None and v.sync_has_escrow() is not False  # None: maybe
             page.hint = _("sync_join_hint")
             fields = [Field("key", _("sync_key_paste_f"), "", tip=_("sync_key_paste_tip"),
                             scan=True)]
@@ -198,7 +185,8 @@ class SyncPlaces:
             url = "https://" + url
         if dav and not dav.startswith(("https://", "http://")):
             dav = "https://" + dav
-        v.sync_setup(url=url, folder=folder, webdav=dav)
+        v.sync_setup(url=url, folder=folder, webdav=dav,
+                     invite=str(values.get("invite") or "").strip() or None)
         return Out(message=_("sync_saved_on"), open={"page": "sync"})
 
     def _a_sync_dav(self, _d, values, _c, _ans):
@@ -232,35 +220,6 @@ class SyncPlaces:
             last = (v.sync_status() or {}).get("last") or {}
             return Out(error=last.get("error") or _("sync_round_failed"), refresh=True)
         return Out(message=_("sync_round", sent=done[0], got=done[1]), refresh=True)
-
-    def _a_sync_login(self, _d, _v, _c, _ans):
-        from .places import Out
-        v = self.view
-        if not v.logged_in:
-            return Out(error=_("cli_login_first"))
-        pending = v.sync_login_begin()
-        _LOGIN[v.paths.profile] = pending
-        return Out(refresh=True, open={"url": pending["url"]})
-
-    def _a_sync_open(self, _d, _v, _c, _ans):
-        from .places import Out
-        got = _LOGIN.get(self.view.paths.profile)
-        return Out(open={"url": got["url"]}) if got else Out(refresh=True)
-
-    def _a_sync_code(self, _d, values, _c, _ans):
-        from .places import Out
-        v = self.view
-        got = _LOGIN.get(v.paths.profile)
-        code = str(values.get("code") or "").strip()
-        if got is None:
-            return Out(refresh=True)
-        if not code:
-            return Out(error=_("sync_login_code_f"))
-        v.sync_login_end(got, code)
-        _LOGIN.pop(v.paths.profile, None)
-        v.sync_setup()  # the token there now: the engine anew, with it
-        return Out(message=_("sync_login_ok", instance=got["instance"]),
-                   open={"page": "sync"})
 
     def _a_sync_first(self, _d, _v, _c, _ans):
         from .places import Out

@@ -19,6 +19,7 @@ class Resp:
     def __init__(self, status=200, body=None):
         self.status_code = status
         self._body = body
+        self.ok = status < 400
 
     def json(self):
         if isinstance(self._body, Exception):
@@ -36,16 +37,21 @@ class Session:
             raise self.answer
         return self.answer
 
-    post = get = _go
+    def get(self, url, **kw):  # the hello: a fedtail-sync of protocol 2
+        if url.endswith("/v2") and not isinstance(self.answer, Exception):
+            return Resp(200, {"fedtail-sync": 2})
+        return self._go(url, **kw)
+
+    post = request = _go
 
 
 class HttpBackendTest(unittest.TestCase):
     def backend(self, answer):
-        return backends.HttpBackend("https://sync.test/", "me@x.test", "T",
+        return backends.HttpBackend("https://sync.test/", bytes(32), "INVITE",
                                     session=Session(answer))
 
     def test_answers_become_kinds(self):
-        for status, kind in ((401, "auth"), (403, "auth"), (413, "full"), (507, "full"),
+        for status, kind in ((401, "auth"), (403, "invite"), (413, "full"), (507, "full"),
                              (404, "gone"), (500, "other")):
             with self.assertRaises(backends.BackendError) as e:
                 self.backend(Resp(status)).push(b"x", "dev")
@@ -168,18 +174,30 @@ class EngineTest(Devices):
             self.assertIsNone(s.step())
         self.assertIn("cryptography", self.desk.sync_status()["last"]["error"])
 
-    def test_a_server_needs_a_login_first(self):
+    def test_a_server_needs_a_key_first(self):
+        """A server's journal is found by the key: no key here — nothing to ask it but
+        the key under a password; the round says what to do."""
         s = self.sync(self.desk)
         s.cfg = dict(s.cfg, folder="", url="https://sync.test")
         self.assertEqual(s.kind(), "server")
-        self.assertIsNone(s.backend())
-        self.assertIsNone(s.step())  # a round without a backend: nothing done
-        self.assertIn("log", self.desk.sync_status()["last"]["error"].lower())
-        (self.desk.paths.data_dir / "sync_auth.json").write_text(
-            json.dumps({"instance": "me@x.test", "token": "T"}), "utf-8")
+        self.assertIsNone(s.step())
+        self.assertIn("no key", self.desk.sync_status()["last"]["error"])
         b = s.backend()
         self.assertIsInstance(b, backends.HttpBackend)
+        self.assertNotIn("X-Fedtail-Journal", b.s.headers)  # keyless: the hello, the escrow
+        key = crypto.new_key()
+        b = s.backend(key)
+        self.assertEqual(b.s.headers["X-Fedtail-Journal"], crypto.journal_id(key))
+        self.assertEqual(b.s.headers["Authorization"], f"Bearer {crypto.journal_secret(key)}")
+        self.assertNotIn(crypto.key_text(key), str(b.s.headers))  # never the key itself
         self.assertEqual(b.url, "https://sync.test")
+
+    def test_an_older_server_is_told_not_talked_to(self):
+        b = backends.HttpBackend("https://sync.test", bytes(32), session=Session(Resp(200)))
+        b._said = {"fedtail-sync": 1}  # what GET /v2 said
+        with self.assertRaisesRegex(backends.BackendError, "protocol 1") as e:
+            b.pull(None, "dev")
+        self.assertEqual(e.exception.kind, "gone")
 
     def test_a_blob_that_isnt_ours_is_skipped(self):
         self.desk.mark_read(["1"])

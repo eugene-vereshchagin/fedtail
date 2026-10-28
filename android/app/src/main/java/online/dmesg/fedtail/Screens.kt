@@ -891,7 +891,6 @@ private fun ConfigPlace(model: AppModel, snack: SnackbarHostState) {
 @Composable
 private fun SyncPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit) {
     val clipboard = LocalClipboardManager.current
-    var code by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
     var done by remember { mutableStateOf("") }
     val info = model.syncInfo
@@ -921,20 +920,6 @@ private fun SyncPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (S
                 Button(onClick = { model.syncNow { done = it } }, enabled = !model.syncBusy,
                     modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_now)) }
                 if (done.isNotBlank()) Text(stringResource(R.string.sync_done, done))
-                if (info.optString("backend") == "server") {
-                    HorizontalDivider()
-                    OutlinedButton(onClick = { model.syncLogin(openBrowser) },
-                        modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.sync_login_go))
-                    }
-                    if (model.syncLoginWaiting) {
-                        OutlinedTextField(value = code, onValueChange = { code = it },
-                            label = { Text(stringResource(R.string.login_code)) }, singleLine = true,
-                            modifier = Modifier.fillMaxWidth())
-                        OutlinedButton(onClick = { model.syncLoginCode(code) },
-                            enabled = code.isNotBlank()) { Text(stringResource(R.string.login_code_go)) }
-                    }
-                }
             }
             HorizontalDivider()
             Text(stringResource(R.string.sync_key_intro), style = MaterialTheme.typography.bodySmall,

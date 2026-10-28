@@ -45,7 +45,9 @@ beats them; how
 far events are seen; the read marks of the posts it keeps. A device that joins later
 gets the state, not only what changed after it came.
 
-Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server),
+Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server: the journal
+is the key's — an id and a secret derived from it; the first device makes the journal with
+the invite code the server's admin gave, kept in the data folder, `sync_invite.json`),
 `sync.folder`, or `sync.webdav` (a WebDAV folder spoken directly — `sync.webdav_user`, the
 password in the profile's data folder, `sync_webdav.json`, never in the config). Nothing
 set — no sync, and nothing is recorded.
@@ -55,8 +57,11 @@ closed): the journal is in the store; whichever process of the profile runs the 
 sends it. The thread (`fedtail-sync`, started with polling) sends and fetches every
 `sync.interval_seconds`, and a few seconds after something was recorded.
 
-The key: the first device makes one when the store is empty, and says so in the log;
-a device without a key facing someone's journal stops and asks for `fedtail sync join`.
+The key: in a folder or WebDAV the first device makes one when the store is empty, and
+says so in the log; a device without a key facing someone's journal stops and asks for
+`fedtail sync join`. On a server the journal is found by the key, so there is nothing to
+look at without one: the key is made only when asked (`fedtail sync first`, the window's
+"this is my first device") or taken (`join`, the password).
 """
 
 import json
@@ -94,7 +99,6 @@ BATCH_OPS = 400     # ops in one sealed blob
 DEBOUNCE = 3        # seconds after a mark before sending: scrolling marks in bursts
 COMPACT_BYTES = 1024 * 1024  # this device's journal past this → packed into a snapshot
 COMPACT_GAIN = 4    # … and only when it is this many times the snapshot
-SCOPES = "read:accounts"  # all a sync server needs to know whose journal it is
 
 
 def wanted(cfg):
@@ -115,8 +119,26 @@ def key_path(paths):
     return paths.data_dir / "sync.key"
 
 
-def auth_path(paths):
-    return paths.data_dir / "sync_auth.json"
+def invite_path(paths):
+    return paths.data_dir / "sync_invite.json"
+
+
+def load_invite(paths):
+    """The sync server's invite code kept here, or ""."""
+    try:
+        data = json.loads(invite_path(paths).read_text("utf-8"))
+    except (OSError, ValueError):
+        return ""
+    return data.get("code") if isinstance(data, dict) and isinstance(data.get("code"), str) \
+        else ""
+
+
+def save_invite(paths, code):
+    code = str(code or "").strip()
+    if not code:
+        invite_path(paths).unlink(missing_ok=True)
+        return
+    auth.save(invite_path(paths), {"code": code})
 
 
 def webdav_path(paths):
@@ -145,16 +167,6 @@ def save_webdav(paths, password):
     with os.fdopen(fd, "w", encoding="utf-8") as out:
         json.dump({"password": password}, out)
     os.replace(tmp, f)
-
-
-def load_auth(path):
-    try:
-        data = json.loads(path.read_text("utf-8"))
-    except (OSError, ValueError):
-        return None
-    ok = isinstance(data, dict) and all(isinstance(data.get(k), str) and data[k]
-                                        for k in ("instance", "token"))
-    return data if ok else None
 
 
 def media_dir(paths):
@@ -275,10 +287,12 @@ class Sync:
 
     SNAPSHOT_READ = 5000  # read marks of the newest posts kept, sent with the snapshot
 
-    def _snapshot(self, key):
+    def _snapshot(self, key, where=""):
         """Once per key: what this device knows already goes into the journal — so a
         device joining later gets the state, not only the changes made after it came."""
-        kid = crypto.key_id(key).hex()
+        # once per key and per store: a journal moved (another server, protocol 2's
+        # journals by key) gets what this device knows again
+        kid = crypto.key_id(key).hex() + (f" {where}" if where else "")
         if self.store.kv_get("sync.snapshot") == kid:
             return
         for k, switch in SETTINGS.items():
@@ -453,13 +467,20 @@ class Sync:
         with self._lock:
             self._trouble = ""  # a problem met this round (the round may go on past it)
             try:
-                backend = self.backend()
-                if backend is None:
-                    return None
-                key = self._key(backend)
-                if key is None:
-                    return None
-                self._snapshot(key)
+                if self.kind() == "server":  # the journal is found by the key
+                    key = crypto.load_key(key_path(self.paths))
+                    if key is None:
+                        self._problem("key", _("sync_need_key_server"))
+                        return None
+                    backend = self.backend(key)
+                else:
+                    backend = self.backend()
+                    if backend is None:
+                        return None
+                    key = self._key(backend)
+                    if key is None:
+                        return None
+                self._snapshot(key, backend.where)
                 self._media_at = (backend, key)  # for the drafts' pictures, this round
                 self._flush_drafts(backend, key)
                 sent = self._push(backend, key)
@@ -467,7 +488,8 @@ class Sync:
                 if pull:
                     self._compact(backend, key)
             except backends.BackendError as e:
-                text = {"auth": _("sync_auth_refused"), "full": _("sync_full")}.get(
+                text = {"auth": _("sync_auth_refused"), "full": _("sync_full"),
+                        "invite": _("sync_invite_needed")}.get(
                     e.kind, _("sync_failed", why=str(e)))
                 self._problem(e.kind, text)
                 return None
@@ -503,7 +525,10 @@ class Sync:
     def where(self):
         return self.cfg["folder"] or self.cfg.get("webdav") or self.cfg["url"]
 
-    def backend(self):
+    def backend(self, key=None):
+        """Where the journal is. A server: the journal of `key` (this device's when None),
+        or — no key here — one that answers only what needs no journal (the key under a
+        password)."""
         if self.cfg["folder"]:
             return backends.FolderBackend(self.cfg["folder"])
         if self.cfg.get("webdav"):
@@ -513,11 +538,8 @@ class Sync:
                 return None
             return backends.WebDavBackend(self.cfg["webdav"], self.cfg["webdav_user"],
                                           password)
-        a = load_auth(auth_path(self.paths))
-        if not a:
-            self._problem("login", _("sync_login_first"))
-            return None
-        return backends.HttpBackend(self.cfg["url"], a["instance"], a["token"])
+        key = key or crypto.load_key(key_path(self.paths))
+        return backends.HttpBackend(self.cfg["url"], key, load_invite(self.paths))
 
     def _key(self, backend):
         key = crypto.load_key(key_path(self.paths))
@@ -545,10 +567,16 @@ class Sync:
         import base64
         self.store.kv_set("sync.escrow", base64.b64encode(bytes(blob)).decode())
 
-    def find_escrow(self):
+    def find_escrow(self, password=None):
         """The key-under-a-password blob: the one seen, else looked for in the journal
-        from its start. → bytes or None."""
+        from its start (a server: asked under the id the password makes — None without
+        one). → bytes or None."""
         import base64
+        if self.kind() == "server":
+            if not password:
+                return None
+            return backends.HttpBackend(self.cfg["url"]).escrow_get(
+                crypto.escrow_id(password, self.cfg["url"]))
         got = self.store.kv_get("sync.escrow")
         if got:
             return base64.b64decode(got)
@@ -573,9 +601,12 @@ class Sync:
             raise ValueError("no key")
         backend = self.backend()
         if backend is None:
-            raise RuntimeError(_("sync_login_first"))
+            raise RuntimeError(_("sync_webdav_login_first"))
         blob = crypto.escrow_seal(key, password)
-        backend.push(blob, self.device)
+        if self.kind() == "server":  # under an id the password makes: found by it alone
+            backend.escrow_put(crypto.escrow_id(password, self.cfg["url"]), blob)
+        else:
+            backend.push(blob, self.device)
         self._keep_escrow(blob)
 
     # ---- out and in -----------------------------------------------------------------
@@ -800,8 +831,7 @@ class Sync:
     # ---- for `fedtail sync status` ---------------------------------------------------
     def status(self):
         key = crypto.load_key(key_path(self.paths))
-        a = load_auth(auth_path(self.paths))
-        login = a["instance"] if a else ""
+        login = "invite" if load_invite(self.paths) else ""
         if self.kind() == "webdav":
             login = self.cfg.get("webdav_user", "") if load_webdav(self.paths) else ""
         return {"backend": self.kind(),
@@ -811,26 +841,6 @@ class Sync:
                 "key": crypto.key_id(key).hex() if key else "",
                 "pending": self.store.sync_pending_count(),
                 "last": self.store.kv_get("sync.last") or {}}
-
-
-# ---- the sync server's token: read:accounts only, never the main one -------------------
-
-def login_start(api_class, instance):
-    """Register the "fedtail sync" app on the account's server. → what login_finish
-    needs, with the page where the user gets the code."""
-    api = api_class(instance)
-    app = api.register_app(scopes=SCOPES, name="fedtail sync")
-    return {"instance": api.base, "client_id": app["client_id"],
-            "client_secret": app["client_secret"],
-            "url": api.authorize_url(app["client_id"], scopes=SCOPES)}
-
-
-def login_finish(api_class, paths, pending, code):
-    api = api_class(pending["instance"])
-    token = api.get_token(pending["client_id"], pending["client_secret"], code, scopes=SCOPES)
-    auth.save(auth_path(paths), {**{k: pending[k] for k in ("instance", "client_id",
-                                                            "client_secret")},
-                                 "token": token})
 
 
 # ---- what `fedtail sync …` asks of a Core (app.py passes these through) -----------------
@@ -863,7 +873,7 @@ def take_escrow(core, password):
     """The key out of the journal with its password. → its id. ValueError: no such
     blob in the journal; BadBlob: the password is wrong."""
     sync = core.sync
-    blob = sync.find_escrow() if sync is not None else None
+    blob = sync.find_escrow(password) if sync is not None else None
     if blob is None:
         raise ValueError("no key in the journal")
     return _take(core, crypto.escrow_open(blob, password))
@@ -879,12 +889,13 @@ def first_key(core):
         return crypto.key_id(crypto.load_key(key_path(core.paths))).hex()
     if not crypto.available():
         raise crypto.CryptoMissing("no cryptography")
-    backend = sync.backend()
-    if backend is None:
-        raise RuntimeError(_("sync_login_first"))
-    blobs, _cur, _more = backend.pull(None, sync.device)
-    if [b for b in blobs if not crypto.is_escrow(b)]:
-        raise ValueError("a journal is there already")
+    if sync.kind() != "server":  # a server's journals are found by their keys: nothing
+        backend = sync.backend()  # to look at before there is one
+        if backend is None:
+            raise RuntimeError(_("sync_webdav_login_first"))
+        blobs, _cur, _more = backend.pull(None, sync.device)
+        if [b for b in blobs if not crypto.is_escrow(b)]:
+            raise ValueError("a journal is there already")
     return _take(core, crypto.new_key())
 
 
@@ -893,7 +904,7 @@ def fresh_key(core):
     other key are let go of — they pass silently from now on. → the new key's id."""
     sync = core.sync
     left = list(core.store.kv_get("sync.left_keys") or [])
-    if sync is not None:
+    if sync is not None and sync.kind() != "server":  # a server: a new key, a new journal
         backend = sync.backend()
         cursor = None
         for _round in range(200) if backend is not None else ():

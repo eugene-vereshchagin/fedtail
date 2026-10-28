@@ -59,10 +59,11 @@ or the folder sees opaque blobs: who sent them, how big, when — not what you r
 which threads. Losing every device with the key loses only the read marks: they can't
 be recovered, and they aren't worth much.
 
-To the sync server fedtail never gives its own token (that one opens your whole account).
-Logging in to the sync server asks your fediverse server for a second one, limited to
-`read:accounts` — it can only tell "who am I". The sync server checks it with your server
-and files your journal under that answer: no accounts or passwords of its own.
+On a sync server the journal is **the key's**: fedtail derives from the key a journal id
+and a secret (the key itself never goes there), so whoever has the key has the journal — no
+login, no accounts, your fediverse server isn't asked anything. A journal is made only with
+an **invite code** the server's admin gives (one per person, and taken back when they
+want — the journals made with it go with it). Only the first device needs it.
 
 ## Turning it on
 
@@ -74,15 +75,16 @@ needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
    (`https://sync.example.org`), a folder all your devices see (`~/Sync/fedtail`), or a
    WebDAV folder (`https://cloud.example.org/remote.php/dav/files/me/fedtail` — made if
    it isn't there). "Next" writes it into config.toml (`sync.url` / `sync.folder` /
-   `sync.webdav`) and turns sync on at once, no restart.
-2. **Login** — to the sync server: "Open the login page", your fediverse server's page
-   opens, allow "fedtail sync", paste the code, "Next". To a WebDAV folder: its user and
-   password (with Nextcloud, better an app password: Settings → Security), checked there
-   at once. A folder needs none.
+   `sync.webdav`) and turns sync on at once, no restart. With a server — also the **invite
+   code** its admin gave you (the first device only; kept in the data folder, not the
+   config).
+2. **Login** — to a WebDAV folder only: its user and password (with Nextcloud, better an
+   app password: Settings → Security), checked there at once. A sync server and a folder
+   need none.
 3. **The key** — a fork, what this device is:
    * **"This is my first device"** — sync isn't set up anywhere yet: the key is made
-     here, and this device starts the journal. If the store holds someone's journal
-     already, fedtail says so and offers the other way.
+     here, and this device starts the journal (on a server — with the invite code). If a
+     folder holds someone's journal already, fedtail says so and offers the other way.
    * **"I'm adding this device to those already syncing"** — on the old device
      ≡ → Sync → "Show the key": a QR code and its text — the phone scans the code
      ("Scan the QR code" by the field), elsewhere paste the text. Or, if a "password for new
@@ -116,9 +118,10 @@ url = "https://sync.example.org"   # or folder = "~/Sync/fedtail",
 ```
 
 ```sh
-fedtail sync login              # log in to the sync server (the code from the page);
-                                # WebDAV: the user (or webdav_user), the password asked
-fedtail sync now                # a round now; on the first device it makes the key too
+fedtail sync invite CODE        # the server's invite code (the first device only)
+fedtail sync first              # this is the first device: the key made here
+fedtail sync login              # WebDAV only: the user (or webdav_user), the password asked
+fedtail sync now                # a round now (a folder: on the first device it makes the key)
 fedtail sync key                # show the key: XXXX-XXXX-…
 fedtail sync join XXXX-XXXX-…   # take the key on another device
 fedtail sync keep               # put the key into the journal under a password (asked twice)

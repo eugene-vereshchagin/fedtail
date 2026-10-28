@@ -8,8 +8,8 @@ import unittest
 from fedtail.core import app as core_app
 from fedtail.core.view import View
 from fedtail.frontends.common.lane import LaneModel
-from tests.fakes import BOB, status
 from tests import test_tag_mute
+from tests.fakes import BOB, status
 
 
 def video(sid, minute):
@@ -26,10 +26,10 @@ class FunnelTest(unittest.TestCase):
         self.addCleanup(t.doCleanups)
         self.core = core = t.core
         core.cfg["feed"]["render_limit"] = 20
-        old = [(st["id"], st, st["created_at"]) for st in (video("%03d" % i, 1)
+        old = [(st["id"], st, st["created_at"]) for st in (video(f"{i:03d}", 1)
                                                            for i in range(30))]
         new = [(st["id"], st, st["created_at"]) for st in (
-            status("%03d" % (100 + i), BOB, minute=2, text="words") for i in range(60))]
+            status(f"{100 + i:03d}", BOB, minute=2, text="words") for i in range(60))]
         core.store.put_items("home", old)
         core.store.put_items("home", new)  # newer: on top
         core._lane_cache.clear()
