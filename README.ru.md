@@ -82,16 +82,38 @@ fedtail задуман как клиент «по-поинтовски» пов�
 
 ## Запуск из исходников
 
-Debian 13 (trixie) и новее:
+Debian 13 (trixie) и новее, Ubuntu 24.04 и новее — четыре шага:
 
 ```sh
-sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests \
-    qt6-image-formats-plugins
+sudo apt install git python3                     # 1. git и Python
 git clone https://github.com/eugene-vereshchagin/fedtail.git
 cd fedtail
-python3 -m fedtail --check   # что есть, чего не хватает, и строка apt, чтобы поставить
-python3 -m fedtail
+python3 -m fedtail --check                       # 2. что есть и чего не хватает
+sudo apt install …                               # 3. строка, которую напечатал --check
+python3 -m fedtail                               # 4. запуск
 ```
+
+`--check` показывает всё, что fedtail нужно от системы: ✓ — есть, ✗ — без этого не
+запустится, – — без этого не заработает какая-то часть (справа написано, какая). В конце —
+готовая команда `sudo apt install …` для всего, чего нет, и под ней покороче — только для
+обязательного. Не Debian — вместо apt будет строка pip.
+
+Всё сразу, ничего не проверяя (окно Qt, окно GTK, терминал, видео, синхронизация,
+орфография, эмодзи):
+
+```sh
+sudo apt install python3-requests python3-pyside6.qtwidgets python3-pyside6.qtsvg \
+    python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets python3-pyside6.qtdbus \
+    qt6-image-formats-plugins python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 python3-textual \
+    python3-pil mpv python3-cryptography python3-langdetect libenchant-2-2 hunspell-ru \
+    hunspell-en-us python3-socks fonts-noto-color-emoji libnotify-bin xdg-utils git
+```
+
+Только окно, минимум: `sudo apt install python3-requests python3-pyside6.qtwidgets`.
+
+Обновился (`git pull`) — запусти `--check` ещё раз: новой версии может понадобиться новое.
+Пишешь о баге — приложи вывод `python3 -m fedtail --check`, с ним сразу видно, чего на
+машине нет.
 
 **Как запускать.** Из папки с исходниками работают обе формы:
 
@@ -105,10 +127,8 @@ python3 fedtail              # папкой — тоже работает
 пакетом (deb — в планах); до тех пор в примерах ниже подставляй `python3 -m fedtail`.
 Все ключи: `python3 -m fedtail --help`.
 
-Если в постах вместо эмодзи и флагов квадратики — нет цветного шрифта эмодзи:
-`sudo apt install fonts-noto-color-emoji`.
-
-Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials`, дальше так же.
+Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials`, дальше так же
+(`python3 -m fedtail --check` подскажет pip-строку и для остального).
 
 На Windows из исходников — так же, через `pip install requests PySide6-Essentials` и
 `python -m fedtail`. Собрать однофайловую версию самому: `pip install pyinstaller` и

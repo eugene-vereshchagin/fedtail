@@ -7,6 +7,11 @@
   (or pip) line for what is missing. At start, a missing must-have (or the interface's)
   is said with that line instead of a traceback; a missing extra in one line, once.
   packaging/deb.py takes its Depends / Recommends / Suggests from the same table.
+  The README and the site's quick start: four steps from the source, and every package
+  in one apt line.
+- The login's server address forgives the usual slips — a comma for a dot (the other
+  keyboard layout), spaces, @me@host, a link to a page there — and an address that
+  can't be reached is said in words, not as a urllib3 trace.
 
 - **From the competitors' report** (every one behind a key, off by default):
   - lanes of rules from someone's wall filtered by its server

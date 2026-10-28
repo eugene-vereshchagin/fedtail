@@ -377,18 +377,29 @@ class Core(SocialMixin):
         (fedtail://oauth on a phone): it goes straight back to the app. proxy: what the
         login window's proxy field holds (net.proxy_at_login), None — no such field."""
         def job():
+            from ..i18n import _
             if proxy is not None:
                 self.set_proxy(proxy)
-            if not api_module.cleartext_ok(server):
+            try:  # "dmesg,online", " social.example ", @me@host, a link: the server's address
+                where = api_module.server_address(server)
+            except ValueError:
+                raise ValueError(_("login_bad_server", server=str(server).strip())) from None
+            if not api_module.cleartext_ok(where):
                 # the token would cross the internet in the clear: only a server here,
                 # at home (localhost, a private address, .local/.lan) may be http://
-                from ..i18n import _
                 raise ValueError(_("login_insecure"))
-            api = self.api_class(server)
-            where = {"redirect": redirect} if redirect else {}
-            app = api.register_app(**where)
-            self._pending_login = (api, app, where)
-            return api.authorize_url(app["client_id"], **where)
+            api = self.api_class(where)
+            back = {"redirect": redirect} if redirect else {}
+            host = where.split("://", 1)[-1]
+            try:
+                app = api.register_app(**back)
+            except requests.ConnectionError as e:  # no such name, no answer, refused
+                log.info("login: %s unreachable: %s", host, e)
+                raise ValueError(_("login_unreachable", host=host)) from None
+            except requests.Timeout:
+                raise ValueError(_("login_timeout", host=host)) from None
+            self._pending_login = (api, app, back)
+            return api.authorize_url(app["client_id"], **back)
         return self.submit(job)
 
     def finish_login(self, code, expect=None):

@@ -104,6 +104,23 @@ def _enchant():
     return any(ctypes.util.find_library(n) for n in ("enchant-2", "enchant"))
 
 
+def _emoji_font():
+    """A colour emoji font: without one emoji and flags are squares."""
+    import glob
+    if any(glob.glob(p) for p in ("/usr/share/fonts/**/*[Cc]olor*[Ee]moji*",
+                                  "/usr/share/fonts/**/*[Ee]moji*",
+                                  os.path.expanduser("~/.local/share/fonts/**/*[Ee]moji*"))):
+        return True
+    if os.name == "nt" or sys.platform == "darwin":
+        return True  # the system's own (Segoe UI Emoji, Apple Color Emoji)
+    try:
+        out = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True,
+                             timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return "emoji" in out.lower()
+
+
 def _tool(*names):
     return lambda: any(shutil.which(n) for n in names)
 
@@ -144,6 +161,8 @@ NEEDS = (
          "pyenchant", "want"),
     Need("PySocks", "extra", "deps_socks", lambda: _module("socks"), "python3-socks",
          "PySocks", "want"),
+    Need("Noto Color Emoji", "extra", "deps_emoji", _emoji_font, "fonts-noto-color-emoji", "",
+         "want"),
     Need("notify-send", "extra", "deps_notify", _tool("notify-send"), "libnotify-bin", "",
          "want"),
     Need("xdg-open", "extra", "deps_xdg", _tool("xdg-open"), "xdg-utils", "", "want"),

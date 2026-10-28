@@ -142,6 +142,11 @@ _STRINGS = {
         "sent_background": "Отправляю в фоне…",
         "sent_background_failed": "Пост не ушёл: {err} — черновик сохранён",
         "held_info": "новых: {n} — «Обновить» покажет",
+        "login_bad_server": "«{server}» не похоже на адрес сервера — нужно вроде "
+                            "social.example (через точки, без пробелов)",
+        "login_unreachable": "Не достучался до {host}: такого адреса нет или сервер не "
+                             "отвечает. Проверь адрес (и прокси, если он нужен)",
+        "login_timeout": "{host} не ответил вовремя — попробуй ещё раз чуть позже",
         "deps_python": "сам Python",
         "deps_requests": "всё сетевое: сервер, картинки, вход",
         "deps_sqlite": "база профиля (с JSON1)",
@@ -160,6 +165,7 @@ _STRINGS = {
         "deps_langdetect": "язык постов по словам (фильтры, проверка языка)",
         "deps_enchant": "проверка орфографии (и словари)",
         "deps_socks": "SOCKS-прокси (server.proxy)",
+        "deps_emoji": "цветные эмодзи и флаги (без шрифта — квадратики)",
         "deps_notify": "уведомления из терминала и GTK",
         "deps_xdg": "открывать ссылки и файлы",
         "deps_git": "версия из исходников, отправка баг-репортов",
@@ -1512,6 +1518,11 @@ _STRINGS = {
         "sent_background": "Sending in the background…",
         "sent_background_failed": "The post didn't go: {err} — the draft is kept",
         "held_info": "{n} new — Refresh shows them",
+        "login_bad_server": "\"{server}\" doesn't look like a server's address — something "
+                            "like social.example is needed (dots, no spaces)",
+        "login_unreachable": "Couldn't reach {host}: no such address, or the server doesn't "
+                             "answer. Check the address (and the proxy, if one is needed)",
+        "login_timeout": "{host} didn't answer in time — try again a bit later",
         "deps_python": "Python itself",
         "deps_requests": "everything online: the server, pictures, login",
         "deps_sqlite": "the profile's database (with JSON1)",
@@ -1530,6 +1541,7 @@ _STRINGS = {
         "deps_langdetect": "a post's language by its words (filters, the language check)",
         "deps_enchant": "spell checking (and dictionaries)",
         "deps_socks": "a SOCKS proxy (server.proxy)",
+        "deps_emoji": "colour emoji and flags (without the font — squares)",
         "deps_notify": "notifications from the terminal and GTK",
         "deps_xdg": "opening links and files",
         "deps_git": "the version from the sources, sending bug reports",

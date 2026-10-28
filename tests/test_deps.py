@@ -81,3 +81,52 @@ class DepsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadmeTest(unittest.TestCase):
+    def test_everything_at_once_names_every_package(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent.parent
+        pkgs = {p for n in deps.NEEDS for p in n.deb.split()} - {"python3", "libsqlite3-0"}
+        for name in ("README.md", "README.ru.md"):
+            text = (root / name).read_text("utf-8")
+            self.assertIn("python3 -m fedtail --check", text)
+            missing = sorted(p for p in pkgs if p not in text)
+            self.assertEqual(missing, [], f"{name}: the apt line lacks these")
+
+
+class ServerAddressTest(unittest.TestCase):
+    """The login's "Server address": the usual slips forgiven, nonsense told in words."""
+
+    def test_slips(self):
+        from fedtail.protocols.mastodon.api import server_address as addr
+        self.assertEqual(addr("dmesg,online"), "https://dmesg.online")  # the other layout
+        self.assertEqual(addr("  social.example. "), "https://social.example")
+        self.assertEqual(addr("@me@mastodon.social"), "https://mastodon.social")
+        self.assertEqual(addr("https://social.example/@me/123"), "https://social.example")
+        self.assertEqual(addr("http://192.168.1.5:8080"), "http://192.168.1.5:8080")
+        for bad in ("dmesg", "x_y.example", "", "http://"):
+            with self.assertRaises(ValueError):
+                addr(bad)
+
+    def test_said_in_words(self):
+        import requests
+
+        from fedtail.core.app import Core
+
+        from .test_custom import FreeBase
+        i18n.setup("en")
+        base = FreeBase()
+        base.setUp()
+        self.addCleanup(base.doCleanups)
+        core, _w = base.make([])
+        with self.assertRaises(ValueError) as e:
+            core.begin_login("dmesg").result()
+        self.assertIn("doesn't look like a server's address", str(e.exception))
+        with mock.patch.object(core, "api_class") as api:
+            api.return_value.register_app.side_effect = requests.ConnectionError("boom")
+            with self.assertRaises(ValueError) as e:
+                core.begin_login("dmesg,online").result()
+            api.assert_called_with("https://dmesg.online")
+        self.assertIn("Couldn't reach dmesg.online", str(e.exception))
+        self.assertTrue(Core)

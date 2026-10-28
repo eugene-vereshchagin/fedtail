@@ -83,16 +83,38 @@ the same as running from the source — the same config, profiles and logs.
 
 ## Running from source
 
-Debian 13 (trixie) or newer:
+Debian 13 (trixie) or newer, Ubuntu 24.04 or newer — four steps:
 
 ```sh
-sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests \
-    qt6-image-formats-plugins
+sudo apt install git python3                     # 1. git and Python
 git clone https://github.com/eugene-vereshchagin/fedtail.git
 cd fedtail
-python3 -m fedtail --check   # what is there and what is missing, with the apt line
-python3 -m fedtail
+python3 -m fedtail --check                       # 2. what is there and what is missing
+sudo apt install …                               # 3. the line --check printed
+python3 -m fedtail                               # 4. run it
 ```
+
+`--check` lists everything fedtail needs from the system: ✓ — there, ✗ — it won't start
+without it, – — some part won't work without it (which one is said on the right). At the
+end — a ready `sudo apt install …` for everything missing, and under it a shorter one with
+the must-haves only. Not Debian — a pip line instead.
+
+Everything at once, no checking (the Qt window, the GTK window, the terminal, video,
+sync, spelling, emoji):
+
+```sh
+sudo apt install python3-requests python3-pyside6.qtwidgets python3-pyside6.qtsvg \
+    python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets python3-pyside6.qtdbus \
+    qt6-image-formats-plugins python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 python3-textual \
+    python3-pil mpv python3-cryptography python3-langdetect libenchant-2-2 hunspell-ru \
+    hunspell-en-us python3-socks fonts-noto-color-emoji libnotify-bin xdg-utils git
+```
+
+The window only, the least: `sudo apt install python3-requests python3-pyside6.qtwidgets`.
+
+Updated (`git pull`) — run `--check` again: a new version may need something new.
+Reporting a bug — attach the output of `python3 -m fedtail --check`: it shows at once what
+the machine lacks.
 
 **How to run.** From the source folder both forms work:
 
@@ -106,10 +128,8 @@ Options are the same for both: `python3 -m fedtail --profile croco`,
 installed as a package (a deb is planned); until then use `python3 -m fedtail` in the examples
 below. All options: `python3 -m fedtail --help`.
 
-Squares instead of emoji and flags mean there is no colour emoji font:
-`sudo apt install fonts-noto-color-emoji`.
-
-Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same.
+Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same
+(`python3 -m fedtail --check` gives the pip line for the rest too).
 
 On Windows from the source: the same, with `pip install requests PySide6-Essentials` and
 `python -m fedtail`. To build the one-file version yourself: `pip install pyinstaller` and

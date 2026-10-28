@@ -242,6 +242,33 @@ def statuses_url(host, their_id, max_id=""):
             "?limit=40&exclude_reblogs=true" + (f"&max_id={quote(max_id)}" if max_id else ""))
 
 
+def server_address(text):
+    """What was typed into "Server address" → "https://host[:port]" (or http:// as
+    typed), forgiving the usual slips: spaces, a comma for a dot (the other keyboard
+    layout), a trailing dot, @me@host or a whole link to a page there. ValueError when
+    it can't be an address (no dot, characters a host can't have)."""
+    import re as re_
+    from urllib.parse import urlsplit
+    raw = (text or "").strip()
+    raw = re_.sub(r"\s+", "", raw).replace(",", ".").replace("。", ".")
+    if raw.count("@") and "://" not in raw:  # @me@social.example → social.example
+        raw = raw.rsplit("@", 1)[-1]
+    scheme = "http" if raw.lower().startswith("http://") else "https"
+    if "://" not in raw:
+        raw = "https://" + raw
+    try:
+        parts = urlsplit(raw)
+        host, port = (parts.hostname or "").rstrip(".").lower(), parts.port
+    except ValueError:
+        host, port = "", None
+    label = r"(?!-)[\w-]{1,63}(?<!-)"
+    ok = host == "localhost" or bool(re_.fullmatch(rf"{label}(\.{label})+", host)) and \
+        "_" not in host
+    if not ok:
+        raise ValueError(text)
+    return f"{scheme}://{host}" + (f":{port}" if port else "")
+
+
 def cleartext_ok(server):
     """May a token go to this server: https always; http only to a server here or at
     home — localhost, a loopback or private address, a .local/.lan/.home.arpa name."""
