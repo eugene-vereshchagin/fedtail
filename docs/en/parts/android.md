@@ -7,6 +7,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | A messenger's layout: a roster and a messages window | · | not a phone thing |
+| A library of pictures for your own lanes | · | the phone's lanes wear its own icons |
 
 ### Threads
 
@@ -49,6 +50,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
+| `fedtail --check`: what the system lacks — and one apt line | · | the app has it all inside |
 
 ### Interfaces
 

@@ -46,6 +46,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Lanes from someone's wall, a search and RSS | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | ✓ |   |   | ✓ | ✓ |   |   |   | ✓ |   |   |   |   |   |
+| A library of pictures for your own lanes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -59,6 +60,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Mute a thread | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | A thread with new replies shows on its card | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ✓ |   |   | ✓ |   |   |   |   | ✓ |   |   |   | ✓ |   |
+| Where a thread opens: at the post or at the first new comment | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Read marks and place
 
@@ -72,6 +74,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
+| Sync set up in the window step by step, a new device by a password alone | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A lane without a seam: older posts come by themselves | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## The post card
 
@@ -227,6 +231,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Screen readers | ◐ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Interface language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ✓ |   |   | ✓ |   |   | ✓ |   | ✓ |   |   |   |   |   |
+| `fedtail --check`: what the system lacks — and one apt line | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Interfaces
 
@@ -238,4 +243,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **49** features of the 174 compared.
+Only in fedtail — **53** features of the 179 compared.

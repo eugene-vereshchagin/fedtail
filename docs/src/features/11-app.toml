@@ -373,3 +373,21 @@ android_note.ru = "Прокси, поле прокси при входе, пот
 android_note.en = "The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs."
 details.ru = "`proxy` — прокси для всего: API, картинки, живой поток (через HTTP-прокси), синхронизация, вход; `socks5h://…` — с PySocks. `proxy_at_login` — поле «Прокси» в окне входа (Qt, GTK, терминал, веб, телефон): что введёшь, запишется в config.toml и сразу пойдёт в дело. `number_keys` — \"ctrl\" или \"both\": лента по номеру ещё и Ctrl+1…9 (окна). `pin_tabs` — правый щелчок по вкладке треда или профиля: закреплённую не закрыть ни ×, ни Ctrl+W, ни Esc (окна). `phone.stream = \"wifi\"` — живой поток только на Wi‑Fi, на мобильной сети — опрос. `stats` — «Статистика» в меню ≡: неделя по дням (в Ленте, мои посты, активность) кто больше всех заполняет Ленту и чем больше всего делились. `translate_backend = \"libretranslate\"` с `translate_url` (и `translate_key`) — «Перевести» через LibreTranslate, даже если сервер не умеет. `translate_auto` — посты на языках, которых ты не читаешь и на которых не пишешь, переводятся сами, с пометкой «переведено с …»."
 details.en = "`proxy` — a proxy for everything: the API, pictures, the live stream (through an HTTP proxy), sync, the login; `socks5h://…` — with PySocks. `proxy_at_login` — a \"Proxy\" field in the login window (Qt, GTK, the terminal, the web page, the phone): what you type is written into config.toml and used at once. `number_keys` — \"ctrl\" or \"both\": a lane by its number with Ctrl+1…9 too (the windows). `pin_tabs` — right-click a thread's or a profile's tab: a pinned one won't close by ×, Ctrl+W or Esc (the windows). `phone.stream = \"wifi\"` — the live stream on Wi-Fi only, polling on a mobile network. `stats` — \"Statistics\" in the ≡ menu: the week day by day (Home, my posts, activity) who fills Home the most and what was shared most. `translate_backend = \"libretranslate\"` with `translate_url` (and `translate_key`) — \"Translate\" through LibreTranslate, even when the server can't. `translate_auto` — posts in languages you neither read nor write translate by themselves, marked \"translated from …\"."
+
+[[feature]]
+id = "deps-check"
+status = "has"
+android = "na"
+android_note.ru = "в приложении всё внутри"
+android_note.en = "the app has it all inside"
+since = "0.21.0"
+name.ru = "`fedtail --check`: чего не хватает в системе — и одна строка apt"
+name.en = "`fedtail --check`: what the system lacks — and one apt line"
+config = "`fedtail --check`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Что обязательно, что нужно каждому интерфейсу и что даёт дополнительное (эмодзи-шрифт, WebP, проверка языка…) — есть ли, и готовая строка `sudo apt install …` для недостающего. При запуске без обязательного — та же строка вместо трейсбэка."
+details.en = "What is a must, what each interface needs and what the extras give (the emoji font, WebP, the language check…) — whether it's there, and a ready `sudo apt install …` line for what's missing. Started without a must-have — the same line instead of a traceback."

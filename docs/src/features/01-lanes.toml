@@ -651,3 +651,22 @@ others.en = "feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Fri
 clients = ["Ivory", "Phanpy", "Fedilab"]
 details.ru = "У условия — `until = \"2026-11-01\"`: после этой даты его как будто нет (заглушка на неделю, лента на поездку). `text_in = \"name\"` — слова (и регулярки) и в имени автора с @ником. У ленты — `per_author = 3`: не больше трёх свежих постов одного человека; `bundle = \"author\"`: посты каждого вместе, самые активные первыми (поля «Не больше от одного автора» и «Собрать вместе» в редакторе). `people.home_hide` — в профиле того, на кого подписан, кнопка «Убрать из Ленты»: его посты уходят из Ленты, подписка, списки и колокольчик остаются. В наборе «extra» — «Упоминания чужих»."
 details.en = "A condition's `until = \"2026-11-01\"`: after that date it's as if it weren't there (a mute for a week, a lane for a trip). `text_in = \"name\"` — words (and regexes) in the author's name and @nick too. A lane's `per_author = 3`: at most three newest posts of one person; `bundle = \"author\"`: each one's posts together, the busiest first (\"At most from one author\" and \"Put together\" in the editor). `people.home_hide` — on the profile of someone you follow, \"Not in Home\": their posts leave Home, the follow, lists and the bell stay. The \"extra\" set has \"Strangers' mentions\"."
+
+[[feature]]
+id = "lane-pictures"
+status = "has"
+android = "na"
+android_note.ru = "у лент на телефоне — свои значки"
+android_note.en = "the phone's lanes wear its own icons"
+since = "0.21.0"
+name.ru = "Библиотека картинок для своих лент"
+name.en = "A library of pictures for your own lanes"
+config.ru = "`icon = \"…\"` у `[[lanes.custom]]`, «Картинка» в редакторе лент"
+config.en = "`icon = \"…\"` in `[[lanes.custom]]`, \"Picture\" in the lane editor"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "44 картинки — люди, сердце, огонь, газета, RSS, лупа, фото, кино, ноты, книга, код, геймпад, горы, рыба, машина, самолёт, чашка… Каждая тема красит их своим стилем, как свои значки; свой файл с тем же именем у темы главнее. В редакторе лент — с картинкой и названием."
+details.en = "44 pictures — people, a heart, fire, a newspaper, RSS, a magnifier, a camera, film, notes, a book, code, a gamepad, mountains, a fish, a car, a plane, a cup… Each theme colours them in its own style, as its own pictures; a theme's own file of that name wins. In the lane editor — with the picture and its name."

@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.21.0 — in progress
+## 0.21.0 — 2026-10-28
+
+Sync set up in the window step by step, "Commented posts" as on Point, a library of lane
+pictures, where a thread opens as one setting, lanes of rules brought to the end, and a
+crash on a flaky connection fixed:
 
 - **A lane without a seam** (`reading.older_ahead`, off by default): read to within a
   screen of what a lane shows, and fedtail fetches a page of older posts itself, as the

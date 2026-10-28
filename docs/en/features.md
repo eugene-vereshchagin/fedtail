@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.21.0 (in progress)**. This is the full list of fedtail's features: what each one does,
+As of version **0.21.0**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -112,6 +112,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | has | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes | — |
 | Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
+| A library of pictures for your own lanes | has | 0.21.0 | `icon = "…"` in `[[lanes.custom]]`, "Picture" in the lane editor | own | only in fedtail |
 
 <details><summary>In detail</summary>
 
@@ -202,6 +203,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Rules: for a while, by name, at most N per author, by author, "Not in Home".** A condition's `until = "2026-11-01"`: after that date it's as if it weren't there (a mute for a week, a lane for a trip). `text_in = "name"` — words (and regexes) in the author's name and @nick too. A lane's `per_author = 3`: at most three newest posts of one person; `bundle = "author"`: each one's posts together, the busiest first ("At most from one author" and "Put together" in the editor). `people.home_hide` — on the profile of someone you follow, "Not in Home": their posts leave Home, the follow, lists and the bell stay. The "extra" set has "Strangers' mentions".
 
+**A library of pictures for your own lanes.** 44 pictures — people, a heart, fire, a newspaper, RSS, a magnifier, a camera, film, notes, a book, code, a gamepad, mountains, a fish, a car, a plane, a cup… Each theme colours them in its own style, as its own pictures; a theme's own file of that name wins. In the lane editor — with the picture and its name.
+
 </details>
 
 ---
@@ -220,6 +223,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 | Commented posts: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` on a lane of your own | own | Point (subscriptions), Juick |
+| Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
 
 <details><summary>In detail</summary>
 
@@ -243,6 +247,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Commented posts: a thread a card, opened at the first new comment.** Your posts, threads you commented in (`subs.auto`) and those followed by hand — the ones with new comments: a card a thread, under it "N in the conversation, new: M · the last — who". A click opens the thread right at the first new comment. A thread read stays while you're in the lane and goes when you come back. Shown by default in fedtail's set, turned on in the lane editor for the others (the extra set); the same thing — `view = "threads"` on a lane of rules of your own.
 
+**Where a thread opens: at the post or at the first new comment.** One setting for every card: `"post"` — the thread stands at the post, `"first_unread"` — at the first unread comment (none — at the post). A lane of rules may decide for itself ("Commented posts" — at the first new one); "🔔 N new in the thread" always goes to the first new one. Every interface and the phone.
+
 </details>
 
 ---
@@ -262,6 +268,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `window.esc`, `window.start_lane` | own | only in fedtail |
 | Sync: the key by a QR code, drafts' pictures, WebDAV | planned | — | `[sync]` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
+| Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
+| A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
 
 <details><summary>In detail</summary>
 
@@ -283,9 +291,13 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `window.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
 
-**Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21.
+**Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot.
 
 **New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
+
+**Sync set up in the window step by step, a new device by a password alone.** Three steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), the login to the sync server, and the fork — "this is my first device" (the key made here) or "adding to those set up" (the key pasted from another device, or taken out of the journal with the password for new devices). The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone.
+
+**A lane without a seam: older posts come by themselves.** Read nearly to the end of what a lane shows — fedtail fetches a page of older posts itself, as the "older" button does. One page at a time; an empty one — it asks no more by itself (the button stays). The old isn't counted as new.
 
 </details>
 
@@ -703,6 +715,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `window.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
 | A sound scheme | has | 0.19.0 | `sound.*`, `tui.sound`; in the theme — `[sound] source`, `from` | own: the theme's `sounds/` folder | QIP, ICQ, Mail.ru Agent, Psi |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | has | 0.21.0 | `server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key` | `/api/v1/statuses/:id/translate` or LibreTranslate's `/translate` | Tokodon (a proxy before login), FastSMRW (Ctrl+digit, pinned lanes), iMast (the stream on Wi-Fi only), Ivory (statistics), Fedilab and Scatto (translating by itself, another translator) |
+| `fedtail --check`: what the system lacks — and one apt line | has | 0.21.0 | `fedtail --check` | own | only in fedtail |
 
 <details><summary>In detail</summary>
 
@@ -747,6 +760,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A sound scheme.** Sounds are part of a theme, as its pictures are. The messenger themes bring their own sets: `qip-retro` (and `qip-modern`) — bright “pip-pip” and a knock at the door when signing in, `mra` (and its colours) — round “blop”s and a xylophone, `psi` — soft chimes, `point` (and `juick`) — dry wooden ticks; `system` plays the desktop's sounds (the KDE/GNOME sound theme through `canberra-gtk-play`; without it a quiet set of fedtail's own), `terminal` and `bnw` — a beep. Your own sounds — a `sounds/` folder by the theme (`message.wav`, `reply.wav`, `mention.wav`, `direct.wav`, `thread.wav`, `request.wav`, `activity.wav`, `online.wav`, `sent.wav`); a missing one comes from the parent theme, from `[sound] from`, then a lighter sound of the same set. By default (`sound.enabled = "auto"`) development versions sound and releases are silent; `"on"` / `"off"` — always / never. A batch of news chimes once, with the weightiest sound (private → reply → mention → thread → request → activity → message), no more often than `sound.min_gap_seconds`; lanes — `sound.lanes` / `sound.except`, signing in and sending — `sound.online`, `sound.sent`; another theme's scheme whatever the look — `sound.scheme`, volume — `sound.volume`, the player — `sound.player` (by default pw-play, paplay, aplay; afplay on macOS; Windows itself). Qt and GTK alike; the terminal beeps (`tui.sound`), the web plays in the browser. ≡ → Debug → “Test the sound”. Every set is synthesised by `tools/make_sounds.py` — our own, GPL.
 
 **A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself.** `proxy` — a proxy for everything: the API, pictures, the live stream (through an HTTP proxy), sync, the login; `socks5h://…` — with PySocks. `proxy_at_login` — a "Proxy" field in the login window (Qt, GTK, the terminal, the web page, the phone): what you type is written into config.toml and used at once. `number_keys` — "ctrl" or "both": a lane by its number with Ctrl+1…9 too (the windows). `pin_tabs` — right-click a thread's or a profile's tab: a pinned one won't close by ×, Ctrl+W or Esc (the windows). `phone.stream = "wifi"` — the live stream on Wi-Fi only, polling on a mobile network. `stats` — "Statistics" in the ≡ menu: the week day by day (Home, my posts, activity) who fills Home the most and what was shared most. `translate_backend = "libretranslate"` with `translate_url` (and `translate_key`) — "Translate" through LibreTranslate, even when the server can't. `translate_auto` — posts in languages you neither read nor write translate by themselves, marked "translated from …".
+
+**`fedtail --check`: what the system lacks — and one apt line.** What is a must, what each interface needs and what the extras give (the emoji font, WebP, the language check…) — whether it's there, and a ready `sudo apt install …` line for what's missing. Started without a must-have — the same line instead of a traceback.
 
 </details>
 
@@ -860,6 +875,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | A messenger's layout: a roster and a messages window | · | not a phone thing |
+| A library of pictures for your own lanes | · | the phone's lanes wear its own icons |
 
 ### Threads
 
@@ -902,6 +918,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
+| `fedtail --check`: what the system lacks — and one apt line | · | the app has it all inside |
 
 ### Interfaces
 

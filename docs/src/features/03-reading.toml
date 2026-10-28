@@ -152,8 +152,8 @@ config = "`[sync]`"
 others = "—"
 size.ru = "средний"
 size.en = "medium"
-details.ru = "Ключ переносится QR-кодом из окна на камеру телефона; картинки черновика едут вместе с ним; WebDAV без монтирования; старые журналы упаковываются в снимок. И проверка вживую на Linux, Windows и Android. В 0.21."
-details.en = "The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21."
+details.ru = "Ключ переносится QR-кодом из окна на камеру телефона; картинки черновика едут вместе с ним; WebDAV без монтирования; старые журналы упаковываются в снимок."
+details.en = "The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot."
 
 [[feature]]
 id = "hold-new"
@@ -169,3 +169,35 @@ others = "Elk"
 clients = ["Elk"]
 details.ru = "Пришедшее после того, как лента нарисована, в неё не вставляется: в заголовке ленты «новых: N — «Обновить» покажет», а ⟳ / F5 впускает их. Более старое (листание вниз) приходит сразу."
 details.en = "What comes after the lane is drawn doesn't go into it: the lane's header says \"N new — Refresh shows them\", and ⟳ / F5 lets them in. Older posts (paging down) come at once."
+
+[[feature]]
+id = "sync-wizard"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Синхронизация настраивается в окне по шагам, новое устройство — одним паролем"
+name.en = "Sync set up in the window step by step, a new device by a password alone"
+config.ru = "≡ → Синхронизация (или щелчок по «⇅»); `fedtail sync keep` / `unlock`"
+config.en = "≡ → Sync (or a click on \"⇅\"); `fedtail sync keep` / `unlock`"
+api.ru = "своё: ключ в журнале, запечатанный паролем (scrypt + AES-GCM)"
+api.en = "own: the key in the journal, sealed by a password (scrypt + AES-GCM)"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Три шага с отметками ✓ / ▶ / ·: где встречаются устройства (адрес сервера или папка — сразу в config.toml, без перезапуска), вход на сервер синхронизации, и развилка — «это первое устройство» (ключ делается здесь) или «добавляю к настроенным» (ключ вставить с другого устройства или достать из журнала паролем для новых устройств). Пароль — по желанию: его придумываешь ты, это не пароль аккаунта. Так же в терминале, на веб-странице и на телефоне."
+details.en = "Three steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), the login to the sync server, and the fork — \"this is my first device\" (the key made here) or \"adding to those set up\" (the key pasted from another device, or taken out of the journal with the password for new devices). The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone."
+
+[[feature]]
+id = "older-ahead"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Лента без шва: старые посты подгружаются сами"
+name.en = "A lane without a seam: older posts come by themselves"
+config = "`reading.older_ahead`"
+api.ru = "своё"
+api.en = "own"
+others = "Mastodon web, Tusky, Phanpy, Ivory"
+clients = ["Mastodon web", "Tusky", "Phanpy", "Ivory"]
+details.ru = "Дочитал почти до конца того, что лента показывает, — fedtail сам берёт с сервера страницу более старых, как кнопка «раньше». По одной странице за раз; пришла пустая — больше сам не спрашивает (кнопка остаётся). Старое не считается новым."
+details.en = "Read nearly to the end of what a lane shows — fedtail fetches a page of older posts itself, as the \"older\" button does. One page at a time; an empty one — it asks no more by itself (the button stays). The old isn't counted as new."
