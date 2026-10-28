@@ -1687,6 +1687,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var pollMultiple by mutableStateOf(false)
     var pollExpires by mutableStateOf(86400)
     var editorFacts by mutableStateOf<JSONObject?>(null)
+
+    /** The editor's formatting buttons (post.format_bar): (name, face, tooltip); none — []. */
+    fun formatBar(): List<Triple<String, String, String>> {
+        val arr = editorFacts?.optJSONArray("format_bar") ?: return emptyList()
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Triple(o.optString("name"), o.optString("face"), o.optString("tip"))
+        }
+    }
     var composeFrom by mutableStateOf<String?>(null) // all accounts in one: whose post
     var composeWhen by mutableStateOf("")       // "2026-10-26T09:30": send then (local time)
     var composeHint by mutableStateOf("")       // "draft restored", "draft saved"

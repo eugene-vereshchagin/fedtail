@@ -85,6 +85,9 @@ object Core {
     suspend fun editor() = obj("editor")
     suspend fun complete(before: String) = obj("complete", before)
     suspend fun composeCheck(body: JSONObject) = obj("compose_check", body.toString())
+    suspend fun formatText(name: String, text: String, start: Int, end: Int) = obj(
+        "format_text", JSONObject().put("name", name).put("text", text).put("start", start)
+            .put("end", end).toString())
     suspend fun addLanguage(code: String) = obj("add_language", code)
     suspend fun draftStart(replyTo: String) = obj("draft_start", replyTo, "", "", false)
     suspend fun draftSave(key: String, snap: JSONObject) = obj("draft_save", key, snap.toString())

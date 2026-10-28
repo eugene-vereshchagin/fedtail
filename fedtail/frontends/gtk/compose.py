@@ -111,6 +111,10 @@ class ComposeWindow(Gtk.Box):
         self.placeholder.set_margin_top(8)
         over.add_overlay(self.placeholder)
         over.set_vexpand(True)
+        from .markup import bar as format_bar
+        self.format_bar = format_bar(self.text, self.cfg, self._markdown())
+        if self.format_bar is not None:  # B I S code link quote list (post.format_bar)
+            box.append(self.format_bar)
         box.append(over)
         self.suggest = Gtk.Label(xalign=0, wrap=True)  # what #tag or @name fits
         self.suggest.add_css_class("ft-muted")
@@ -826,6 +830,12 @@ class ComposeWindow(Gtk.Box):
             return True
         if keyval == Gdk.KEY_Tab and self._complete():
             return True
+        if ctrl and self.format_bar is not None and self.text.has_focus():
+            from .markup import KEYS, apply
+            name = KEYS.get((Gdk.keyval_name(Gdk.keyval_to_lower(keyval)) or "").lower())
+            if name:  # Ctrl+B / Ctrl+I / Ctrl+K: the formatting buttons' keys
+                apply(self.text, name)
+                return True
         if keyval == Gdk.KEY_Escape:
             self.close()
             return True

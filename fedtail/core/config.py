@@ -193,6 +193,7 @@ DEFAULTS = {
         "resize_images": True,
         "chain": True,
         "preview": True,
+        "format_bar": "auto",
         "complete_emoji": True,
         "focus_point": True,
         "quote_prefix": "> ",
@@ -348,6 +349,7 @@ CHOICES = {
     ("post", "who_can_boost"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
+    ("post", "format_bar"): {"auto", "on", "off"},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
@@ -508,7 +510,7 @@ FILE_LAYOUT = (
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "report_forward quote_policy quote_action quote_prefix invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
-                           "redraft resize_images focus_point chain preview lang_check "
+                           "redraft resize_images focus_point chain preview format_bar lang_check "
                            "link_quote send_in_background scheduled_to_draft drafts_place")
      + _keys("account", "markdown")),
     ("notify", _keys("notify", "enabled lanes except privacy when_focused backend filtered")

@@ -580,6 +580,13 @@ def compose_check(body_json):
     return _answer(lambda: _s["web"].compose_check(json.loads(body_json or "{}")))
 
 
+def format_text(body_json):
+    """A formatting button (post.format_bar, common/markup.py — the windows' own) on the
+    text: {name, text, start, end} → {text, start, end}; positions are Kotlin's (UTF-16).
+    The buttons themselves come with editor(): "format_bar"."""
+    return _answer(lambda: _s["web"].format_text(json.loads(body_json or "{}")))
+
+
 def add_language(code):
     """The editor's "Another language…": a code it lists from then on → {code, label}."""
     return _answer(lambda: _s["web"].add_language(code))

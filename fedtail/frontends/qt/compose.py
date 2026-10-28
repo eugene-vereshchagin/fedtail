@@ -275,6 +275,10 @@ class Compose(QDialog):
         self.setAcceptDrops(True)
         self.text.setPlaceholderText(_("text_placeholder_md") if self.core.markdown
                                      else _("text_placeholder"))
+        from .markup import bar as format_bar
+        self.format_bar = format_bar(self.text, win.cfg, self.core.markdown)
+        if self.format_bar is not None:  # B I S code link quote list (post.format_bar)
+            lay.addWidget(self.format_bar)
         lay.addWidget(self.text, 1)
         # "#ge" offers the tags already in use: #georgia, #GeorgiaNews…
         from .complete import Completer

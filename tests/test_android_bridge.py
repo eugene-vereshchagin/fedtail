@@ -50,6 +50,17 @@ class _Base(TmpDir):
 
 
 class BridgeTest(_Base):
+    def test_the_formatting_buttons(self):
+        """The phone's editor: the buttons with editor(), a button's work through
+        format_text with Kotlin's UTF-16 positions — the desktop's rules."""
+        self.demo()
+        self.bridge._core().cfg["post"]["format_bar"] = "on"
+        facts = self.call("editor")
+        self.assertIn("link", [b["name"] for b in facts["format_bar"]])
+        got = self.call("format_text", json.dumps({"name": "italic", "text": "😀 hi",
+                                                   "start": 3, "end": 5}))
+        self.assertEqual(got, {"text": "😀 *hi*", "start": 4, "end": 6})
+
     def test_the_phone_says_itself(self):
         """The phone's facts given to start(): the issue's draft and the report say the
         phone, its Android and "interface android" — not the config's "qt"."""

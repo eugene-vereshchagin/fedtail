@@ -384,6 +384,18 @@ keys = ["preview", "preview_back", "preview_md", "preview_media", "preview_plain
         "preview_tip"]
 
 [[capability]]
+id = "format-bar"
+area = "writing"
+android = "has"
+tui = "partly"
+name.ru = "Кнопки разметки в редакторе"
+name.en = "Formatting buttons in the editor"
+note.ru = "post.format_bar: жирный, курсив, зачёркнутый, код, ссылка, цитата, список — метки Markdown вокруг выделенного. В терминале — только кнопками мышью: Ctrl+B/I/K там у поля текста свои (Ctrl+I — это Tab)."
+note.en = "post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab)."
+keys = ["fmt_bold", "fmt_italic", "fmt_strike", "fmt_code", "fmt_link", "fmt_quote",
+        "fmt_list"]
+
+[[capability]]
 id = "editor-extras"
 area = "writing"
 android = "has"

@@ -74,6 +74,38 @@ class TuiSpellAccountsTest(Base):
             self.assertIn("fedtail", (core.paths.config_file.parent / "spelling.txt")
                           .read_text("utf-8"))
 
+    async def test_the_formatting_buttons(self):
+        """post.format_bar in the terminal: buttons over the text, the windows' rules."""
+        from textual.widgets import Button, TextArea
+        from textual.widgets.text_area import Selection
+
+        from fedtail.frontends.tui.screens import ComposeScreen
+        core, _w = self.make()
+        core.cfg["post"]["format_bar"] = "on"
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            editor = app.screen
+            ta = editor.query_one("#c-text", TextArea)
+            ta.load_text("one\nsay hi")
+            ta.selection = Selection((1, 4), (1, 6))
+            editor.query_one("#fmt-bold", Button).press()
+            await pilot.pause(0.1)
+            self.assertEqual(ta.text, "one\nsay **hi**")
+            self.assertEqual(ta.selected_text, "hi")
+            editor.query_one("#fmt-quote", Button).press()
+            await pilot.pause(0.1)
+            self.assertEqual(ta.text, "one\n> say **hi**")
+        core.cfg["post"]["format_bar"] = "off"
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            self.assertFalse(app.screen.query("#c-format"))
+
     async def test_no_dictionaries_said_so(self):
         from fedtail.frontends.tui.screens import ComposeScreen
         p = mock.patch.object(spell, "_backend", False)

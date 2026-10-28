@@ -659,6 +659,8 @@ class ComposeScreen(Screen):
     ComposeScreen #c-hint { height: auto; color: $text-muted; }
     ComposeScreen #c-count { height: auto; color: $text-muted; }
     ComposeScreen #c-text { height: 1fr; }
+    ComposeScreen #c-format { height: 1; }
+    ComposeScreen #c-format Button { height: 1; min-width: 5; border: none; margin: 0 1 0 0; }
     ComposeScreen #c-row { height: auto; }
     ComposeScreen #c-row Select { width: 30; }
     ComposeScreen #c-row Input { width: 1fr; }
@@ -742,10 +744,47 @@ class ComposeScreen(Screen):
                          id="c-vis")
             yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
+        from ..common import markup
+        if markup.shown(core.cfg, getattr(core, "markdown", False)):
+            # the formatting buttons (post.format_bar), clicked with the mouse: the
+            # terminal's Ctrl+B/I/K belong to the text field (Ctrl+I is Tab there)
+            with Horizontal(id="c-format"):
+                for f in markup.FORMATS:
+                    b = Button(f.face, id="fmt-" + f.name, tooltip=_(f.tip))
+                    b.can_focus = False  # the selection stays in the text
+                    yield b
         yield TextArea("", id="c-text")
         yield Static("", id="c-count")
         yield Static("", id="c-extras")
         yield Footer()
+
+    def on_button_pressed(self, e: Button.Pressed):
+        """A formatting button (common/markup.py): Markdown around the selection."""
+        bid = e.button.id or ""
+        if not bid.startswith("fmt-"):
+            return
+        e.stop()
+        self.format_text(bid[4:])
+
+    def format_text(self, name):
+        from ..common import markup
+        ta = self.query_one("#c-text", TextArea)
+        text = ta.text
+        lines = text.split("\n")
+
+        def index(loc):
+            row, col = loc
+            return sum(len(x) + 1 for x in lines[:row]) + col
+
+        def location(i, t):
+            before = t[:i]
+            return before.count("\n"), i - (before.rfind("\n") + 1)
+        sel = ta.selection
+        got = markup.apply(name, text, index(sel.start), index(sel.end))
+        ta.text = got.text
+        from textual.widgets.text_area import Selection
+        ta.selection = Selection(location(got.start, got.text), location(got.end, got.text))
+        ta.focus()
 
     def on_mount(self):
         if self.accounts:

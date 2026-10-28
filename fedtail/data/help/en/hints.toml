@@ -278,3 +278,38 @@ help = "keys.md#the-viewer-and-the-player"
 text = "This very mode: longer hints when you point the mouse. The same menu item turns it off."
 config = "ui.whats_this"
 help = "index.md"
+
+[fmt_bold]
+text = "Bold: ** around the selection; again — off. Ctrl+B."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_italic]
+text = "Italic: * around the selection; again — off. Ctrl+I."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_strike]
+text = "Strikethrough: ~~ around the selection; again — off."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_code]
+text = "Code: ` around a word, a ``` block around several lines."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_link]
+text = "A link: the selection becomes its words, the address is left selected to type over. Ctrl+K."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_quote]
+text = "A quote: \"> \" before every line of the selection; again — off."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_list]
+text = "A list: \"- \" before every line of the selection; again — off."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"

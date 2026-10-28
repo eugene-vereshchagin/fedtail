@@ -21,6 +21,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.AssistChip
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -540,6 +542,36 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                             model.composeText = text
                             offer = null
                         }, label = { Text(label, maxLines = 1) })
+                    }
+                }
+            }
+            // the formatting buttons (post.format_bar): what each does is the desktop's
+            val formats = model.formatBar()
+            if (formats.isNotEmpty()) {
+                val scope = rememberCoroutineScope()
+                Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    formats.forEach { (name, face, tip) ->
+                        TextButton(onClick = {
+                            scope.launch {
+                                val got = Core.formatText(name, field.text,
+                                    field.selection.min, field.selection.max)
+                                if (Core.failed(got) != null) return@launch
+                                val text = got.optString("text")
+                                field = TextFieldValue(text,
+                                    TextRange(got.optInt("start"), got.optInt("end")))
+                                model.composeText = text
+                            }
+                        }, modifier = Modifier.semantics { contentDescription = tip }) {
+                            Text(face, style = when (name) {
+                                "bold" -> LocalTextStyle.current.copy(fontWeight = FontWeight.Bold)
+                                "italic" -> LocalTextStyle.current.copy(fontStyle = FontStyle.Italic)
+                                "strike" -> LocalTextStyle.current.copy(
+                                    textDecoration = TextDecoration.LineThrough)
+                                "code" -> LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
+                                else -> LocalTextStyle.current
+                            })
+                        }
                     }
                 }
             }

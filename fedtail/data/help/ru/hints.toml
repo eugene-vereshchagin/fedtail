@@ -278,3 +278,38 @@ help = "keys.md#просмотрщик-и-плеер"
 text = "Этот самый режим: подробные подсказки при наведении мыши. Выключить — тем же пунктом меню."
 config = "ui.whats_this"
 help = "index.md"
+
+[fmt_bold]
+text = "Жирный: ** вокруг выделенного; ещё раз — снять. Ctrl+B."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_italic]
+text = "Курсив: * вокруг выделенного; ещё раз — снять. Ctrl+I."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_strike]
+text = "Зачёркнутый: ~~ вокруг выделенного; ещё раз — снять."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_code]
+text = "Код: ` вокруг слова, блок ``` вокруг нескольких строк."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_link]
+text = "Ссылка: выделенное — её текст, адрес остаётся выделенным, чтобы вписать свой. Ctrl+K."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_quote]
+text = "Цитата: «> » перед каждой строкой выделенного; ещё раз — снять."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"
+
+[fmt_list]
+text = "Список: «- » перед каждой строкой выделенного; ещё раз — снять."
+config = "post.format_bar"
+help = "writing.md#markdown-cw-language"

@@ -764,6 +764,29 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(other.closed)
         self.assertFalse(self.view.get_draft(other.key))
 
+    def test_the_formatting_buttons(self):
+        """post.format_bar: as Qt's — Markdown around the selection, off again, one undo."""
+        self.core.cfg["post"]["format_bar"] = "on"
+        self.addCleanup(self.core.cfg["post"].__setitem__, "format_bar", "auto")
+        dlg = self.win.compose()
+        self.assertIsNotNone(dlg.format_bar)
+        dlg.buffer.set_text("say hi 😀 now")
+        b = dlg.buffer
+        b.select_range(b.get_iter_at_offset(4), b.get_iter_at_offset(8))
+        dlg.format_bar.buttons["bold"].emit("clicked")
+        self.assertEqual(dlg._text(), "say **hi 😀** now")
+        s, e = b.get_selection_bounds()
+        self.assertEqual((s.get_offset(), e.get_offset()), (6, 10))
+        dlg.format_bar.buttons["bold"].emit("clicked")
+        self.assertEqual(dlg._text(), "say hi 😀 now")
+        dlg.format_bar.buttons["list"].emit("clicked")
+        self.assertTrue(dlg._text().startswith("- say"))
+        dlg.close()
+        self.core.cfg["post"]["format_bar"] = "off"
+        dlg = self.win.compose()
+        self.assertIsNone(dlg.format_bar)
+        dlg.close()
+
     def test_editor_keeps_a_draft(self):
         dlg = self.win.compose()
         dlg.buffer.set_text("недописанное")

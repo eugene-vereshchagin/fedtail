@@ -857,7 +857,30 @@ class Web:
                 "preview": bool(self.core.cfg["post"].get("preview", True)),
                 # spell checking: the browser's own (post.spellcheck), in the post's
                 # language — the windows check with the system's dictionaries
-                "spellcheck": bool(self.core.cfg["post"].get("spellcheck", True))}
+                "spellcheck": bool(self.core.cfg["post"].get("spellcheck", True)),
+                # the formatting buttons (post.format_bar): [] — none
+                "format_bar": self.format_bar()}
+
+    def format_bar(self):
+        """The editor's formatting buttons (common/markup.py) — [{name, face, tip, keys}],
+        [] when post.format_bar hides them; the phone draws the same."""
+        from ..common import markup
+        if not markup.shown(self.core.cfg, self.core.markdown):
+            return []
+        return [{"name": f.name, "face": f.face, "tip": markup.tip(f, _(f.tip)),
+                 "keys": f.keys} for f in markup.FORMATS]
+
+    def format_text(self, body):
+        """One button of the formatting row on the editor's text: {name, text, start, end}
+        → {text, start, end}. Positions are the browser's and Kotlin's (UTF-16); the work
+        is common/markup.py's, the windows' own."""
+        from ..common import markup
+        text = str(body.get("text") or "")
+        s = markup.from_utf16(text, int(body.get("start") or 0))
+        e = markup.from_utf16(text, int(body.get("end") or 0))
+        got = markup.apply(str(body.get("name") or ""), text, s, e)
+        return {"text": got.text, "start": markup.utf16(got.text, got.start),
+                "end": markup.utf16(got.text, got.end)}
 
     # ---- attachments: the page sends the file, the post names it by its token ----------
     def uploads_dir(self):
@@ -2090,6 +2113,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/columns": lambda: web.set_columns(body.get("names"), body.get("on") is not False),
             "/api/reveal": lambda: web.reveal(body.get("lane"), body.get("index")),
             "/api/compose_check": lambda: web.compose_check(body),
+            "/api/format": lambda: web.format_text(body),
             "/api/add_language": lambda: web.add_language(body.get("code")),
             "/api/preview": lambda: web.preview(body),
             "/api/save": lambda: web.save_media(body.get("url")),

@@ -2839,6 +2839,49 @@ async function follow() {
   }
 }
 
+// ---- the formatting buttons over the text (post.format_bar) -------------------------------
+// what a button does is the windows' own (common/markup.py), asked of the server: the page
+// keeps no second copy of the rules; the browser's undo keeps the step (execCommand)
+async function formatText(name) {
+  const box = $("#text");
+  let got;
+  try {
+    got = await api("/api/format", { name, text: box.value,
+                                     start: box.selectionStart, end: box.selectionEnd });
+  } catch (e) { toast(e.message); return; }
+  box.focus();
+  box.setSelectionRange(0, box.value.length);
+  if (!document.execCommand || !document.execCommand("insertText", false, got.text)) {
+    box.value = got.text;  // no execCommand: the text all the same, undo without it
+  }
+  box.setSelectionRange(got.start, got.end);
+  counter();
+}
+
+function formatBar(items) {
+  const bar = $("#format-bar");
+  bar.replaceChildren();
+  bar.hidden = !items || !items.length;
+  const keys = {};
+  for (const f of items || []) {
+    const b = el("button", "tool fmt fmt-" + f.name, f.face);
+    b.type = "button";
+    b.title = f.tip;
+    b.setAttribute("aria-label", f.tip);
+    b.addEventListener("mousedown", (e) => e.preventDefault());  // the text keeps its selection
+    b.onclick = () => formatText(f.name);
+    bar.append(b);
+    if (f.keys) keys[f.keys.split("+").pop().toLowerCase()] = f.name;
+  }
+  $("#text").addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    const name = keys[(e.key || "").toLowerCase()];
+    if (!name || bar.hidden) return;
+    e.preventDefault();
+    formatText(name);
+  });
+}
+
 // ---- start --------------------------------------------------------------------------------
 // spell checking in the editor: the browser's own checker (its red underline and its
 // suggestions on a right click), in the post's language, or the page's when none is
@@ -2898,6 +2941,7 @@ async function start() {
   $("#preview").title = w("preview") + ": " + w("preview_tip");
   $("#preview").hidden = (me.editor || {}).preview === false;
   $("#preview").onclick = preview;
+  formatBar((me.editor || {}).format_bar);
   $("#preview-back").onclick = () => $("#preview-dlg").close();
   $("#preview-send").onclick = () => { $("#preview-dlg").close(); send(null); };
   $("#lang").addEventListener("change", () => {

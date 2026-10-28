@@ -67,6 +67,24 @@ class WebApiTest(TmpDir):
         self.assertEqual(self.srv.web._media_changes(
             self.srv.web.core.by_id("400"), [{"id": "m9", "alt": "new words"}]), {})
 
+    def test_the_formatting_buttons(self):
+        """post.format_bar: the page is told the buttons, and a button's work is asked of
+        the server with the browser's UTF-16 positions."""
+        self.core.cfg["post"]["format_bar"] = "on"
+        me = json.loads(self.req("/api/me")[2])
+        bar = me["editor"]["format_bar"]
+        self.assertEqual([b["name"] for b in bar][:2], ["bold", "italic"])
+        self.assertEqual(bar[0]["tip"], "Bold (Ctrl+B)")
+        # "say hi 😀 now": 😀 is two UTF-16 units, so "hi 😀" is [4, 9) in the browser
+        code, _h, got = self.req("/api/format", {"name": "bold", "text": "say hi 😀 now",
+                                                 "start": 4, "end": 9})
+        self.assertEqual(code, 200, got)
+        self.assertEqual(json.loads(got), {"text": "say **hi 😀** now", "start": 6, "end": 11})
+        self.core.cfg["post"]["format_bar"] = "off"
+        self.assertEqual(json.loads(self.req("/api/me")[2])["editor"]["format_bar"], [])
+        code, _h, _r = self.req("/api/format", {"name": "blink", "text": "x"})
+        self.assertNotEqual(code, 200)
+
     def test_link_posts_place(self):
         st = self.w.add(status("401", BOB, text="look", vis="public"), home=True)
         st["card"] = {"url": "https://news.example/a", "title": "A"}

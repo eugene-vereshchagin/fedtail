@@ -193,6 +193,32 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
         self.assertEqual(self.world.languages[-1], "ka")
 
+        # the formatting buttons (post.format_bar): Markdown around the selection, off again
+        self.core.cfg["post"]["format_bar"] = "on"
+        dlg = Compose(self.win)
+        dlg.show()
+        self.assertIsNotNone(dlg.format_bar)
+        dlg.text.setPlainText("say hi 😀 now")
+        c = dlg.text.textCursor()
+        c.setPosition(4)
+        c.setPosition(9, QTextCursor.MoveMode.KeepAnchor)  # "hi 😀": 😀 is two in Qt
+        dlg.text.setTextCursor(c)
+        dlg.format_bar.buttons["bold"].click()
+        self.assertEqual(dlg.text.toPlainText(), "say **hi 😀** now")
+        self.assertEqual(dlg.text.textCursor().selectedText(), "hi 😀")
+        dlg.format_bar.buttons["bold"].click()
+        self.assertEqual(dlg.text.toPlainText(), "say hi 😀 now")
+        dlg.text.undo()
+        self.assertEqual(dlg.text.toPlainText(), "say **hi 😀** now")  # one step of undo
+        dlg.format_bar.buttons["quote"].click()
+        self.assertTrue(dlg.text.toPlainText().startswith("> say"))
+        dlg.reject()
+        self.core.cfg["post"]["format_bar"] = "off"
+        dlg = Compose(self.win)
+        self.assertIsNone(dlg.format_bar)
+        dlg.reject()
+        self.core.cfg["post"]["format_bar"] = "auto"
+
         # a poll: choices, how long, one or several
         dlg = Compose(self.win)
         dlg.show()

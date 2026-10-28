@@ -447,3 +447,12 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 
 /* the empty lane's opossum (the windows' curtain): swinging while the lanes update */
 .empty img.possum { display: block; width: 96px; height: 96px; margin: 24px auto 8px; }
+
+/* the formatting buttons over the text (post.format_bar) */
+#format-bar { display: flex; gap: 2px; flex-wrap: wrap; margin: 4px 0 2px; }
+#format-bar[hidden] { display: none; }
+#format-bar .fmt { min-width: 2em; padding: 2px 6px; }
+#format-bar .fmt-bold { font-weight: bold; }
+#format-bar .fmt-italic { font-style: italic; }
+#format-bar .fmt-strike { text-decoration: line-through; }
+#format-bar .fmt-code { font-family: monospace; }
