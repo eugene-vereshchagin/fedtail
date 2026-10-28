@@ -2,6 +2,11 @@ package online.dmesg.fedtail
 
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import android.net.Uri
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -345,6 +350,13 @@ private fun PageRowView(
         }
         r.kind == "heading" -> Text(r.title, Modifier.padding(top = 12.dp, start = 4.dp),
             style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        r.qr.isNotEmpty() -> Column(Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            QrCode(r.qr)
+            if (r.line.isNotBlank()) Text(r.line, fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            buttons()
+        }
         r.kind == "html" -> Column {
             HtmlText(r.html, onLink, Modifier.fillMaxWidth().padding(horizontal = 4.dp))
             buttons()
@@ -416,6 +428,16 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
             tip()
         }
         else -> Column {
+            if (f.scan) {  // the other device's QR code fills the field
+                val scan = rememberLauncherForActivityResult(ScanContract()) { got ->
+                    got.contents?.let { values[f.name] = it }
+                }
+                val prompt = stringResource(R.string.scan_prompt)
+                OutlinedButton(onClick = {
+                    scan.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                        .setBeepEnabled(false).setOrientationLocked(false).setPrompt(prompt))
+                }) { Text(stringResource(R.string.scan_qr)) }
+            }
             OutlinedTextField(value = values[f.name]?.toString() ?: "",
                 onValueChange = { values[f.name] = it },
                 label = if (f.label.isNotBlank()) { { Text(f.label) } } else null,
@@ -425,6 +447,21 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
                 else androidx.compose.ui.text.input.VisualTransformation.None,
                 modifier = Modifier.fillMaxWidth())
             tip()
+        }
+    }
+}
+
+/** A QR code (common/qr.rows: "1" dark, the quiet zone included), dark on white whatever
+ *  the theme — a scanner wants it so. */
+@Composable
+private fun QrCode(rows: List<String>) {
+    Canvas(Modifier.size(260.dp).background(Color.White)) {
+        val n = rows.size
+        val cell = size.minDimension / n
+        rows.forEachIndexed { y, row ->
+            row.forEachIndexed { x, c ->
+                if (c == '1') drawRect(Color.Black, Offset(x * cell, y * cell), Size(cell + 0.5f, cell + 0.5f))
+            }
         }
     }
 }

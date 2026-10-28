@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- phone.stream = "wifi": is this Wi-Fi? (the live stream only there) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- the shade: replies, mentions, follow requests (notify.lanes), asked at first start -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Sync → "Scan": the other device's key as a QR code (asked only when scanning) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- allowBackup off: the token and the read marks never go into anybody's cloud backup -->
     <application
@@ -16,6 +20,12 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
+
+        <!-- the QR scanner (zxing-android-embedded): turned the way the phone is held -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="screenOrientation" />
 
         <!-- singleTask: the server's "allow" comes back to this very window -->
         <activity

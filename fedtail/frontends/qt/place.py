@@ -146,6 +146,9 @@ class PlaceDialog(QDialog):
         elif r.kind == "pre":
             text = QLabel(r.title)
             text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        elif r.kind == "qr":
+            text = QLabel(r.line)
+            lay.addWidget(_qr_label(r.data or ()))
         elif r.kind == "post" and r.data is not None:
             from ...model.text import snippet
             p = real(r.data)
@@ -355,3 +358,20 @@ def _plain(text):
 
 
 __all__ = ["PlaceDialog"]
+
+
+def _qr_label(rows, module=6):
+    """A QR code (common/qr.rows) as a picture: dark on white whatever the theme."""
+    from PySide6.QtGui import QColor, QImage, QPixmap
+    n = len(rows)
+    img = QImage(n, n, QImage.Format.Format_RGB32)
+    img.fill(QColor("white"))
+    black = QColor("black").rgb()
+    for y, row in enumerate(rows):
+        for x, c in enumerate(row):
+            if c == "1":
+                img.setPixel(x, y, black)
+    label = QLabel()
+    label.setPixmap(QPixmap.fromImage(img.scaled(n * module, n * module)))
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    return label

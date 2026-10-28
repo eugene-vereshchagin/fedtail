@@ -110,6 +110,9 @@ class PlaceWindow:
             p = real(r.data)
             label.set_markup(f"<b>{escape(p.author.name or p.author.handle)}</b> "
                              f"@{escape(p.author.handle)}\n{escape(snippet(p, 400))}")
+        elif r.kind == "qr":
+            box.append(_qr_picture(r.data or ()))
+            label.set_text(r.line)
         elif r.kind == "heading":
             label.set_markup(f"<b>{escape(r.title)}</b>")
         else:
@@ -302,3 +305,20 @@ def _pango(html):
 
 
 __all__ = ["PlaceWindow"]
+
+
+def _qr_picture(rows, module=6):
+    """A QR code (common/qr.rows) as a picture: dark on white whatever the theme."""
+    from gi.repository import Gdk, GLib
+    n = len(rows) * module
+    data = bytearray()
+    for row in rows:
+        line = b"".join((b"\x00\x00\x00" if c == "1" else b"\xff\xff\xff") * module
+                        for c in row)
+        data += line * module
+    tex = Gdk.MemoryTexture.new(n, n, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(data)),
+                                n * 3)
+    pic = Gtk.Picture.new_for_paintable(tex)
+    pic.set_can_shrink(False)
+    pic.set_halign(Gtk.Align.CENTER)
+    return pic

@@ -158,4 +158,6 @@
     <string name="save_media">Сохранить</string>
     <string name="preview">Предпросмотр</string>
     <string name="open_warnings">Открыть все предупреждения</string>
+    <string name="scan_qr">Сканировать QR-код</string>
+    <string name="scan_prompt">Наведи камеру на QR-код ключа на другом устройстве</string>
 </resources>

@@ -1852,11 +1852,20 @@ class Web:
             elif r.kind == "pre":
                 row["html"] = "<pre>" + escape(r.title) + "</pre>"
                 row["kind"], row["title"] = "html", ""
+            elif r.kind == "qr":  # our own SVG (common/qr.py), and the rows for the phone
+                from ..common.qr import svg
+                row["qr"] = list(r.data or ())
+                row["html"] = ('<div class="qr">' + svg(row["qr"]) + "<div>" + escape(r.line) +
+                               "</div></div>")
+                row["kind"] = "html"
+                row["title"] = ""
+                row["line"] = r.line
             rows.append(row)
         return {"name": pg.name, "title": pg.title, "arg": pg.arg, "hint": pg.hint,
                 "tabs": [list(t) for t in pg.tabs], "tab": pg.tab, "rows": rows,
                 "form": [{"name": f.name, "label": f.label, "value": f.value, "kind": f.kind,
-                          "choices": [list(c) for c in f.choices], "tip": f.tip}
+                          "choices": [list(c) for c in f.choices], "tip": f.tip,
+                          "scan": f.scan}
                          for f in pg.form],
                 "submit": _btn_json(pg.submit) if pg.submit else None,
                 "more": _btn_json(pg.more) if pg.more else None, "empty": pg.empty}

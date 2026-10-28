@@ -295,7 +295,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
 
-**Sync set up in the window step by step, a new device by a password alone.** Three steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), the login to the sync server, and the fork — "this is my first device" (the key made here) or "adding to those set up" (the key pasted from another device, or taken out of the journal with the password for new devices). The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone.
+**Sync set up in the window step by step, a new device by a password alone.** Three steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), the login to the sync server, and the fork — "this is my first device" (the key made here) or "adding to those set up" (the key from another device — there "Show the key" gives a QR code the phone scans, and the text to paste; or the key taken out of the journal with the password for new devices). The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone.
 
 **A lane without a seam: older posts come by themselves.** Read nearly to the end of what a lane shows — fedtail fetches a page of older posts itself, as the "older" button does. One page at a time; an empty one — it asks no more by itself (the button stays). The old isn't counted as new.
 

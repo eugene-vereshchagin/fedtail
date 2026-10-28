@@ -49,8 +49,23 @@ class SyncPlaceTest(Devices):
         self.desk.mark_read(["101"])
         self.desk.sync_now()  # the desk: its journal, its key
         p_desk = self.place(self.desk)
+        self.assertTrue(p_desk.act("sync", "show", "").confirm)  # "sure?" first
         shown = p_desk.act("sync", "show", "", confirmed=True)
-        self.assertEqual(shown.copy, self.desk.sync_key())
+        self.assertEqual(shown.open, {"page": "sync_key"})
+        page = p_desk.page("sync_key")  # its QR code to scan, its text to copy
+        from fedtail.frontends.common import qr
+        self.assertEqual(next(r for r in page.rows if r.kind == "qr").data,
+                         qr.rows(qr.matrix(self.desk.sync_key())))
+        self.assertEqual(next(r for r in page.rows if r.kind == "pre").title,
+                         self.desk.sync_key())
+        self.assertEqual(p_desk.act("sync", "copykey", "").copy, self.desk.sync_key())
+        from fedtail.frontends.web.server import Web  # the web page and the phone: JSON
+        got = Web(View(self.desk), None).page("sync_key")
+        row = next(r for r in got["rows"] if r.get("qr"))
+        self.assertIn("<svg", row["html"])
+        self.assertEqual(row["qr"], qr.rows(qr.matrix(self.desk.sync_key())))
+        join = Web(View(self.phone), None).page("sync", "", "join")
+        self.assertTrue(next(f for f in join["form"] if f["name"] == "key")["scan"])
         page = p_desk.page("sync")  # done: the password is a row of its own, not a form
         self.assertFalse(page.form)
         row = next(r for r in page.rows if r.key == "escrow")

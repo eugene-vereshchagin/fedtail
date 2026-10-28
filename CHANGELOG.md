@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- Sync: the key for the next device is a QR code now. ≡ → Sync → "Show the key" (after a
+  "sure?") shows the code and its text with "Copy"; on the phone "Add to those set up" has
+  "Scan the QR code" by the key's field (the camera is asked only then; the scanner is
+  zxing-android-embedded, no Google services). The code is fedtail's own (common/qr.py,
+  no library), drawn by every interface: a picture in the windows, SVG on the web page,
+  half blocks in the terminal, a canvas on the phone.
+
 - Fixed: a comment in a followed thread that came only as a mention (an unlisted reply into
   a public thread, say) went to "To me" and not to Commented posts. The thread is now found
   through the comment's chain of parents (up to 40 known posts), and its comments are

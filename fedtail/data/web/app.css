@@ -463,3 +463,5 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 #format-bar .fmt-italic { font-style: italic; }
 #format-bar .fmt-strike { text-decoration: line-through; }
 #format-bar .fmt-code { font-family: monospace; }
+.qr { text-align: center; }
+.qr svg { max-width: 100%; height: auto; }

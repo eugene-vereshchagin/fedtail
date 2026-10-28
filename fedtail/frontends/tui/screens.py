@@ -273,6 +273,16 @@ def row_text(row):
     return t
 
 
+def qr_text(row):
+    """A QR code row (common/qr.rows) in half blocks: light on a dark ground, as a scanner
+    wants it whatever the terminal's colours."""
+    from ..common.qr import blocks
+    t = Text("\n".join(blocks(row.data or ())), style="white on black", no_wrap=True)
+    if row.line:
+        t.append("\n" + row.line, style="dim")
+    return t
+
+
 class PlaceScreen(Screen):
     """A place (common/places.py) as the terminal draws it: the hint, the tabs ([ / ]),
     the rows (Enter — a post's thread, a person's profile, else the row's first button;
@@ -388,6 +398,8 @@ class PlaceScreen(Screen):
                 else:
                     from ...model.text import html_to_text
                     out.append(RowItem(r, Text(html_to_text(r.title))))
+            elif r.kind == "qr":
+                out.append(RowItem(r, qr_text(r)))
             else:
                 out.append(RowItem(r, row_text(r)))
         if not page.rows and page.empty:

@@ -125,7 +125,8 @@ class SyncPlaces:
         if step == "join":
             escrow = st is not None and v.sync_has_escrow()
             page.hint = _("sync_join_hint")
-            fields = [Field("key", _("sync_key_paste_f"), "", tip=_("sync_key_paste_tip"))]
+            fields = [Field("key", _("sync_key_paste_f"), "", tip=_("sync_key_paste_tip"),
+                            scan=True)]
             if escrow:
                 fields.append(Field("password", _("sync_password_take"), "", "secret",
                                     tip=_("sync_password_take_tip")))
@@ -253,9 +254,31 @@ class SyncPlaces:
                    open={"page": "sync"})
 
     def _a_sync_show(self, _d, _v, confirmed, _ans):
+        """The key for the next device — after a "sure?": its QR code to scan, and the
+        text to copy (place sync_key)."""
         from .places import Out
         if not confirmed:
             return Out(confirm=_("sync_key_show_sure"))
+        if not self.view.sync_key():
+            return Out(error=_("sync_key_none"))
+        return Out(open={"page": "sync_key"})
+
+    def _p_sync_key(self, _arg, _tab, _cur):
+        from . import qr
+        from .places import Btn, Page, Row
+        key = self.view.sync_key()
+        page = Page("sync_key", _("sync_key_title"), hint=_("sync_key_hint"),
+                    empty=_("sync_key_none"))
+        if key:
+            page.rows.append(Row("qr", line=_("sync_key_scan_line"), key="qr",
+                                 data=qr.rows(qr.matrix(key))))
+            page.rows.append(Row("pre", key, key="text", buttons=(
+                self._btn(_("sync_key_copy"), "sync", "copykey"),)))
+        page.more = Btn(_("sync_back_done"), ("sync", "goto", "done"))
+        return page
+
+    def _a_sync_copykey(self, _d, _v, _c, _ans):
+        from .places import Out
         key = self.view.sync_key()
         return Out(message=_("sync_key_copied"), copy=key) if key else \
             Out(error=_("sync_key_none"))

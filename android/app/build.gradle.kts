@@ -180,6 +180,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // pictures: avatars, previews, the viewer — straight from their servers, never with
     // the account's token (as the desktop's images.py); memory + disk cache of its own
+    // Sync → "Scan": the key as a QR code from another device (no Google services)
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
     // a theme's own pictures on the buttons: SVG, as the windows draw them (iconpack)
     implementation("io.coil-kt:coil-svg:2.7.0")

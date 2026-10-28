@@ -180,12 +180,14 @@ data class AccountItem(val id: String, val handle: String, val name: String, val
 
 /** A form's field (common/places.py Field): kind line | text | check | choice | checks | file. */
 data class PageField(val name: String, val label: String, val kind: String, val value: Any?,
-                     val choices: List<Pair<String, String>>, val tip: String)
+                     val choices: List<Pair<String, String>>, val tip: String,
+                     val scan: Boolean = false) // a QR code may fill it: "Scan" beside it
 
-/** A place's row: kind item | post | account | tag | text | heading | html. */
+/** A place's row: kind item | post | account | tag | text | heading | html; qr — a QR code's
+ *  rows of "1"/"0" (common/qr.rows) to draw, dark on white. */
 data class PageRow(val kind: String, val title: String, val line: String, val key: String,
                    val buttons: List<PlaceButton>, val post: PostItem?, val account: AccountItem?,
-                   val html: String)
+                   val html: String, val qr: List<String> = emptyList())
 
 /** A place as the windows draw it: the hint, the tabs, the rows, the form and its button. */
 data class PageView(
@@ -2036,14 +2038,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 PageRow(str(r, "kind"), str(r, "title"), str(r, "line"), str(r, "key"),
                     (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) },
                     r.optJSONObject("post")?.let { parsePost(it) },
-                    r.optJSONObject("account")?.let { parseAccount(it) }, str(r, "html"))
+                    r.optJSONObject("account")?.let { parseAccount(it) }, str(r, "html"),
+                    r.optJSONArray("qr")?.let { q -> (0 until q.length()).map { q.optString(it) } }
+                        ?: emptyList())
             },
             form = (0 until form.length()).map { form.getJSONObject(it) }.map { f ->
                 val ch = f.optJSONArray("choices") ?: JSONArray()
                 PageField(str(f, "name"), str(f, "label"), f.optString("kind", "line"),
                     if (f.isNull("value")) null else f.opt("value"),
                     (0 until ch.length()).map { ch.getJSONArray(it) }
-                        .map { it.optString(0) to it.optString(1) }, str(f, "tip"))
+                        .map { it.optString(0) to it.optString(1) }, str(f, "tip"),
+                    f.optBoolean("scan", false))
             },
             submit = parseButton(o.optJSONObject("submit")), more = parseButton(o.optJSONObject("more")),
             empty = str(o, "empty"))

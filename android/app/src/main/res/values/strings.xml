@@ -159,4 +159,6 @@
     <string name="save_media">Save</string>
     <string name="preview">Preview</string>
     <string name="open_warnings">Open every warning</string>
+    <string name="scan_qr">Scan the QR code</string>
+    <string name="scan_prompt">Point the camera at the key's QR code on the other device</string>
 </resources>

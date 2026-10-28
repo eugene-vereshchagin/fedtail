@@ -189,7 +189,8 @@ _STRINGS = {
         "sync_first_but_journal": "В хранилище уже есть журнал другого устройства — это не первое: "
                                   "возьми его ключ",
         "sync_join_hint": "На устройстве, где синхронизация уже работает: ≡ → Синхронизация → "
-                          "«Скопировать ключ», и вставь его сюда (мессенджер с самим собой, "
+                          "«Показать ключ» — и сканируй его QR-код (на телефоне — «Сканировать» "
+                          "у поля) или вставь текст ключа сюда (мессенджер с самим собой, "
                           "менеджер паролей). Если там задавали пароль для новых устройств — "
                           "хватит его.",
         "sync_lost_title": "Старого устройства под рукой нет и пароля нет?",
@@ -238,12 +239,14 @@ _STRINGS = {
         "sync_login_go": "Открыть страницу входа",
         "sync_login_again": "Войти заново",
         "sync_login_code_f": "Код со страницы",
-        "sync_key_hint": "Всё, что уходит в журнал, зашифровано ключом аккаунта: хранилище видит "
-                         "только непрозрачные байты. Ключ один на все твои устройства — его "
-                         "переносят с устройства на устройство.",
-        "sync_key_show_btn": "Скопировать ключ",
-        "sync_key_show_sure": "Ключ открывает всё, что синхронизируется. Скопировать его в буфер "
-                              "обмена?",
+        "sync_key_hint": "Ключ один на все твои устройства и открывает всё, что синхронизируется: "
+                         "не показывай его никому. На новом устройстве: ≡ → Синхронизация → "
+                         "«Добавить к настроенным» → «Сканировать» (телефон) или вставить текст.",
+        "sync_key_title": "Ключ для нового устройства",
+        "sync_key_scan_line": "QR-код ключа",
+        "sync_key_copy": "Скопировать",
+        "sync_key_show_btn": "Показать ключ",
+        "sync_key_show_sure": "Ключ открывает всё, что синхронизируется. Показать его на экране?",
         "sync_key_copied": "Ключ в буфере обмена — на новом устройстве: ≡ → Синхронизация → "
                            "«Добавить к настроенным»",
         "sync_escrow_title": "Пароль для новых устройств (по желанию)",
@@ -1783,9 +1786,10 @@ _STRINGS = {
         "sync_first_done": "The key is ready (id {kid}), sync is on",
         "sync_first_but_journal": "The store holds another device's journal already — this isn't "
                                   "the first: take its key",
-        "sync_join_hint": "On a device where sync already works: ≡ → Sync → “Copy the key”, and "
-                          "paste it here (a chat with yourself, a password manager). If a password "
-                          "for new devices was set there — it is enough.",
+        "sync_join_hint": "On a device where sync already works: ≡ → Sync → “Show the key” — "
+                          "and scan its QR code (on the phone — “Scan” by the field) or paste "
+                          "the key's text here (a chat with yourself, a password manager). If a "
+                          "password for new devices was set there — it is enough.",
         "sync_lost_title": "No old device at hand and no password?",
         "sync_lost_line": "You can start again with a new key: what was read before won't come "
                           "here, and the old devices will have to take the new key later.",
@@ -1830,11 +1834,14 @@ _STRINGS = {
         "sync_login_go": "Open the login page",
         "sync_login_again": "Log in again",
         "sync_login_code_f": "The code from the page",
-        "sync_key_hint": "Everything that goes into the journal is sealed with the account's key: "
-                         "the store sees opaque bytes only. One key for all your devices — it is "
-                         "carried from one to another.",
-        "sync_key_show_btn": "Copy the key",
-        "sync_key_show_sure": "The key opens everything that is synced. Copy it to the clipboard?",
+        "sync_key_hint": "One key for all your devices, and it opens everything that is synced: "
+                         "show it to no one. On the new device: ≡ → Sync → “Add to those set up” → "
+                         "“Scan” (the phone) or paste the text.",
+        "sync_key_title": "The key for a new device",
+        "sync_key_scan_line": "The key's QR code",
+        "sync_key_copy": "Copy",
+        "sync_key_show_btn": "Show the key",
+        "sync_key_show_sure": "The key opens everything that is synced. Show it on the screen?",
         "sync_key_copied": "The key is on the clipboard — on the new device: ≡ → Sync → “Add to "
                            "those set up”",
         "sync_escrow_title": "A password for new devices (optional)",

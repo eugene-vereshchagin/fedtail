@@ -55,7 +55,8 @@ class Row:
     """One row of a place. kind: "post" (data: the Post), "account" (data: the Account),
     "tag" (data: the Tag), "text" (title, line), "heading" (title), "html" (title: HTML
     made safe already — help pages, the server's about), "item" (title, line: a filter,
-    a list, a server, a scheduled post…)."""
+    a list, a server, a scheduled post…), "qr" (data: common/qr.rows — a QR code to draw,
+    dark on light whatever the theme; line: what it is for)."""
     kind: str              # also "pre": title is text to keep as it is (monospace)
     title: str = ""
     line: str = ""
@@ -76,6 +77,8 @@ class Field:
     tip: str = ""  # what it means: under the field, or on hover
     pictures: bool = False  # a choice of pictures (the values: iconpack's names) —
     # the windows draw each beside its words
+    scan: bool = False  # a QR code may fill it: an interface with a camera (the phone)
+    # offers "Scan" beside it
 
 
 @dataclass
@@ -114,7 +117,7 @@ PLACES = {
     "silence": "silence_title", "lists": "lists_header", "search": "search_title",
     "requests": "lane_requests", "activity": "lane_activity", "tags": "followed_tags",
     "scheduled": "scheduled_title", "drafts": "drafts_title", "stats": "stats_title",
-    "sync": "sync_title",
+    "sync": "sync_title", "sync_key": "sync_key_title",
     "trends": "trends_title",
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
