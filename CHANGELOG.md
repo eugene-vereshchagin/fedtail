@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: "Why is it here?" fell over on a lane whose condition didn't match the post
+  (its words had a field named like the lookup's own argument); a test keeps every word
+  of the interface clear of it.
+
 - The status line at the bottom ("⟳ updating the lanes…", "updated at 16:18", the sync
   mark, the account) is written in the text's colour, not the faint one — it couldn't be
   read on a light theme (the windows, GTK; its labels have a style of their own now,

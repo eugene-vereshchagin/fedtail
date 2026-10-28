@@ -205,7 +205,7 @@ class LanePlaces:
             else:
                 for w, i, raw, reason in g["conds"]:
                     if w == "any" and reason:
-                        lines.append(_("why_not_cond", n=i + 1, key=reason,
+                        lines.append(_("why_not_cond", n=i + 1, what=reason,
                                        line=laneedit.cond_line(raw)))
             mark = "✓ " if g["in_lane"] else "· "
             page.rows.append(Row("item", mark + title, "\n".join(lines), key=g["lane"],

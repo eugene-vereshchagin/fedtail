@@ -679,7 +679,7 @@ _STRINGS = {
         "why_none": "Пост не найден в базе",
         "why_taken": "берёт условие {n}: {line}",
         "why_kept_out": "не пускает «Не берёт» {n}: {line}",
-        "why_not_cond": "условие {n} ({line}) — не подошло: {key}",
+        "why_not_cond": "условие {n} ({line}) — не подошло: {what}",
         "why_source": "не из её источников",
         "why_silenced": "скрыт до всех правил: автор заглушён или заблокирован, или фильтр сервера",
         "why_before_rules": "правило берёт, но пост убран раньше правил: человек в списке, "
@@ -2261,7 +2261,7 @@ _STRINGS = {
         "why_none": "The post isn't in the store",
         "why_taken": "taken by condition {n}: {line}",
         "why_kept_out": "kept out by “Keeps out” {n}: {line}",
-        "why_not_cond": "condition {n} ({line}) didn't match: {key}",
+        "why_not_cond": "condition {n} ({line}) didn't match: {what}",
         "why_source": "not from its sources",
         "why_silenced": "hidden before any rule: the author muted or blocked, or a server filter",
         "why_before_rules": "the rule takes it, but it went before the rules: a list's person, "
