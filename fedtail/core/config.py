@@ -93,7 +93,6 @@ DEFAULTS = {
         "render_limit": 300,
         "older_ahead": False,     # the end of a lane in sight: a page older by itself
         "repeat_boosts": False,
-        "build_at_once": 40,
         "first_run_mark_read": True,
         "honest_counters": False,
         "counters_via_accounts": True,
@@ -436,7 +435,6 @@ MINIMUM = {
     ("feed", "remote_posts"): 1,
     ("feed", "catch_up_limit"): 1,
     ("feed", "render_limit"): 20,
-    ("feed", "build_at_once"): 0,
     ("ui", "font_size"): 0,
     ("ui", "roster_threads"): 0,
     ("ui", "max_width"): 0,
@@ -487,7 +485,7 @@ FILE_LAYOUT = (
                              "extra_minutes tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
-                              "older_ahead build_at_once remember_choices first_run_mark_read "
+                              "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button")),
     ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
@@ -568,6 +566,13 @@ def older_place(section, key):
     where the file keeps it now; else None."""
     inner = internal_place(section, key)
     return inner if file_place(*inner)[0] != inner[0] else None
+
+
+# options taken out, as the file names them → what to say instead of "unknown"
+GONE = {
+    "reading.build_at_once": "reading.build_at_once is gone: only the cards near the screen "
+                             "are built now, however long the lane (0.22)",
+}
 
 
 def from_file(user):
@@ -677,7 +682,7 @@ def validate(user):
     cfg = copy.deepcopy(DEFAULTS)
     warnings, errors = [], []
     user, older, unknown = from_file(user)
-    warnings += [f"unknown key {name} — ignored" for name in unknown]
+    warnings += [GONE.get(name, f"unknown key {name} — ignored") for name in unknown]
     if older:
         warnings.append(f"options in their places of 0.20 and before: {', '.join(older[:6])}"
                         + (" …" if len(older) > 6 else "")

@@ -33,7 +33,7 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 | 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | — |
 | 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
 | 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
-| 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | partly: only the lanes opened last keep their cards (`ui.keep_hidden_lanes`) |
+| 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | Qt done: `qt/feedview.py` builds only the cards within a screen of the screen (the rest are places of their height); only the lanes opened last keep theirs (`ui.keep_hidden_lanes`). GTK — its own window of cards, as before |
 | 6 | **Pictures and media**: decoded right at the size shown (Qt: QImageReader.setScaledSize), the full size only when opened; one picture cache with a limit in MB (an option, a sensible default), LRU; thumbnails cached on disk; media off screen not decoded; video — still a preview only | partly: `media.image_cache_mb` (64 MB by default since 0.22, measured), `image_disk_mb`, `image_decode` |
 | 7 | **A lazy start**: heavy modules (language detection, spelling, sound, anything rare) imported at first use; the opossum's curtain drawn first, then the open lane, the rest in the background; every heavy operation (parsing, requests, language detection, the lanes' rules) off the GUI thread | partly: the curtain first (0.22) |
 | 8 | **Budgets as tests**: the bench of step 0 a test with ceilings of memory and time (the start, opening a lane, scrolling); over the ceiling — the test fails, so the lightness doesn't creep back with new features; run in the full CI, not on every small change | done: `tests/test_budgets.py` (`FEDTAIL_BUDGETS=1`), CI's `budgets` job — a release waits for it; the ceilings a quarter over the numbers of 28.10 |
@@ -150,6 +150,25 @@ So the order of the plan holds for the core, but the window's weight is in the c
   319 → 298 after; going through them all again adds nothing (2255 widgets either way). The
   bench deletes the widgets let go after each lane, as a running window does (before, it
   counted 10 147 widgets that were only waiting to be deleted).
+* **Step 5 in Qt: only the cards near the screen** (`qt/feedview.py`, 29.10). Every card had
+  been a set of widgets, and a lane built 40 of them at once and kept up to 120. Now the
+  body has a place for every post (its height measured once built, else the mean) and
+  widgets only within a screen above and below. Not a delegate painting cards: the cards
+  on screen are the same widgets as before (links, selection, menus, a screen reader all
+  as they were) — what counted was how many of them exist. 4000 posts, every lane opened:
+
+  | | before | after |
+  |---|---|---|
+  | USS, MB | 405 | 263 |
+  | after the trim, MB | 298 | 244 |
+  | widgets | 2255 | 1252 |
+  | the pictures kept, MB | 64 | 33 |
+  | the window up, Home drawn, ms | 1860 | 767 |
+  | every lane opened (19), ms | 11 306 | 2651 |
+  | the slowest lane, ms | 1355 | 313 |
+
+  `reading.build_at_once` is gone (said so, if a config still has it). The budgets
+  (`tests/test_budgets.py`) moved down with it.
 
 ## Decisions
 

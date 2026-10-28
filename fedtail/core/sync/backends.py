@@ -334,6 +334,26 @@ DAV_LIST_MAX = 8 * 1024 * 1024  # the most a folder's listing may be: it's someo
 _DAV = "{DAV:}"
 
 
+def _xml(body):
+    """Someone's server's XML, parsed without what makes XML dangerous: no DTD at all, so
+    no entities to expand (the billion laughs) and none pointing outside (XXE). A
+    multistatus never needs one: expat looks first and stops at a DTD."""
+    import xml.etree.ElementTree as ET
+    from xml.parsers import expat
+
+    def refused(*_a):
+        raise ValueError("a DTD in a WebDAV answer")
+    look = expat.ParserCreate()
+    look.StartDoctypeDeclHandler = refused
+    look.EntityDeclHandler = refused
+    try:
+        look.Parse(body, True)
+    except expat.ExpatError as e:
+        raise ET.ParseError(str(e)) from e
+    # no DTD in it (above): nothing left for defusedxml to defuse
+    return ET.fromstring(body)  # noqa: S314  # nosec B314
+
+
 class DavTree:
     """A WebDAV folder (Nextcloud, ownCloud, a NAS, Apache's mod_dav, rclone serve
     webdav…) spoken directly: PROPFIND to list, GET, PUT, DELETE, MKCOL. The password is
@@ -396,8 +416,8 @@ class DavTree:
         if len(body) > DAV_LIST_MAX:
             raise BackendError("other", f"WebDAV {path}: a listing too big")
         try:
-            root = ET.fromstring(body)
-        except ET.ParseError as e:
+            root = _xml(body)
+        except (ET.ParseError, ValueError) as e:
             raise BackendError("other", f"WebDAV {path}: an answer not understood") from e
         here = (self.base + path).rstrip("/")
         out = []

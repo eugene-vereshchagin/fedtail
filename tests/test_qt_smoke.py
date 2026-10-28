@@ -851,11 +851,12 @@ class QtSmokeTest(unittest.TestCase):
         people = self.win.lane_widgets["home"]
         people.set_filter("posts")
         self.pump(0.1)
-        self.assertNotIn("013", [r.status_id for r in people.view.rows.values()])
+        shown = lambda: [s.entry.id for s in people.view.model if s.entry is not None]  # noqa: E731
+        self.assertNotIn("013", shown())  # (in the lane or not; built — only near the screen)
         self.assertTrue(self.core.posts_only("home"))
         people.set_filter("all")
         self.pump(0.1)
-        self.assertIn("013", [r.status_id for r in people.view.rows.values()])
+        self.assertIn("013", shown())
 
         # pictures open over the main window, fitted to it
         from PySide6.QtGui import QPixmap
@@ -2530,10 +2531,10 @@ class QtSmokeTest(unittest.TestCase):
                       f"rows={len(view.rows)} active={self.win.isActiveWindow()}")
 
     def test_big_lane_builds_cards_around_the_reading_place(self):
-        """A lane of hundreds: only the cards around the first unread are built at first;
-        scrolling up builds more above without moving what's on screen; going to a post
-        far away builds there; "all read" covers the cards not built too."""
-        self.win.cfg["feed"]["build_at_once"] = 10  # a small window: 40 posts make "big"
+        """A lane of hundreds: only the cards near the screen exist (docs/en/dev/
+        memory.md, step 5); scrolling up builds those coming near without moving the
+        post on top; going to a post far away builds it there; "all read" covers the
+        cards never built too."""
         for i in range(60):
             self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60,
                                   text="длинный пост " * (60 + i % 30) + str(i)), home=True)
@@ -2547,27 +2548,32 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["bots"]
         view = lane.view
         self.pump(1.5)
-        self.assertLess(len(view.rows), len(view.model))  # not all built
+        self.assertLess(len(view.rows), len(view.model) // 2)  # far from all built
         first = view.unread_keys()[0]
         self.assertIn(first, view.rows)  # the reading place is
         self.assertEqual(len(view.unread_keys()), 5)
-
-        # up: more is built above, and the post at the top of the screen stays put
         sb = view.verticalScrollBar()
-        built = len(view.rows)
-        top_key = view.order[0]
-        sb.setValue(0)
+        vh = view.viewport().height()
+        for k, row in view.rows.items():  # every card built stands near the screen
+            self.assertLess(abs(view._top(row) - sb.value()), (1 + 2 * view.AHEAD) * vh + 50, k)
+
+        # up a screen: the cards above are built, and the post on top stays put
         view._touched()
-        y = view._top(view.rows[top_key]) - sb.value()
-        self.pump(until=lambda: len(view.rows) > built)
-        self.pump(0.3)
-        self.assertEqual(view._top(view.rows[top_key]) - sb.value(), y)
+        sb.setValue(max(0, sb.value() - vh))
+        self.pump(0.5)
+        top_key, y = view._anchor()
+        self.assertIn(top_key, view.rows)
+        sb.setValue(max(0, sb.value() - vh // 2))
+        view._touched()
+        self.pump(0.5)
+        top_key, y = view._anchor()
+        self.pump(0.5)  # their heights measured, the places moved: the top one held
+        self.assertLessEqual(abs(view._top(view.rows[top_key]) - sb.value() - y), 2)
 
         # far away: its card is built there
         oldest = view.model[0].key
-        if oldest not in view.rows:
-            view.scroll_to(oldest, "top")
-            self.assertIn(oldest, view.rows)
+        view.scroll_to(oldest, "top")
+        self.assertIn(oldest, view.rows)
 
         # "all read" is about the whole lane, built or not
         lane.mark_all_read()
@@ -2620,10 +2626,10 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("widgets", got)
 
     def test_short_rows_dont_build_and_let_go_for_ever(self):
-        """Rows of a line each (an Activity of follows and likes): building near an edge
-        and letting far cards go must settle — counted by cards, the two undid each
-        other every few hundred ms and the window froze for good (28.10)."""
-        self.win.cfg["feed"]["build_at_once"] = 4
+        """Rows of a line each (an Activity of follows and likes): once the screen stands
+        still, no card is built or let go any more — building near an edge and letting
+        far ones go once undid each other every few hundred ms, and the window froze for
+        good (28.10)."""
         for i in range(120):
             self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60, text=f"p{i}"), home=True)
         self.win.start()
@@ -2635,13 +2641,15 @@ class QtSmokeTest(unittest.TestCase):
         sb = view.verticalScrollBar()
         sb.setValue(sb.maximum() // 2)
         view._touched()
-        self.pump(1.5)  # grown, trimmed, settled
+        self.pump(1.5)  # built near the screen, laid out, settled
         calls = []
-        real_set = view._set_specs
-        view._set_specs = lambda *a, **k: (calls.append(1), real_set(*a, **k))[1]
+        real_go = view._let_go
+        view._let_go = lambda k: (calls.append(k), real_go(k))[1]
+        built = dict(view.rows)
         self.pump(2.0)
-        del view._set_specs
-        self.assertLessEqual(len(calls), 1, "the window keeps rebuilding while nobody moves")
+        del view._let_go
+        self.assertEqual(calls, [], "cards keep coming and going while nobody moves")
+        self.assertEqual(set(view.rows), set(built))
 
     def test_no_player_says_why_once(self):
         """A Qt without QtMultimedia (Windows with PySide6-Essentials alone): videos go to
@@ -2663,9 +2671,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("QtMultimedia", said[0])
 
     def test_cards_far_behind_are_let_go(self):
-        """Reading a long lane from the oldest to the newest: cards far behind go again,
-        so a few hundred read posts don't stay built, and the post on top stays put."""
-        self.win.cfg["feed"]["build_at_once"] = 10
+        """Reading a long lane from the oldest to the newest: the cards gone far behind
+        go, so a few hundred read posts don't stay built; reading on, the post on top
+        stays put."""
         for i in range(80):
             self.world.add(status(f"7{i:03d}", NEWS, minute=i % 60,
                                   text="пост " * (40 + i % 20) + str(i)), home=True)
@@ -2679,37 +2687,25 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.3)
         sb = view.verticalScrollBar()
         most = 0
-        for _ in range(60):  # down, a screen at a time, as a reader would
-            sb.setValue(sb.value() + view.viewport().height())
+        for _ in range(80):  # down, a screen at a time, as a reader would
             view._touched()
-            self.pump(0.08)
+            sb.setValue(sb.value() + view.viewport().height())
+            self.pump(0.05)
             most = max(most, len(view.rows))
-            if view.order and view.order[-1] == view.model[-1].key and \
-                    sb.value() >= sb.maximum():
+            if sb.value() >= sb.maximum():
                 break
-        self.assertEqual(view.order[-1], view.model[-1].key)  # read to the end
-        self.assertLessEqual(most, 3 * 10 + 10)  # never all 80 built
-        self.assertLess(len(view.rows), len(view.model))
-        # the post on top stays where it is when the ones behind go: build more behind
-        # it (as scrolling up does), let it settle, then let them go again
-        sb.setValue(max(0, sb.value() - 2 * view.viewport().height()))
-        view._touched()
-        self.pump(1.8)  # grown above, laid out, the scroll target let go
-        view.build_at_once = 4  # a smaller window: the next trim has something to drop
-        view.TRIM_SCREENS = 0  # …and only the screen itself kept: what's off it goes
+        self.pump(0.3)
+        self.assertIn(view.model[-1].key, view.rows)  # read to the end
+        self.assertLess(most, 40)  # never all 80 built: three screens of them at most
+        self.assertNotIn(view.model[0].key, view.rows)  # the first ones went
         top, y = view._anchor()
-        before = len(view.rows)
-        view._trim()
         self.pump(0.5)
-        self.assertLess(len(view.rows), before)
-        self.assertIn(top, view.rows)
         self.assertLessEqual(abs(view._top(view.rows[top]) - sb.value() - y), 2)
 
     def test_media_filter_off_doesnt_build_everything(self):
         """A big lane filtered to the few posts with pictures, then the filter off: the
         hundreds back are not all built at once (it froze for seconds), only around the
         post on screen."""
-        self.win.cfg["feed"]["build_at_once"] = 10
         pic = [{"id": "m", "type": "image", "url": "https://x/p.png",
                 "preview_url": "https://x/p.png", "meta": {}}]
         for i in range(80):
@@ -2750,7 +2746,8 @@ class QtSmokeTest(unittest.TestCase):
         seen = []
         view.seen.connect(seen.extend)
         sb = view.verticalScrollBar()
-        keys = [k for k in view.unread_keys() if view.rows[k].height() < view.viewport().height()]
+        keys = [k for k in view.unread_keys()  # built (near the screen), shorter than it
+                if k in view.rows and view.rows[k].height() < view.viewport().height()]
         row = view.rows[keys[len(keys) // 2]]
         top = view._top(row)
         view._touched()
@@ -2761,16 +2758,19 @@ class QtSmokeTest(unittest.TestCase):
         view._emit_seen()
         self.assertIn(row.status_id, seen)
 
-        # a post that never was on screen (jumped over) stays unread
-        far = view.rows[keys[-1]]
-        if view._top(far) > sb.value() + view.viewport().height():
-            self.assertNotIn(far.status_id, seen)
+        # a post that never was on screen (far below: not even built) stays unread
+        far_key = view.unread_keys()[-1]
+        far_id = view.model[view.keys().index(far_key)].entry.id
+        self.assertGreater(view._ys[far_key], sb.value() + view.viewport().height())
+        self.assertNotIn(far_id, seen)
 
         # without focus and without the reader's hand: nothing counts
         view._touched_at = 0.0
         view._window_active = lambda: False
         seen.clear()
-        sb.setValue(view._top(far) - 5)
+        sb.setValue(view._ys[far_key] - 5)  # its card built there
+        far = view.rows[far_key]
+        sb.setValue(view._top(far) - 5)  # (its place exact now it's measured)
         view._emit_seen()
         self.assertEqual(seen, [])
         view._touched()  # the wheel over the window: it's being read

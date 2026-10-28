@@ -71,7 +71,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | When a post counts as read | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The reading place is shared with other clients | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
 | Read marks, thread subscriptions and lane order shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Only the cards near the screen are in memory | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A draft's pictures travel with it | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |

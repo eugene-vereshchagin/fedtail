@@ -2,6 +2,14 @@
 
 ## 0.22.0 — in progress
 
+- Much lighter and quicker, the Qt window: a lane builds only the cards near the screen —
+  a screen above and below; the other posts are a place of their height, built as the
+  scroll comes near and let go when it's gone far (what was done to a card — a warning
+  opened, a translation shown — is kept for it). The cards themselves are as before.
+  Every lane opened, 4000 posts in the bench: 405 → 263 MB, opening all 19 lanes
+  11.3 → 2.7 s (the slowest 1.4 → 0.3 s), the window up 1.9 → 0.8 s. `reading.build_at_once`
+  is gone (a config that still has it is told so).
+
 - Lightness held by a test: `tests/test_budgets.py` runs the memory bench (2000 posts, 20
   lanes, an hour of polling) — the core alone and the Qt window — against ceilings of
   memory, time, widgets and the picture cache; CI's `budgets` job runs it and a release

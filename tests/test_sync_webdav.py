@@ -48,6 +48,14 @@ class DavBackendTest(Devices):
         puts = [c for c in self.dav.calls if c[0] == "PUT" and "/media/" in c[1]]
         self.assertEqual(len(puts), 1)
 
+    def test_no_dtd_in_an_answer(self):
+        """Someone's server's XML: a DTD (the billion laughs, an entity to a file) is
+        refused, not expanded."""
+        from fedtail.core.sync.backends import _xml
+        with self.assertRaises(ValueError):
+            _xml(b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><x>&a;</x>')
+        self.assertEqual(_xml(b'<d:multistatus xmlns:d="DAV:"/>').tag, "{DAV:}multistatus")
+
     def test_refused_and_gone(self):
         with self.assertRaises(backends.BackendError) as e:
             self.backend(password="wrong").pull(None, "a" * 16)

@@ -169,8 +169,8 @@ fedtail/
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
       bridge.py      core futures and events → GUI thread (Qt signals)
       window.py      MainWindow: sidebar, tabs, menu, event dispatch, actions
-      feed.py        FeedView (scrolling list of cards), LaneWidget,
-                     ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
+      feedview.py    FeedView: the scrolling list of cards, only those near the screen built
+      feed.py        LaneWidget, ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
       card.py        PostRow (one post), CardSpec, SeparatorRow, media grid
       compose.py     the compose dialog (drafts, media, drag&drop, CW, hint)
       help.py        HelpPanel: the help as a panel over the lanes, like compose's
@@ -638,8 +638,15 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * **`CardSpec`** (card.py) describes one row: status, depth, `/N` number, parent,
   unread, focus, in_thread, extra (my_replies, short_id, separator). `PostRow`
   rebuilds only when the spec really changed (`update_spec`).
-* **`FeedView`** (feed.py) is a QScrollArea with a centred column of rows
-  (`appearance.max_width`), the target logic of §10 and the "seen" signal.
+* **`FeedView`** (feedview.py) is a QScrollArea whose body has a place for every spec — a
+  top and a height (measured once its card was built at this width, else the mean of those
+  measured) — and cards only within `AHEAD` screens of the screen (`windowed`: lanes;
+  threads and profiles build all), placed by hand in a centred column
+  (`appearance.max_width`); scrolling builds and lets go (`_realize`), a card asking for
+  another height (`LayoutRequest`) moves the ones below with the card on top held; what a
+  card let go held (an opened warning, a translation) is kept for it; the target logic of
+  §10, the cards held while gone to (`_held`, `found_key`, `cursor_key`) and the "seen"
+  signal. docs/en/dev/memory.md, step 5.
 * **`LaneWidget`** = header (title, "N new", posts-only control, To new, All
   read, refresh) + FeedView + "Older" button. `refresh()` builds specs from
   `lane_entries`, parents, my replies, short ids and the separator.

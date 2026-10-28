@@ -170,8 +170,8 @@ fedtail/
       __init__.py    run(): QApplication, тема, Bridge, MainWindow, диагностика
       bridge.py      фьючерсы и события ядра → GUI-поток (сигналы Qt)
       window.py      MainWindow: боковая панель, вкладки, меню, разбор событий, действия
-      feed.py        FeedView (прокручиваемый список карточек), LaneWidget,
-                     ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
+      feedview.py    FeedView: прокручиваемый список карточек, строятся только те, что у экрана
+      feed.py        LaneWidget, ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
       card.py        PostRow (один пост), CardSpec, SeparatorRow, сетка медиа
       compose.py     окно написания (черновики, медиа, drag&drop, CW, подсказка)
       help.py        HelpPanel: справка панелью поверх лент, как окно написания
@@ -650,8 +650,15 @@ GUI-потоке; разбирает `MainWindow.on_event`.
 * **`CardSpec`** (card.py) описывает одну строку: статус, глубина, номер `/N`, родитель,
   непрочитанность, фокус, in_thread, extra (my_replies, short_id, separator). `PostRow`
   перестраивается, только если спецификация правда изменилась (`update_spec`).
-* **`FeedView`** (feed.py) — QScrollArea с колонкой строк по центру (`appearance.max_width`),
-  логика цели из §10 и сигнал «увидено».
+* **`FeedView`** (feedview.py) — QScrollArea, в теле которой у каждой спецификации есть
+  место — верх и высота (измеренная, когда её карточка была построена при этой ширине, иначе
+  средняя из измеренных), — а карточки есть только в пределах `AHEAD` экранов от экрана
+  (`windowed`: ленты; треды и профили строят всё), расставлены вручную в колонке по центру
+  (`appearance.max_width`); прокрутка строит и отпускает (`_realize`), карточка, попросившая
+  другую высоту (`LayoutRequest`), сдвигает нижние, а верхняя на экране держится; что держала
+  отпущенная карточка (открытое предупреждение, перевод), для неё запоминается; логика цели из
+  §10, карточки, удерживаемые, пока к ним идут (`_held`, `found_key`, `cursor_key`), и сигнал
+  «увидено». docs/ru/dev/memory.md, шаг 5.
 * **`LaneWidget`** = шапка (заголовок, «N новых», переключатель «только посты», «К новому»,
   «Всё прочитано», обновить) + FeedView + кнопка «Раньше». `refresh()` строит спецификации
   из `lane_entries`, родителей, моих ответов, коротких id и разделителя.

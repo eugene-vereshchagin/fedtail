@@ -287,9 +287,15 @@ class FindBar(QWidget):
         self._show_count()
 
     def _mark(self, key):
+        """The match's card marked "found": the view keeps the mark (and the card built)
+        while it is the one shown, whatever the scrolling builds and lets go."""
         if self.view is None:
             return
-        for k, row in self.view.rows.items():
+        mark = getattr(self.view, "mark_found", None)
+        if mark is not None:
+            mark(key)
+            return
+        for k, row in self.view.rows.items():  # a list that isn't a FeedView
             card = getattr(row, "card", None)
             if card is None:
                 continue

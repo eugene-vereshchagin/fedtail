@@ -4,9 +4,10 @@ when FEDTAIL_BUDGETS is set — CI's budgets job, a release waits for it; by han
 
     FEDTAIL_BUDGETS=1 python3 -m unittest tests.test_budgets -v
 
-The ceilings are about a quarter over what the bench says now (28.10: 2000 posts, 20 lanes,
-an hour of polling): over one — the test fails and says by how much; lower numbers after a
-step of the plan move them down here, never up without a reason in memory.md."""
+The ceilings are about a quarter over what the bench says now (29.10: 2000 posts, 20 lanes,
+an hour of polling; the times more, for a slower runner): over one — the test fails and
+says by how much; lower numbers after a step of the plan move them down here, never up
+without a reason in memory.md."""
 
 import json
 import os
@@ -22,10 +23,12 @@ RUN = bool(os.environ.get("FEDTAIL_BUDGETS"))
 # what the bench says the scenario holds (USS, MB) and takes (ms), at most
 CORE = {"memory": {"after.uss_mb": 90},
         "time": {"open every lane (19)": 2000, "lanes' rules applied anew (all of them)": 2500}}
-QT = {"memory": {"after.uss_mb": 480, "after_malloc_trim.uss_mb": 340},
-      "time": {"Qt window up, Home drawn": 6000, "open every lane (19)": 25000,
+# step 5 (only the cards near the screen: 29.10) took these down from 480 / 340 MB,
+# 6000 / 25 000 ms and 3000 widgets
+QT = {"memory": {"after.uss_mb": 280, "after_malloc_trim.uss_mb": 270},
+      "time": {"Qt window up, Home drawn": 2500, "open every lane (19)": 8000,
                "Home scrolled through 1000 posts": 1500},
-      "counts": {"qt.widgets": 3000, "qt.images_mb": 66}}
+      "counts": {"qt.widgets": 1600, "qt.images_mb": 66}}
 
 
 def bench(*args):

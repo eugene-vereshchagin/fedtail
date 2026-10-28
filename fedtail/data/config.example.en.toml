@@ -500,11 +500,6 @@ render_limit = 300
 # asks no more until a restart. Every interface and the phone. false — by the button only.
 older_ahead = false
 
-# How many cards to build at once when a lane opens — around where you read;
-# the rest are built as you scroll near an edge (the screen doesn't wait for fifty
-# cards). What you read doesn't move meanwhile. 0 — build the whole lane at once (as
-# before: on hundreds of posts that takes seconds).
-build_at_once = 40
 
 # The quick filters, remembered between runs: over a lane — "All / Posts only / New", a lane's
 # own quick filters, "Feed / Conversations", the media funnel — and Activity's. false — every
