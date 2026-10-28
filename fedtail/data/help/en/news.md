@@ -9,6 +9,7 @@ What's new in the latest versions, and the plans.
 
 - A draft's pictures travel with it
 - Formatting buttons
+- Mute a hashtag in one click
 
 **0.21.0:**
 

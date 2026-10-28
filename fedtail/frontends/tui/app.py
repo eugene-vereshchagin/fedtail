@@ -1020,6 +1020,8 @@ class FedtailApp(App, PostsMixin):
             for name in names:
                 title_, n = lane_label(self.core, name, self.lanes_width - 2)
                 items.append(LaneItem(name, title_, n, sidebar.fresh(self.core, name) if n else 0))
+        if not lv.is_mounted:  # the app ended while the list was being cleared
+            return
         await lv.extend(items)
         for i, it in enumerate(items):
             if at is not None and at in (getattr(it, "lane", None), getattr(it, "group", None)):

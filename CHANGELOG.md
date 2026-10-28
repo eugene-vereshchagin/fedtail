@@ -2,6 +2,15 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: Activity froze the window for good (28.10): with its short rows, building cards
+  near an edge and letting far ones go undid each other every few hundred ms. Far cards go
+  by distance now (four screens either side), never within what building reaches. Seen
+  events only lose their marks in place (Qt, GTK) — every event lane was rebuilt at each
+  mark. And no "Older ↑" in a lane of events only: there is nothing older to fetch.
+- A hashtag muted in one click (as in Fedilab): a post's ⋯ → "Mute #tag", or the tag's
+  page → "Mute the tag" / "Show the tag again" — into one server filter of muted hashtags
+  ("fedtail: hashtags"); its posts leave at once, those already here too.
+
 - Fixed: a profile copied to another computer (state.db and all) synced with nothing — both
   carried one device id, and each took the other's journal for its own (28.10's report: a
   Linux profile moved onto a Windows VM). The id is bound to the computer and the folder it

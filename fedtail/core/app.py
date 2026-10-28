@@ -17,6 +17,7 @@ worker threads (see events.py):
   auth_failed      str                      token no longer accepted
 """
 
+import copy
 import logging
 import re
 import threading
@@ -1750,17 +1751,81 @@ class Core(SocialMixin):
         except Exception as e:  # noqa: BLE001 — what we had stays
             log.debug("filters: %s", e)
             got = self._server_filters
-        if got != self._server_filters:
-            self._server_filters = got
+        filters_changed = got != self._server_filters
+        if filters_changed:
+            # a copy: an API handing back objects it keeps (a cache, the tests' fake)
+            # mustn't change ours under us, or the next change would look like none
+            self._server_filters = copy.deepcopy(got)
             self._silence_version += 1
         muted = {a["id"] for a in self.api.mutes()}
         blocked = {a["id"] for a in self.api.blocks()}
         domains = self._domain_blocks()
         self._silence_checked = time.monotonic()
-        if (muted, blocked, domains) != (self.muted, self.blocked, self.blocked_domains):
+        people_changed = (muted, blocked, domains) != (self.muted, self.blocked,
+                                                       self.blocked_domains)
+        if people_changed:
             self.muted, self.blocked, self.blocked_domains = muted, blocked, domains
             self._silence_version += 1
+        if people_changed or filters_changed and self._muted_tags_of(got) != \
+                self.__dict__.get("_tags_seen_muted"):
+            self._tags_seen_muted = self._muted_tags_of(got)
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    # ---- a hashtag muted in one click (Fedilab's way): a server filter "#tag" ------------
+    TAG_MUTE_CONTEXTS = ("home", "public", "notifications", "thread", "account")
+
+    @staticmethod
+    def _muted_tags_of(filters):
+        """The tags my "hide" filters name as "#tag" — muted, whoever made the filter."""
+        out = set()
+        for f in filters or ():
+            if (f.get("filter_action") or "warn") != "hide":
+                continue
+            for k in f.get("keywords") or ():
+                word = str(k.get("keyword") or "").strip()
+                if word.startswith("#") and len(word) > 1 and " " not in word:
+                    out.add(word[1:].lower())
+        return out
+
+    def muted_tags(self):
+        return self._muted_tags_of(self._server_filters)
+
+    def tag_muted(self, name):
+        return str(name or "").lstrip("#").lower() in self.muted_tags()
+
+    TAG_FILTER = "fedtail: hashtags"  # the one filter muted tags gather in (its title)
+
+    def mute_tag(self, name, on=True):
+        """Mute a hashtag (on): "#tag" added to one filter of muted hashtags (made the
+        first time, hiding in every context — as Fedilab does it); or take it off again,
+        from whichever filter of mine names it (an emptied one goes). Its posts leave the
+        lanes at once, those stored before too (silenced). → future of on."""
+        name = str(name or "").lstrip("#").lower()
+        word = "#" + name
+
+        def job():
+            filters = [f for f in self.api.filters() or () if isinstance(f, dict)]
+            if on:
+                if name not in self._muted_tags_of(filters):
+                    mine = next((f for f in filters if f.get("title") == self.TAG_FILTER), None)
+                    if mine is None:
+                        self.api.create_filter(self.TAG_FILTER, [word], "hide",
+                                               self.TAG_MUTE_CONTEXTS)
+                    else:
+                        self.api.update_filter(mine["id"], action="hide", add=(word,))
+            else:
+                for f in filters:
+                    kws = [k for k in f.get("keywords") or ()
+                           if str(k.get("keyword") or "").strip().lower() == word]
+                    if not kws:
+                        continue
+                    if len(kws) == len(f.get("keywords") or ()):
+                        self.api.delete_filter(f["id"])
+                    else:
+                        self.api.update_filter(f["id"], remove=tuple(k["id"] for k in kws))
+            self._refresh_silence()
+            return on
+        return self.submit(job)
 
     def _domain_blocks(self):
         """My blocked servers; a server without the endpoint (GoToSocial for users) is
@@ -1787,6 +1852,10 @@ class Core(SocialMixin):
                 (a.get("acct") or "").partition("@")[2].lower() in self.blocked_domains
                 for a in (s["account"], status["account"])):
             return True
+        muted_tags = self.muted_tags()
+        if muted_tags and any(str(t.get("name") or "").lower() in muted_tags
+                              for t in s.get("tags") or () if isinstance(t, dict)):
+            return True  # a tag muted by hand: hidden in arts mode too, posts stored before too
         if self.cfg["ui"]["arts_mode"]:
             return False  # server filters don't hide anything in arts mode
         return any((f.get("filter") or {}).get("filter_action") == "hide"

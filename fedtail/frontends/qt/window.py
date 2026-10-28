@@ -1802,11 +1802,15 @@ class MainWindow(QMainWindow):
                     w.reload_account()
             self.statusBar().showMessage(_("profile_saved"), 5000)
         elif name in ("activity_updated", "activity_seen", "requests_updated"):
-            # events came, were seen or answered: every lane that shows events looks again
+            # events came or were answered: every lane that shows events looks again;
+            # seen: only their marks go (see LaneWidget.apply_seen)
             for lname, w in self.lane_widgets.items():
                 if isinstance(w, LaneWidget) and \
                         getattr(self.core.lane_by_name.get(lname), "events", False):
-                    w.refresh()
+                    if name == "activity_seen":
+                        w.apply_seen(payload or self.core.activity_seen_mark())
+                    else:
+                        w.refresh()
             self.update_badges()
         elif name == "lists_changed":
             self._rebuild_lists()

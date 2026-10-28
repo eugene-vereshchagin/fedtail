@@ -1676,11 +1676,14 @@ class MainWindow(Gtk.ApplicationWindow):
                 else:
                     lv.dirty = True
         elif name in ("activity_updated", "activity_seen", "requests_updated"):
-            # events came, were seen or answered: every lane that shows events looks again
+            # events came or were answered: every lane that shows events looks again;
+            # seen: only their marks go (LaneView.apply_seen)
             for lname, lv in self.lane_views.items():
                 if not getattr(self.view.lane_by_name.get(lname), "events", False):
                     continue
-                if lv.get_mapped():
+                if name == "activity_seen":
+                    lv.apply_seen(payload or self.view.activity_seen_mark())
+                elif lv.get_mapped():
                     lv.refresh()
                 else:
                     lv.dirty = True

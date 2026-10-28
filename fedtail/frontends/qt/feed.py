@@ -439,27 +439,32 @@ class FeedView(QScrollArea):
         self._trim()
         self._grow_timer.start()  # still near an edge? the next few
 
+    TRIM_SCREENS = 4  # cards kept this many screens either side; _grow builds within 2
+
     def _trim(self):
-        """Cards far behind the reading place go again (their spec stays: scrolling back
-        builds them anew). Reading a night's hundred posts built every one of them and
-        kept them all, pictures and all: over a megabyte a card. Past 3 × build_at_once
-        cards, back to build_at_once behind the post on top and twice that ahead; the
-        post on top stays exactly where it is."""
+        """Cards far behind or ahead of the screen go again (their spec stays: scrolling
+        back builds them anew). Reading a night's hundred posts built every one of them
+        and kept them all, pictures and all: over a megabyte a card. Past
+        3 × build_at_once cards, the ones more than TRIM_SCREENS screens away go — by
+        height, not by count: _grow builds while the screen is within two screens of an
+        edge, and a count of short rows (an Activity of one-line events) was less than
+        that, so the two undid each other for ever (28.10: the window froze)."""
         n = self.build_at_once
         if self._all_at_once() or not n or len(self.order) <= 3 * n:
             return
-        anchor = self._reading_anchor()
-        if anchor is None or anchor[0] not in self.rows:
-            return
         keys = self.keys()
         index = {k: i for i, k in enumerate(keys)}
-        if anchor[0] not in index:
+        if self.order[0] not in index or self.order[-1] not in index:
             return
-        a = index[anchor[0]]
-        lo = max(index[self.order[0]], a - n)
-        hi = min(index[self.order[-1]] + 1, a + 2 * n)
-        if hi - lo >= len(self.order):
+        v = self.verticalScrollBar().value()
+        h = max(1, self.viewport().height())
+        top_keep, bottom_keep = v - self.TRIM_SCREENS * h, v + h + self.TRIM_SCREENS * h
+        kept = [k for k in self.order if k in self.rows and
+                self._top(self.rows[k]) + self.rows[k].height() >= top_keep and
+                self._top(self.rows[k]) <= bottom_keep]
+        if not kept or len(kept) >= len(self.order):
             return
+        lo, hi = index[kept[0]], index[kept[-1]] + 1
         before = len(self.order)
         self.setUpdatesEnabled(False)
         try:
@@ -1051,7 +1056,8 @@ class LaneWidget(QWidget):
         self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
                                  self.load_older, name="older")
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
-        self.btn_older.setVisible(not self.unread_only_on())
+        # nothing older to fetch in a lane of events only (they come with the poll), as GTK
+        self.btn_older.setVisible(not self.unread_only_on() and not self.lm.events_only())
         # reading.older_ahead: the "older" end in sight — the core fetches a page itself
         self.view.verticalScrollBar().valueChanged.connect(self._older_in_sight)
 
@@ -1075,7 +1081,8 @@ class LaneWidget(QWidget):
     def _apply_filter(self, which):
         self.lm.set_filter(which)
         self.positioned = False  # a different list: start over at the first unread
-        self.btn_older.setVisible(which != "unread")  # older history is read: not here
+        # older history is read: not with "unread only"; a lane of events only has none
+        self.btn_older.setVisible(which != "unread" and not self.lm.events_only())
         self.refresh(force=True)
         self._initial_position()
         self.win.update_badges()
@@ -1307,6 +1314,16 @@ class LaneWidget(QWidget):
 
     def apply_read(self, ids):
         self.view.set_unread(ids, False)
+        if self.isVisible():
+            self.update_strip()
+
+    def apply_seen(self, mark):
+        """Events seen up to `mark` (one mark for every lane): their rows lose the unread
+        mark in place — no lane rebuilt. Rebuilding every event lane at each mark froze
+        the window while one read Activity by scrolling (28.10)."""
+        keys = [k for k, sort in self.lm.event_sorts.items() if sort and sort <= mark]
+        if keys:
+            self.view.set_unread(keys, False)
         if self.isVisible():
             self.update_strip()
 
@@ -2240,6 +2257,9 @@ class TagWidget(_PagedTab):
                             fail=lambda _e: self.feature_btn.hide())
         # one tag kept as a lane of its own, in the sidebar's "Tags" (as a group of them)
         self.header.add(tag_lanes_button(win, tag))
+        # muted in one click: into the server's filter of muted hashtags (Core.mute_tag)
+        self.mute_btn = self.header.add(_button("", self._toggle_mute, tip=_("tag_mute_tip")))
+        self._show_mute()
         win.bridge.call(self.core.tag_info(tag), ok=self._info, fail=lambda _e: None)
         self.more()
 
@@ -2255,6 +2275,20 @@ class TagWidget(_PagedTab):
                              ok=lambda _r: self._featured({self.tag.lower()} if on else set()),
                              fail=lambda e: (self.feature_btn.setEnabled(True),
                                              self.win.error(e)))
+
+    def _show_mute(self):
+        self.mute_btn.setText(_("tag_unmute_btn") if self.core.tag_muted(self.tag)
+                              else _("tag_mute_btn"))
+
+    def _toggle_mute(self):
+        on = not self.core.tag_muted(self.tag)
+        self.mute_btn.setEnabled(False)
+        self.win.bridge.call(
+            self.core.mute_tag(self.tag, on),
+            ok=lambda _r: (self.mute_btn.setEnabled(True), self._show_mute(),
+                           self.win.status(_("tag_muted_msg" if on else "tag_unmuted_msg",
+                                             tag=self.tag))),
+            fail=lambda e: (self.mute_btn.setEnabled(True), self.win.error(e)))
 
     def _info(self, t):
         self.following = bool(t and t.following)

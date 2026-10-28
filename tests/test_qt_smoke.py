@@ -2611,6 +2611,30 @@ class QtSmokeTest(unittest.TestCase):
         t.join(5)
         self.assertIn("widgets", got)
 
+    def test_short_rows_dont_build_and_let_go_for_ever(self):
+        """Rows of a line each (an Activity of follows and likes): building near an edge
+        and letting far cards go must settle — counted by cards, the two undid each
+        other every few hundred ms and the window froze for good (28.10)."""
+        self.win.cfg["feed"]["build_at_once"] = 4
+        for i in range(120):
+            self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60, text=f"p{i}"), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(1.0)
+        sb = view.verticalScrollBar()
+        sb.setValue(sb.maximum() // 2)
+        view._touched()
+        self.pump(1.5)  # grown, trimmed, settled
+        calls = []
+        real_set = view._set_specs
+        view._set_specs = lambda *a, **k: (calls.append(1), real_set(*a, **k))[1]
+        self.pump(2.0)
+        del view._set_specs
+        self.assertLessEqual(len(calls), 1, "the window keeps rebuilding while nobody moves")
+
     def test_cards_far_behind_are_let_go(self):
         """Reading a long lane from the oldest to the newest: cards far behind go again,
         so a few hundred read posts don't stay built, and the post on top stays put."""
@@ -2645,6 +2669,7 @@ class QtSmokeTest(unittest.TestCase):
         view._touched()
         self.pump(1.8)  # grown above, laid out, the scroll target let go
         view.build_at_once = 4  # a smaller window: the next trim has something to drop
+        view.TRIM_SCREENS = 0  # …and only the screen itself kept: what's off it goes
         top, y = view._anchor()
         before = len(view.rows)
         view._trim()
@@ -2678,7 +2703,7 @@ class QtSmokeTest(unittest.TestCase):
         lane.media_filter.reset()
         self.pump(0.3)
         self.assertGreaterEqual(len(lane.view.model), 40)  # a page of the lane is back
-        self.assertLessEqual(len(lane.view.rows), 3 * 10)  # but not all built
+        self.assertLess(len(lane.view.rows), len(lane.view.model))  # but not all built
 
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went

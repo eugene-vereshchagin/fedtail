@@ -135,6 +135,12 @@ class TagRow(Gtk.Box):
         self._words()
         self.append(self.follow)
         self.append(tag_lanes_button(win, tag.name))  # into the sidebar's Tags (as Qt)
+        # muted in one click: into the server's filter of muted hashtags (Core.mute_tag)
+        self.mute = Gtk.Button()
+        tip(self.mute, _("tag_mute_tip"))
+        self.mute.connect("clicked", self._toggle_mute)
+        self._mute_words()
+        self.append(self.mute)
         self.feature = None
         if header and win.view.supports("featured_tags"):
             # on my profile (featured tags), as Qt's tag tab; not known yet: dead
@@ -153,6 +159,21 @@ class TagRow(Gtk.Box):
             tip(self.follow, _("tag_follow_tip"))
         else:
             self.follow.set_label(_("unfollow") if self.following else _("follow"))
+
+    def _mute_words(self):
+        self.mute.set_label(_("tag_unmute_btn") if self.win.view.tag_muted(self.tag.name)
+                            else _("tag_mute_btn"))
+
+    def _toggle_mute(self, _b):
+        on = not self.win.view.tag_muted(self.tag.name)
+        self.mute.set_sensitive(False)
+
+        def done(_r):
+            self.mute.set_sensitive(True)
+            self._mute_words()
+            self.win.status(_("tag_muted_msg" if on else "tag_unmuted_msg", tag=self.tag.name))
+        self.win.call(self.win.view.mute_tag(self.tag.name, on), done,
+                      lambda e: (self.mute.set_sensitive(True), self.win.error(e)))
 
     def _featured(self, names):
         self.featured = self.tag.name.lower() in (names or set())

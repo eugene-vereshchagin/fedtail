@@ -331,6 +331,12 @@ class View:
     def unread_count(self, lane):
         return self._core.unread_count(lane)
 
+    def tag_muted(self, name):
+        return self._core.tag_muted(name)
+
+    def mute_tag(self, name, on=True):
+        return self._core.mute_tag(name, on)
+
     def mark_read(self, ids):
         self._core.mark_read([i if isinstance(i, str) else i.id for i in ids])
 

@@ -51,6 +51,21 @@ details.ru = "Фильтры слов — серверные, v2: где дей�
 details.en = "Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `card.arts_mode`, a line on top says the server's filters don't apply there."
 
 [[feature]]
+id = "mute-tag"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Скрыть хештег одним щелчком"
+name.en = "Mute a hashtag in one click"
+config = "—"
+api = "`/api/v2/filters`"
+others.ru = "Fedilab — одним щелчком; Mastodon web — вручную фильтром"
+others.en = "Fedilab — one click; Mastodon web — by hand, with a filter"
+clients = ["Fedilab"]
+details.ru = "⋯ поста → «Скрыть #тег» (у каждого его тега, до трёх), а на странице тега — «Скрыть тег» / «Снова показывать тег». Тег уходит в один серверный фильтр «fedtail: hashtags» (прятать везде), как делает Fedilab, — так он работает и в других клиентах. Посты с тегом пропадают сразу, и уже пришедшие тоже; тег, записанный «#тег» в любой твоей фильтр-«прятать», тоже считается скрытым. Скрытый вручную тег прячется и при `ui.arts_mode`."
+details.en = "A post's ⋯ → “Mute #tag” (for each of its tags, up to three), and on a tag's page “Mute the tag” / “Show the tag again”. The tag goes into one server filter, “fedtail: hashtags” (hide everywhere), as Fedilab does it — so it works in other clients too. Posts with it leave at once, those already here too; a tag written “#tag” in any “hide” filter of yours counts as muted as well. A tag muted by hand hides with `ui.arts_mode` too."
+
+[[feature]]
 id = "mute-timed"
 status = "has"
 android = "has"

@@ -281,6 +281,21 @@ class LaneView(Gtk.Box):
                 card.set_unread(False)
         self._pill(len(self.unread))
 
+    def apply_seen(self, mark):
+        """Events seen up to `mark`: their rows lose the unread mark in place (as Qt's
+        apply_seen) — a rebuild of every event lane at each mark froze the window."""
+        gone = [k for k, sort in self.lm.event_sorts.items()
+                if sort and sort <= mark and k in self.unread]
+        for k in gone:
+            self.unread.discard(k)
+            if self.specs.get(k) is not None:
+                self.specs[k] = replace(self.specs[k], unread=False)
+            card = self.rows.get(k)
+            if card is not None:
+                card.set_unread(False)
+        if gone:
+            self._pill(len(self.unread))
+
     def _reset(self):
         """Another filter or view: the lane anew, placed anew."""
         for k in list(self.order):

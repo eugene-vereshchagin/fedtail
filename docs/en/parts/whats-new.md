@@ -2,6 +2,7 @@
 
 - A draft's pictures travel with it
 - Formatting buttons
+- Mute a hashtag in one click
 
 **0.21.0:**
 

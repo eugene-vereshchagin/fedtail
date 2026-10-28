@@ -548,6 +548,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Follows and follow requests | has | 0.1.0 | `"requests"` in `lanes.enabled` | `follow`, `follow_requests` | everyone |
 | Hide a person's boosts; the languages of a follow | has | 0.14.0 | `people.per_person_follow` | `follow` with `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
 | Mute, block, word filters | has | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | everyone |
+| Mute a hashtag in one click | has | 0.22.0 | — | `/api/v2/filters` | Fedilab — one click; Mastodon web — by hand, with a filter |
 | Mute for a while; posts only | has | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
 | Hide a single post | has | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
 | Editing a filter | has | 0.20.0 | — | `PUT /api/v2/filters/:id` | Mastodon web, Ivory, Fedilab |
@@ -574,6 +575,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Hide a person's boosts; the languages of a follow.** On the profile of someone you follow: “♻ without their boosts” and “🌐 languages” — only their posts in these languages. The server keeps it, so it works in every client.
 
 **Mute, block, word filters.** Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `card.arts_mode`, a line on top says the server's filters don't apply there.
+
+**Mute a hashtag in one click.** A post's ⋯ → “Mute #tag” (for each of its tags, up to three), and on a tag's page “Mute the tag” / “Show the tag again”. The tag goes into one server filter, “fedtail: hashtags” (hide everywhere), as Fedilab does it — so it works in other clients too. Posts with it leave at once, those already here too; a tag written “#tag” in any “hide” filter of yours counts as muted as well. A tag muted by hand hides with `ui.arts_mode` too.
 
 **Mute for a while; posts only.** “Mute” asks for how long: for good, an hour, a day, a week, a month — then the server lifts it by itself. The “Posts only” tick keeps their notifications coming. Word filters get a term too.
 

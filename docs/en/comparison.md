@@ -165,6 +165,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Follows and follow requests | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Hide a person's boosts; the languages of a follow | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Mute, block, word filters | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mute a hashtag in one click | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Mute for a while; posts only | ✓ | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
 | Hide a single post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Editing a filter | ✓ | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
@@ -245,4 +246,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **54** features of the 181 compared.
+Only in fedtail — **54** features of the 182 compared.

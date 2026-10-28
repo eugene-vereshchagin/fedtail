@@ -85,6 +85,11 @@ class Links:
             self._ask(h, "put_alias", arg)
         elif action == "tag":
             self._ask(h, "open_tag", unquote(arg))
+        elif action in ("mutetag", "unmutetag"):  # a hashtag, in one click (Fedilab's way)
+            tag, on = unquote(arg).lstrip("#"), action == "mutetag"
+            h.call(self.view.mute_tag(tag, on), fail=h.error,
+                   ok=lambda _r: h.status(_("tag_muted_msg" if on else "tag_unmuted_msg",
+                                            tag=tag)))
         elif action == "resolve":
             self._ask(h, "resolve_link", unquote(arg))
         elif action in ("thread", "threadnew"):

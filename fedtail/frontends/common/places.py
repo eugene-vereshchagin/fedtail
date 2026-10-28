@@ -766,7 +766,21 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             self._btn(_("tag_unfollow") if t.following else _("tag_follow"), "tag",
                       "unfollow" if t.following else "follow", t.name,
                       tip=_("tag_follow_tip")),
-            self._btn(_("tags_lanes_menu"), "tag", "lanes", t.name, tip=_("tags_lanes_tip"))))
+            self._btn(_("tags_lanes_menu"), "tag", "lanes", t.name, tip=_("tags_lanes_tip")),
+            self._mute_tag_button(t.name)))
+
+    def _mute_tag_button(self, name):
+        muted = self.view.tag_muted(name)
+        return self._btn(_("tag_unmute_btn") if muted else _("tag_mute_btn"), "tag",
+                         "unmute" if muted else "mute", name, tip=_("tag_mute_tip"))
+
+    def _a_tag_mute(self, name, _v, _c, _ans):
+        _wait(self.view.mute_tag(name, True))
+        return Out(message=_("tag_muted_msg", tag=name.lstrip("#")), refresh=True)
+
+    def _a_tag_unmute(self, name, _v, _c, _ans):
+        _wait(self.view.mute_tag(name, False))
+        return Out(message=_("tag_unmuted_msg", tag=name.lstrip("#")), refresh=True)
 
     def _p_tags(self, _arg, _tab, _cur):
         page = Page("tags", _("followed_tags"), empty="—")
