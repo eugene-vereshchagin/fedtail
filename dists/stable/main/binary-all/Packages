@@ -46,3 +46,27 @@ Description: fediverse client for people who miss Point.im and Juick
  in a terminal (with python3-textual), as a GTK 4 window (fedtail --ui gtk)
  and as a page in a browser.
 
+Package: fedtail
+Architecture: all
+Version: 0.21.0
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 16446
+Depends: python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets
+Recommends: python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, python3-pyside6.qtmultimediawidgets, python3-pyside6.qtdbus, qt6-image-formats-plugins, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, python3-cryptography, python3-langdetect
+Suggests: python3-textual, python3-pil, mpv, libenchant-2-2, hunspell-ru, hunspell-en-us, python3-socks, fonts-noto-color-emoji, libnotify-bin, xdg-utils, git
+Filename: pool/main/fedtail_0.21.0_all.deb
+Size: 6342932
+MD5sum: 662eb3930027f41212942f11dd6a2300
+SHA1: bf4a94f4ba1294acfe75ab9319fff7e572da1e30
+SHA256: 7c33dd377dfe7c7a13e4ee06e206cb3157b8fb71767e3b1b51018e1bcd444a83
+SHA512: 65c2f4b616a8d2fe72277094ef67b048b2edc363ff90ce8c8f472755b7f2f763ca2a43b5658e1c63f6823a7e22f306edc7f217f1cae46e758faec07bbef929ee
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client for people who miss Point.im and Juick
+ A desktop client for GoToSocial, Mastodon, Akkoma and anything else that
+ speaks the Mastodon API: whole threads as trees, every reply shows what it
+ answers, lanes that never jump, everything is a config option. Also runs
+ in a terminal (with python3-textual), as a GTK 4 window (fedtail --ui gtk)
+ and as a page in a browser.
+
