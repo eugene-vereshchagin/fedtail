@@ -41,6 +41,27 @@ KIND = {"post", "reply", "self_reply", "boost", "self_boost", "quote", "poll", "
 ME = {"reply", "reply_to_post", "reply_to_comment", "mention", "direct", "in_my_thread",
       "boost_of_mine", "quote_of_mine", "my_boost"}
 PARENT = {"mine", "followed", "stranger", "unknown"}
+# what a post shows, for a lane's funnel ("only video…"): the windows' words for it
+MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
+VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
+
+
+def media_kinds(st):
+    """{"image", "gifv", "video", "audio"} of a status's attachments (a boost: its post's;
+    a video a server called a picture — by its file's name — counts as a video), or
+    {"text"}."""
+    st = st.get("reblog") or st
+    kinds = set()
+    for m in st.get("media_attachments") or ():
+        kind = m.get("type")
+        url = str(m.get("url") or m.get("remote_url") or "").lower().split("?")[0]
+        if kind in ("image", "unknown") and url.endswith(VIDEO_EXT):
+            kind = "video"
+        if kind in MEDIA_KINDS:
+            kinds.add(kind)
+    return kinds or {"text"}
+
+
 HAS = {"media", "image", "video", "audio", "cw", "sensitive", "link", "poll", "alt_missing",
        "followed_tag"}
 HAS_PREFIXES = ("tag:", "link:", "word:")

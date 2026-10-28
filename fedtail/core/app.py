@@ -243,6 +243,8 @@ class Core(SocialMixin):
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
         self._limits = {}
+        self._horizons = {}  # lane → how many stored items its window looks through
+        self._lane_deep = {}  # lane → its store had more than was looked through
         self.chime = Chime(cfg, chosen=self.lane_chosen)
         self._lane_cache = {}
         self._opened_threads = {}  # root id -> when it was opened (thread recheck)
@@ -2751,10 +2753,13 @@ class Core(SocialMixin):
         repeats = self.cfg["feed"].get("repeat_boosts", False)
         rule = next((c for c in self.customs if c.name == name), None)
         state = rule is not None and "state" in rule.needs  # unread, new_replies…
+        horizon = self._horizons.get(name, max(FILTER_WINDOW, limit))
+        funnel = self._funnel(name)
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
                self.me["id"] if self.me else None, only_posts, self._lists_version,
                self._silence_version, repeats, self._world_version,
                self.store.read_version if state else 0, self.lane_filter(name),
+               horizon, str(self.choice(f"media.{name}")),
                # a window moves with the clock (and density with the posts' age): anew
                # each minute
                int(time.time() // 60) if getattr(lane, "window", 0)
@@ -2764,24 +2769,37 @@ class Core(SocialMixin):
             return hit[1]
         ctx = self._ctx()
         kept = []
-        rows = self.store.iter_items(lane.source, max_rows=max(FILTER_WINDOW, limit))
+        # the quick filters (a free lane's switches, the funnel "only video…") count
+        # before the window does: the window is the newest `limit` posts they let
+        # through — not the newest `limit` posts, filtered after, a handful of videos
+        # out of a lane full of them further down (28.10)
+        shows = self._chip_shows(name) if lane.chips else None
+        scanned, full = 0, False
+        rows = self.store.iter_items(lane.source, max_rows=horizon)
         if not repeats:
             rows = self._without_repeats(lane.source, rows)
         for item_id, st in rows:
+            if scanned >= horizon:
+                break
+            scanned += 1
             if only_posts and real(st).get("in_reply_to_id"):
                 continue
             if self.silenced(st):
                 continue
+            if funnel is not None and not funnel(st):
+                continue
+            if shows is not None and not shows(st):
+                continue
             if lanes.keeps(lane, st, ctx):
                 kept.append((item_id, st))
                 if len(kept) >= limit:
+                    full = True
                     break
+        # what "Older" does next: the store has more to look through, or only the server
+        self._lane_deep[name] = not full and scanned >= horizon
         kept.reverse()
         if lane.by_status_time:
             kept.sort(key=lambda e: (real(e[1]).get("created_at", ""), real(e[1])["id"]))
-        if lane.chips:  # a free lane's quick filter
-            shows = self._chip_shows(name)
-            kept = [e for e in kept if shows(e[1])]
         if getattr(lane, "window", 0):  # only the last so many hours (mode = "catch_up")
             kept = _within(kept, lane.window)
         if getattr(lane, "filter_context", ""):
@@ -2839,6 +2857,20 @@ class Core(SocialMixin):
             return "all"
         got = self.choice(f"filter.{name}")
         return got if got in {"all"} | {k for k, _w in c.chips()} else c.default_filter()
+
+    def _funnel(self, name):
+        """The lane's funnel ("only posts with video…", boosts or not — LaneModel's
+        MediaFilter, a choice "media.<name>"): a test of a status, or None (all)."""
+        got = self.choice(f"media.{name}")
+        if not isinstance(got, dict):
+            return None
+        wanted = set(got.get("wanted") or ()) & set(atoms.MEDIA_KINDS)
+        boosts = bool(got.get("boosts", True))
+        if (not wanted or wanted == set(atoms.MEDIA_KINDS)) and boosts:
+            return None
+        every = not wanted or wanted == set(atoms.MEDIA_KINDS)
+        return lambda st: (boosts or not st.get("reblog")) and \
+            (every or bool(atoms.media_kinds(st) & wanted))
 
     def set_lane_filter(self, name, which):
         self.set_choice(f"filter.{name}", which)
@@ -3033,7 +3065,21 @@ class Core(SocialMixin):
         return fut
 
     def load_older(self, name):
+        """A page older: from the store first, while it holds more than the lane's
+        window looked through (a filtered lane, a funnel: the posts are there, further
+        down), then from the server."""
         lane = self.lane_by_name[name]
+        if self._lane_deep.get(name):
+            def deeper():
+                limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+                before = len(self.lane_entries(name))
+                self._horizons[name] = self._horizons.get(
+                    name, max(FILTER_WINDOW, limit)) + FILTER_WINDOW
+                self._limits[name] = limit + self.cfg["feed"]["page_size"]
+                got = len(self.lane_entries(name)) - before
+                self.emit("lanes_updated", {name: []})
+                return max(got, 1) if self._lane_deep.get(name) else got
+            return self.submit(deeper)
         if lane.feeds:
             return self.submit(lambda: self._older_custom(name))
         if lane.source not in self.sources:  # nothing older on a server for this one

@@ -59,10 +59,11 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             # j / k move, and reading on the way marks read (read.mark_read = on_scroll)
             posts.focus()
             posts.index = 0
-            kids = list(posts.children)
-            second = next(i for i, x in enumerate(kids) if i > 0 and isinstance(x, PostItem))
             await pilot.press("j")  # the next post — over "new below", if it stands between
             await pilot.pause(0.1)
+            # counted after the move: "new below" may have come in meanwhile (2.x)
+            kids = list(posts.children)
+            second = next(i for i, x in enumerate(kids) if i > 0 and isinstance(x, PostItem))
             self.assertEqual(posts.index, second)
             seen = posts.highlighted_child.entry.id
             self.assertNotIn(seen, core.unread_ids([(None, {"id": seen})]))

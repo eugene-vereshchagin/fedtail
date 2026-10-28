@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: a lane's funnel ("only video…") and a free lane's switches filtered the newest
+  posts after the lane's window was cut — a handful of videos out of the newest few
+  hundred, none of the many further down, and "Older" asked the server while the store had
+  them. Now they count before the window (the core does it — every interface the same), and
+  "Older" first looks deeper into what is stored, then asks the server.
+
 - Lighter: avatars are decoded at their box (twice it for HiDPI) in every window, not as
   feed pictures up to 1200 px — measured, 3–13 MB less in the bench's window.
 

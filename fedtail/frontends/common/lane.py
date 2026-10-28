@@ -9,14 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
+from ...core.atoms import MEDIA_KINDS, VIDEO_EXT  # one list for the core and the cards
 from ...i18n import _
 from ...model import Share, real
 from ...model.text import snippet
 
 POSTS_ONLY_LANES = ("home", "bots", "my_posts", "local")  # "posts only" makes sense here
 CONVERSATION_LANES = ("replies", "mentions", "subs", "to_me")       # …and "as conversations" here
-MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
-VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
 SEPARATOR = "__sep__"
 
 
@@ -123,9 +122,34 @@ class MediaFilter:
     run, like every quick filter; kept between runs only with feed.remember_choices
     (LaneModel keeps it then)."""
 
-    def __init__(self):
-        self.wanted = set(MEDIA_KINDS)
-        self.boosts = True
+    def __init__(self, changed=None):
+        self.changed = changed  # called on each change: the core filters by it (a choice)
+        self._wanted = set(MEDIA_KINDS)
+        self._boosts = True
+
+    # the windows change these in place; each change goes to the core at once — it counts
+    # the lane's window by the funnel (Core._funnel), and finding in the lane asks it
+    @property
+    def wanted(self):
+        return _Kinds(self._wanted, self._said)
+
+    @wanted.setter
+    def wanted(self, kinds):
+        self._wanted = set(kinds)
+        self._said()
+
+    @property
+    def boosts(self):
+        return self._boosts
+
+    @boosts.setter
+    def boosts(self, on):
+        self._boosts = bool(on)
+        self._said()
+
+    def _said(self):
+        if self.changed is not None:
+            self.changed()
 
     def active(self):
         return self.wanted != set(MEDIA_KINDS) or not self.boosts
@@ -139,8 +163,26 @@ class MediaFilter:
         (self.wanted.add if on else self.wanted.discard)(kind)
 
     def reset(self):
-        self.wanted = set(MEDIA_KINDS)
-        self.boosts = True
+        self._wanted, self._boosts = set(MEDIA_KINDS), True
+        self._said()
+
+
+class _Kinds(set):
+    """MediaFilter.wanted as a set, its add / discard told to the filter."""
+
+    def __init__(self, kinds, said):
+        super().__init__(kinds)
+        self._target, self._said = kinds, said
+
+    def add(self, kind):
+        super().add(kind)
+        self._target.add(kind)
+        self._said()
+
+    def discard(self, kind):
+        super().discard(kind)
+        self._target.discard(kind)
+        self._said()
 
 
 @dataclass
@@ -185,6 +227,7 @@ class LaneModel:
                 or set(MEDIA_KINDS)
             self.media.boosts = bool(kept.get("boosts", True))
         self._media_kept = self._media_state()
+        self.media.changed = self._keep_media
         opts = ["all"]
         if self.chips:  # "main" (what isn't hidden) before "all"
             opts = [k for k, _w in self.chips if k == "main"] + ["all"]
