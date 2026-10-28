@@ -53,7 +53,7 @@ class HttpBackendTest(unittest.TestCase):
 
     def test_network_and_nonsense(self):
         for call in (lambda b: b.push(b"x", "dev"), lambda b: b.pull(0, "dev")):
-            with self.assertRaisesRegex(backends.BackendError, "ConnectionError"):
+            with self.assertRaisesRegex(backends.BackendError, "cannot reach"):  # in words
                 call(self.backend(requests.ConnectionError("down")))
         for body in (ValueError("not json"), {"no": "blobs"}, {"blobs": [{"seq": "x"}]}):
             with self.assertRaisesRegex(backends.BackendError, "not understood"):
