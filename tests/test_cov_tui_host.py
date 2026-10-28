@@ -69,6 +69,9 @@ class Base(TmpDir, unittest.IsolatedAsyncioTestCase):
                                            for i in app.query_one("#lanes").children),
                         what="lanes")
         await self.wait(pilot, lambda: app.lane is not None, what="a lane")
+        # the poll's news may still be making the lane list anew: done before going on
+        await self.wait(pilot, lambda: not getattr(app, "_lanes_busy", False),
+                        what="the lane list made")
 
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")

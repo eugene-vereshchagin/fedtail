@@ -1001,7 +1001,25 @@ class FedtailApp(App, PostsMixin):
 
     async def fill_lanes(self):
         """The lanes in the windows' sections (ui.sidebar_groups): a heading each, Enter
-        on it folds the section (its unread stays as a number on the heading)."""
+        on it folds the section (its unread stays as a number on the heading).
+        One at a time: news asking for the list again while it is being made (a poll's
+        lanes_updated right after the start) wait and make it once more after — two at
+        once cleared and filled one list in turns, and an Enter on a heading met a list
+        half made (28.10)."""
+        if getattr(self, "_lanes_busy", False):
+            self._lanes_again = True
+            return
+        self._lanes_busy = True
+        try:
+            while True:
+                self._lanes_again = False
+                await self._fill_lanes()
+                if not self._lanes_again:
+                    break
+        finally:
+            self._lanes_busy = False
+
+    async def _fill_lanes(self):
         from ..common import sidebar
         lv = self._main("#lanes", ListView)
         if not lv.is_mounted:  # news before the screen is up, or while the app ends
