@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.22.0 — in progress
+
 ## 0.21.0 — 2026-10-28
 
 Sync set up in the window step by step, "Commented posts" as on Point, a library of lane
