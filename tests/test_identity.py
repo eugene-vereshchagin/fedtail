@@ -71,5 +71,29 @@ class IdentityTest(unittest.TestCase):
         self.assertEqual(len(self.store._parsed), 5)
 
 
+
+class ModelIdentityTest(unittest.TestCase):
+    """The model's side: one Post per stored post for every lane, made anew only when
+    the words it carries change (my names for people)."""
+
+    def test_one_post_in_every_lane(self):
+        from fedtail.core.view import View
+        from tests.test_tag_mute import TagMuteTest
+        t = TagMuteTest("test_one_filter_gathers_them_and_posts_go_at_once")
+        t.setUp()
+        self.addCleanup(t.doCleanups)
+        core = t.core
+        core.cfg["feed"]["aliases"] = True
+        view = View(core)
+        a = dict(view.entries("home"))
+        b = view.entry(core.store.get_status("010"))
+        self.assertIs(a["010"], b)
+        core.set_alias("B", "Бобби").result()
+        renamed = view.entry(core.store.get_status("010"))
+        self.assertIsNot(renamed, b)  # my name for him: a new Post, with it
+        self.assertEqual(renamed.author.name, "Бобби")
+        self.assertIs(view.entry(core.store.get_status("010")), renamed)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -29,7 +29,7 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 | step | what | status |
 |---|---|---|
 | 0 | **The bench**: a synthetic day — 10 000 posts, 20 lanes of rules, pictures, a day of polling; memory by parts (posts, lanes, the picture cache, the interface's widgets, modules; Qt's C++ side through its caches' sizes and object counts, tracemalloc doesn't see it); timings — the cold start to the first lane, opening a lane, scrolling 1000 posts, applying the lanes' rules; in a dev build these numbers in the log every few minutes; the first run's numbers here as the baseline | done: the baseline below |
-| 1 | **One store of posts**: one identity map in the core — one object per post for the whole program; lanes keep ids and order, no copies of posts; the same for accounts, attachments, threads | done for posts: `Store._parse` — one read-only `Stored` per post while anyone holds it (weak), shared by every lane |
+| 1 | **One store of posts**: one identity map in the core — one object per post for the whole program; lanes keep ids and order, no copies of posts; the same for accounts, attachments, threads | done: `Store._parse` — one read-only `Stored` per post while anyone holds it (weak), shared by every lane; `View.entry` — one `Post` per stored post (accounts and attachments live inside them) |
 | 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | — |
 | 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
 | 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
@@ -117,6 +117,10 @@ What the numbers say, three runs later (28 Oct):
 
 So the order of the plan holds for the core, but the window's weight is in the cards
 (step 5): every card a score of widgets.
+
+* **Step 1 on the model's side** (one `Post` per stored post for every lane, `View.entry`):
+  `--ui qt --hours 2` USS 401.0 → 399.5 MB, after the trim 245.3 → 245.0 MB, Python
+  objects 228 169 → 222 232. Next to nothing: the Post objects were never the weight.
 
 ## Decisions
 

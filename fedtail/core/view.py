@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import os
 import threading
+import weakref
 from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import fields, replace
@@ -105,6 +106,10 @@ class View:
         self._media = None  # pictures' own workers, made when first needed
         self._raw_accounts = OrderedDict()  # (profile, id) -> the core's account dict
         self._raw_activity = OrderedDict()  # (profile, id) -> the core's activity entry
+        # one Post per stored post (memory.md step 1, the model's side): id(Stored) ->
+        # (a weak ref to it, the people words it was made with, the Post); a post every
+        # lane shows is one object, made once, gone with the stored one
+        self._posts = {}
 
     def __getattr__(self, name):
         if name in PASS:
@@ -256,13 +261,40 @@ class View:
             acc = dict(acc, _fedtail_color=colors[key])
         return acc
 
-    def entry(self, raw):
+    def entry(self, raw, people=None):
         """A stored status → Post or Share (the names I gave people put in; a post in a
-        language I don't read translated, with feed.translate_auto)."""
+        language I don't read translated, with feed.translate_auto). The same stored
+        post with the same names gives the same object (made once)."""
         auto = getattr(self._core, "auto_translation", None)
         if auto is not None and isinstance(raw, dict):
             raw = auto(raw) or raw
-        people = self._people()
+        people = self._people() if people is None else people
+        shared = getattr(raw, "_text_hash", None) is not None  # a Stored: the store's own
+        if shared:
+            key = self._people_key(people)
+            hit = self._posts.get(id(raw))
+            if hit is not None and hit[0]() is raw and hit[1] == key:
+                return hit[2]
+            post = self._entry(raw, people)
+            rid = id(raw)
+            self._posts[rid] = (weakref.ref(raw, lambda _r, rid=rid: self._posts.pop(rid, None)),
+                                key, post)
+            return post
+        return self._entry(raw, people)
+
+    def _people_key(self, people):
+        """The names and colours as one comparable value — worked out once for a lane
+        (the same `people` handed for each of its posts), not once a post."""
+        last = getattr(self, "_pk_last", None)
+        if last is not None and last[0] is people:
+            return last[1]
+        aliases, colors = people
+        key = (tuple(sorted(aliases.items())) if aliases else (),
+               tuple(sorted(colors.items())) if colors else ())
+        self._pk_last = (people, key)
+        return key
+
+    def _entry(self, raw, people):
         if (people[0] or people[1]) and isinstance(raw, dict):
             raw = dict(raw, account=self._named(raw.get("account"), people))
             if isinstance(raw.get("reblog"), dict):
@@ -315,7 +347,8 @@ class View:
             hit = self._cache.get(lane)
             if hit and hit[0] is raw:
                 return hit[1]
-        out = [(item, self.entry(st)) for item, st in raw]
+        people = self._people()  # asked once for the lane, not once a post
+        out = [(item, self.entry(st, people)) for item, st in raw]
         with self._lock:
             self._cache[lane] = (raw, out)
         return out
