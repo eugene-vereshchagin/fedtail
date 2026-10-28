@@ -282,7 +282,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_line.add_css_class("ft-status")
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
         self.profile_label = Gtk.Label(xalign=0)
-        self.profile_label.add_css_class("ft-muted")
+        self.profile_label.add_css_class("ft-status")
         # a narrow window: the bar's words give way ("…") instead of holding it wide
         # (the sync mark beside them took the window past 600 px)
         self.profile_label.set_ellipsize(Pango.EllipsizeMode.END)
@@ -297,12 +297,12 @@ class MainWindow(Gtk.ApplicationWindow):
         # sync with my other devices (or that there is none: off without sync.url)
         # slow mode on: when the next batch comes ("slow · next at 14:30")
         self.slow_label = Gtk.Label(xalign=1)
-        self.slow_label.add_css_class("ft-muted")
+        self.slow_label.add_css_class("ft-status")
         self.slow_label.set_visible(False)
         bar.append(self.slow_label)
         GLib.timeout_add_seconds(30, lambda: (self._slow_text(), True)[1])
         self.sync_label = Gtk.Label(xalign=1)
-        self.sync_label.add_css_class("ft-muted")
+        self.sync_label.add_css_class("ft-status")
         click = Gtk.GestureClick()  # a click: ≡ → Sync
         click.connect("released", lambda *_a: self.open_place("sync"))
         self.sync_label.add_controller(click)

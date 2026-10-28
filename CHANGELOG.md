@@ -2,9 +2,10 @@
 
 ## 0.22.0 — in progress
 
-- The status line at the bottom ("⟳ updating the lanes…", "updated at 16:18", the
-  account) is written in the text's colour, not the faint one — it couldn't be read on
-  a light theme (the windows, GTK).
+- The status line at the bottom ("⟳ updating the lanes…", "updated at 16:18", the sync
+  mark, the account) is written in the text's colour, not the faint one — it couldn't be
+  read on a light theme (the windows, GTK; its labels have a style of their own now,
+  `statusText` / `ft-status`, not the cards' faint one).
 
 - Fixed: the config reference (`docs/<lang>/config.md`, the help's "Settings") listed a few
   options twice or in one language only — an explanation that begins with "open_at = …"

@@ -506,7 +506,7 @@ class MainWindow(QMainWindow):
         self.menuBar().hide()
         # left in the status bar: which profile this is and who (★ the main one)
         self.profile_label = QLabel()
-        self.profile_label.setObjectName("muted")
+        self.profile_label.setObjectName("statusText")
         self.profile_label.setToolTip(_("footer_profile_tip"))
         self.statusBar().addWidget(self.profile_label)
         # a message comes over the left of the bar: the profile's name steps aside for it
@@ -519,11 +519,11 @@ class MainWindow(QMainWindow):
         # there is none — it is a service of its own, off without sync.url)
         # slow mode on: when the next batch comes ("slow · next at 14:30")
         self.slow_label = QLabel()
-        self.slow_label.setObjectName("muted")
+        self.slow_label.setObjectName("statusText")
         self.statusBar().addPermanentWidget(self.slow_label)
         from .card import ClickLabel
         self.sync_label = ClickLabel()  # a click: ≡ → Sync
-        self.sync_label.setObjectName("muted")
+        self.sync_label.setObjectName("statusText")
         self.sync_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.sync_label.clicked.connect(lambda: self.open_place("sync"))
         self.statusBar().addPermanentWidget(self.sync_label)

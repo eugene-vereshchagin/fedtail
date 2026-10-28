@@ -390,6 +390,7 @@ QPushButton#older {{ background: transparent; color: {k('muted')}; border: 1px d
 
 QStatusBar {{ background: {self._bg('window')}; color: {k('text')}; }}
 QStatusBar::item {{ border: 0; }}
+QLabel#statusText {{ color: {k('text')}; }}
 """
 
 
