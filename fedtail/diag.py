@@ -531,6 +531,29 @@ def _proc_status():
     return out
 
 
+def smaps():
+    """{"uss_mb", "pss_mb"} of this process (Linux: /proc/self/smaps_rollup); {} elsewhere.
+    USS — the pages only this process has, what it would give back: the number that
+    says how heavy fedtail itself is (RSS counts the shared libraries whole)."""
+    try:
+        text = Path("/proc/self/smaps_rollup").read_text()
+    except OSError:
+        return {}
+    kb = {}
+    for line in text.splitlines():
+        key, _sep, rest = line.partition(":")
+        parts = rest.split()
+        if parts and parts[0].isdigit():
+            kb[key.strip()] = int(parts[0])
+    out = {}
+    uss = kb.get("Private_Clean", 0) + kb.get("Private_Dirty", 0)
+    if uss:
+        out["uss_mb"] = round(uss / 1024, 1)
+    if "Pss" in kb:
+        out["pss_mb"] = round(kb["Pss"] / 1024, 1)
+    return out
+
+
 def stats():
     """One snapshot: memory, CPU since the last snapshot, threads, files, providers."""
     now = time.monotonic()
@@ -542,6 +565,7 @@ def stats():
     rss_mb = round((st.get("VmRSS") or maxrss) / 1024, 1)
     out = {
         "rss_mb": rss_mb,
+        **smaps(),
         "peak_mb": round(st.get("VmHWM", maxrss) / 1024, 1),
         "cpu_s": round(cpu, 1),
         "py_objects": len(gc.get_objects()),  # growing for hours: Python-side leak

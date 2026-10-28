@@ -31,6 +31,7 @@ python3 tools/make_sounds.py             # the themes' sound sets (--check: are 
 python3 tools/gallery.py out/            # the site's/docs' pictures + gallery.toml (built-in themes)
 python3 tools/qt_tour.py out/ --native   # every theme, menu (inventory) and dialog of Qt
 python3 tools/qt_bench.py / gtk_bench.py # freezes: start, lanes, scroll, menu, themes
+python3 tools/membench.py --ui qt        # memory & speed on one synthetic day (dev/memory.md)
 python3 tools/tui_check.py out/          # Textual: every lane, screen and key; SVG shots
 python3 tools/web_check.py out/          # the web page in Chromium (Playwright): lanes, menus
 # qt_tour, qt_bench, gtk_bench, tui_check, web_check: --real[=PROFILE] — your own account

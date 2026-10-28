@@ -38,6 +38,7 @@
 | инструмент | что делает | как запустить |
 |---|---|---|
 | `qt_bench.py` | насколько быстро окно Qt: старт, ленты, прокрутка тысяч постов, меню, редактор, темы, split | `python3 tools/qt_bench.py` |
+| `membench.py` | память и скорость на одних синтетических сутках: USS/PSS/RSS, где лежит память Python (`--trace`), старт, ленты, правила, прокрутка (`--ui qt`) — базовая линия [memory.md](memory.md) | `python3 tools/membench.py --ui qt` |
 | `gtk_bench.py` | то же для окна GTK | `python3 tools/gtk_bench.py` |
 | `coverage_lite.py` | покрытие строк без установки чего-либо (sys.monitoring, Python 3.12+), считаются все процессы ночного прогона (`tools/covhook/`) | `python3 tools/coverage_lite.py OUT` |
 

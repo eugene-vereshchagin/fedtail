@@ -38,6 +38,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | tool | what it does | how to run |
 |---|---|---|
 | `qt_bench.py` | how fast the Qt window is: start, lanes, scrolling thousands of posts, menus, the editor, themes, split | `python3 tools/qt_bench.py` |
+| `membench.py` | memory and speed on one synthetic day: USS/PSS/RSS, where Python's memory is (`--trace`), the start, the lanes, the rules, scrolling (`--ui qt`) — the baseline of [memory.md](memory.md) | `python3 tools/membench.py --ui qt` |
 | `gtk_bench.py` | the same for the GTK window | `python3 tools/gtk_bench.py` |
 | `coverage_lite.py` | line coverage with nothing installed (sys.monitoring, Python 3.12+), every process of a night run counted (`tools/covhook/`) | `python3 tools/coverage_lite.py OUT` |
 

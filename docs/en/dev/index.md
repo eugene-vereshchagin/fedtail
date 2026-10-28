@@ -13,6 +13,7 @@ the tests and whether it fits.
 | [architecture.md](architecture.md) | the map: every module, the threads, the store schema, lanes, the poll cycle, events, the frontends, recipes for common changes |
 | [design.md](design.md) | the product spec, the principles and the queue of planned work |
 | [protocols.md](protocols.md) | how Mastodon became one protocol among others behind fedtail's own data model |
+| [memory.md](memory.md) | making fedtail lighter: the plan, step by step, the bench and its numbers before and after each step |
 | [gtk.md](gtk.md) | the plan and the state of the GTK 4 frontend |
 | [layouts.md](layouts.md) | the messenger-style layouts (QIP, Psi+, Mail.ru Agent) and their themes |
 | [windows.md](windows.md) | running and testing on Windows from the source |

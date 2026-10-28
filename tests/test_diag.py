@@ -8,6 +8,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from fedtail import diag
 from fedtail.core import config, paths
@@ -284,3 +285,17 @@ class ApiPathTest(unittest.TestCase):
         self.assertEqual(seg("01HXYZ"), "01HXYZ")
         with self.assertRaises(ValueError):
             seg("..")
+
+
+class SmapsTest(unittest.TestCase):
+    def test_uss_and_pss_in_the_stats_line(self):
+        """Linux: what the process holds alone (USS) and its share (PSS), with every
+        stats line of the dev log (docs/en/dev/memory.md); elsewhere — nothing."""
+        from fedtail import diag
+        got = diag.smaps()
+        if Path("/proc/self/smaps_rollup").exists():
+            self.assertGreater(got["uss_mb"], 0)
+            self.assertGreaterEqual(got["pss_mb"], got["uss_mb"])
+            self.assertIn("uss_mb", diag.stats())
+        with mock.patch.object(diag.Path, "read_text", side_effect=OSError):
+            self.assertEqual(diag.smaps(), {})
