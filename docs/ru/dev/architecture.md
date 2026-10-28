@@ -198,7 +198,7 @@ fedtail/
     themes/*.toml        встроенные темы (в system.toml перечислены все ключи)
     icons/fedtail.png    иконка приложения: опоссум, обнявший свой хвост (окно, меню, О программе)
     icons/fedtail.svg    нарисованный пузырь (appearance.app_icon = "bubble"; iconart.py красит его темой)
-syncserver/fedtail_sync.py  сервер fedtail-sync: один файл на stdlib, админ его копирует (§12)
+(fedtail-sync, сервер синхронизации: свой репозиторий — fedtail-syncserver, §12)
 tests/               unittest; fakes.py — Mastodon в памяти
 tools/screenshots.py рисует окно с выдуманными данными (CI публикует PNG)
 tools/push_probe.py  пушит ли сервер аккаунта? Web Push → тема ntfy, расшифровано
@@ -557,8 +557,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   и каждая проблема излучают `sync_changed`; `frontends/common/syncline.py` превращает
   `sync_status()` в «⇅ 21:40 / … / ! / выкл» строки состояния (Qt, GTK) и строку в
   «О программе». Бэкенды
-  (backends.py): `HttpBackend` (fedtail-sync: `syncserver/fedtail_sync.py`, файл на stdlib
-  вне пакета; токен из `data/sync_auth.json`, приложение с `read:accounts`, которое
+  (backends.py): `HttpBackend` (fedtail-sync: свой репозиторий, fedtail-syncserver — один
+  файл на stdlib; токен из `data/sync_auth.json`, приложение с `read:accounts`, которое
   делает `fedtail sync login`; URL только из `sync.url`) и `FolderBackend` (`sync.folder`,
   по подпапке на устройство; заданы оба — ошибка конфига). Нет ключа, а в хранилище
   чужие блобы → новый ключ не делается, ошибка просит `fedtail sync join`. Проблемы

@@ -15,3 +15,4 @@ fedtail/_build.py
 /android/local.properties
 /android/.kotlin/
 /coverage/
+/fedtail-syncserver/

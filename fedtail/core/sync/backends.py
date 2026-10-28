@@ -5,7 +5,7 @@ since a cursor (`pull`). It never opens a blob — they are sealed (crypto.py) �
 dumb store will do; adding one is a class here and an option in `[sync]` that says
 where it is (as `url` and `folder` do).
 
-* `HttpBackend` — fedtail-sync (syncserver/fedtail_sync.py) or anything speaking its two
+* `HttpBackend` — fedtail-sync (its own repository, fedtail-syncserver) or anything speaking its two
   calls. The device proves who it is with a token of the account limited to
   `read:accounts` (never the main token: that one opens the whole account), and names
   its server in `X-Fedtail-Instance` for the sync server to check the token there.

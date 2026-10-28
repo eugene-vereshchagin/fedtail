@@ -31,14 +31,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+      # the server, a project of its own: its main, beside fedtail's code, one version
+      - uses: actions/checkout@v5
+        with:
+          repository: eugene-vereshchagin/fedtail-syncserver
+          path: fedtail-syncserver
+      - run: python fedtail-syncserver/tools/same_version.py fedtail/__init__.py
       - run: pip install bandit ruff requests cryptography
-      - run: bandit -r syncserver fedtail/core/sync -ll
-      - run: ruff check --select S --output-format=github syncserver fedtail/core/sync
-      # the server's own tests (the standard library only: they leave with it when it
-      # moves to a repo of its own), then the client against it
-      - run: python -m unittest discover -v -s syncserver/tests -t syncserver
-      - if: matrix.python != '3.11'  # sys.monitoring: 3.12+
-        run: python syncserver/tools/coverage.py --fail-under 100
+      - run: bandit -r fedtail/core/sync -ll
+      - run: ruff check --select S --output-format=github fedtail/core/sync
+      # the client against the real server (the server's own tests: in its repository)
       - run: python -m unittest -v tests.test_sync
 
   # known vulnerabilities in what fedtail runs on (requests, urllib3, PySide6, textual):

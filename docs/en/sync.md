@@ -108,10 +108,10 @@ fedtail sync status             # where, the key's id, what waits to go, how las
 
 ## Running a fedtail-sync server
 
-The server is a project of its own, with its own page: [`syncserver/README.md`](/syncserver/README.md)
+The server is a project of its own, with its own page: [fedtail-syncserver](https://github.com/eugene-vereshchagin/fedtail-syncserver#readme)
 — installing it (one file, Python 3.11+, SQLite), the config, a systemd unit, putting it
 behind Cloudflare Tunnel, nginx or Caddy, how it guards itself, and serving people of
-other servers. What it speaks is in [`syncserver/PROTOCOL.md`](/syncserver/PROTOCOL.md).
+other servers. What it speaks is in [`PROTOCOL.md`](https://github.com/eugene-vereshchagin/fedtail-syncserver/blob/main/PROTOCOL.md).
 
 ## Not yet
 

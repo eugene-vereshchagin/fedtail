@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- fedtail-sync, the sync server, lives in a repository of its own now:
+  https://github.com/eugene-vereshchagin/fedtail-syncserver (with its history). Its version
+  is fedtail's — one number, released together (both CIs check it).
+
 - The window opens on the curtain with the opossum swinging from its very first frame;
   connecting, counting the lanes and fetching the news start only once it is on screen
   (before, the window thought first and showed the curtain after). The core counts

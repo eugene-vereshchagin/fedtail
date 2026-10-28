@@ -8,7 +8,9 @@ only they have:
     crypto.py    AES-GCM sealing, the key and its text form, the key file
     backends.py  where the blobs meet: a fedtail-sync server (sync.url), a folder
 
-The server side is syncserver/fedtail_sync.py. docs/en/sync.md says how to set it all up.
+The server side is fedtail-sync, a project of its own
+(https://github.com/eugene-vereshchagin/fedtail-syncserver). docs/en/sync.md says how to
+set it all up.
 """
 
 from .engine import Sync, load_auth, login_finish, login_start  # noqa: F401

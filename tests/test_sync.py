@@ -23,11 +23,24 @@ except ImportError:
 need_crypto = unittest.skipUnless(HAVE_CRYPTO, "needs the cryptography package")
 
 
-def load_server():
-    """syncserver/fedtail_sync.py: a file of its own, outside the package."""
-    import importlib.util
+def server_file():
+    """fedtail_sync.py of the fedtail-sync repository (a project of its own): where
+    $FEDTAIL_SYNCSERVER says, else a checkout of it inside this one (CI puts it there) or
+    beside it; None — not here (the tests against the real server are skipped)."""
+    import os
     from pathlib import Path
-    path = Path(__file__).resolve().parent.parent / "syncserver" / "fedtail_sync.py"
+    root = Path(__file__).resolve().parent.parent
+    for p in (os.environ.get("FEDTAIL_SYNCSERVER"), root / "fedtail-syncserver",
+              root.parent / "fedtail-syncserver"):
+        if p and (Path(p) / "fedtail_sync.py").exists():
+            return Path(p) / "fedtail_sync.py"
+    return None
+
+
+def load_server():
+    """The server's file as a module (outside fedtail's package)."""
+    import importlib.util
+    path = server_file()
     spec = importlib.util.spec_from_file_location("fedtail_sync", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -334,8 +347,10 @@ class SyncLineTest(Devices):
         self.assertIn(str(self.tmp / "meet"), syncline.about(self.desk))
 
 
-# ---- the client against the real server (the server's own tests: syncserver/tests/) -------
+# ---- the client against the real server (its own tests are in its own repository) --------
 
+@unittest.skipIf(server_file() is None, "the fedtail-syncserver repository isn't here "
+                 "(clone it beside this one, or set FEDTAIL_SYNCSERVER)")
 class ClientServerTest(TmpDir):
     TOKENS = {("me.example", "t-me"): "1", ("me.example", "t-me2"): "1",
               ("me.example", "t-you"): "2"}

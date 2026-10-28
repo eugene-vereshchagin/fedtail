@@ -110,10 +110,10 @@ fedtail sync status             # куда, id ключа, что ждёт от�
 
 ## Свой сервер fedtail-sync
 
-Сервер — отдельный проект со своей страницей: [`syncserver/README.ru.md`](/syncserver/README.ru.md)
+Сервер — отдельный проект со своей страницей: [fedtail-syncserver](https://github.com/eugene-vereshchagin/fedtail-syncserver#readme)
 — установка (один файл, Python 3.11+, SQLite), конфиг, юнит systemd, как поставить за
 Cloudflare Tunnel, nginx или Caddy, как он себя защищает, люди с других серверов. На каком
-языке он говорит — [`syncserver/PROTOCOL.md`](/syncserver/PROTOCOL.md).
+языке он говорит — [`PROTOCOL.md`](https://github.com/eugene-vereshchagin/fedtail-syncserver/blob/main/PROTOCOL.md).
 
 ## Чего пока нет
 

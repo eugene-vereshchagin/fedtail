@@ -197,9 +197,7 @@ fedtail/
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
     icons/fedtail.svg    the drawn bubble (appearance.app_icon = "bubble"; iconart.py themes it)
-syncserver/fedtail_sync.py  the fedtail-sync server: one stdlib file an admin copies (§12);
-                            a project of its own (README, PROTOCOL.md, CHANGELOG, tests/,
-                            tools/coverage.py) on its way to a repo of its own
+(fedtail-sync, the sync server: a repository of its own — fedtail-syncserver, §12)
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
 tools/push_probe.py  does the account's server push? Web Push → an ntfy topic, decrypted
@@ -548,8 +546,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   and every problem emits `sync_changed`; `frontends/common/syncline.py` turns
   `sync_status()` into the status bar's "⇅ 21:40 / … / ! / off" (Qt, GTK) and About's
   row. Backends
-  (backends.py): `HttpBackend` (fedtail-sync: `syncserver/fedtail_sync.py`, a stdlib file
-  outside the package; token from `data/sync_auth.json`, a `read:accounts` app made by
+  (backends.py): `HttpBackend` (fedtail-sync: its own repository, fedtail-syncserver — one
+  stdlib file; token from `data/sync_auth.json`, a `read:accounts` app made by
   `fedtail sync login`; URL from `sync.url` only) and `FolderBackend` (`sync.folder`, one
   subfolder per device; both set is a config error). No key and a store
   with others' blobs → no new key, the error asks for `fedtail sync join`. Problems go
