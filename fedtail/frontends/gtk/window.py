@@ -1547,6 +1547,20 @@ class MainWindow(Gtk.ApplicationWindow):
         self.view.set_active_lane(name)
         self.view.set_state("lane", name)
         lv.shown()
+        self._keep_lanes(name)
+
+    def _keep_lanes(self, name):
+        """The lanes shown last keep their cards; one before them lets them go now
+        (ui.keep_hidden_lanes, common/lanekeep.py — as the Qt window)."""
+        n = self.cfg["ui"].get("keep_hidden_lanes", 3)
+        if not n:
+            return
+        keep = getattr(self, "kept_lanes", None)
+        if keep is None:
+            from ..common.lanekeep import KeptLanes
+            keep = self.kept_lanes = KeptLanes(n)
+        keep.shown(name, lambda other: other not in self.lane_views or
+                   self.lane_views[other].unload())
 
     def _lane_view(self, name):
         """The lane's view, made the first time (in the stack until a column takes it)."""

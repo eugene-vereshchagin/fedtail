@@ -258,6 +258,9 @@ def run(args):
             if win is not None:
                 win.select_lane(lane.name)
                 app.processEvents()
+                # what a running loop does by itself: widgets let go are deleted
+                from PySide6.QtCore import QCoreApplication, QEvent
+                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
             else:
                 LaneModel(view, lane.name).build(False)
             worst = max(worst, time.perf_counter() - t)

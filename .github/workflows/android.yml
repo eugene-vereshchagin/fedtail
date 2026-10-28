@@ -3,7 +3,9 @@ name: Android
 # The phone's dev build (online.dmesg.fedtail.dev, the dev key), its screenshots and UI
 # tests on an emulator — on a push to main touching the app or the core it carries (a
 # "[skip ci]" push builds nothing: push in batches), and by hand (Actions → Android → Run).
-# A release's APK, signed with the release key, is ci.yml's (the apk job).
+# Beside it, when the repository has the release key: the same commit signed with it, as
+# online.dmesg.fedtail — it installs over the released app (its login and data kept),
+# without the dev tools (fedtail-android-update-N). A release's APK is ci.yml's.
 on:
   push:
     branches: [main]
@@ -59,6 +61,33 @@ jobs:
         with:
           name: fedtail-android-dev-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      # the same commit as an update of the installed app: the release key, the release id
+      - name: Build the APK that updates the installed app
+        id: update
+        working-directory: android
+        env:
+          CHAQUOPY_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
+          FEDTAIL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FEDTAIL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          FEDTAIL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::notice::no ANDROID_KEYSTORE secret: only the dev APK"
+            exit 0
+          fi
+          export FEDTAIL_KEYSTORE="$RUNNER_TEMP/release.keystore"
+          echo "$KEYSTORE_B64" | base64 -d > "$FEDTAIL_KEYSTORE"
+          ./gradlew --no-daemon assembleRelease 2>&1 | tee ../gradle-update.log
+          rm -f "$FEDTAIL_KEYSTORE"
+          echo "built=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.update.outputs.built == 'true'
+        with:
+          name: fedtail-android-update-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       # ---- the app on an emulator: two screenshots and what it said ----------------------

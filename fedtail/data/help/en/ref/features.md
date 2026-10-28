@@ -709,7 +709,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Links to posts and profiles — inside | has | 0.2.0 | `card.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Open a link in the running fedtail | has | 0.14.0 | `fedtail open URL`; `--install-desktop` installs a `web+ap://` handler | own | Megalodon (share a link into the app) |
 | Everything is stored locally, readable offline | has | 0.1.0 | — | SQLite in the profile's data folder | Tusky — partly, Ice Cubes — a Home cache |
-| Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |
+| Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.keep_hidden_lanes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |
 | Polling the server and the live stream | has | 0.9.0 | `[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds` | streaming (WebSocket) | Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes |
 | Errors in plain words and without spam | has | 0.13.0 | — | own | — |
 | A detailed log for bug reports | has | 0.2.0 | `[debug]`, the launch keys `--debug`, `--bug-report` | own | — |
@@ -740,7 +740,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Open a link in the running fedtail.** `fedtail open URL` from a terminal or a browser opens a post or a profile in the window already open (or starts it and opens it there). `--install-desktop` makes fedtail the handler of `web+ap://` links — the “open in your app” buttons on servers' pages.
 
-**Open for days without bloating.** A lane not opened for `unload_hidden_minutes` minutes lets its cards go from memory; the one open is never unloaded. fedtail gives the freed memory back to the system (`trim_memory`: otherwise glibc keeps the peak after a night of lanes and pictures).
+**Open for days without bloating.** A lane not opened for `unload_hidden_minutes` minutes lets its cards go from memory; only the `keep_hidden_lanes` opened last keep them (since 0.22: one opened before lets them go the moment another comes to the front); the one open is never unloaded. fedtail gives the freed memory back to the system (`trim_memory`: otherwise glibc keeps the peak after a night of lanes and pictures).
 
 **Polling the server and the live stream.** A poll every `interval_seconds` (at least 30). The live stream (`"auto"`, if the server offers it) wakes the poll at once, but not more often than every `stream_gap_seconds`. The stream only wakes, so if it drops (a laptop asleep, a proxy) nothing is lost.
 

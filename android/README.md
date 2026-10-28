@@ -75,7 +75,11 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
   phone's setting; fedtail's other themes (terminal, Point, Juick) come later.
 
 Dev builds are signed with `dev.keystore` (in the repository on purpose: it signs only
-`online.dmesg.fedtail.dev`), so each one installs over the last.
+`online.dmesg.fedtail.dev`), so each one installs over the last. Each Android CI run also
+builds the same commit signed with the release key (when the repository has it) as
+`fedtail-android-update-N`: it **installs over the released app** — its login, data and
+settings kept — without the dev tools (the self-check). Take that one to try a fix on the
+phone you read with; the dev one stands apart for tests and the demo.
 
 ## Testing
 
@@ -133,6 +137,6 @@ Repository → Settings → Secrets and variables → Actions: `ANDROID_KEYSTORE
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`fedtail`), `ANDROID_KEY_PASSWORD`.
 Without them a release goes out without the APK (a warning says so). The dev builds keep
 `dev.keystore` and their own id, `online.dmesg.fedtail.dev`: they stand next to the
-released app and never replace it.
+released app and never replace it; the `update` APK of the same run does (the release key).
 
 `tests/test_android_bridge.py` checks the Python door on any desktop Python, no phone needed.

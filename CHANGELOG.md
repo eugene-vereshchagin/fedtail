@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Lighter: only the lanes opened last keep their cards out of sight (`ui.keep_hidden_lanes`,
+  3) — one opened before lets them go the moment another lane comes to the front, besides
+  `unload_hidden_minutes`. Every lane opened in the bench's window: 573 → 405 MB (a lane
+  drawn is some 18 MB). The same rule in the GTK window, which now heeds
+  `unload_hidden_minutes` too (it kept every lane drawn for ever).
+
 - Sync without logging in to the fediverse server: on a fedtail-sync server (protocol 2,
   fedtail-syncserver 0.22) the journal is the key's — an id and a secret derived from it,
   the key never sent. The first device makes the journal with an invite code the server's

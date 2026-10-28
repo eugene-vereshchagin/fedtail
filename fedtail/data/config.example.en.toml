@@ -851,6 +851,13 @@ video_disk_mb = 10000
 # The lane open right now is never unloaded. 0 — keep everything.
 unload_hidden_minutes = 10
 
+# How many lanes out of sight keep their cards for coming back at once, besides the one in
+# front: the ones opened last. One opened before them lets its cards go the moment
+# another lane comes to the front (a lane drawn is some 15–20 MB with its pictures; reading
+# through a dozen held half a gigabyte). Opened again — drawn anew, at the first unread.
+# 0 — only unload_hidden_minutes decides.
+keep_hidden_lanes = 3
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  9. Writing posts

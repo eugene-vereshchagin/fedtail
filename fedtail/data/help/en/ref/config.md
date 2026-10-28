@@ -264,6 +264,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `media.image_disk_mb` | `1000` | How much disk space, MB, to keep for fetched pictures: over that, out go the ones not opened the longest (at start and along the way). 0 — don't clean. |
 | `media.video_disk_mb` | `10000` | The same for videos, gifs and sound — they have their own folder and their own limit, MB (a clip or two is a gigabyte already). A video opened once stays on disk and plays at once the next time. 0 — don't keep videos on disk. |
 | `media.unload_hidden_minutes` | `10` | A lane not opened for this many minutes lets its cards go from memory: a client open for days otherwise holds hundreds of cards with all their pictures (over a gigabyte). Open it again — it's drawn anew, from the first unread (that's quick). The lane open right now is never unloaded. 0 — keep everything. |
+| `media.keep_hidden_lanes` | `3` | How many lanes out of sight keep their cards for coming back at once, besides the one in front: the ones opened last. One opened before them lets its cards go the moment another lane comes to the front (a lane drawn is some 15–20 MB with its pictures; reading through a dozen held half a gigabyte). Opened again — drawn anew, at the first unread. 0 — only unload_hidden_minutes decides. |
 
 ## 9. Writing posts
 

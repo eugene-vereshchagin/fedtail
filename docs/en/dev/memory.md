@@ -33,7 +33,7 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 | 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | — |
 | 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
 | 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
-| 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | — |
+| 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | partly: only the lanes opened last keep their cards (`ui.keep_hidden_lanes`) |
 | 6 | **Pictures and media**: decoded right at the size shown (Qt: QImageReader.setScaledSize), the full size only when opened; one picture cache with a limit in MB (an option, a sensible default), LRU; thumbnails cached on disk; media off screen not decoded; video — still a preview only | partly: `media.image_cache_mb` (64 MB by default since 0.22, measured), `image_disk_mb`, `image_decode` |
 | 7 | **A lazy start**: heavy modules (language detection, spelling, sound, anything rare) imported at first use; the opossum's curtain drawn first, then the open lane, the rest in the background; every heavy operation (parsing, requests, language detection, the lanes' rules) off the GUI thread | partly: the curtain first (0.22) |
 | 8 | **Budgets as tests**: the bench of step 0 a test with ceilings of memory and time (the start, opening a lane, scrolling); over the ceiling — the test fails, so the lightness doesn't creep back with new features; run in the full CI, not on every small change | — |
@@ -142,6 +142,14 @@ So the order of the plan holds for the core, but the window's weight is in the c
   card's picture as its box shows it instead of the decoded one (each on screen was there
   twice) — +12…+23 MB, measured, so not done. The bench left a different lane in front
   from run to run (1062 widgets or 1936, 20 MB apart): it puts Home in front now.
+* **Lanes kept drawn** (`ui.keep_hidden_lanes`, 3, `common/lanekeep.py`, Qt and GTK; GTK now
+  heeds `unload_hidden_minutes` too): every lane opened kept its cards for 10 minutes — a
+  lane drawn is some 18 MB (the window with Home alone: 175 MB; every lane opened: 500 MB
+  after the trim). Now only the 3 opened last stay; one opened before goes the moment
+  another comes to the front. Every lane opened, 4000 posts: 573 → 405 MB before the trim,
+  319 → 298 after; going through them all again adds nothing (2255 widgets either way). The
+  bench deletes the widgets let go after each lane, as a running window does (before, it
+  counted 10 147 widgets that were only waiting to be deleted).
 
 ## Decisions
 

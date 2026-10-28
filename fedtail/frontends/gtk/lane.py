@@ -743,14 +743,36 @@ class LaneView(Gtk.Box):
             GLib.idle_add(self._position, priority=GLib.PRIORITY_LOW)
 
     def hidden(self):
-        """Another lane in front: "unread only" shows anew what's unread next time."""
+        """Another lane in front: "unread only" shows anew what's unread next time; out
+        of sight for unload_hidden_minutes, its cards go (as Qt's)."""
         if self.lm.left():
             self.dirty = True
-            for k in list(self.order):
-                self._remove(k)
-            self._queue = []
-            self.keys, self.index = [], {}
-            self.positioned = False
+            self._drop_cards()
+        minutes = self.ctx.cfg["ui"].get("unload_hidden_minutes", 0)
+        if minutes:
+            if getattr(self, "_unload_src", None):
+                GLib.source_remove(self._unload_src)
+            self._unload_src = GLib.timeout_add_seconds(
+                int(minutes * 60), lambda: (setattr(self, "_unload_src", None),
+                                            self.unload(), False)[-1])
+
+    def _drop_cards(self):
+        for k in list(self.order):
+            self._remove(k)
+        self._queue = []
+        self.keys, self.index = [], {}
+        self.positioned = False
+
+    def unload(self):
+        """Its cards let go (ui.keep_hidden_lanes / unload_hidden_minutes,
+        common/lanekeep.py); drawn anew when shown. → False: on screen, it stays."""
+        if self.get_mapped():
+            return False
+        if self.order:
+            log.info("lane %s unloaded: %d cards let go", self.name, len(self.order))
+            self._drop_cards()
+            self.dirty = True
+        return True
 
     def bring(self, key, then=None):
         """key's card on screen near the top — built around it if it wasn't (find,

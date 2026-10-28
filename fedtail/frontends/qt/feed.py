@@ -1120,13 +1120,17 @@ class LaneWidget(QWidget):
         super().hideEvent(e)
 
     def _unload(self):
-        """Long out of sight: its cards go (a card is a score of widgets, its pictures
-        a megabyte each at screen size: a few hundred of them held over a gigabyte in a
-        client kept open for days). Opening it again draws it anew, at the first unread."""
-        if self.isVisible() or not self.view.order:
-            return
+        """Out of sight long (unload_hidden_minutes) or shown before the lanes kept
+        (keep_hidden_lanes, common/lanekeep.py): its cards go (a card is a score of
+        widgets, its pictures a megabyte each at screen size: a few hundred of them held
+        over a gigabyte in a client kept open for days). Opening it again draws it anew,
+        at the first unread. → False: it can't go now (on screen, or the lane in front)."""
+        if self.isVisible():
+            return False
         if self.win.stack.currentWidget() is self:
-            return  # the lane in front, only out of sight with the window: keep it as is
+            return False  # the lane in front, only out of sight with the window: kept
+        if not self.view.order:
+            return True
         n = len(self.view.order)
         self.view.clear()
         self.positioned = False
@@ -1134,6 +1138,7 @@ class LaneWidget(QWidget):
         self.unloaded = True
         self.dirty = True
         log.info("lane %s unloaded: %d cards let go", self.name, n)
+        return True
 
     def conversations_on(self):
         return self.view_seg is not None and self.view_seg.current == "conversations"

@@ -1550,6 +1550,20 @@ class MainWindow(QMainWindow):
         self.core.set_active_lane(name)
         for lane_name, item in self.lane_items.items():
             item.set_current(lane_name == name)
+        self._keep_lanes(name)
+
+    def _keep_lanes(self, name):
+        """The lanes shown last keep their cards; one before them lets them go now
+        (ui.keep_hidden_lanes, common/lanekeep.py)."""
+        n = self.cfg["ui"].get("keep_hidden_lanes", 3)
+        if not n:
+            return  # 0: only unload_hidden_minutes decides
+        keep = getattr(self, "kept_lanes", None)
+        if keep is None:
+            from ..common.lanekeep import KeptLanes
+            keep = self.kept_lanes = KeptLanes(n)
+        keep.shown(name, lambda other: other not in self.lane_widgets or
+                   self.lane_widgets[other]._unload())
 
     def _lane_widget(self, name):
         w = self.lane_widgets.get(name)

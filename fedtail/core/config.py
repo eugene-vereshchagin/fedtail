@@ -68,6 +68,7 @@ DEFAULTS = {
         "image_disk_mb": 1000,
         "video_disk_mb": 10000,
         "unload_hidden_minutes": 10,
+        "keep_hidden_lanes": 3,
         "app_icon": "possum",
         "themed_icon": True,
         "icon_count": ["to_me", "replies", "mentions", "subs", "commented", "important",
@@ -417,6 +418,7 @@ MINIMUM = {
     ("debug", "log_mb"): 1,
     ("ui", "image_cache_mb"): 16,
     ("ui", "unload_hidden_minutes"): 0,
+    ("ui", "keep_hidden_lanes"): 0,
     ("debug", "keep_mb"): 20,
     ("debug", "stall_ms"): 0,
     ("debug", "leak_samples"): 3,
@@ -506,7 +508,7 @@ FILE_LAYOUT = (
                           "video_decode gifv image_upscale save_dir")
      + _keys("feed", "prefetch")
      + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
-                   "unload_hidden_minutes")),
+                   "unload_hidden_minutes keep_hidden_lanes")),
     ("post", _keys("post", "default_visibility send_timeout reply_never_wider drafts_autosave "
                            "cw_field camelcase_hint plain_posts language languages spellcheck "
                            "spell_languages complete_mentions complete_tags complete_emoji "
