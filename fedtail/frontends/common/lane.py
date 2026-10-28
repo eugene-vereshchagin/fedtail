@@ -173,6 +173,7 @@ class LaneModel:
         self.shown = None        # on_new = "hold": the item keys let in so far
         self.refreshes = getattr(view, "hand_refreshes", 0)
         self.conv_members = {}   # conversation top id -> member ids
+        self.event_sorts = {}    # an event row's key -> its newest sort (what's seen)
         # view = "threads" (a lane of rules): one card a thread, as on Point — the threads
         # with new comments; one read while the lane is open stays till it is left
         self.threads_view = getattr(lane, "view", "") == "threads"
@@ -365,41 +366,62 @@ class LaneModel:
             lane.source in getattr(view, "browse_empty", ())
         return Built(specs, info, sum(1 for s in specs if s.unread), empty, held)
 
+    def events_only(self):
+        """A lane of events only (Activity, Requests — any lane whose rule takes
+        nothing but events): its rows are events, no posts."""
+        lane = self.view.lane_by_name.get(self.name)
+        return bool(getattr(lane, "events", False) and not getattr(lane, "source", None))
+
     def _with_events(self, specs):
-        """A lane of rules that takes events (likes, follows… — feeds.md §2.3): their
-        rows among the posts, by time — each run of one kind about one post as one row
-        (CardSpec "event:<id>", extra["event"]: [Activity]). Not while only the unread
-        or a kind of media are shown: an event is neither. Before the oldest post shown
-        none come (the lane's window), unless there are no posts at all."""
-        if self.unread_only() or self.media.active():
+        """A lane of rules that takes events (likes, follows, follow requests… — feeds.md
+        §2.3): their rows among the posts, by time — each run of one kind about one post
+        as one row (CardSpec "event:<id>", extra["event"]: [Activity], extra["row"]: the
+        row's words, common/activity.Row). Unread: newer than what's seen (one mark for
+        every lane: Core.mark_activity_seen). Not while a kind of media is shown (an
+        event is none); with "unread only" — the unseen ones. Among posts, none come
+        before the oldest post shown (the lane's window); a lane of events only shows
+        them all; those without a time (a follow request waiting) stand as the newest."""
+        if self.media.active():
             return specs
         events = getattr(self.view, "lane_events", None)
         events = events(self.name) if events else []
         if not events:
             return specs
-        from .activity import groups
+        from .activity import rows as act_rows
+        seen_at = getattr(self.view, "activity_seen", None)
+        seen_at = seen_at() if seen_at else ""
+        rows = act_rows(events, seen_at, lambda _d: "", oldest_first=False)  # when: drawn
+        only = self.events_only()
 
         def when_post(s):
             e = s.entry
             return (e.created if isinstance(e, Share) and e.created else real(e).created) \
                 if e is not None else None
-        rows = []
-        for g in groups(events):
-            es = g["entries"]
-            times = [a.created for a in es if a.created]
-            rows.append((max(times) if times else None, es))
-        rows.sort(key=lambda r: (r[0] is not None, r[0] or 0))  # oldest first
+        made = []
+        for r in rows:
+            times = [a.created for a in r.entries if a.created]
+            key = "event:" + r.entries[0].id
+            self.event_sorts[key] = r.newest_sort
+            made.append((max(times) if times else None,
+                         CardSpec(key=key, unread=r.unread,
+                                  extra={"event": r.entries, "row": r})))
+        if self.unread_only():
+            made = [m for m in made if m[1].unread or m[1].key in (self.kept or ())]
+            self.kept = (self.kept or set()) | {m[1].key for m in made}
+        # oldest first; without a time (a follow request waiting) — now: the newest
+        undated = [spec for when, spec in made if when is None]
+        made = sorted(((w, sp) for w, sp in made if w is not None), key=lambda r: r[0])
         timed = [when_post(s) for s in specs]
         oldest = min((t for t in timed if t is not None), default=None)
         out, i = [], 0
-        for when, es in rows:
-            if when is None or (oldest is not None and when < oldest):
+        for when, spec in made:
+            if not only and oldest is not None and when < oldest:
                 continue
             while i < len(specs) and timed[i] is not None and timed[i] <= when:
                 out.append(specs[i])
                 i += 1
-            out.append(CardSpec(key="event:" + es[0].id, extra={"event": es}))
-        return out + specs[i:]
+            out.append(spec)
+        return out + specs[i:] + undated
 
     def _conversation_specs(self, entries, unread, parents, answers, short):
         """One card per conversation: its top post, with a line about the rest."""
@@ -449,7 +471,15 @@ class LaneModel:
 
     def read(self, ids):
         """Ids seen on screen → the post ids to mark read (read.mark_read = "on_scroll";
-        a conversation card seen = its members seen). [] when reading is by hand."""
+        a conversation card seen = its members seen). [] when reading is by hand. An
+        event row seen ("event:<id>") marks the events seen up to it, here and now."""
+        newest = max((self.event_sorts.get(i, "") for i in ids if str(i).startswith(
+            "event:")), default="")
+        if newest:
+            seen = getattr(self.view, "mark_activity_seen", None)
+            if seen is not None:
+                seen(newest)
+        ids = [i for i in ids if not str(i).startswith("event:")]
         if self.cfg["read"]["mark_read"] != "on_scroll":
             return []
         return [m for i in ids for m in self.conv_members.get(i, [i])]

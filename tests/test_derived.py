@@ -139,7 +139,6 @@ class ActivityFilterTest(FreeBase):
 
     def test_filters(self):
         from fedtail.core.view import View
-        from fedtail.frontends.common.places import Places
         core, w = self.make([])
         mine = w.add(fakes.status("900", fakes.ME, minute=1), home=True)
         w.act("n1", "favourite", BOB, mine, minute=2)
@@ -151,43 +150,30 @@ class ActivityFilterTest(FreeBase):
         core.poll_once()
         core.follow(BOB["id"]).result()
         v = View(core)
-        kinds = lambda which: sorted(a.kind for a in v.activity(which=which))  # noqa: E731
-        self.assertEqual(kinds("reactions"), ["like", "like"])
-        self.assertEqual(kinds("follows"), ["follow", "follow"])
-        self.assertEqual(kinds("mine"), ["my_follow"])
         self.assertEqual(len(v.activity()), 5)
-        page = Places(v).page("activity", tab="follows")
-        self.assertEqual(page.tab, "follows")
-        self.assertEqual([k for k, _w in page.tabs][:3], ["all", "reactions", "follows"])
-        self.assertEqual(len(v.activity()), 2)  # the choice stays
-        v.set_activity_filter("all")
-        self.assertEqual(len(v.activity()), 5)
+        # Activity's quick filters are its rule's switches (chips)
+        from fedtail.frontends.common.lane import LaneModel
+        m = LaneModel(v, "activity")
 
-    def test_this_run_only_and_only_what_can_show(self):
+        def kinds(words):
+            m.set_filter(next(k for k, w in m.chips if w == words))
+            return sorted(a.kind for s in m.build(False).specs if s.extra.get("event")
+                          for a in s.extra["event"])
+        self.assertEqual(kinds("@actf_reactions"), ["like", "like"])
+        self.assertEqual(kinds("@actf_follows"), ["follow", "follow"])
+        self.assertEqual(kinds("@actf_mine"), ["my_follow"])
+
+    def test_the_chosen_chip_is_kept_with_remember_choices(self):
         from fedtail.core.view import View
-        from fedtail.frontends.common import activity as act
+        from fedtail.frontends.common.lane import LaneModel
         core, w = self.make([])
         core.connect().result()
         v = View(core)
-        self.assertIn("requests", act.offered(v))  # follow requests stand in Activity
-        v.set_activity_filter("follows")
-        self.assertEqual(act.chosen(v), "follows")
-        self.assertIsNone(core.store.kv_get("ui.activity_filter"))  # nothing kept
+        m = LaneModel(v, "activity")
+        chip = next(k for k, w in m.chips if w == "@actf_follows")
         core.cfg["feed"]["remember_choices"] = True  # the tick: kept between runs
-        v.set_activity_filter("reactions")
-        self.assertEqual(core.store.kv_get("ui.activity_filter"), "reactions")
-        core.cfg["feed"]["remember_choices"] = False
-        v.set_activity_filter("all")
-        # follow requests in a lane of their own, no approvals: no "Requests" filter
-        core.cfg["lanes"]["enabled"] = ["home", "activity", "requests"]
-        core.cfg["activity"]["approvals"] = False
-        core._apply_lists([], {})
-        self.assertNotIn("requests", act.offered(v))
-        v.set_activity_filter("requests")
-        self.assertEqual(act.chosen(v), "all")  # not offered: everything
-        core.cfg["activity"]["my_follows"] = False
-        self.assertNotIn("mine", act.offered(v))
-
+        m.set_filter(chip)
+        self.assertEqual(LaneModel(v, "activity").current_filter(), chip)
 
     def test_deleted_post_marked_and_kept(self):
         from fedtail.core.view import View

@@ -69,10 +69,8 @@ from .cmdline import CommandBar
 from .compose import Compose, media_paths, save_image
 from .feed import (
     AccountWidget,
-    ActivityWidget,
     LaneWidget,
     PeopleWidget,
-    RequestsWidget,
     SearchWidget,
     TagGroupWidget,
     TagWidget,
@@ -1393,7 +1391,7 @@ class MainWindow(QMainWindow):
         elif self.cfg["lists"]["enabled"]:
             m.addAction(_("list_new"), lambda: self.new_list())
         if name and not name.startswith(("list:", "tags:")) and \
-                name in self.core.lane_by_name and name not in ("activity", "requests"):
+                name in self.core.lane_by_name:
             m.addAction(_("le_edit_lane"), lambda: self.open_place("lane", name))
         if name:
             m.addAction(_("le_title") + "…", lambda: self.open_place("lanes"))
@@ -1556,13 +1554,8 @@ class MainWindow(QMainWindow):
     def _lane_widget(self, name):
         w = self.lane_widgets.get(name)
         if w is None:
-            if name == "requests":
-                w = RequestsWidget(self)
-            elif name == "activity":
-                w = ActivityWidget(self)
-            else:
-                w = LaneWidget(self, name)
-                w.dirty = True  # drawn right after the switch, under "loading…"
+            w = LaneWidget(self, name)  # every lane, events' too: one kind of lane
+            w.dirty = True  # drawn right after the switch, under "loading…"
             self.lane_widgets[name] = w
             self.stack.addWidget(w)
         return w
@@ -1808,10 +1801,12 @@ class MainWindow(QMainWindow):
                 if isinstance(w, AccountWidget) and w.mine:
                     w.reload_account()
             self.statusBar().showMessage(_("profile_saved"), 5000)
-        elif name in ("activity_updated", "activity_seen"):
-            w = self.lane_widgets.get("activity")
-            if w:
-                w.refresh()
+        elif name in ("activity_updated", "activity_seen", "requests_updated"):
+            # events came, were seen or answered: every lane that shows events looks again
+            for lname, w in self.lane_widgets.items():
+                if isinstance(w, LaneWidget) and \
+                        getattr(self.core.lane_by_name.get(lname), "events", False):
+                    w.refresh()
             self.update_badges()
         elif name == "lists_changed":
             self._rebuild_lists()
@@ -1824,11 +1819,6 @@ class MainWindow(QMainWindow):
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget):
                     w.update_sub_button()
-        elif name == "requests_updated":
-            w = self.lane_widgets.get("requests")
-            if w:
-                w.refresh()
-            self.update_badges()
         elif name == "notify":
             self._notify(payload)
         elif name == "sound":

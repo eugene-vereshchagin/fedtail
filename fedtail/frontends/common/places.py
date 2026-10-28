@@ -115,7 +115,7 @@ class Out:
 # the places, in the order of the ≡ menu (title words)
 PLACES = {
     "silence": "silence_title", "lists": "lists_header", "search": "search_title",
-    "requests": "lane_requests", "activity": "lane_activity", "tags": "followed_tags",
+    "tags": "followed_tags",
     "scheduled": "scheduled_title", "drafts": "drafts_title", "stats": "stats_title",
     "sync": "sync_title", "sync_key": "sync_key_title",
     "trends": "trends_title",
@@ -137,9 +137,7 @@ PLACES = {
     "lane": "le_title", "why": "why_here", "around": "around_post", "raw": "raw_json",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "drafts",
-        "slow", "stats",
-        "requests",
-        "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
+        "slow", "stats", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts", "sync",
         "settings", "lanes", "help", "news", "about", "issue", "federation", "log")
 
@@ -254,7 +252,7 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         cfg = v.cfg
         out = []
         for lane in v.lanes:
-            if lane.lazy or lane.source is None or lane.name in ("activity", "requests"):
+            if lane.lazy or lane.source is None:  # browsed, or a lane of events only
                 continue
             if v.lane_chosen(lane.name, cfg["notify"]["lanes"], cfg["notify"].get("except")
                              or ()) or v.lane_chosen(lane.name, cfg["sound"]["lanes"],
@@ -987,100 +985,6 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         return Out(refresh=True)
 
     # ---- follow requests, activity -------------------------------------------------------
-    def _p_requests(self, _arg, _tab, _cur):
-        page = Page("requests", _("lane_requests"), empty=_("no_requests"))
-        for a in self.view.follow_requests():
-            page.rows.append(Row("account", acc_line(a), data=a, key=a.id, buttons=(
-                self._btn(_("approve"), "requests", "yes", a.id, primary=True,
-                          tip=_("approve_tip")),
-                self._btn(_("reject"), "requests", "no", a.id, tip=_("reject_tip")),
-                self._btn(_("tui_profile"), "person", "open", a.id))))
-        return page
-
-    def _a_requests_yes(self, acc_id, _v, _c, _ans):
-        _wait(self.view.answer_follow(acc_id, True))
-        return Out(refresh=True, message=_("approved"))
-
-    def _a_requests_no(self, acc_id, _v, _c, _ans):
-        _wait(self.view.answer_follow(acc_id, False))
-        return Out(refresh=True, message=_("rejected"))
-
-    def _p_activity(self, _arg, _tab, _cur):
-        """Who liked, boosted, followed…: the rows the windows' Activity lane draws
-        (common/activity.py), with the same buttons — answer a request, hide a row."""
-        from ...model.text import snippet
-        from . import activity as act
-        v = self.view
-        offered = act.offered(v)
-        which = _tab if _tab in offered else act.chosen(v)
-        if _tab and _tab != act.chosen(v):  # a quick filter picked: it stays (this run)
-            v.set_activity_filter(which)
-        page = Page("activity", _("lane_activity"), empty=_("activity_none"),
-                    tabs=tuple((k, act.filter_words(k)[0]) for k in offered), tab=which)
-        entries = v.activity(which=which)
-        oldest_first = v.cfg["feed"]["order"] == "oldest_first"
-        for r in act.rows(entries, v.activity_seen(), self.date, oldest_first):
-            if r.notice:
-                who = "⚠ " + r.notice
-            else:
-                who = ", ".join(a.name or a.username for a in r.people)
-                if r.more:
-                    who += " " + _("act_more", n=r.more)
-            line = r.what + (" · " + r.when if r.when else "")
-            if r.post is not None:
-                line += " · «" + snippet(r.post, 160) + "»"
-            btns = []
-            if r.request:
-                for e in r.entries:
-                    btns.append(self._btn(_("ok_interaction"), "activity", "approve",
-                                          e.id, primary=True, tip=_("approve_tip")))
-                    btns.append(self._btn(_("no_interaction"), "activity", "refuse",
-                                          e.id, tip=_("reject_tip")))
-            if r.post is not None:
-                btns.append(self._btn(_("thread"), "post", "thread", r.post.id))
-            if r.people:
-                btns.append(self._btn(_("tui_profile"), "person", "open", r.people[0].id))
-            btns.append(self._btn("×", "activity", "dismiss",
-                                  " ".join(e.id for e in r.entries),
-                                  tip=_("activity_dismiss_tip" if v.can_dismiss_one()
-                                        else "activity_hide_tip")))
-            page.rows.append(Row("item", ("● " if r.unread else "") + who, line,
-                                 key=r.newest_sort, buttons=tuple(btns)))
-        if entries:
-            page.submit = self._btn(_("activity_clear"), "activity", "clear",
-                                    tip=_("activity_clear_tip"))
-            page.more = self._btn(_("mark_all_read"), "activity", "seen")
-        return page
-
-    def _activity(self, aid):
-        for e in self.view.activity():
-            if e.id == aid:
-                return e
-        raise KeyError(aid)
-
-    def _a_activity_seen(self, _d, _v, _c, _ans):
-        self.view.mark_activity_seen()
-        return Out(refresh=True)
-
-    def _a_activity_approve(self, aid, _v, _c, _ans):
-        found = _wait(self.view.answer_interaction(self._activity(aid), True))
-        return Out(refresh=True, message=_("approved" if found else "approval_gone"))
-
-    def _a_activity_refuse(self, aid, _v, _c, _ans):
-        found = _wait(self.view.answer_interaction(self._activity(aid), False))
-        return Out(refresh=True, message=_("rejected" if found else "approval_gone"))
-
-    def _a_activity_dismiss(self, ids, _v, _c, _ans):
-        for nid in ids.split():
-            _wait(self.view.dismiss_activity(nid))
-        return Out(refresh=True)
-
-    def _a_activity_clear(self, _d, _v, confirmed, _ans):
-        if not confirmed:
-            return Out(confirm=_("activity_clear_q"))
-        _wait(self.view.clear_activity())
-        return Out(refresh=True)
-
     def _a_post_thread(self, sid, _v, _c, _ans):
         return Out(open={"thread": sid})
 

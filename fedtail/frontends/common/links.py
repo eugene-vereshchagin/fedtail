@@ -34,7 +34,8 @@ log = logging.getLogger(__name__)
 
 PREFIX = "fedtail:"
 # actions whose argument is not a post id
-NOT_A_POST = ("account", "tag", "resolve", "alias", "copyhandle")
+NOT_A_POST = ("account", "tag", "resolve", "alias", "copyhandle", "eventyes", "eventno",
+              "eventhide")
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,15 @@ class Links:
             h.open_thread(arg, "first_unread" if action == "threadnew" else "post")
         elif action == "account":
             self._ask(h, "open_account", arg)
+        elif action in ("eventyes", "eventno"):  # a follow request, an approval: answered
+            ok = action == "eventyes"
+            h.call(self.view.answer_event(unquote(arg), ok),
+                   ok=lambda found: h.status(_(("approved" if ok else "rejected") if found
+                                               else "approval_gone")),
+                   fail=h.error)
+        elif action == "eventhide":  # × on an event's row: its events, gone
+            h.call(self.view.dismiss_events([unquote(i) for i in arg.split(",") if i]),
+                   fail=h.error)
         else:
             post = self.view.by_id(arg)
             if post is None:

@@ -30,7 +30,6 @@ from ...model import Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity, timed
-from ..common.activity import ACT_KINDS, act_key
 from ..common.lane import (  # noqa: F401  (Qt's names for them)
     CONVERSATION_LANES,
     MEDIA_KINDS,
@@ -609,8 +608,8 @@ class FeedView(QScrollArea):
     def set_unread(self, status_ids, unread=False):
         ids = set(status_ids)
         for spec in self.model:  # cards not built yet too: they're built as they are now
-            if spec.entry is not None and spec.entry.id in ids:
-                spec.unread = unread
+            if spec.entry is not None and spec.entry.id in ids or spec.key in ids:
+                spec.unread = unread  # (an event's row by its key, "event:<id>")
         for row in self.rows.values():
             if row.status_id in ids:
                 row.set_unread(unread)
@@ -1029,6 +1028,13 @@ class LaneWidget(QWidget):
                                                icon="mark_read"))
         self.media_filter = MediaFilter(self.header, lambda: self.refresh(force=True),
                                         self.lm.media)
+        # a lane of events only (Activity…): "Clear" — every notification, on the server
+        self.clear_btn = None
+        if self.lm.events_only():
+            self.clear_btn = self.header.add(_button(_("activity_clear"), self._clear,
+                                                     icon="clear",
+                                                     tip=_("activity_clear_tip")))
+            self.clear_btn.setVisible(self.core.supports("dismiss"))
         self.header.add(_button("", self.refresh_now, icon="refresh",
                                 tip=_("refresh") + " (F5)"))
         lay.addWidget(self.header)
@@ -1086,7 +1092,10 @@ class LaneWidget(QWidget):
         self.refresh(force=True)
 
     def _seen(self, ids):
-        ids = self.lm.read(ids)  # a conversation card seen = its new messages seen
+        events = [i for i in ids if str(i).startswith("event:")]
+        ids = self.lm.read(ids)  # a conversation card seen = its new messages seen;
+        if events:                # an event's row seen: the events up to it (core)
+            self.view.set_unread(events, False)
         if ids:
             self.core.mark_read(ids)
 
@@ -1251,6 +1260,22 @@ class LaneWidget(QWidget):
 
     def mark_all_read(self):
         self.core.mark_read(self.view.unread_status_ids())
+        if getattr(self.core.lane_by_name.get(self.name), "events", False):
+            self.core.mark_activity_seen()  # its events seen too
+
+    def capabilities_changed(self):
+        """The server answered for a feature: "Clear" as it can now, the rows' × tips."""
+        if self.clear_btn is not None:
+            self.clear_btn.setVisible(self.core.supports("dismiss"))
+        if getattr(self.core.lane_by_name.get(self.name), "events", False):
+            self.refresh()
+
+    def _clear(self):
+        """Every notification gone, on the server too (a lane of events only)."""
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(self, _("activity_clear"), _("activity_clear_q")) \
+                == QMessageBox.StandardButton.Yes:
+            self.win.bridge.call(self.core.clear_activity(), fail=self.win.error)
 
     def load_older(self):
         self.btn_older.setEnabled(False)
@@ -2272,313 +2297,6 @@ def _flash(w):
     QTimer.singleShot(1200, off)
 
 
-class RequestsWidget(QScrollArea):
-    def __init__(self, win):
-        super().__init__()
-        self.win = win
-        self.setWidgetResizable(True)
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setObjectName("feed")
-        self.body = QWidget()
-        self.body.setObjectName("feedBody")
-        self.lay = QVBoxLayout(self.body)
-        self.lay.setContentsMargins(28, 20, 28, 20)
-        self.lay.setSpacing(10)
-        self.setWidget(self.body)
-        self.refresh()
-
-    def refresh(self):
-        while self.lay.count():
-            item = self.lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        reqs = self.win.ctx.view.follow_requests()  # [Account]
-        if not reqs:
-            self.lay.addWidget(QLabel(_("no_requests")))
-        for acc in reqs:
-            card = QFrame()
-            card.setObjectName("card")
-            v = QVBoxLayout(card)
-            v.setContentsMargins(18, 14, 18, 14)
-            # the profile opens here, as GTK's (and the web page's) — not in the browser
-            name = QLabel(f'<b>{display_name(acc)}</b> '
-                          f'<a href="fedtail:account/{esc(acc.id)}">@{esc(acc.handle)}</a>')
-            name.setOpenExternalLinks(False)
-            name.linkActivated.connect(self.win.on_link)
-            v.addWidget(name)
-            note = QLabel(esc(snippet_html(acc.note, 300)))
-            note.setWordWrap(True)
-            note.setObjectName("muted")
-            v.addWidget(note)
-            h = QHBoxLayout()
-            h.addWidget(_button(_("approve"), lambda _c=False, a=acc.id:
-                                self.win.answer_follow(a, True), icon="accept"))
-            h.addWidget(_button(_("reject"), lambda _c=False, a=acc.id:
-                                self.win.answer_follow(a, False), icon="reject"))
-            h.addStretch(1)
-            v.addLayout(h)
-            self.lay.addWidget(card)
-        self.lay.addStretch(1)
-
-    def apply_read(self, ids):
-        pass
-
-
-class ActivityWidget(QWidget):
-    """Who favourited, boosted, followed: one row per post and kind, the names
-    gathered, like a phone's notification shade. Seen once it's on screen."""
-
-    MAX_NAMES = 3
-
-    def __init__(self, win):
-        super().__init__()
-        self.win, self.core = win, win.ctx.view
-        self.view = None  # not a FeedView: Ctrl+F has nothing to do here
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(0)
-        self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
-        self.header.add(_button(_("mark_all_read"), lambda: self.core.mark_activity_seen(),
-                                icon="mark_read"))
-        self.clear_btn = _button(_("activity_clear"), self._clear, icon="clear",
-                                 tip=_("activity_clear_tip"))
-        self.header.add(self.clear_btn)
-        self.clear_btn.setVisible(self.core.supports("dismiss"))
-        # the quick filters: all · likes & boosts · follows · requests · mine · other
-        self.filter_seg = _Segmented(
-            [(k, *activity.filter_words(k)) for k in activity.offered(self.core)],
-            activity.chosen(self.core), self.core.set_activity_filter,
-            win.theme.shape["posts_only"])
-        self.header.add(self.filter_seg)
-        lay.addWidget(self.header)
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll.setObjectName("feed")
-        body = QWidget()
-        body.setObjectName("feedBody")
-        outer = QHBoxLayout(body)
-        outer.setContentsMargins(0, 0, 0, 0)
-        self.column = QWidget()
-        self.column.setMaximumWidth(win.cfg["ui"]["max_width"] or 16777215)
-        outer.addWidget(self.column, 1)
-        self.lay = QVBoxLayout(self.column)
-        self.lay.setContentsMargins(20, 14, 20, 14)
-        self.lay.setSpacing(8)
-        self.scroll.setWidget(body)
-        lay.addWidget(self.scroll, 1)
-        # seen is what came on screen, as in the other lanes: checked when the reader
-        # scrolls, comes back to the window, or new rows arrive — not once on opening
-        # (that marked rows far off screen read, and a window in the background at that
-        # moment left the new ones unread for good)
-        self._seen_timer = QTimer(self, singleShot=True, interval=700)
-        self._seen_timer.timeout.connect(self._mark_seen)
-        self._touched_at = 0.0
-        bar = self.scroll.verticalScrollBar()
-        bar.valueChanged.connect(self._scrolled)
-        bar.rangeChanged.connect(lambda *_a: self._seen_timer.start())
-        self.refresh()
-
-    groups = staticmethod(activity.groups)  # one kind about one post: one row
-
-    def refresh(self):
-        built = self.lay.count() > 0
-        kept = self.scroll.verticalScrollBar().value() if built else None
-        while self.lay.count():
-            item = self.lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        seen = self.core.activity_seen()
-        entries = self.core.activity()  # [Activity], newest first
-        if not entries:
-            self.lay.addWidget(QLabel(_("activity_none")))
-        groups = self.groups(entries)
-        # feed.order, like every other lane: "oldest_first" — the new comes in below
-        oldest_first = self.win.cfg["feed"]["order"] == "oldest_first"
-        if oldest_first:
-            groups.reverse()
-        first_new = None
-        for g in groups:
-            unread = any(a.sort > seen for a in g["entries"])
-            row = self._row(g, unread)
-            self.lay.addWidget(row)
-            if unread and first_new is None:
-                first_new = row
-        self.lay.addStretch(1)
-        if oldest_first:
-            if self.isVisible():
-                QTimer.singleShot(0, self, lambda r=first_new, v=kept: self._place(r, v))
-            else:  # built hidden (at start, or behind another lane): placed when shown
-                self._unplaced = (first_new, kept)
-        if self.isVisible():
-            self._seen_timer.start()
-
-    def _place(self, first_new, kept):
-        """The first time: where the new begins (feed.start_at), else the newest, below.
-        Later rebuilds (new activity came): stay put, or go down to it with
-        feed.on_new = "jump_to_newest"."""
-        try:
-            bar = self.scroll.verticalScrollBar()
-            fc = self.win.cfg["feed"]
-            if kept is not None and fc["on_new"] == "keep_position":
-                bar.setValue(kept)
-            elif kept is None and first_new is not None and fc["start_at"] == "first_unread":
-                bar.setValue(max(0, first_new.mapTo(self.scroll.widget(), QPoint(0, 0)).y()
-                                 - 14))
-            else:
-                bar.setValue(bar.maximum())
-        except RuntimeError:  # rebuilt or closed meanwhile
-            pass
-
-    def _row(self, group, unread):
-        es = group["entries"]
-        first = es[0]
-        kind = act_key(first)  # the words for it (act_favourite…), and the card's kind
-        card = QFrame()
-        card.setObjectName("card")
-        card.setProperty("kind", kind)  # what it is about, for tests and stylesheets
-        card.setProperty("unread", "true" if unread else "false")
-        card.newest_sort = max(a.sort for a in es)  # for what's seen (seen_upto)
-        v = QVBoxLayout(card)
-        v.setContentsMargins(16, 10, 16, 10)
-        v.setSpacing(4)
-        people, total = activity.who_of(es)  # a server's group names some, counts all
-        names = [f'<a href="fedtail:account/{esc(p.id)}" style="text-decoration:none;'
-                 f'color:{self.win.theme.c["text"].name()};"><b>{display_name(p)}</b></a>'
-                 for p in people]
-        more = total - min(len(names), self.MAX_NAMES)
-        who = ", ".join(names[:self.MAX_NAMES]) + \
-            (" " + _("act_more", n=more) if more > 0 else "")
-        # when: the newest of the group, and since when if they came over a while
-        theme = self.win.theme
-        times = sorted((a.created for a in es if a.created), reverse=True)
-        when = theme.date(times[0]) if times else ""
-        if len(times) > 1 and theme.date(times[-1]) != when:
-            when = f"{theme.date(times[-1])} … {when}"
-        if first.kind == "notice" and first.details is not None:
-            # from the server itself: what happened, not who did it
-            who = "<b>⚠ " + esc(_notice_text(first.details)) + "</b>"
-        top = QLabel(f'{who} <span style="color:{theme.c["muted"].name()};">— '
-                     f'{_("act_" + kind) if kind in ACT_KINDS else kind}'
-                     + (f' · {esc(when)}' if when else "") + '</span>')
-        if len(es) > 1:
-            top.setToolTip("\n".join(f'{theme.date(a.created) if a.created else ""}  '
-                                      f'{a.who.handle if a.who else ""}' for a in es[:30]))
-        top.setTextFormat(Qt.TextFormat.RichText)
-        top.setWordWrap(True)
-        top.linkActivated.connect(self.win.on_link)
-        # × hides this row: the notifications in it go from the server too where it can
-        # dismiss one (Mastodon), else only from here (GoToSocial) — nothing gets muted
-        line = QHBoxLayout()
-        line.addWidget(top, 1)
-        x = QPushButton("×")
-        x.setObjectName("tool")
-        x.setFixedWidth(28)
-        x.setToolTip(_("activity_dismiss_tip" if self.core.can_dismiss_one()
-                       else "activity_hide_tip"))
-        x.clicked.connect(lambda _c=False, ids=[a.id for a in es]: self._dismiss(ids))
-        line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
-        v.addLayout(line)
-        if first.kind == "request":
-            # waiting for my yes (GoToSocial): answer right here, one by one
-            for a in es:
-                line = QHBoxLayout()
-                line.addStretch(1)
-                for approve in (True, False):
-                    b = _button(_("ok_interaction") if approve else _("no_interaction"),
-                                lambda _c=False, en=a, ok=approve: self._answer(en, ok),
-                                name="primary" if approve else "tool")
-                    b.setToolTip(_("approve_tip") if approve else _("reject_tip"))
-                    line.addWidget(b)
-                v.addLayout(line)
-        if first.post is not None:
-            post = QLabel(f'<a href="fedtail:thread/{esc(first.post.id)}" '
-                          f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
-                          f'«{esc(snippet(first.post, 160))}»</a>')
-            post.setTextFormat(Qt.TextFormat.RichText)
-            post.setWordWrap(True)
-            post.setCursor(Qt.CursorShape.PointingHandCursor)
-            post.linkActivated.connect(self.win.on_link)
-            v.addWidget(post)
-        return card
-
-    def _scrolled(self, _value):
-        self._touched_at = time.monotonic()
-        self._seen_timer.start()
-
-    def _mark_seen(self):
-        """Up to the newest row that is on screen (all of it, or the end of the lane
-        reached): the mark is one point in time, so with the newest below what's above
-        is older and goes with it."""
-        if not self.isVisible() or self.window().isMinimized():
-            return
-        if not self.window().isActiveWindow() and \
-                time.monotonic() - self._touched_at > READING_S:
-            self._seen_timer.start(3000)  # not being looked at: look again in a while
-            return
-        upto = self.seen_upto()
-        if upto:
-            self.core.mark_activity_seen(upto)
-
-    def seen_upto(self):
-        bar = self.scroll.verticalScrollBar()
-        vtop, vh = bar.value(), self.scroll.viewport().height()
-        vbot, at_end = vtop + vh, bar.value() >= bar.maximum()
-        body = self.scroll.widget()
-        best = ""
-        for i in range(self.lay.count()):
-            w = self.lay.itemAt(i).widget()
-            sort = getattr(w, "newest_sort", None) if w is not None else None
-            if not sort or not w.isVisible():
-                continue
-            top = w.mapTo(body, QPoint(0, 0)).y()
-            bottom = top + w.height()
-            fully = top >= vtop - 2 and bottom <= vbot + 2
-            tall = w.height() > vh and top < vbot and bottom > vtop
-            if fully or tall or (at_end and top < vbot and bottom > vtop):
-                best = max(best, sort)
-        return best
-
-    def changeEvent(self, e):
-        super().changeEvent(e)
-        if e.type() == QEvent.Type.ActivationChange:
-            self._seen_timer.start()
-
-    def _answer(self, entry, approve):
-        self.win.bridge.call(
-            self.core.answer_interaction(entry, approve),
-            ok=lambda found: self.win.statusBar().showMessage(
-                _(("approved" if approve else "rejected") if found else "approval_gone"),
-                5000),
-            fail=self.win.error)
-
-    def _dismiss(self, ids):
-        """A row gone: each notification in it, here and on the server."""
-        for nid in ids:
-            self.win.bridge.call(self.core.dismiss_activity(nid), fail=self.win.error)
-
-    def _clear(self):
-        from PySide6.QtWidgets import QMessageBox
-        if QMessageBox.question(self, _("activity_clear"), _("activity_clear_q")) \
-                == QMessageBox.StandardButton.Yes:
-            self.win.bridge.call(self.core.clear_activity(), fail=self.win.error)
-
-    def showEvent(self, e):
-        super().showEvent(e)
-        self._seen_timer.start()
-        unplaced, self._unplaced = getattr(self, "_unplaced", None), None
-        if unplaced:
-            QTimer.singleShot(0, self, lambda: self._place(*unplaced))
-
-    def apply_read(self, ids):
-        pass
-
-    def capabilities_changed(self):
-        """The server answered for a feature: Clear and the × tips as it can now."""
-        self.clear_btn.setVisible(self.core.supports("dismiss"))
-        self.refresh()
-
-
 # the Activity lane's words and grouping are shared with GTK (common/activity.py)
 _notice_text = activity.notice_text
 
@@ -2760,7 +2478,6 @@ class SearchWidget(QWidget):
         """Enter in the search field searches and stops there: a line edit lets the key
         go on to its parents, and up there Enter means other things (open a post, go
         back to the lane)."""
-        from PySide6.QtCore import QEvent
         if obj is self.edit and e.type() == QEvent.Type.KeyPress and \
                 e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.run(self.edit.text())

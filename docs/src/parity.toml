@@ -732,3 +732,15 @@ in = ["qt", "gtk"]
 why.ru = "Окна открывают занятый профиль поднятием его окна — сказать «профиль занят» им не нужно."
 why.en = "The windows open a busy profile by raising its window — they never need to say “the profile is busy”."
 keys = ["profile_busy"]
+
+[[wording]]
+in = ["qt", "gtk", "web"]
+why.ru = "Пустая лента событий (Активность, Запросы) в окнах и вебе говорит то же, что любая пустая лента; терминал — своими словами «ничего нового»."
+why.en = "An empty lane of events (Activity, Requests) in the windows and on the web page says what any empty lane says; the terminal says “nothing new” in its own words."
+keys = ["activity_none"]
+
+[[wording]]
+in = ["tui", "web"]
+why.ru = "«Всё прочитано» в терминале — клавиша x (её подсказка — `tui_*`), в вебе — кнопка ✓ со своей подсказкой (`web_mark_read`)."
+why.en = "“Mark all read” in the terminal is the x key (its hint a `tui_*` word), on the web page the ✓ button with its own tip (`web_mark_read`)."
+keys = ["mark_all_read"]

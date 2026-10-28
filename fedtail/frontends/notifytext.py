@@ -40,6 +40,13 @@ def _account(obj):
     return real(obj).author
 
 
+def _is_request(obj):
+    """A follow request: an account waiting (as the core said them before 0.22), or the
+    event of one, as any lane of events takes it now."""
+    return isinstance(obj, Account) or (isinstance(obj, Activity) and obj.kind == "request"
+                                        and obj.asks == "follow")
+
+
 def _who(obj):
     acc = _account(obj)
     return (acc.name or acc.username or acc.handle or "?") if acc else "?"
@@ -67,15 +74,16 @@ def build(items, privacy="full", titles=None):
     _titles = titles
     groups, acts = {}, {}
     for lane, obj in items:
-        if lane == "activity":
-            acts.setdefault(obj.kind, []).append(obj)
+        if isinstance(obj, Activity) and not _is_request(obj):  # a like, a follow…
+            acts.setdefault(obj.kind, []).append((lane, obj))
         else:
             groups.setdefault(lane, []).append(obj)
     lanes = [x for x in ORDER if x in groups] + sorted(x for x in groups if x not in ORDER)
     notes = [_note(lane, groups[lane], privacy) for lane in lanes]
     kinds = [k for k in ACTIVITY_ORDER if k in acts] + sorted(k for k in acts
                                                               if k not in ACTIVITY_ORDER)
-    return notes + [_activity_note(k, acts[k], privacy) for k in kinds]
+    return notes + [_activity_note(k, [o for _l, o in acts[k]], privacy, acts[k][0][0])
+                    for k in kinds]
 
 
 def due(view, items, cfg, on_screen, titles=None):
@@ -97,12 +105,12 @@ def due(view, items, cfg, on_screen, titles=None):
     return notes
 
 
-def _activity_note(kind, notifs, privacy):
+def _activity_note(kind, notifs, privacy, lane="activity"):
     """"★ 3 in favourites" — from whom, and (full) on which post."""
     n = len(notifs)
     title = _(ACT_WORDS.get(kind, "notify_act_other_n"), n=n)
     if privacy == "count":
-        return Note("fedtail", title, "activity")
+        return Note("fedtail", title, lane)
     names = list(dict.fromkeys(_who(x) for x in notifs))
     shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
     body = _("notify_from", names=shown)
@@ -110,12 +118,13 @@ def _activity_note(kind, notifs, privacy):
     if privacy == "full" and posts:
         body += "\n" + "\n".join(f"«{p}»" for p in posts[:2])
     sids = {x.post.id for x in notifs if x.post}
-    return Note(title, body, "activity", sids.pop() if len(sids) == 1 else "")
+    return Note(title, body, lane, sids.pop() if len(sids) == 1 else "")
 
 
 def _note(lane, objs, privacy):
     n = len(objs)
-    kind = lane if lane in ("replies", "mentions", "requests") else "lane"
+    requests = all(_is_request(o) for o in objs)  # in "requests" or any lane of events
+    kind = "requests" if requests else lane if lane in ("replies", "mentions") else "lane"
     count_title = _(f"notify_{kind}_n", n=n, lane=_lane_title(lane))
     if privacy == "count":
         return Note("fedtail", count_title, lane)
@@ -124,14 +133,14 @@ def _note(lane, objs, privacy):
     if n == 1:
         obj = objs[0]
         title = _(f"notify_{kind}_one", name=names[0], lane=_lane_title(lane))
-        thread = real(obj).id if lane != "requests" else ""
-        if privacy == "sender" or lane == "requests":
+        thread = real(obj).id if not requests else ""
+        if privacy == "sender" or requests:
             body = "@" + (_account(obj).handle if _account(obj) else "")
         else:
             body = snippet(real(obj), 200)
         return Note(title, body, lane, thread)
 
-    if privacy == "sender" or lane == "requests":
+    if privacy == "sender" or requests:
         shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
         return Note(count_title, _("notify_from", names=shown), lane)
     lines = [f"{_who(o)}: {snippet(real(o), 90)}" for o in objs[:MAX_LINES]]

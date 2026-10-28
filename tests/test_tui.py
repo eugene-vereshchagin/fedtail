@@ -170,11 +170,10 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         from textual.widgets import ListView, Static
 
         from fedtail.frontends.tui.app import (
-            ActivityItem,
+            EventItem,
             FedtailApp,
             PictureScreen,
             ProfileScreen,
-            RequestItem,
         )
         core, w = self.make(lanes={"enabled": ["home", "replies", "activity", "requests"]})
         mine = w.add(status("001", ME, minute=1, text="my post", vis="public"), home=True)
@@ -223,16 +222,16 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("l")
             await self.wait(pilot, lambda: app.lane == target)
 
-            await app.select_lane("activity")
-            await self.wait(pilot, lambda: any(isinstance(i, ActivityItem)
+            await app.select_lane("activity")  # a lane like any other, its rows events
+            await self.wait(pilot, lambda: any(isinstance(i, EventItem)
                                                for i in app.query_one("#posts").children))
             await app.select_lane("requests")
-            await self.wait(pilot, lambda: any(isinstance(i, RequestItem)
+            await self.wait(pilot, lambda: any(isinstance(i, EventItem) and i.parts.answers
                                                for i in app.query_one("#posts").children))
             posts = app.query_one("#posts", ListView)
             posts.focus()
             posts.index = 0
-            await pilot.press("a")
+            await pilot.press("a")  # the request's "approve"
             await self.wait(pilot, lambda: not w.requests)
 
             await app.select_lane("home")

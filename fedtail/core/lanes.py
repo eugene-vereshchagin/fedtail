@@ -10,7 +10,7 @@ from .model import real
 @dataclass
 class Lane:
     name: str
-    source: str | None  # None: not a status stream (follow requests)
+    source: str | None  # None: no stream of posts (a lane of events only: Activity)
     keep: Callable  # keep(status, ctx) -> bool
     # order by the post's own time instead of when it reached us (notifications
     # can arrive late or out of order; the card shows the post's time)
@@ -41,6 +41,9 @@ class Lane:
     # "first_unread"; "" — threads.open_at: core.open_at)
     view: str = ""
     open_at: str = ""
+    # it takes events (likes, follows, follow requests… — a condition with `event`):
+    # Core.lane_events gives them; with no source it takes nothing else (Activity)
+    events: bool = False
 
 
 @dataclass

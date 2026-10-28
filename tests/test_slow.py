@@ -68,12 +68,15 @@ class FreshTest(Base):
         self.assertIn("56", sidebar.fresh_words(56))
 
     def test_requests_and_activity(self):
+        """Lanes of events (Activity, Requests): "of them new" — what the last update
+        brought that is still not seen; a request while it waits."""
         core, w = self.make()
-        core._fresh = {"requests": {"r1", "r2"}, "activity": {"a1", "a2", "a3"}}
-        core.follow_requests = [{"id": "r1"}]
-        self.assertEqual(core.fresh_count("requests"), 1)
-        with mock.patch.object(core, "activity_unread", return_value=2):
-            self.assertEqual(core.fresh_count("activity"), 2)
+        core.cfg["lanes"]["enabled"] = ["home", "activity", "requests"]
+        core._apply_lists(core.lists, core.list_members)
+        core.follow_requests = [{"id": "r1", "acct": "r1@x", "username": "r1"}]
+        core._fresh = {"requests": {"follow_request:r1", "follow_request:r2"}}
+        self.assertEqual(core.fresh_count("requests"), 1)  # r2 answered meanwhile
+        self.assertEqual(core.fresh_count("activity"), 0)  # nothing came there
 
     def test_a_lane_it_cant_count_says_nothing(self):
         view = mock.Mock()

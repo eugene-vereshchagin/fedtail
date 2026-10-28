@@ -241,6 +241,111 @@ class WebBase(TmpDir):
         self.assertFalse((old / "left.png").exists())  # last run's attachments: gone
 
 
+class WebEventLanesTest(WebBase):
+    """Activity and Requests are lanes of rules like any (feeds.md, 28.10): the page gets
+    their rows as events of the lane, each in its parts (common/activity.EventParts), its
+    buttons fedtail: links done by /api/link; seen on screen through /api/read."""
+
+    def like(self, nid, post_id="001", minute=1):
+        self.core.store.activity_put([{
+            "id": nid, "type": "favourite", "account": BOB,
+            "created_at": f"2026-10-28T10:{minute:02d}:00.000Z",
+            "status": status(post_id, ME, minute=1)}])
+        self.core._events_cache = {}
+
+    def follow(self, nid, minute=3):
+        self.core.store.activity_put([{
+            "id": nid, "type": "follow", "account": BOB,
+            "created_at": f"2026-10-28T10:{minute:02d}:00.000Z"}])
+        self.core._events_cache = {}
+
+    def events(self, name):
+        return {e["key"]: e["event"] for e in self.web.lane(name)["events"]}
+
+    def test_likes_listed_as_full_rows(self):
+        self.like("n1")
+        got = self.web.lane("activity")
+        self.assertNotIn("place", got)
+        (ev,) = got["events"]
+        self.assertEqual(ev["key"], "event:n1")
+        self.assertIsNone(ev["before"])  # no posts: after the last of none
+        x = ev["event"]
+        self.assertEqual(x["kind"], "favourite")
+        self.assertEqual([u for _n, u in x["people"]], ["fedtail:account/B"])
+        self.assertTrue(x["people"][0][0])
+        self.assertTrue(x["what"])
+        self.assertEqual(x["post_link"], "fedtail:thread/001")
+        self.assertIn("«", x["post"])
+        self.assertTrue(x["hide"].startswith("fedtail:eventhide/"))
+        self.assertEqual(x["answers"], [])
+        self.assertEqual(len(x["answer_words"]), 2)
+        self.assertTrue(x["unread"])
+        self.assertEqual(got["clear"]["label"], i18n._("activity_clear"))
+        self.assertIsNone(self.web.lane("home")["clear"])  # posts: nothing to clear
+
+    def test_a_request_answered_by_its_button(self):
+        self.w.requests.append(BOB)
+        self.core.poll_once()
+        x = self.events("requests")["event:follow_request:B"]
+        self.assertEqual(x["kind"], "follow_request")
+        yes, no = x["answers"][0]
+        self.assertTrue(yes.startswith("fedtail:eventyes/") and no.startswith("fedtail:eventno/"))
+        got = self.web.link(yes)
+        self.assertTrue(got.get("refresh"))
+        self.assertEqual(self.core.follow_requests, [])
+        self.assertEqual(self.events("requests"), {})
+
+    def test_x_hides_the_row(self):
+        self.like("n2")
+        x = self.events("activity")["event:n2"]
+        self.web.link(x["hide"])
+        self.assertEqual(self.events("activity"), {})
+
+    def test_seen_counts_down(self):
+        self.like("n3", minute=1)
+        self.follow("n4", minute=2)
+        self.core.store.kv_set("activity_seen", "")
+        self.assertEqual(self.core.unread_count("activity"), 2)
+        keys = sorted(self.events("activity"))
+        older = min(keys, key=lambda k: self.web.model("activity").event_sorts[k])
+        self.web.read([older])  # the older row seen on screen: the newer one still new
+        self.assertEqual(self.core.unread_count("activity"), 1)
+        self.assertEqual(sum(x["unread"] for x in self.events("activity").values()), 1)
+        self.web.read([], lane="activity")  # "mark all read" over the lane: its events too
+        self.assertEqual(self.core.unread_count("activity"), 0)
+        self.assertFalse(any(x["unread"] for x in self.events("activity").values()))
+
+    def test_chips_filter_the_rows(self):
+        self.like("n5")
+        self.follow("n8")
+        got = self.web.lane("activity")
+        self.assertEqual(len(got["events"]), 2)
+        chips = {words: key for key, words, _tip in got["filters"]}
+        self.web.lane_set({"name": "activity", "filter": chips[i18n._("actf_follows")]})
+        kinds = {e["event"]["kind"] for e in self.web.lane("activity")["events"]}
+        self.assertEqual(kinds, {"follow"})
+        self.web.lane_set({"name": "activity", "filter": chips[i18n._("actf_reactions")]})
+        kinds = {e["event"]["kind"] for e in self.web.lane("activity")["events"]}
+        self.assertEqual(kinds, {"favourite"})
+
+    def test_clear_asks_first(self):
+        self.like("n6")
+        self.assertIn("confirm", self.web.lane_clear("activity"))
+        self.assertEqual(len(self.events("activity")), 1)
+        self.assertEqual(self.web.lane_clear("activity", confirmed=True), {"refresh": True})
+        self.core._events_cache = {}
+        self.assertEqual(self.events("activity"), {})
+        with self.assertRaises(ValueError):
+            self.web.lane_clear("home")  # posts: not a lane of events only
+
+    def test_events_wake_the_page(self):
+        v = self.web.version
+        self.core.emit("activity_seen", "x")
+        self.core.emit("requests_updated", [])
+        self.core.emit("activity_updated", None)
+        self.assertEqual(self.web.version, v + 3)
+
+
 class WebApiTest(WebBase):
 
     def test_posts_with_shares_and_missing_parents(self):
@@ -254,7 +359,9 @@ class WebApiTest(WebBase):
 
     def test_lanes_find_and_choices(self):
         wb = self.web
-        self.assertEqual(wb.lane("activity")["place"], "activity")
+        got = wb.lane("activity")  # a lane as any: no place in its stead
+        self.assertNotIn("place", got)
+        self.assertEqual(got["posts"], [])
         with self.assertRaises(KeyError):
             wb.lane("nope")
         self.assertEqual(wb.find("home", "  "), {"ids": [], "text": ""})

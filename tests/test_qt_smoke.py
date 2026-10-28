@@ -507,8 +507,10 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: name not in self.win.lane_items)
         self.win.select_lane("home")
 
-        # activity: favourites of one post gather in one row
-        from fedtail.frontends.qt.feed import ActivityWidget
+        # activity: favourites of one post gather in one row — Activity is a lane like
+        # any other (a lane of rules taking events), drawn by the same LaneWidget
+        from fedtail.frontends.qt.card import EventRow
+        from fedtail.frontends.qt.feed import LaneWidget
         mine = self.core.store.get_status("012") or {"id": "012"}
         self.world.act("x1", "favourite", fakes.BOB, mine, minute=1)
         self.world.act("x2", "favourite", fakes.NEWS, mine, minute=2)
@@ -518,28 +520,28 @@ class QtSmokeTest(unittest.TestCase):
         self.core.poll_once()
         self.pump(0.2)
         self.assertEqual(self.core.activity_unread(), 1)
-        groups = ActivityWidget.groups(self.win.ctx.view.activity())
-        self.assertEqual([(g["key"][0], len(g["entries"])) for g in groups],
-                         [("reblog", 1), ("follow", 1), ("favourite", 2)])
         self.win.select_lane("activity")
-        self.pump(0.2)
         aw = self.win.lane_widgets["activity"]
-        self.assertIsInstance(aw, ActivityWidget)
+        self.assertIsInstance(aw, LaneWidget)
+        self.pump(until=lambda: any(isinstance(r, EventRow) for r in aw.view.rows.values()))
         # feed.order = "oldest_first" here too: the newest comes last, below
-        kinds = [aw.lay.itemAt(i).widget().property("kind") for i in range(aw.lay.count())
-                 if aw.lay.itemAt(i).widget() is not None]
+        kinds = [aw.view.rows[k].card.property("kind") for k in aw.view.order
+                 if isinstance(aw.view.rows.get(k), EventRow)]
         self.assertEqual(kinds, ["favourite", "follow", "reblog"])
-        # seen is what is on screen: the window in the background — not yet; the reader
-        # looking at it — the new row on screen counts, the lane read
-        aw.window().isActiveWindow = lambda: False
-        aw._touched_at = 0.0
-        aw._mark_seen()
+        two = next(aw.view.rows[k] for k in aw.view.order
+                   if isinstance(aw.view.rows.get(k), EventRow) and
+                   aw.view.rows[k].card.property("kind") == "favourite")
+        self.assertEqual(len(two.spec.extra["event"]), 2)  # two likes, one row
+        # seen is what is on screen, as for posts: the window in the background — not
+        # yet; the reader looking at it — the rows on screen count, the events seen
+        aw.view._window_active = lambda: False
+        aw.view._touched_at = 0.0
+        aw.view._emit_seen()
         self.assertEqual(self.core.activity_unread(), 1)
-        aw.window().isActiveWindow = lambda: True
-        self.assertTrue(aw.seen_upto())  # three short rows: all on screen
-        aw._mark_seen()
+        aw.view._window_active = lambda: True
+        aw.view._emit_seen()
         self.pump(until=lambda: self.core.activity_unread() == 0)
-        del aw.window().isActiveWindow
+        del aw.view._window_active
         self.win.select_lane("home")
 
         # diagnostics: Qt messages into the log, widget counts in the stats line
@@ -2055,8 +2057,9 @@ class QtSmokeTest(unittest.TestCase):
                                     "status": mine, "reply": reply}]
         self.core.poll_once()
         self.win.select_lane("activity")
-        self.pump(0.2)
         w = self.win.lane_widgets["activity"]
+        self.pump(until=lambda: w.clear_btn is not None and w.view.rows)
+        self.pump(0.2)
         when = self.theme.date("2099-10-14T11:01:00.000Z")
         self.assertTrue(any(when in lab.text() for lab in w.findChildren(QLabel)))
         # the server says it can't clear: the button goes at once
@@ -2065,8 +2068,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: w.clear_btn.isHidden())
         from PySide6.QtCore import QCoreApplication, QEvent
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)  # old rows
-        w = self.win.lane_widgets["activity"]
-        ok = [b for b in w.findChildren(QPushButton) if b.text() == _("ok_interaction")]
+        ok = [b for b in w.findChildren(QPushButton) if b.text() == _("ok_interaction")
+              and b.isVisible()]
         self.assertEqual(len(ok), 1)
         ok[0].click()
         self.pump(until=lambda: self.world.answered == [("rq", True)])
@@ -2094,18 +2097,29 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_a_follow_request_opens_the_profile_here(self):
         """The person asking to follow: their @name opens their profile in fedtail,
-        not in the browser (as GTK's)."""
-        from PySide6.QtWidgets import QLabel
+        not in the browser (as GTK's) — the request a row of events, in any lane that
+        takes them (Requests here: its lane is shown); its ✔ answers it."""
+        from PySide6.QtWidgets import QLabel, QPushButton
 
-        from fedtail.frontends.qt.feed import RequestsWidget
-        self.win.ctx.view.follow_requests = lambda: [adapter.account(BOB)]
-        opened = []
-        self.win.on_link = opened.append  # before the widget takes it
-        w = RequestsWidget(self.win)
-        label = next(x for x in w.findChildren(QLabel) if "fedtail:account/" in x.text())
+        from fedtail.frontends.qt.card import EventRow
+        from fedtail.i18n import _
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.world.requests.append(BOB)
+        self.core.poll_once()
+        self.win.select_lane("requests")
+        w = self.win.lane_widgets["requests"]
+        self.pump(until=lambda: any(isinstance(r, EventRow) for r in w.view.rows.values()))
+        row = next(r for r in w.view.rows.values() if isinstance(r, EventRow))
+        from fedtail.frontends.qt.feed import AccountWidget
+        label = next(x for x in row.findChildren(QLabel) if "fedtail:account/" in x.text())
         self.assertFalse(label.openExternalLinks())
         label.linkActivated.emit(f"fedtail:account/{BOB['id']}")
-        self.assertEqual(opened, [f"fedtail:account/{BOB['id']}"])
+        self.assertIsInstance(self.win.tabs.currentWidget(), AccountWidget)
+        self.win.select_lane("requests")
+        yes = next(b for b in row.findChildren(QPushButton) if b.text() == _("ok_interaction"))
+        yes.click()
+        self.pump(until=lambda: not self.core.follow_requests)
 
     def test_settings_open_again_after_closing(self):
         """27.10: the settings window closed (and deleted with it), opened again — a

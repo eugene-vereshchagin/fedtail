@@ -620,10 +620,10 @@ class Core(SocialMixin):
         got = self._fresh.get(name)
         if not got:
             return 0
-        if name == "activity":
-            return min(len(got), int(self.activity_unread() or 0))
-        if name == "requests":
-            return len(got & {a["id"] for a in self.follow_requests or ()})
+        if self._events_only(name):
+            seen = self.activity_seen_mark()
+            return sum(1 for n in self.lane_events(name, 1000)
+                       if str(n.get("id")) in got and str(n.get("sort") or "") > seen)
         entries = [e for e in self.lane_entries(name) if e[0] in got]
         if not entries:
             return 0
@@ -992,7 +992,7 @@ class Core(SocialMixin):
                 self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
             self._step("my direct")
             new_requests = []
-            if "requests" in self.lane_by_name or self._requests_in_activity():
+            if self._wants_event("follow_request"):
                 try:
                     self.follow_requests = self.api.follow_requests() or []
                     ids = {a["id"] for a in self.follow_requests}
@@ -1004,13 +1004,16 @@ class Core(SocialMixin):
                     if changed:  # not every poll: the tab would be rebuilt for nothing
                         self._warm_lanes()  # the window counts every lane on this too
                         self.emit("requests_updated", self.follow_requests)
-                        if self._requests_in_activity():
-                            self.emit("activity_updated", len(new_requests))
+                        self.emit("activity_updated", len(new_requests))
+                        events_in = {c.name: [] for c in self._event_lanes()
+                                     if c.wants_event("follow_request")}
+                        if events_in:
+                            self.emit("lanes_updated", events_in)
                 except Exception as e:
                     self.emit("error", f"requests: {e}")
 
             new_activity = []
-            if "activity" in self.lane_by_name or self._event_lanes():
+            if self._event_lanes():
                 try:
                     new_activity = self._poll_activity()
                     if new_activity:
@@ -1230,11 +1233,8 @@ class Core(SocialMixin):
     def _note_fresh(self, per_lane, new_requests, new_activity):
         """The last update that brought anything: what it brought, lane by lane."""
         got = {name: set(ids) for name, ids in per_lane.items() if ids}
-        if new_activity:
-            got["activity"] = {str(n.get("id")) for n in new_activity if isinstance(n, dict)} \
-                or {str(i) for i in range(len(new_activity))}
-        if new_requests:
-            got["requests"] = {a["id"] for a in new_requests}
+        for name, events in self._events_by_lane(new_requests, new_activity).items():
+            got[name] = {str(n.get("id")) for n in events}
         if got:
             self._fresh = got
 
@@ -1418,14 +1418,10 @@ class Core(SocialMixin):
             fresh.append(name)
             if self._notify_wanted(name, wanted, never):
                 out += news
-        if new_requests:
-            fresh.append("requests")
-            if self._notify_wanted("requests", wanted, never):
-                out += [("requests", acc) for acc in new_requests]
-        if new_activity:
-            fresh.append("activity")
-            if self._notify_wanted("activity", wanted, never):
-                out += [("activity", n) for n in new_activity]
+        for name, events in self._events_by_lane(new_requests, new_activity).items():
+            fresh.append(name)
+            if self._notify_wanted(name, wanted, never):
+                out += [(name, n) for n in events]
         if quiet:  # "why no notification?" — answered by the log
             log.info("notify: not asked for (notify.lanes / notify.except): %s",
                      ", ".join(quiet))
@@ -1512,7 +1508,7 @@ class Core(SocialMixin):
         reply > mention > thread > the rest); requests and activity stay as they are."""
         best = {}
         for i, (name, x) in enumerate(out):
-            if name in ("requests", "activity") or not isinstance(x, dict):
+            if not isinstance(x, dict) or "type" in x:  # an event: as it is
                 continue
             sid = real(x).get("id")
             rank = self.lane_rank(name)
@@ -1520,7 +1516,7 @@ class Core(SocialMixin):
                 best[sid] = (rank, i)
         keep = {i for _r, i in best.values()}
         return [(n, x) for i, (n, x) in enumerate(out)
-                if n in ("requests", "activity") or not isinstance(x, dict) or i in keep]
+                if not isinstance(x, dict) or "type" in x or i in keep]
 
     def _calm_out(self, wanted, never):
         """The lanes with news held back whose minutes have passed: [(lane, news still
@@ -1621,15 +1617,42 @@ class Core(SocialMixin):
         return self.api.notifications(types, **page)
 
     def activity_entries(self, limit=300):
-        """Activity newest first; with activity.requests the follow requests on top, as
-        entries waiting for a yes (social.FOLLOW_REQUEST ids, answered by the buttons)."""
+        """Activity newest first: what Activity (the lane of that name) takes — every
+        event, follow requests among them while no lane of their own is shown."""
+        if "activity" in self.lane_by_name:
+            return self.lane_events("activity", limit, which="all")
+        return self.event_items(limit)
+
+    def event_items(self, limit=300):
+        """Every event fedtail has, newest first, as notifications: the stored activity
+        and — when some lane takes them — the follow requests waiting, on top (their
+        ids social.FOLLOW_REQUEST + the account's, answered by the buttons)."""
         got = self.store.activity_recent(limit)
-        if self._requests_in_activity():
-            from .social import FOLLOW_REQUEST
-            got = [{"id": FOLLOW_REQUEST + a["id"], "type": "follow_request", "account": a,
-                    "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
-                   for a in self.follow_requests or ()] + list(got)
+        if self._wants_event("follow_request"):
+            got = self._request_events(self.follow_requests or ()) + list(got)
         return got
+
+    @staticmethod
+    def _request_events(accounts):
+        from .social import FOLLOW_REQUEST
+        return [{"id": FOLLOW_REQUEST + a["id"], "type": "follow_request", "account": a,
+                 "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
+                for a in accounts]
+
+    def _events_by_lane(self, new_requests=(), new_activity=()):
+        """{lane: [notification]}: which shown lanes take which of the new events."""
+        events = self._request_events(new_requests or ()) + \
+            [n for n in new_activity or () if isinstance(n, dict)]
+        if not events:
+            return {}
+        world, quiet = self._world(), self.muted | self.blocked
+        events = [n for n in events if (n.get("account") or {}).get("id") not in quiet]
+        out = {}
+        for c in self._event_lanes():
+            took = [n for n in events if c.takes_event(n, world)]
+            if took:
+                out[c.name] = took
+        return out
 
     def open_at(self, lane=None):
         """Where a thread opened from a card of `lane` opens: "post" or "first_unread" —
@@ -1656,53 +1679,56 @@ class Core(SocialMixin):
         """The lanes shown that take events too (a condition with `event`)."""
         return [c for c in self.customs if c.event_conds and c.name in self.lane_by_name]
 
-    def lane_events(self, name, limit=200):
+    def _events_only(self, name):
+        """A lane of events only (Activity, Requests): no posts, its rows are events."""
+        c = next((c for c in self.customs if c.name == name), None)
+        return bool(c is not None and c.events_only and name in self.lane_by_name)
+
+    def _wants_event(self, word):
+        """Does a shown lane take events of this word ("follow_request"…)? The server
+        is asked for them only then."""
+        return any(c.wants_event(word) for c in self._event_lanes())
+
+    def lane_events(self, name, limit=200, which=None):
         """[notification] newest first: the events (likes, boosts, follows…) a lane of
         rules shows among its posts (feeds.md §2.3) — from what Activity has stored."""
         c = next((c for c in self.customs if c.event_conds and c.name == name), None)
         if c is None or name not in self.lane_by_name:
             return []
-        which = self.lane_filter(name)
+        which = self.lane_filter(name) if which is None else which
+        reqs = tuple(a.get("id") for a in self.follow_requests or ())
         key = (self.store.activity_newest(), self.store.activity_count_after(""),
-               self._world_version, self._lists_version, limit, which)
+               self._world_version, self._lists_version, limit, which, reqs,
+               self._silence_version)
         cache = self.__dict__.setdefault("_events_cache", {})
-        hit = cache.get(name)
+        hit = cache.get((name, which))
         if hit and hit[0] == key:
             return hit[1]
         world, quiet = self._world(), self.muted | self.blocked
-        got = [n for n in self.store.activity_recent(max(limit * 3, 300))
+        got = [n for n in self.event_items(max(limit * 3, 300))
                if (n.get("account") or {}).get("id") not in quiet
                and c.takes_event(n, world, which)][:limit]
-        cache[name] = (key, got)
+        cache[(name, which)] = (key, got)
         return got
-
-    def activity_filters(self):
-        """Activity's quick filters that can show something here: "requests" — when follow
-        requests stand in Activity (no lane of their own) or approvals wait there
-        (activity.approvals); "mine" — with activity.my_follows."""
-        from .view import ACTIVITY_FILTERS
-        a = self.cfg["activity"]
-        out = []
-        for k in ACTIVITY_FILTERS:
-            if k == "requests" and not (self._requests_in_activity() or a.get("approvals")):
-                continue
-            if k == "mine" and not a.get("my_follows", True):
-                continue
-            out.append(k)
-        return out
-
-    def _requests_in_activity(self):
-        """Follow requests stand in Activity — when it's on and there's no lane of their
-        own (then they'd be there twice, and counted twice)."""
-        return bool(self.cfg["activity"].get("requests", True)) and \
-            "activity" in self.lane_by_name and "requests" not in self.lane_by_name
 
     def activity_seen_mark(self):
         return self.store.kv_get("activity_seen", "")
 
     def activity_unread(self):
-        waiting = len(self.follow_requests or ()) if self._requests_in_activity() else 0
-        return self.store.activity_count_after(self.activity_seen_mark()) + waiting
+        """Activity's events not seen yet (follow requests: while they wait)."""
+        if "activity" in self.lane_by_name:
+            return self.events_unread("activity")
+        return self.store.activity_count_after(self.activity_seen_mark())
+
+    def events_unread(self, name):
+        """A lane's events not seen yet: newer than the seen mark (common to every
+        lane — an event seen in one is seen everywhere); follow requests count while
+        they wait."""
+        from .store import MINE_EVENT
+        seen = self.activity_seen_mark()
+        return sum(1 for n in self.lane_events(name, 1000, which="all")
+                   if str(n.get("sort") or "") > seen  # what I did myself isn't news
+                   and not str(n.get("id") or "").startswith(MINE_EVENT))
 
     def mark_activity_seen(self, upto=None):
         """Seen up to this entry's sort (what came on screen), or everything (None: the
@@ -2844,7 +2870,10 @@ class Core(SocialMixin):
 
     def unread_count(self, name):
         """Unread in a lane — cached while neither the lane nor any read mark changed:
-        the sidebar asks for every lane after every event."""
+        the sidebar asks for every lane after every event. A lane of events only counts
+        its events not seen yet."""
+        if self._events_only(name):
+            return self.events_unread(name)
         entries = self.lane_entries(name)
         hit = self._lane_cache.get(name)
         key = (hit[0] if hit else None, id(entries), self.store.read_version)

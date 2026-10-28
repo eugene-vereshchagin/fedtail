@@ -40,11 +40,10 @@ from . import pictures, termcaps
 from .model import (
     Commands,
     DeleteGuard,
+    event_lines,
     lane_groups,
     lane_label,
-    show_activity,
     show_post,
-    show_request,
     start_lane,
 )
 
@@ -53,7 +52,10 @@ log = logging.getLogger(__name__)
 STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
          "unread": "bold green", "quote": "italic", "myreply": "dim cyan",
-         "conv": "cyan", "divider": "bold green", "newcomer": "bold red"}
+         "conv": "cyan", "divider": "bold green", "newcomer": "bold red",
+         # an event's row (event_lines): its links stand out as the windows' do
+         "notice": "bold yellow", "hide": "dim", "yes": "bold green", "no": "red",
+         "event_post": "italic dim"}
 
 
 def _cmd_line():
@@ -91,6 +93,22 @@ def render(shown):
     return t
 
 
+def render_event(lines):
+    """event_lines → one rich Text: each part with a link is clickable (the app's
+    `link` action: the windows' common/links.py handles it)."""
+    from rich.style import Style
+    t = Text()
+    for i, line in enumerate(lines):
+        if i:
+            t.append("\n")
+        for kind, part, link in line:
+            style = Style.parse(STYLE.get(kind, "") or "none")
+            if link:
+                style += Style.from_meta({"@click": f"app.link({link!r})"})
+            t.append(part, style=style)
+    return t
+
+
 class PostItem(ListItem):
     def __init__(self, entry, text, key=None, open_at=None):
         self.body = Static(text, classes="post")  # kept: a picture comes in later
@@ -119,22 +137,36 @@ class PostItem(ListItem):
             self.mount(widget)
 
 
-class ActivityItem(ListItem):
-    """A row of the "Activity" lane: someone liked, shared, followed, mentioned…"""
+class EventItem(ListItem):
+    """An event's row in any lane that takes events — Activity, Requests, a lane of
+    one's own (common/activity.EventParts, as the windows' EventRow): who — what · when,
+    the post it is about, × and a request's yes / no, each a fedtail: link (a click, or
+    Enter / p / a / d / Delete on the row). Unread until it is on the cursor, as a post
+    is; its key ("event:<id>") goes to LaneModel.read."""
 
-    def __init__(self, activity, text):
-        super().__init__(Static(text, classes="post"))
-        self.activity = activity
-        self.key = activity.id
+    def __init__(self, spec, parts):
+        self.body = Static(render_event(event_lines(parts)), classes="post")
+        super().__init__(self.body)
+        self.spec, self.parts = spec, parts
+        self.key = spec.key
+        self.unread = parts.unread
+        self.tooltip = "\n".join(x for x in (parts.tip, "Delete — " + parts.hide_tip) if x)
 
+    @property
+    def post(self):
+        """The Post it is about (r, f, b, ⋯ act on it), or None."""
+        return self.spec.extra["row"].post
 
-class RequestItem(ListItem):
-    """Someone asking to follow me: a — accept, d — reject."""
+    def first_link(self):
+        """Where Enter goes: the post's thread, else the first person."""
+        return self.parts.post_link or (self.parts.people[0][1] if self.parts.people else "")
 
-    def __init__(self, account, text):
-        super().__init__(Static(text, classes="post"))
-        self.account = account
-        self.key = account.id
+    def set_unread(self, unread):
+        if unread != self.unread:
+            from dataclasses import replace
+            self.unread = unread
+            self.parts = replace(self.parts, unread=unread)
+            self.body.update(render_event(event_lines(self.parts)))
 
 
 PLAYABLE = ("video", "gifv")
@@ -356,8 +388,8 @@ class PostsMixin(Ui):
     def current(self):
         lv = self.query_one("#posts", ListView)
         item = lv.highlighted_child
-        if isinstance(item, ActivityItem):  # a like, a mention…: the post it is about
-            return item.activity.post
+        if isinstance(item, EventItem):  # a like, a mention…: the post it is about
+            return item.post
         return item.entry if isinstance(item, PostItem) else None
 
     def current_item(self):
@@ -422,11 +454,8 @@ class PostsMixin(Ui):
 
     def action_profile(self):
         item = self.current_item()
-        if isinstance(item, ActivityItem) and item.activity.who is not None:
-            self.app.push_screen(ProfileScreen(item.activity.who.id))
-            return
-        if isinstance(item, RequestItem):
-            self.app.push_screen(ProfileScreen(item.account.id))
+        if isinstance(item, EventItem) and item.parts.people:  # who did it
+            self.app.links.open(item.parts.people[0][1])
             return
         st = self.current()
         if st:
@@ -819,8 +848,9 @@ class FedtailApp(App, PostsMixin):
                 Binding("J", "to_new", _("to_new"), show=False),
                 Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
                 Binding("s", "lane_choices", _("media_filter"), show=False),
-                Binding("a", "request(True)", show=False),
-                Binding("d", "request(False)", show=False),
+                Binding("a", "answer(0)", show=False),
+                Binding("d", "answer(1)", show=False),
+                Binding("delete", "event_hide", "×", show=False),
                 Binding("left_square_bracket", "lane_step(-1)", _("tui_lane_prev")),
                 Binding("right_square_bracket", "lane_step(1)", _("tui_lane_next")),
                 Binding("h", "to_lanes", _("tui_lanes_keys"), show=False),
@@ -921,7 +951,7 @@ class FedtailApp(App, PostsMixin):
             self._instance.listen(lambda _m: None)
         self.core.on("lanes_updated", lambda _n, p: self.in_ui(self.lanes_updated, p))
         for event in ("activity_updated", "activity_seen", "requests_updated"):
-            self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
+            self.core.on(event, lambda n, _p: self.in_ui(self.events_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
         # replies from other servers, or an open thread asked again: it grows
         self.core.on("thread_grew", lambda _n, p: self.in_ui(self.thread_grew, p))
@@ -1035,9 +1065,6 @@ class FedtailApp(App, PostsMixin):
             lv = self._main("#posts", ListView)
         except NoMatches:  # a redraw queued (a post sent) while the app was closing
             return
-        if name in ("activity", "requests"):  # not posts: rows of their own
-            await self._fill_other(lv, name, first)
-            return
         from ..common.lane import SEPARATOR
         m = self.lane_model(name)
         if first:  # opened anew: "new below" stands where reading stands now
@@ -1047,6 +1074,7 @@ class FedtailApp(App, PostsMixin):
         keep = getattr(lv.highlighted_child, "key", None)
         width = max(30, lv.size.width - 4 if lv.size.width else 76)
         items, entries, unread = [], [], set()
+        events_unread = 0
         for sp in built.specs:
             if sp.key == SEPARATOR:  # "new below", fixed where reading stood
                 div = ListItem(Static(Text("── " + sp.extra.get("separator", "") + " ──",
@@ -1055,14 +1083,9 @@ class FedtailApp(App, PostsMixin):
                 div.disabled = True  # j / k step over it, as over the windows' divider
                 items.append(div)
                 continue
-            if sp.extra.get("event"):  # a like, a follow… a lane of rules shows: one line
-                from ..common.activity import event_bit
-                from .model import when as tui_when
-                ev = ListItem(Static(Text("  " + event_bit(sp.extra["event"], tui_when).text,
-                                          style=STYLE["muted"])))
-                ev.key = sp.key
-                ev.disabled = True  # not a post: j / k step over it
-                items.append(ev)
+            if sp.extra.get("event"):  # a like, a follow, a request… in any lane
+                items.append(self.event_item(sp))
+                events_unread += sp.unread
                 continue
             e = sp.entry
             entries.append((sp.key, e))
@@ -1072,8 +1095,9 @@ class FedtailApp(App, PostsMixin):
                               parent=sp.parent, spec=sp)
             items.append(PostItem(e, render(shown), key=sp.key, open_at=sp.open_at))
         title = core.lane_title(name) or _("lane_" + name)
-        line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=len(unread))}"
-                                                if unread else "", style="dim")
+        n_unread = len(unread) + events_unread
+        line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=n_unread)}"
+                                                if n_unread else "", style="dim")
         if built.info:
             line += Text("  · " + built.info, style="yellow")
         elif m.current_filter() != "all" or m.conversations():
@@ -1082,6 +1106,9 @@ class FedtailApp(App, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         if not items:
+            if m.events_only():  # nothing happened yet: said so
+                await lv.append(ListItem(Static(Text(_("activity_none"), style="dim"))))
+            self.update_lane_counts()
             return
         keys = [it.key for it in items]
         if keep in keys and not first:
@@ -1245,42 +1272,15 @@ class FedtailApp(App, PostsMixin):
         webbrowser.open(m.remote_url or url)
         self.notify(_("tui_video_browser") if argv is None else _("open_browser"))
 
-    async def _fill_other(self, lv, name, first):
-        core = self.core
-        width = max(30, lv.size.width - 4 if lv.size.width else 76)
-        keep = getattr(lv.highlighted_child, "key", None)
-        if name == "activity":
-            seen = core.activity_seen()
-            rows = core.activity(300)  # newest first
-            if core.cfg["feed"]["order"] == "oldest_first":
-                rows = list(reversed(rows))
-            # a follow request among them (activity.requests): its row answers to a / d
-            items = [RequestItem(a.who, render(show_request(a.who, width)))
-                     if a.kind == "request" and a.asks == "follow" and a.who is not None
-                     else ActivityItem(a, render(show_activity(a, width, a.sort > seen)))
-                     for a in rows]
-            empty = _("activity_none")
-        else:
-            items = [RequestItem(acc, render(show_request(acc, width)))
-                     for acc in core.follow_requests()]
-            empty = _("no_requests")
-        title = core.lane_title(name) or _("lane_" + name)
-        self._main("#title", Static).update(Text(title, style="bold"))
-        await lv.clear()
-        if not items:
-            await lv.append(ListItem(Static(Text(empty, style="dim"))))
-            self.update_lane_counts()
-            return
-        await lv.extend(items)
-        keys = [it.key for it in items]
-        if keep in keys and not first:
-            lv.index = keys.index(keep)
-        else:
-            newest = 0 if core.cfg["feed"]["order"] == "newest_first" else len(items) - 1
-            lv.index = newest
-        if name == "activity":
-            core.mark_activity_seen()  # on screen: seen, as in the window
-        self.update_lane_counts()
+    def event_item(self, spec):
+        """An event's row (CardSpec "event:<id>") as the windows draw it."""
+        from ..common.activity import event_parts
+        from .model import when as tui_when
+        try:
+            dismiss_one = bool(self.core.supports("dismiss_one"))
+        except Exception:  # noqa: BLE001 — a core that can't say: the server's way
+            dismiss_one = True
+        return EventItem(spec, event_parts(spec.extra["row"], tui_when, dismiss_one))
 
     # ---- a lane's choices (common/lane.py LaneModel: the windows' own) ---------------
     def lane_model(self, name):
@@ -1301,19 +1301,7 @@ class FedtailApp(App, PostsMixin):
         media funnel (as the windows' lane header)."""
         from ..common.lane import MEDIA_KINDS
         from .screens import MenuScreen
-        if self.lane == "activity":  # its quick filters (as the windows' header)
-            from ..common import activity as act
-            now = act.chosen(self.core)
-
-            def picked(v):
-                if v is not None:
-                    self.core.set_activity_filter(v)
-                    self.call_next(self.refresh_posts, True)
-            self.push_screen(MenuScreen(_("actf_tip"), [
-                (("● " if k == now else "○ ") + act.filter_words(k)[0], k,
-                 act.filter_words(k)[1]) for k in act.offered(self.core)]), picked)
-            return
-        if not self.lane or self.lane == "requests":
+        if not self.lane:
             return
         m = self.lane_model(self.lane)
         items = []
@@ -1328,10 +1316,15 @@ class FedtailApp(App, PostsMixin):
                       (("● " if on else "○ ") + _("conv_mode"), ("conv", True),
                        _("conv_mode_tip")), "-"]
         items.append(("⇣ " + _("to_new"), ("new", None), _("to_new_tip")))
-        items += [(("☑ " if k in m.media.wanted else "☐ ") + _("filter_" + k), ("media", k))
-                  for k in MEDIA_KINDS]
-        items += [(("☑ " if m.media.boosts else "☐ ") + _("filter_boosts"), ("media", "boosts")),
-                  (_("filter_all"), ("media", "reset"))]
+        if m.events_only():  # no posts, no pictures: "Clear" instead of the funnel
+            if self._supports("dismiss"):
+                items.append((_("activity_clear") + " …", ("clear", None),
+                              _("activity_clear_tip")))
+        else:
+            items += [(("☑ " if k in m.media.wanted else "☐ ") + _("filter_" + k),
+                       ("media", k)) for k in MEDIA_KINDS]
+            items += [(("☑ " if m.media.boosts else "☐ ") + _("filter_boosts"),
+                       ("media", "boosts")), (_("filter_all"), ("media", "reset"))]
 
         def chosen(v):
             if v is None:
@@ -1339,6 +1332,9 @@ class FedtailApp(App, PostsMixin):
             what, arg = v
             if what == "new":
                 self.action_to_new()
+                return
+            if what == "clear":
+                self.clear_events()
                 return
             if what == "filter":
                 m.set_filter(arg)
@@ -1352,6 +1348,19 @@ class FedtailApp(App, PostsMixin):
                 m.media.toggle(arg, arg not in m.media.wanted)
             self.call_next(self.refresh_posts, True)
         self.push_screen(MenuScreen(_("media_filter"), items), chosen)
+
+    def _supports(self, feature):
+        try:
+            return bool(self.core.supports(feature))
+        except Exception:  # noqa: BLE001 — a core that can't say
+            return False
+
+    def clear_events(self):
+        """Every notification gone, on the server too (a lane of events only: "Clear",
+        as the windows' button) — after a "sure?"."""
+        self.host.confirm(_("activity_clear"), _("activity_clear_q"),
+                          lambda: self.later(self.core.clear_activity(),
+                                             ok=lambda _r: self.refresh_lane()))
 
     def _start_index(self, entries, unread):
         """feed.start_at: the first unread (oldest first) or the newest."""
@@ -1394,18 +1403,35 @@ class FedtailApp(App, PostsMixin):
                     screen.root.id == root_id:
                 screen.load()
 
-    async def other_updated(self, event):
-        """Activity or follow requests changed: the lane redrawn if it is on screen
-        (not for "seen" — that is this very lane being looked at), the counts anyway."""
-        lane = "requests" if event == "requests_updated" else "activity"
-        if self.lane == lane and event != "activity_seen" and not self._redraw_pending:
-            self._redraw_pending = True
-            try:
-                await self.refresh_posts()
-            finally:
-                self._redraw_pending = False
-        else:
-            self.update_lane_counts()
+    def _takes_events(self, name):
+        return bool(getattr(self.core.lane_by_name.get(name), "events", False))
+
+    async def events_updated(self, event):
+        """Events came or were answered (activity_updated, requests_updated): the lane on
+        screen drawn anew if it takes events — any lane, Activity or one's own. Seen
+        (activity_seen, one mark for every lane): its rows lose their unread mark in
+        place. The counts on the left anyway."""
+        if self.lane and self._takes_events(self.lane) and self.screen_stack:
+            if event == "activity_seen":
+                self._events_seen()
+            elif not self._redraw_pending:
+                self._redraw_pending = True
+                try:
+                    await self.refresh_posts()
+                finally:
+                    self._redraw_pending = False
+                return
+        self.update_lane_counts()
+
+    def _events_seen(self):
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:
+            return
+        seen = self.core.activity_seen()
+        for it in lv.children:
+            if isinstance(it, EventItem) and it.unread:
+                it.set_unread(any(a.sort > seen for a in it.spec.extra["event"]))
 
     def _lane_names(self):
         return [i.lane for i in self._main("#lanes", ListView).children
@@ -1422,22 +1448,26 @@ class FedtailApp(App, PostsMixin):
         elif e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
             await self.select_lane(e.item.lane)
             self.query_one("#posts", ListView).focus()
-        elif e.list_view.id == "posts" and isinstance(e.item, RequestItem):
-            self.push_screen(ProfileScreen(e.item.account.id))
-        elif e.list_view.id == "posts" and isinstance(e.item, ActivityItem):
-            a = e.item.activity
-            if a.post is not None:
-                self.push_screen(ThreadScreen(a.post.id))
-            elif a.who is not None:
-                self.push_screen(ProfileScreen(a.who.id))
+        elif e.list_view.id == "posts" and isinstance(e.item, EventItem):
+            link = e.item.first_link()  # the post it is about, or who did it
+            if link:
+                self.links.open(link)
         elif e.list_view.id == "posts" and self.screen is self.screen_stack[0]:
             self.action_open()
         elif e.list_view.id == "posts" and isinstance(self.screen, ProfileScreen):
             self.screen.action_open()
 
     def on_list_view_highlighted(self, e: ListView.Highlighted):
-        if e.list_view.id != "posts" or not isinstance(e.item, PostItem) or \
-                not self.screen_stack:  # no screens: it came in as the app was closing
+        if e.list_view.id != "posts" or not self.screen_stack:
+            return  # no screens: it came in as the app was closing
+        if isinstance(e.item, EventItem):
+            if self.lane and self.screen is self.screen_stack[0] and e.item.unread:
+                # on the cursor: seen, here and in every lane (LaneModel.read → the core)
+                self.lane_model(self.lane).read([e.item.key])
+                e.item.set_unread(False)
+                self.update_lane_counts()
+            return
+        if not isinstance(e.item, PostItem):
             return
         lv = e.list_view
         if self.lane and self.screen is self.screen_stack[0] and lv.index is not None:
@@ -2009,13 +2039,22 @@ class FedtailApp(App, PostsMixin):
         if 0 < n <= len(names):
             await self.select_lane(names[n - 1])
 
-    def action_request(self, approve):
+    def action_link(self, url):
+        """A click on a link of an event's row: the windows' links (common/links.py)."""
+        self.links.open(url)
+
+    def action_answer(self, which):
+        """a / d on an event's row waiting for my yes: its first request answered
+        (0 — yes, 1 — no), as its buttons do."""
         item = self.current_item()
-        if not isinstance(item, RequestItem):
-            return
-        who = item.account.handle
-        self.later(self.core.answer_follow(item.account.id, approve),
-                   ok=lambda _r: self.notify(("✔ " if approve else "✘ ") + "@" + who))
+        if isinstance(item, EventItem) and item.parts.answers:
+            self.links.open(item.parts.answers[0][which])
+
+    def action_event_hide(self):
+        """Delete on an event's row: its × (the row's events gone)."""
+        item = self.current_item()
+        if isinstance(item, EventItem):
+            self.links.open(item.parts.hide)
 
     def action_escape(self):
         cmd = self.query_one("#cmd", Input)
@@ -2034,14 +2073,15 @@ class FedtailApp(App, PostsMixin):
         if self.core.cfg["feed"]["order"] == "newest_first":
             order.reverse()  # the first new one is the oldest unread: the lowest
         for i, it in order:
-            if isinstance(it, PostItem) and it.entry.id in unread:
+            if isinstance(it, PostItem) and it.entry.id in unread or \
+                    isinstance(it, EventItem) and it.unread:
                 lv.index = i
                 lv.focus()
                 return
         self.notify(_("to_new_tip") + ": —")
 
     async def _older_ahead(self):
-        if not self.lane or self.lane in ("activity", "requests"):
+        if not self.lane or self.lane_model(self.lane).events_only():
             return
         fut = self.core.older_ahead(self.lane)
         if fut is not None and await asyncio.wrap_future(fut):
@@ -2049,8 +2089,8 @@ class FedtailApp(App, PostsMixin):
 
     async def action_older(self):
         """j past the last post: older ones from the server, or "nothing older"."""
-        if not self.lane or self.lane in ("activity", "requests"):
-            return
+        if not self.lane or self.lane_model(self.lane).events_only():
+            return  # no posts: nothing older on a server
         n = await asyncio.wrap_future(self.core.load_older(self.lane))
         if not n:
             self.notify(_("no_older"))

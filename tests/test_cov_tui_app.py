@@ -1,6 +1,7 @@
 """The terminal application (frontends/tui/app.py) beyond tests/test_tui.py: every key
 of the lane and of the menus, the ≡ menu's items, the lane's choices, the command line's
-every answer, Activity and follow requests, a thread and a profile, logging in, the
+every answer, the lanes of events (Activity, Requests) and their rows, a thread and a
+profile, logging in, the
 pictures in the lane and full screen, and calls from other threads. Driven headless by
 Textual's pilot; skipped without Textual."""
 
@@ -232,7 +233,7 @@ class AppKeysTest(Base):
             with mock.patch.object(type(app), "_lane_names", return_value=[]):
                 await app.action_lane_step(1)
             await app.select_lane("home")
-            app.action_request(True)  # not a request under the cursor: nothing
+            app.action_answer(0)  # not an event waiting under the cursor: nothing
             app.action_all_read()
             await self.wait(pilot, lambda: not view.unread_count("home"))
 
@@ -414,75 +415,136 @@ class AppKeysTest(Base):
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
 class ActivityRequestsTest(Base):
+    """Activity and Requests are lanes like any other (lanes of events only, 0.22): drawn
+    by the lane model, an event's row the windows' parts, each action a fedtail: link."""
+
+    def events(self, posts):
+        from fedtail.frontends.tui.app import EventItem
+        return [x for x in posts.children if isinstance(x, EventItem)]
+
     async def test_activity_and_requests(self):
         from textual.widgets import ListView
 
-        from fedtail.frontends.tui.app import (
-            ActivityItem,
-            ProfileScreen,
-            RequestItem,
-            ThreadScreen,
-        )
+        from fedtail.frontends.tui.app import ProfileScreen, ThreadScreen
+        from fedtail.frontends.tui.screens import ConfirmScreen, MenuScreen
         core, w = self.make(lanes={"enabled": ["home", "activity", "requests"]},
                             feed={"order": "newest_first"}, tui={"pictures": "off"})
         mine = w.add(status("001", ME, minute=1, text="my post", vis="public"), home=True)
+        w.act("a0", "follow", NEWS, minute=0)  # the first fetch: history, seen
         app = self.app_of(core)
         async with app.run_test(size=(120, 40)) as pilot:
             await self.started(pilot, app)
             posts = app.query_one("#posts", ListView)
-            # nothing yet: said so
             await app.select_lane("activity")
+            await self.wait(pilot, lambda: len(self.events(posts)) == 1)
+            self.assertFalse(self.events(posts)[0].unread)
+            posts.index = 0
+            await pilot.press("delete")  # × — gone; nothing left: said so
             await self.wait(pilot, lambda: i18n._("activity_none") in str(
                 posts.children[0].query_one("Static").render()))
             await app.select_lane("requests")
-            await self.wait(pilot, lambda: i18n._("no_requests") in str(
+            await self.wait(pilot, lambda: i18n._("activity_none") in str(
                 posts.children[0].query_one("Static").render()))
 
             w.act("a1", "favourite", BOB, mine, minute=5)
             w.act("a2", "follow", NEWS, minute=6)
             w.requests.append(fakes.acct("Q", "quinn@example.org"))
             app.core.poll_once()
+            await app.select_lane("home")
+            self.assertEqual(app.core.unread_count("activity"), 2)  # the like, the follow
             await app.select_lane("activity")
-            await self.wait(pilot, lambda: len([x for x in posts.children
-                                                if isinstance(x, ActivityItem)]) == 2)
-            kinds = {x.activity.kind: i for i, x in enumerate(posts.children)}
-            self.assertEqual(posts.index, 0)  # newest first: the newest at the top
-            posts.index = kinds["like"]
-            self.assertEqual(app.current().id, "001")  # a like: the post it is about
+            await self.wait(pilot, lambda: len(self.events(posts)) == 2, what="two rows")
+            rows = {x.parts.kind: x for x in self.events(posts)}
+            self.assertEqual(set(rows), {"favourite", "follow"})
+            like = rows["favourite"]
+            text = str(like.body.render())
+            self.assertIn(i18n._("act_favourite"), text)
+            self.assertIn("my post", text)  # the post it is about, in its line
+            self.assertIn("[×]", text)
+            # the cursor on a row: seen, everywhere (LaneModel.read → the core), the count
+            # on the left goes down
+            posts.focus()
+            posts.index = posts.children.index(like)
+            await self.wait(pilot, lambda: not like.unread, what="seen")
+            self.assertLess(app.core.unread_count("activity"), 2)
+            # on it: r, f… act on its post; p — who did it; Enter — the post's thread
+            self.assertEqual(app.current().id, "001")
             app.action_profile()
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             app.pop_screen()
             await pilot.pause(0.05)
-            await app.on_list_view_selected(mock.Mock(list_view=posts,
-                                                      item=posts.children[kinds["like"]]))
+            await app.on_list_view_selected(mock.Mock(list_view=posts, item=like))
             await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen))
             app.pop_screen()
             await pilot.pause(0.05)
-            await app.on_list_view_selected(mock.Mock(list_view=posts,
-                                                      item=posts.children[kinds["follow"]]))
+            follow = next(x for x in self.events(posts) if x.parts.kind == "follow")
+            await app.on_list_view_selected(mock.Mock(list_view=posts, item=follow))
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             app.pop_screen()
             await pilot.pause(0.05)
-            # a new one while on screen: redrawn, the cursor kept
-            posts.index = kinds["follow"]
-            await app.other_updated("activity_updated")
-            await app.other_updated("activity_seen")  # this lane being looked at
-            await app.other_updated("requests_updated")  # not on screen: counts
+            # its chips are the lane's filters (s): the follows only
+            m = app.lane_model("activity")
+            chips = [f for f in m.filters if f.startswith("chip:")]
+            self.assertTrue(chips)
+            follows = next(f for f in chips if m.filter_words(f)[0] ==
+                           i18n._("actf_follows"))
+            app.action_lane_choices()
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            self.assertTrue(any(it != "-" and it[0].endswith(i18n._("activity_clear") + " …")
+                                for it in app.screen.items))
+            self.assertFalse(any(it != "-" and it[1] == ("media", "image")
+                                 for it in app.screen.items))  # no pictures in events
+            app.screen.dismiss(("filter", follows))
+            await self.wait(pilot, lambda: [x.parts.kind for x in self.events(posts)]
+                            == ["follow"], what="the follows only")
+            m.set_filter("all")
+            await app.refresh_posts(True)
+            await self.wait(pilot, lambda: len(self.events(posts)) == 2)
+            # × (Delete on the row): its events gone
+            posts.index = posts.children.index(next(
+                x for x in self.events(posts) if x.parts.kind == "follow"))
+            await pilot.press("delete")
+            await self.wait(pilot, lambda: [x.parts.kind for x in self.events(posts)]
+                            == ["favourite"], what="hidden")
+            # x: every event seen
+            app.action_all_read()
+            await pilot.pause(0.1)
+            self.assertEqual(app.core.unread_count("activity"), 0)
+            # events on the way while another lane is on screen: counts only
+            await app.events_updated("activity_updated")
+            await app.events_updated("activity_seen")
 
+            # Requests: the request's row, answered by its key (a: yes)
             await app.select_lane("requests")
-            await self.wait(pilot, lambda: isinstance(posts.children[0], RequestItem))
+            await self.wait(pilot, lambda: len(self.events(posts)) == 1, what="the request")
+            req = self.events(posts)[0]
+            self.assertEqual(len(req.parts.answers), 1)
+            self.assertIn(i18n._("ok_interaction"), str(req.body.render()))
+            self.assertEqual(app.core.unread_count("requests"), 1)  # it waits
             app.action_profile()
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             app.pop_screen()
             await pilot.pause(0.05)
-            await app.on_list_view_selected(mock.Mock(list_view=posts,
-                                                      item=posts.children[0]))
-            await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
-            app.pop_screen()
-            await pilot.pause(0.05)
-            await app.other_updated("requests_updated")
-            app.action_request(True)
-            await self.wait(pilot, lambda: "✔ @quinn@example.org" in self.notes)
+            posts.focus()
+            posts.index = 0
+            await pilot.press("a")
+            await self.wait(pilot, lambda: not w.requests, what="answered")
+            await self.wait(pilot, lambda: i18n._("approved") in self.notes)
+            await self.wait(pilot, lambda: not self.events(posts), what="gone from the lane")
+            app.action_answer(0)  # nothing on the cursor to answer: nothing
+            app.action_event_hide()
+
+            # Clear (a lane of events only): asked first, then gone on the server too
+            w.act("a3", "favourite", BOB, mine, minute=7)
+            app.core.poll_once()
+            await app.select_lane("activity")
+            await self.wait(pilot, lambda: len(self.events(posts)) >= 1)
+            app.clear_events()
+            await self.wait(pilot, lambda: isinstance(app.screen, ConfirmScreen))
+            app.screen.dismiss(True)
+            await self.wait(pilot, lambda: not self.events(posts), what="cleared")
+            await app.action_older()  # no posts: nothing older to fetch
+            await app._older_ahead()
             # Enter on a lane: the lane, then its posts
             lanes = app.query_one("#lanes", ListView)
             home = next(x for x in lanes.children if getattr(x, "lane", "") == "home")
@@ -493,6 +555,43 @@ class ActivityRequestsTest(Base):
                                                       item=posts.children[0]))
             await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen))
             await pilot.pause(0.3)  # its highlights handled before the app closes
+
+    async def test_events_among_posts_and_their_links(self):
+        """A lane of one's own taking follow requests among its posts: the request's row
+        there, its buttons clickable (the app's `link` action: common/links.py); a click
+        on a name opens the person."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import PostItem
+        mine = {"name": "home", "source": "home",
+                "any": [{}, {"event": "follow_request", "switch": "requests"}]}
+        core, w = self.make(lanes={"custom": [mine]}, tui={"pictures": "off"})
+        w.add(status("010", BOB, minute=2, text="hello"), home=True)
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            await app.select_lane("home")
+            posts = app.query_one("#posts", ListView)
+            await self.wait(pilot, lambda: any(isinstance(x, PostItem)
+                                               for x in posts.children))
+            w.requests.append(fakes.acct("Q", "quinn@example.org"))
+            app.core.poll_once()
+            await self.wait(pilot, lambda: self.events(posts), what="the request among posts")
+            self.assertTrue(any(isinstance(x, PostItem) for x in posts.children))
+            req = self.events(posts)[0]
+            opened = []
+            with mock.patch.object(app.links, "open", side_effect=opened.append):
+                app.action_link(req.parts.people[0][1])
+                posts.index = posts.children.index(req)
+                app.action_profile()
+                await app.on_list_view_selected(mock.Mock(list_view=posts, item=req))
+            self.assertEqual(opened, [req.parts.people[0][1]] * 3)  # no post: the person
+            # the real click on its "no" button
+            no = req.parts.answers[0][1]
+            await pilot.click(req.body, offset=(len(i18n._("ok_interaction")) + 4, 1))
+            await self.wait(pilot, lambda: not w.requests, what="rejected by a click")
+            self.assertTrue(no.startswith("fedtail:eventno/"))
+            await self.wait(pilot, lambda: i18n._("rejected") in self.notes)
 
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")

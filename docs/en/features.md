@@ -617,7 +617,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Server announcements | has | 0.9.0 | `notify.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | The unread number on the icon | has | 0.3.0 | `window.icon_count`, `window.icon_count_except`, `appearance.app_icon`, `appearance.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
-| Activity's quick filters | has | 0.21.0 | — (the choice holds till the program closes) | own | — | — |
+| Activity's quick filters | has | 0.21.0 | `switch` in the rule of `[[lanes.custom]]` | own | — | — |
 | Who stopped following you | has | 0.21.0 | `activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass`, `activity.unlikes`, `activity.unlikes_days`, `activity.unlikes_posts` | `accounts/:id/followers`, `accounts/relationships` | only in fedtail (no server says it) | — |
 | Activity says whom you followed | has | 0.21.0 | `activity.my_follows` | own (and `accounts/:id/following`) | only in fedtail | — |
 | Someone new in a private talk — shown at once | has | 0.21.0 | — | own | only in fedtail | — |
@@ -625,7 +625,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
 | Slow mode and “notify at most every…” | has | 0.20.0 | `server.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane | own | only in fedtail (others have only the poll interval) | — |
 | “Of them new”: what the last update brought | has | 0.20.0 | on the phone's tiles, in the sidebar of the windows, the web page and the terminal | own | only in fedtail | — |
-| Follow requests in Activity | has | 0.21.0 | `activity.requests` | `follow_requests`, `follow_requests/<id>/authorize\|reject` | Mastodon web, Ivory, Phanpy — among notifications | — |
+| Follow requests in any lane | has | 0.21.0 | `activity.requests`, `event = "follow_request"` in a lane's rule | `follow_requests`, `follow_requests/<id>/authorize\|reject` | Mastodon web, Ivory, Phanpy — among notifications | — |
 
 <details><summary>In detail</summary>
 
@@ -645,7 +645,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **The unread number on the icon.** In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = "possum"`, also in the menu and in About), or the drawn thread bubble (`"bubble"`), which `themed_icon` paints in the theme's colours.
 
-**Activity's quick filters.** Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`. Only the filters that can show something: follow requests in a lane of their own (and no approvals waiting) — no “Requests”; without `activity.my_follows` — no “Mine”.
+**Activity's quick filters.** Over Activity — its rule's switches: Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices); none pressed — everything. Since 0.22 these are the lane rule's ordinary switches (`switch`), as on any lane: rename them, drop them or make your own in the lanes' editor. The empty ones aren't shown: requests in a lane of their own — no “Requests”, without `activity.my_follows` — no “Mine”. In the terminal — `s`.
 
 **Who stopped following you.** Every hour fedtail compares the whole list of your followers with the last one: missing from two lists in a row and not following when asked — a row “stopped following you” in Activity; an account that is no more — “gone”. So as not to lie: a list that didn't come whole (fewer than the server counts) is thrown away; the first snapshot is the start, no events; the ones you removed or blocked yourself aren't news; more than `unfollows_mass` of one server at once — one row about the server. A lane of rules takes them as `event = "unfollow"` (`"unfollowed_back"`: one you follow too), `"gone"`, `"lost"`. A follower who moved is “moved”, not an unfollow (`"moved"`). With `activity.unlikes` — likes taken back too (`"unliked"`): your last `unlikes_posts` posts of `unlikes_days` days, a request a post — so it is off. A post deleted on its server is marked on its card.
 
@@ -659,7 +659,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **“Of them new”: what the last update brought.** Beside the unread count, smaller — how many of them the last update that brought anything brought: “300” with “56 of them new” under it on the phone's tile, “300 +56” in the sidebar (the words on hover). What's read of the batch leaves the number. With slow mode — exactly what the last batch brought.
 
-**Follow requests in Activity.** Requests stand on top of Activity with “Approve” / “Reject” (in the terminal — a / d), counted in its number; × leaves them be. The “Follow requests” lane isn't among the defaults any more; with it on, requests are there, not in Activity.
+**Follow requests in any lane.** A follow request is an event like a like or a follow: any lane whose rule has `event = "follow_request"` takes it. By default — Activity, on top, with “Approve” / “Reject” (in the terminal — a / d), counted in its number; × leaves it be. With the “Follow requests” lane on, requests are there, not in Activity (`apart`). A request's row and buttons are the same in every lane and interface.
 
 </details>
 

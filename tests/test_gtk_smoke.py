@@ -1016,7 +1016,19 @@ class GtkSmokeTest(_GtkBase):
         n.opened("thread:013")  # a click: the thread
         self.assertTrue(pump(lambda: "013" in self.win.threads, 5))
 
-    def test_activity_lane(self):
+    def _events(self, lane):
+        """The event rows a lane has on screen (gtk/lane.py EventRow), top to bottom."""
+        from fedtail.frontends.gtk.lane import EventRow
+        return [lane.rows[k] for k in lane.order if isinstance(lane.rows[k], EventRow)]
+
+    def _open_lane(self, name):
+        self.assertIn(name, self.win.lane_rows)
+        self.win.select_lane(name)
+        lane = self.win.lane_views[name]
+        self.assertTrue(pump(lambda: lane.positioned, 5))
+        return lane
+
+    def _some_activity(self):
         mine = self.core.store.get_status("010")
         self.world.act("x1", "favourite", BOB, mine, minute=1)
         self.world.act("x2", "favourite", NEWS, mine, minute=2)
@@ -1025,31 +1037,101 @@ class GtkSmokeTest(_GtkBase):
         self.world.act("x4", "reblog", BOB, mine, minute=4)
         self.core.poll_once()
         pump(timeout=0.3)
-        self.assertIn("activity", self.win.lane_rows)
-        self.win.sidebar.select_row(self.win.lane_rows["activity"])
-        lane = self.win.lane_views["activity"]
-        self.assertTrue(pump(lambda: lane.positioned, 5))
-        rows = [w for w in _walk(lane.list) if hasattr(w, "newest_sort")]
-        self.assertEqual(len(rows), 3)  # the two likes of one post are one row
+
+    def test_activity_lane(self):
+        """Activity is a lane like any other (LaneView, its rows from LaneModel): the
+        likes listed, two of one post in one row, × at the row's end, seen on screen
+        counts down, Clear asks and clears."""
+        from fedtail.frontends.gtk.lane import LaneView
+        self._some_activity()
+        lane = self._open_lane("activity")
+        self.assertIsInstance(lane, LaneView)
+        self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))  # likes: one row
+        kinds = sorted(r.kind for r in self._events(lane))
+        self.assertEqual(kinds, ["favourite", "follow", "reblog"])
+        like = next(r for r in self._events(lane) if r.kind == "favourite")
+        words = " ".join(w.get_text() for w in _walk(like) if isinstance(w, Gtk.Label))
+        self.assertIn("«", words)  # the post it is about, a line of its own
+        self.assertIn(i18n._("act_favourite"), words)
         # × at the row's right end, whatever the words' length
         pump(timeout=0.3)
-        for r in rows:
+        for r in self._events(lane):
             x = next(b for b in _walk(r) if isinstance(b, Gtk.Button) and b.get_label() == "×")
             ok, bounds = x.compute_bounds(r)
             self.assertTrue(ok)
             self.assertGreater(bounds.get_x() + bounds.get_width(), r.get_width() - 40)
-        # on screen in an active window: seen
+        # on screen in an active window: seen, here and in the core
         if pump(lambda: self.win.is_active(), 2):
-            self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
+            self.assertTrue(pump(lambda: self.core.unread_count("activity") == 0, 5))
+            self.assertTrue(pump(lambda: not any(r.unread for r in self._events(lane)), 5))
         # Clear: asked first, then gone here and on the server
+        self.assertIsNotNone(lane.clear_btn)
         self.assertTrue(lane.clear_btn.get_visible())
         asked = []
         self.win.confirm = lambda _t, _x, then: asked.append(then)
         lane.clear_btn.emit("clicked")
         self.assertEqual(len(asked), 1)
         asked[0]()
-        self.assertTrue(pump(lambda: not self.world.activity and not
-                             [w for w in _walk(lane.list) if hasattr(w, "newest_sort")], 5))
+        self.assertTrue(pump(lambda: not self.world.activity and not self._events(lane), 5))
+        self.assertIsNone(self._lane("home").clear_btn)  # a lane of posts has none
+
+    def test_events_unread_until_all_read(self):
+        """Not seen yet: an event row looks unread as a post does; "mark all read" marks
+        the lane's events seen too."""
+        self._some_activity()
+        self.win.view.mark_activity_seen = lambda upto=None: None  # nothing seen by scrolling
+        lane = self._open_lane("activity")
+        self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
+        # the first fetch is history (seen); what came after it is new
+        boost = next(r for r in self._events(lane) if r.kind == "reblog")
+        self.assertTrue(boost.unread)
+        self.assertTrue(boost.has_css_class("ft-unread"))
+        self.assertGreater(self.core.unread_count("activity"), 0)
+        del self.win.view.mark_activity_seen
+        lane.mark_all_read()
+        self.assertTrue(pump(lambda: self.core.unread_count("activity") == 0, 5))
+        self.assertTrue(pump(lambda: not any(r.unread for r in self._events(lane)), 5))
+
+    def test_event_hidden_by_its_cross(self):
+        self._some_activity()
+        lane = self._open_lane("activity")
+        self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
+        follow = next(r for r in self._events(lane) if r.kind == "follow")
+        x = next(b for b in _walk(follow) if isinstance(b, Gtk.Button) and b.get_label() == "×")
+        x.emit("clicked")
+        self.assertTrue(pump(lambda: sorted(r.kind for r in self._events(lane)) ==
+                             ["favourite", "reblog"], 5))
+
+    def test_follow_request_answered_by_its_button(self):
+        """A follow request is an event: in Activity (no Requests lane shown) with its
+        two buttons; ✔ lets them in and the row goes."""
+        self.world.requests.append(BOB)
+        self.core.poll_once()
+        pump(timeout=0.3)
+        lane = self._open_lane("activity")
+        self.assertTrue(pump(lambda: any(r.kind == "follow_request"
+                                         for r in self._events(lane)), 5))
+        row = next(r for r in self._events(lane) if r.kind == "follow_request")
+        ok = [b for b in _walk(row) if isinstance(b, Gtk.Button) and
+              b.get_label() == i18n._("ok_interaction")]
+        self.assertEqual(len(ok), 1)
+        ok[0].emit("clicked")
+        self.assertTrue(pump(lambda: not self.world.requests and
+                             not any(r.kind == "follow_request" for r in self._events(lane)),
+                             5))
+
+    def test_activity_chips_filter(self):
+        """Activity's quick filters are its rule's switches, as any lane's: "follows"
+        shows only the follows."""
+        self._some_activity()
+        lane = self._open_lane("activity")
+        self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
+        follows = next(k for k, w in lane.lm.chips if w == "@actf_follows")
+        self.assertIn(follows, lane._filter_buttons)
+        lane._filter_buttons[follows].set_active(True)
+        self.assertTrue(pump(lambda: [r.kind for r in self._events(lane)] == ["follow"], 5))
+        lane._filter_buttons["all"].set_active(True)
+        self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
 
     def test_command_line(self):
         bar = self.win.cmdline

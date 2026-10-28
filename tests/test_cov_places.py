@@ -192,47 +192,6 @@ class PlacesUnitTest(unittest.TestCase):
             settings.model, settings.changes_of, settings.save = (orig_model, orig_changes,
                                                                   orig_save)
 
-    def test_requests_and_activity(self):
-        v = View()
-        pl = Places(v)
-        self.assertEqual(pl.act("requests", "no", "B").message, _("rejected"))
-        from fedtail.frontends.common import activity as act
-        post = NS(id="P")
-        e1, e2 = NS(id="n1"), NS(id="n2")
-        rows = [NS(notice="moderation", people=[], more=0, what="w", when="", post=None,
-                   request=False, entries=[e1], unread=True, newest_sort="2"),
-                NS(notice="", people=[acc("B")], more=4, what="liked", when="today",
-                   post=post, request=True, entries=[e2], unread=False, newest_sort="1")]
-        v.answers.update(activity=[e1, e2], activity_seen=0, can_dismiss_one=True)
-        orig = act.rows
-        act.rows = lambda entries, seen, date, oldest: rows
-        from fedtail.model import text as mtext
-        orig_snip = mtext.snippet
-        mtext.snippet = lambda p, n: "quoted"
-        try:
-            pg = pl.page("activity")
-        finally:
-            act.rows = orig
-            mtext.snippet = orig_snip
-        self.assertTrue(pg.rows[0].title.startswith("● ⚠ moderation"))
-        self.assertIn(_("act_more", n=4), pg.rows[1].title)
-        keys = [b.act[1] for b in pg.rows[1].buttons]
-        self.assertEqual(keys, ["approve", "refuse", "thread", "open", "dismiss"])
-        v.answers["answer_interaction"] = True
-        self.assertEqual(pl.act("activity", "approve", "n2").message, _("approved"))
-        v.answers["answer_interaction"] = False
-        self.assertEqual(pl.act("activity", "approve", "n2").message, _("approval_gone"))
-        self.assertEqual(pl.act("activity", "refuse", "n2").message, _("approval_gone"))
-        v.answers["answer_interaction"] = True
-        self.assertEqual(pl.act("activity", "refuse", "n2").message, _("rejected"))
-        self.assertTrue(pl.act("activity", "approve", "gone").error)
-        pl.act("activity", "dismiss", "n1 n2")
-        self.assertEqual([c[1] for c in v.called("dismiss_activity")], [("n1",), ("n2",)])
-        self.assertEqual(pl.act("activity", "clear").confirm, _("activity_clear_q"))
-        pl.act("activity", "clear", confirmed=True)
-        self.assertTrue(v.called("clear_activity"))
-        self.assertEqual(pl.act("post", "thread", "P").open, {"thread": "P"})
-
     def test_people_more_and_missing_posts(self):
         v = View(people=({"accounts": [acc("B")], "relations": {}}, "C9"))
         pl = Places(v)

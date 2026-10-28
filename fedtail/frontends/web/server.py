@@ -239,6 +239,21 @@ def bit_json(b):
         if b is not None else None
 
 
+def event_json(spec, dismiss_one=True):
+    """An event's row (common/activity.EventParts) as the page and the phone draw it:
+    who (names with their fedtail:account/ links), what, when, the post it is about
+    and its link, × (fedtail:eventhide/…), a request's yes / no links with their words.
+    Every action is a fedtail: link: /api/link does it, as for a card's ⋯."""
+    from ..common.activity import ANSWER_WORDS, event_parts
+    parts = event_parts(spec.extra["row"], web_date, dismiss_one)
+    return {"kind": parts.kind, "people": [list(x) for x in parts.people], "more": parts.more,
+            "what": parts.what, "when": parts.when, "notice": parts.notice,
+            "post": parts.post, "post_link": parts.post_link, "hide": parts.hide,
+            "hide_tip": parts.hide_tip, "answers": [list(x) for x in parts.answers],
+            "answer_words": [[_(words), _(tip)] for words, tip in ANSWER_WORDS],
+            "tip": parts.tip, "unread": bool(spec.unread)}
+
+
 def words_json(view, spec, date):
     """The words around a card (common/cardtext.py): the windows' own."""
     from ..common.cardtext import card_words
@@ -503,8 +518,10 @@ class Web:
     def _listen(self, view):
         """The core's news, to the page."""
         # thread_grew: replies from other servers came into a thread — an open one grows
+        # events came, were seen or answered: every lane that takes them is drawn anew
         for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
-                      "lists_changed", "thread_grew"):
+                      "lists_changed", "thread_grew", "activity_updated", "activity_seen",
+                      "requests_updated"):
             view.on(event, lambda _n, _p: self.bump())
         view.on("thread_grew", lambda _n, _p: self._thread_news())
         view.on("status_updated", lambda _n, _p: self._thread_news())
@@ -1020,8 +1037,6 @@ class Web:
         name = self._lane_name(name)
         core = self.core
         title = core.lane_title(name) or _("lane_" + name)
-        if name in ("activity", "requests"):  # not posts: a place in the lane's stead
-            return {"name": name, "title": title, "posts": [], "older": False, "place": name}
         m = self.model(name)
         built = m.build(bool(keep))
         specs = [sp for sp in built.specs]
@@ -1029,6 +1044,8 @@ class Web:
             specs.reverse()
         posts, divider, pending = [], None, None
         events, waiting = [], []  # likes, follows… among the posts: before which one
+        dismiss_one = bool(core.can_dismiss_one()) if hasattr(core, "can_dismiss_one") \
+            else True
         entries = [sp.entry for sp in specs if sp.entry is not None]
         short = core.short_ids(entries)
         unread = core.unread(entries)
@@ -1036,10 +1053,10 @@ class Web:
             if sp.key == SEPARATOR:  # "new below": before the card that follows it
                 pending = sp.extra.get("separator", "")
                 continue
-            if sp.extra.get("event"):
-                from ..common.activity import event_bit
-                waiting.append({"key": sp.key,
-                                "bit": bit_json(event_bit(sp.extra["event"], web_date))})
+            if sp.extra.get("event"):  # an event's row: its parts, every action a link
+                if pending is not None:
+                    divider, pending = {"before": sp.key, "text": pending}, None
+                waiting.append({"key": sp.key, "event": event_json(sp, dismiss_one)})
                 continue
             e = sp.entry
             events += [dict(x, before=e.id) for x in waiting]
@@ -1058,6 +1075,10 @@ class Web:
                 "filters": [[f, *m.filter_words(f)] for f in m.filters]
                 if len(m.filters) > 1 else [],
                 "filter": m.current_filter(),
+                # a lane of events only: "Clear" (every notification, on the server too)
+                "clear": {"label": _("activity_clear"), "tip": _("activity_clear_tip")}
+                if m.events_only() and getattr(core, "supports", lambda _f: True)("dismiss")
+                else None,
                 "conversations": {"offered": m.conversations_offered(), "on": m.conversations(),
                                   "words": [_("view_feed"), _("conv_mode")],
                                   "tips": [_("view_feed_tip"), _("conv_mode_tip")]},
@@ -1085,14 +1106,38 @@ class Web:
             m.media.toggle(kind, bool(body.get("on")))
         return {"ok": True}
 
-    def read(self, ids):
-        """Posts seen: marked read — a conversation card's whole conversation with it."""
+    def read(self, ids, lane=None):
+        """Posts seen: marked read — a conversation card's whole conversation with it. An
+        event's row seen ("event:<id>") goes to the lane model that drew it
+        (LaneModel.read: the events seen up to it, one mark for every lane). lane: "mark
+        all read" over that lane — its events seen too, every one of them."""
+        events = [i for i in ids if str(i).startswith("event:")]
+        ids = [i for i in ids if not str(i).startswith("event:")]
         members = {}
         for m in self.models.values():
             members.update(m.conv_members)
+            mine = [k for k in events if k in m.event_sorts]
+            if mine:
+                m.read(mine)  # events only: what it says of posts is decided here
         out = [x for i in ids for x in members.get(i, [i])]
-        self.core.mark_read(out[:2000])
+        if out or not events:
+            self.core.mark_read(out[:2000])
+        if lane:
+            name = self._lane_name(lane)
+            if getattr(self.core.lane_by_name.get(name), "events", False):
+                self.core.mark_activity_seen()
         return {"ok": True}
+
+    def lane_clear(self, name, confirmed=False):
+        """"Clear" over a lane of events only: every notification gone, here and on the
+        server (asked first: {confirm})."""
+        name = self._lane_name(name)
+        if not self.model(name).events_only():
+            raise ValueError(name)
+        if not confirmed:
+            return {"confirm": _("activity_clear_q")}
+        self.core.clear_activity().result(timeout=60)
+        return {"refresh": True}
 
     def find(self, name, query):
         """Ctrl+F: the posts of a lane that have every word (common/find.py's rule:
@@ -2118,7 +2163,10 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         web = self.web
         routes = {
-            "/api/read": lambda: web.read([str(i) for i in body.get("ids", [])][:500]),
+            "/api/read": lambda: web.read([str(i) for i in body.get("ids", [])][:500],
+                                          body.get("lane") or None),
+            "/api/lane_clear": lambda: web.lane_clear(body.get("name"),
+                                                      body.get("confirmed") is True),
             "/api/lane_set": lambda: web.lane_set(body),
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),

@@ -1,7 +1,7 @@
 """The terminal's text side (frontends/tui/model.py) beyond tests/test_tui_model.py: a
 card's words from the lane (who boosted, edited, the folded warning, the quote,
 reactions, "you replied", the conversation), a boost or a direct post without them, a
-poll, the activity rows of every kind, a request's note, lanes without groups. No
+poll, an event's row of every shape, lanes without groups. No
 Textual needed."""
 
 import types
@@ -12,11 +12,10 @@ from fedtail import i18n
 from fedtail.core.view import View
 from fedtail.frontends.common.cardtext import Bit, CardWords
 from fedtail.frontends.tui import model
-from fedtail.protocols.mastodon.adapter import account, activity
 from fedtail.protocols.mastodon.adapter import post as to_post
 
 from . import test_cli
-from .fakes import BOB, ME, NEWS, status
+from .fakes import BOB, NEWS, status
 from .test_core import TmpDir
 
 
@@ -86,58 +85,40 @@ class TuiModelCornersTest(TmpDir):
         title, _n = model.lane_label(self.view, "replies", width=4)
         self.assertTrue(title.endswith("…"))
 
-        class Old:
+        class Old:  # a core that can't count: no number, nothing breaks
             lane_by_name = {}
+            me = object()
 
             def lane_title(self, _n):
                 return "Activity"
 
-            def activity_unread(self):
+            def unread_count(self, _n):
                 raise AttributeError("not in this core")
-
-            def follow_requests(self):
-                return None
         self.assertEqual(model.lane_label(Old(), "activity"), ("Activity", 0))
-        self.assertEqual(model.lane_label(Old(), "requests")[1], 0)
 
-    def test_activity_rows_of_every_kind(self):
-        def act(kind, **kw):
-            base = {"id": "a", "type": kind, "account": BOB,
-                    "created_at": "2099-10-14T11:00:00.000Z"}
-            base.update(kw)
-            return activity(base)
-        r = act("pleroma:emoji_reaction", emoji="🔥",
-                status=status("001", ME, minute=1, text="mine"))
-        if r.kind == "reaction":
-            self.assertIn("🔥", dict(model.show_activity(r).head)["boost"])
-        a = act("follow")
-        notice = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                                "kind": "notice", "notice": "The server says hi"})
-        self.assertEqual(dict(model.show_activity(notice).head)["boost"], "The server says hi")
-        bare = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                              "kind": "notice", "notice": ""})
-        self.assertEqual(dict(model.show_activity(bare).head)["boost"], i18n._("act_other"))
-        emoji = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                               "kind": "reaction", "emoji": "🎉"})
-        self.assertEqual(dict(model.show_activity(emoji).head)["boost"],
-                         "🎉 " + i18n._("act_reaction"))
-        odd = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                             "kind": "something_new"})
-        self.assertEqual(dict(model.show_activity(odd).head)["boost"], i18n._("act_other"))
-        many = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                              "count": 300})
-        self.assertIn(("time", i18n._("act_more", n=299)), model.show_activity(many).head)
-        named = model.show_activity(act("follow", account=dict(BOB, display_name="Bob B")))
-        self.assertIn(("name", "Bob B"), named.head)
-        nobody = a.__class__(**{**{f: getattr(a, f) for f in a.__dataclass_fields__},
-                                "who": None})
-        self.assertNotIn("who", dict(model.show_activity(nobody).head))
-
-    def test_a_request_with_a_note(self):
-        acc = account(dict(BOB, display_name="Bob B", note="<p>" + "word " * 60 + "</p>"))
-        shown = model.show_request(acc, width=30)
-        self.assertIn(("name", "Bob B"), shown.head)
-        self.assertEqual(len(shown.body), 3)  # three lines at most
+    def test_event_lines_of_every_shape(self):
+        """A server's notice says itself (no names); many people: "and N more"; no post,
+        no time: no line for them."""
+        from fedtail.frontends.common.activity import EventParts
+        parts = EventParts(kind="severed_relationships", people=[], more="", what="lost",
+                           when="", notice="The server says hi", post="", post_link="",
+                           hide="fedtail:eventhide/n1", hide_tip="", answers=[], tip="",
+                           unread=False)
+        lines = model.event_lines(parts)
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0][0], ("notice", "⚠ The server says hi", None))
+        self.assertNotIn("unread", [k for k, _t, _l in lines[0]])
+        many = EventParts(kind="favourite", people=[("A", "fedtail:account/1"),
+                                                    ("B", "fedtail:account/2")],
+                          more="and 5 more", what="liked", when="11:00", notice="",
+                          post="«x»", post_link="fedtail:thread/9",
+                          hide="fedtail:eventhide/1,2", hide_tip="", answers=[], tip="",
+                          unread=True)
+        top = model.event_lines(many)[0]
+        self.assertEqual([t for k, t, _l in top if k == "who"], ["A", "B"])
+        self.assertIn(("muted", ", ", None), top)
+        self.assertIn(("name", " and 5 more", None), top)
+        self.assertIn(("muted", " — liked · 11:00", None), top)
 
     def test_lanes_without_groups(self):
         self.view.cfg["ui"]["sidebar_groups"] = False

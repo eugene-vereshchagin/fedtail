@@ -388,8 +388,23 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
 #chars.over { color: var(--danger); font-weight: 700; }
 .post .thread-news { display: block; color: var(--accent); font-weight: 600; margin: 4px 0;
   text-decoration: none; }
-.event-line { display: block; color: var(--muted); padding: 6px 12px; margin: 4px 0;
-  border-left: 3px solid var(--line); text-decoration: none; font-size: .92em; }
+/* an event's row (common/activity.EventParts), in any lane that takes events */
+.event { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+         box-sizing: border-box; padding: 8px 12px; margin: 0 auto 10px; max-width: 760px;
+         position: relative; display: flex; flex-direction: column; gap: 4px; }
+#posts .event { margin-left: auto; }
+#cols .event { max-width: none; }
+.event.unread::before { content: ""; position: absolute; left: -1px; top: 8px; bottom: 8px;
+                        width: 3px; background: var(--unread); border-radius: 2px; }
+.event .ev-top { display: flex; gap: 8px; align-items: flex-start; }
+.event .ev-who { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.event .ev-name { color: var(--text); font-weight: 600; text-decoration: none; }
+.event .ev-name:hover { text-decoration: underline; }
+.event .ev-hide { flex: none; padding: 0 8px; font-size: 18px; line-height: 1.2; }
+.event .ev-answers { display: flex; gap: 8px; justify-content: flex-end; }
+.event .ev-post { color: var(--muted); text-decoration: none; font-size: .92em;
+                  overflow-wrap: anywhere; }
+.event .ev-post:hover { color: var(--text); }
 .post .newcomer, #compose-hint.newcomer { color: var(--danger); font-weight: 700; }
 .post .newcomer { display: block; margin: 4px 0; text-decoration: none; }
 #sensitive.on { color: var(--warn); }

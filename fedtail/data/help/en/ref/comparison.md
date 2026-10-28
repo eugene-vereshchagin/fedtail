@@ -205,7 +205,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The server's grouped notifications (v2) | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | Slow mode and “notify at most every…” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | “Of them new”: what the last update brought | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| Follow requests in Activity | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Follow requests in any lane | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## Several accounts
 

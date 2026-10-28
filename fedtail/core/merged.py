@@ -164,7 +164,7 @@ class MergedCore:
             self.events.emit(name, self._p(tag, payload))
         elif name == "notify":
             items = [(self._lane_name(tag, lane), self.wrap(tag, x)) for lane, x in payload
-                     if lane not in ("requests", "activity")]
+                     if not (isinstance(x, dict) and "type" in x)]  # their events: theirs
             if items:
                 self.events.emit(name, items)
         elif name in ("parents", "lists_changed", "subs_changed", "sound", "poll_state"):
@@ -236,9 +236,6 @@ class MergedCore:
             out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
         return out
 
-    def activity_filters(self):
-        return self.primary.activity_filters()  # Activity is the main account's
-
     def lanes_saved(self, cfg):
         """The lane editor wrote the main profile's lanes: it takes them."""
         return self.primary.lanes_saved(cfg)
@@ -246,9 +243,9 @@ class MergedCore:
     def lane_icon(self, name):
         return None if lanes_module.is_list(name) else self.primary.lane_icon(name)
 
-    def lane_events(self, name, limit=200):
+    def lane_events(self, name, limit=200, which=None):
         """The events a lane of rules shows: the main account's (Activity is its)."""
-        return self.primary.lane_events(name, limit)
+        return self.primary.lane_events(name, limit, which)
 
     def unread_ids(self, entries):
         groups = {}
@@ -261,9 +258,13 @@ class MergedCore:
         return out
 
     def unread_count(self, name):
-        """A lane of a card a thread ("Commented posts") counts threads, as each
-        account's own core does; any other lane — its unread posts."""
-        if getattr(self.lane_by_name.get(name), "view", "") == "threads":
+        """A lane of a card a thread ("Commented posts") counts threads, a lane of events
+        only its events not seen — as each account's own core does; any other lane — its
+        unread posts."""
+        lane = self.lane_by_name.get(name)
+        if getattr(lane, "events", False) and not getattr(lane, "source", None):
+            return self.primary.unread_count(name)  # events are the main account's
+        if getattr(lane, "view", "") == "threads":
             return sum(core.unread_count(own) for core, _t, own in self._own_lane(name)
                        if own in core.lane_by_name)
         return len(self.unread_ids(self.lane_entries(name)))
@@ -271,7 +272,7 @@ class MergedCore:
     def fresh_count(self, name):
         """"Of them new": every account's share of the lane's last update."""
         return sum(core.fresh_count(own) for core, _t, own in self._own_lane(name)
-                   if own in core.lane_by_name or own in ("activity", "requests"))
+                   if own in core.lane_by_name)
 
     def calm(self, name):
         parts = self._own_lane(name)

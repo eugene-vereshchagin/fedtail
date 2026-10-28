@@ -257,7 +257,6 @@ fun PostList(
     emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
     prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
     busy: Boolean = false,     // a poll round on: the opossum swings
-    newestFirst: Boolean = false,  // how the lane is read: where its events stand
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -282,18 +281,10 @@ fun PostList(
                 item(key = "new-below") { NewBelow(words) }
             }
             item(key = p.key) {
-                if (thread) ThreadRow(p, focused = p.sid == focus, act, hideSensitive)
-                else {
-                    // a lane's events among its posts (server order: before / after the post;
-                    // read newest first, the other way round)
-                    val above = if (newestFirst) p.eventsAfter else p.eventsBefore
-                    val below = if (newestFirst) p.eventsBefore else p.eventsAfter
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        above.forEach { EventRow(it, act) }
-                        PostCard(p, act, hideSensitive)
-                        below.forEach { EventRow(it, act) }
-                    }
-                }
+                val ev = p.event
+                if (ev != null) EventRow(ev, p.unread, act)  // a lane's event, among its posts
+                else if (thread) ThreadRow(p, focused = p.sid == focus, act, hideSensitive)
+                else PostCard(p, act, hideSensitive)
             }
         }
         footer?.let { f -> item(key = "footer") { f() } }
@@ -514,15 +505,61 @@ private fun MetaLine(p: PostItem, act: CardActions, via: String) {
     }
 }
 
-/** An event among a lane's posts ("★ Bob liked your post…"): one line, a tap — its link. */
+/** An event's row in any lane that takes events (common/activity.EventParts, the windows'
+ *  row): who (each name — their profile), what · when, the post it is about (its thread),
+ *  × and a request's yes / no. Every action is a fedtail: link, done as a card's links
+ *  (AppModel.openLink: a person, a thread here; the rest the windows' way). Unread until
+ *  seen on screen, as a post. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun EventRow(bit: Pair<String, String>, act: CardActions) {
-    Text(bit.first, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .clickable(enabled = bit.second.isNotBlank()) { act.link(bit.second) }
-            .padding(horizontal = 12.dp, vertical = 8.dp))
+private fun EventRow(ev: EventItem, unread: Boolean, act: CardActions) {
+    val ground = if (unread) MaterialTheme.colorScheme.secondaryContainer
+                 else MaterialTheme.colorScheme.surface
+    val text = if (unread) MaterialTheme.colorScheme.onSecondaryContainer
+               else MaterialTheme.colorScheme.onSurface
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ground)
+        .clickable(enabled = ev.postLink.isNotBlank()) { act.link(ev.postLink) }
+        .padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            androidx.compose.foundation.layout.FlowRow(Modifier.weight(1f).padding(top = 4.dp)) {
+                if (ev.notice.isNotBlank()) {  // the server's own: what happened, not who did it
+                    Text("⚠ " + ev.notice, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        color = text)
+                } else {
+                    ev.people.forEachIndexed { i, (name, link) ->
+                        Text(name + if (i < ev.people.size - 1) ", " else "", fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold, color = text,
+                            modifier = Modifier.clickable(enabled = link.isNotBlank()) { act.link(link) })
+                    }
+                    if (ev.more.isNotBlank()) Text(" " + ev.more, fontSize = 14.sp, color = text)
+                }
+                Text(" — " + ev.what + (if (ev.whenText.isNotBlank()) " · " + ev.whenText else ""),
+                    fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (ev.hide.isNotBlank()) {
+                TextButton(onClick = { act.link(ev.hide) },
+                    modifier = Modifier.semantics { contentDescription = ev.hideTip }) {
+                    Text("×", fontSize = 18.sp)
+                }
+            }
+        }
+        ev.answers.forEach { (yes, no) ->  // waiting for my yes: answered right here
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                listOf(yes, no).forEachIndexed { i, url ->
+                    val words = ev.answerWords.getOrNull(i)?.first.orEmpty()
+                    TextButton(onClick = { act.link(url) }) {
+                        Text(words, fontWeight = if (i == 0) FontWeight.SemiBold else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+        if (ev.post.isNotBlank()) {
+            Text(ev.post, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 10.dp))
+        }
+    }
 }
 
 /** A line around a card (common/cardtext.py): its words, a tap on it — its link (a thread,

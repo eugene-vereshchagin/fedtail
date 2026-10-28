@@ -163,37 +163,87 @@ class SeparatorRow(QWidget):
 
 
 class EventRow(QWidget):
-    """An event among a lane's posts (a lane of rules with `event`; common/activity.py
-    event_bit): who — what · when · about which post, one muted line; a click opens the
-    post (or the person). Not a post: never unread, no cursor stop."""
+    """An event's row in any lane that takes events — Activity, Requests, a lane of
+    one's own (common/activity.EventParts, the same parts every interface draws): who —
+    what · when, the post it is about, × and a request's yes / no. Every button is a
+    fedtail: link (common/links.py). Unread until seen on screen, as a post is; seen
+    here is seen everywhere (its key goes to LaneModel.read)."""
 
-    status_id = None
     real_id = None
 
     def __init__(self, spec, ctx):
         super().__init__()
         self.ctx = ctx
-        h = QHBoxLayout(self)
-        h.setContentsMargins(0, 2, 0, 2)
-        self.label = QLabel()
-        self.label.setObjectName("eventLine")
-        self.label.setWordWrap(True)
-        self.label.setTextFormat(Qt.TextFormat.RichText)
-        self.label.linkActivated.connect(ctx.on_link)
-        h.addWidget(self.label, 1)
+        self.lay = QVBoxLayout(self)
+        self.lay.setContentsMargins(0, 2, 0, 2)
+        self.card = None
         self.update_spec(spec)
 
-    def update_spec(self, spec):
-        from ..common.activity import event_bit
-        self.spec = spec
-        bit = event_bit(spec.extra["event"], self.ctx.theme.date)
-        color = self.ctx.theme.css("muted")
-        self.label.setText(f'<a href="{esc(bit.link)}" style="text-decoration:none;'
-                           f'color:{color};">{esc(bit.text)}</a>' if bit.link else esc(bit.text))
-        self.label.setToolTip(bit.tip)
+    @property
+    def status_id(self):
+        return self.spec.key  # "event:<id>": what LaneModel.read marks seen
 
-    def set_unread(self, _unread):
-        pass
+    def update_spec(self, spec):
+        from ..common.activity import ANSWER_WORDS, event_parts
+        self.spec = spec
+        if self.card is not None:
+            self.lay.removeWidget(self.card)
+            self.card.deleteLater()
+        theme, link = self.ctx.theme, self.ctx.on_link
+        dismiss_one = bool(self.ctx.supports("dismiss_one")) if self.ctx.supports else True
+        parts = event_parts(spec.extra["row"], theme.date, dismiss_one)
+        card = self.card = QFrame()
+        card.setObjectName("card")
+        card.setProperty("kind", parts.kind)  # what it is about: tests, stylesheets
+        v = QVBoxLayout(card)
+        v.setContentsMargins(16, 10, 16, 10)
+        v.setSpacing(4)
+        text, muted = theme.c["text"].name(), theme.c["muted"].name()
+        if parts.notice:  # from the server itself: what happened, not who did it
+            who = f"<b>⚠ {esc(parts.notice)}</b>"
+        else:
+            who = ", ".join(f'<a href="{esc(u)}" style="text-decoration:none;color:{text};">'
+                            f"<b>{esc(n)}</b></a>" for n, u in parts.people)
+            who += (" " + esc(parts.more)) if parts.more else ""
+        top = QLabel(f'{who} <span style="color:{muted};">— {esc(parts.what)}'
+                     + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
+        top.setTextFormat(Qt.TextFormat.RichText)
+        top.setWordWrap(True)
+        top.setToolTip(parts.tip)
+        top.linkActivated.connect(link)
+        line = QHBoxLayout()
+        line.addWidget(top, 1)
+        x = QPushButton("×")
+        x.setObjectName("tool")
+        x.setFixedWidth(28)
+        x.setToolTip(parts.hide_tip)
+        x.clicked.connect(lambda _c=False, u=parts.hide: link(u))
+        line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
+        v.addLayout(line)
+        for yes, no in parts.answers:  # waiting for my yes: answered right here
+            row = QHBoxLayout()
+            row.addStretch(1)
+            for url, (words, tip) in zip((yes, no), ANSWER_WORDS, strict=True):
+                b = QPushButton(_(words))
+                b.setObjectName("primary" if url == yes else "tool")
+                b.setToolTip(_(tip))
+                b.clicked.connect(lambda _c=False, u=url: link(u))
+                row.addWidget(b)
+            v.addLayout(row)
+        if parts.post:
+            post = QLabel(f'<a href="{esc(parts.post_link)}" style="text-decoration:none;'
+                          f'color:{muted};">{esc(parts.post)}</a>')
+            post.setTextFormat(Qt.TextFormat.RichText)
+            post.setWordWrap(True)
+            post.setCursor(Qt.CursorShape.PointingHandCursor)
+            post.linkActivated.connect(link)
+            v.addWidget(post)
+        self.lay.addWidget(card)
+        self.set_unread(spec.unread)
+
+    def set_unread(self, unread):
+        self.spec.unread = unread
+        _set_prop(self.card, "unread", "true" if unread else "false")
 
 
 def row_class(spec):

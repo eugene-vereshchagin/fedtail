@@ -274,6 +274,20 @@ class SocialMixin:
             self.emit("activity_updated", None)
         return self.submit(job)
 
+    def answer_event(self, event_id, approve):
+        """An event's row answered by its id (a follow request, a reply waiting for my
+        yes) — the buttons of any lane that shows it (fedtail:eventyes / eventno)."""
+        raw = next((n for n in self.event_items(1000) if str(n.get("id")) == str(event_id)),
+                   None)
+        if raw is None:
+            return self.submit(lambda: False)  # answered elsewhere meanwhile
+        return self.answer_interaction(raw, approve)
+
+    def dismiss_events(self, ids):
+        """A row of events gone (×): each of them, here and on the server where it can."""
+        futs = [self.dismiss_activity(i) for i in ids]
+        return self.submit(lambda: [f.result() for f in futs] and None)
+
     def answer_interaction(self, entry, approve):
         """A reply, like or boost waiting for my approval (GoToSocial's interaction
         policies): yes or no, on the server; the notification goes either way. A follow

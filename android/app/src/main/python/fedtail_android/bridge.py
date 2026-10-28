@@ -20,6 +20,7 @@ a copy of their logic.
     hub()                                    every lane by kind, its count, its first unread
     pin(names)                               which lanes are the overview's tiles, in order
     read(ids) / refresh() / pause(on)        marks; a round now; out of sight
+    lane_clear(name, confirmed)              "Clear" over a lane of events only
     wait(since, seconds)                     blocks until something changed → version
     thread(id)                               a thread as a tree: numbers and depths
     post(body) / act(action, id)             write or answer; like, boost, bookmark
@@ -299,8 +300,6 @@ def lane(name, keep=False):
             # a browsed lane its server gives nothing for: said in the lane (the windows')
             from fedtail.i18n import _
             got["info"] = _("browse_empty")
-        if got.get("place"):  # activity, requests: rows with buttons, not posts
-            got["page"] = _place_page(got["place"])
         return got
     return _answer(go)
 
@@ -340,23 +339,10 @@ def poll_refresh(post_id):
     return _answer(go)
 
 
-def _place_page(name):
-    """A place in a lane's stead (common/places.py, as the windows and the page have it):
-    {title, rows: [{kind, title, line, key, buttons: [{label, act, primary, tip}]}], empty,
-    submit, more}. Activity on screen is seen, as in the terminal; the rows keep their ●."""
-    page = _s["web"].page(name)
-    for r in page["rows"]:
-        r.pop("post", None)
-        r.pop("account", None)
-    if name == "activity":
-        _core().mark_activity_seen()
-    return page
-
-
 def place_act(act_json, confirmed=False, values_json=None, answer=None):
     """A place's button (act = [place, key, data]), with the place's form (values) and a
     line typed when it asked for one (answer): → {message, confirm, ask, open, compose,
-    copy, refresh} — and, for activity and requests shown as a lane, their new "page"."""
+    copy, refresh}."""
     def go():
         act = json.loads(act_json)
         body = {"act": act, "confirmed": bool(confirmed)}
@@ -365,8 +351,6 @@ def place_act(act_json, confirmed=False, values_json=None, answer=None):
         if answer is not None:
             body["answer"] = str(answer)
         got = _s["web"].place_act(body)
-        if got.get("refresh") and act and act[0] in ("activity", "requests"):
-            got["page"] = _place_page(act[0])
         if got.get("reload"):  # another account: the core was made anew for it
             _s["core"] = _s["web"].core._core if hasattr(_s["web"].core, "_core") \
                 else _s["web"].core
@@ -594,7 +578,7 @@ def add_language(code):
 
 # the overview's sections, in the order "read in a row" walks them: what is addressed to
 # you first, then what you follow, then the lists; lanes without counts are only browsed
-YOU = ("direct", "to_me", "replies", "mentions", "requests", "activity")
+YOU = ("direct", "to_me", "replies", "mentions")
 BROWSED = ("my_posts",)  # counted, but your own posts are nothing to catch up on
 PEEK = 90
 
@@ -613,8 +597,8 @@ def hub():
             group = x.get("group") or group  # the set's section: given on its first lane
             lane = core.lane_by_name.get(name)
             lazy = lane is None or lane.lazy or lane.source is None
-            if name in ("activity", "requests"):
-                kind = "you"
+            if getattr(lane, "events", False) and lane.source is None:
+                kind = "you"  # a lane of events only (Activity, Requests): what happened to me
             elif lazy or name in BROWSED:
                 kind = "browse"
             elif name in YOU:
@@ -693,8 +677,17 @@ def older(name, ahead=False):
     return _answer(lambda: _s["web"].older(name, bool(ahead)))
 
 
-def read(ids_json):
-    return _answer(lambda: _s["web"].read(list(json.loads(ids_json or "[]"))))
+def read(ids_json, lane=None):
+    """Seen on screen: post ids, and event rows' keys ("event:<id>": the events seen up to
+    it, LaneModel.read) → {ok}. lane: "mark all read" over it — its events seen too."""
+    return _answer(lambda: _s["web"].read([str(i) for i in json.loads(ids_json or "[]")],
+                                          lane or None))
+
+
+def lane_clear(name, confirmed=False):
+    """"Clear" over a lane of events only: every notification, on the server too →
+    {confirm} first, then {refresh}."""
+    return _answer(lambda: _s["web"].lane_clear(name, bool(confirmed)))
 
 
 def refresh():

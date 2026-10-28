@@ -93,13 +93,20 @@ data class MediaItem(
 /** A button of a place (common/places.py Btn): act = [place, key, data]. */
 data class PlaceButton(val label: String, val act: List<String>, val primary: Boolean, val tip: String)
 
-/** A row of a place shown in a lane's stead (activity, follow requests): the windows' rows. */
-data class PlaceRow(val title: String, val line: String, val key: String,
-                    val buttons: List<PlaceButton>, val fresh: Boolean)
-
-/** Activity, follow requests: rows with buttons, "nothing yet", the place's own buttons. */
-data class PlacePage(val rows: List<PlaceRow>, val empty: String,
-                     val submit: PlaceButton?, val more: PlaceButton?)
+/** An event's row in any lane that takes events (common/activity.EventParts, web lane
+ *  "events": the windows' row): every action is a fedtail: link, done as a card's links. */
+data class EventItem(
+    val kind: String,
+    val people: List<Pair<String, String>>,   // (name, fedtail:account/<id>)
+    val more: String,                         // "and 5 more"
+    val what: String, val whenText: String,
+    val notice: String,                       // the server's own notice, or ""
+    val post: String, val postLink: String,   // «the post it is about», fedtail:thread/<id>
+    val hide: String, val hideTip: String,    // × — fedtail:eventhide/<ids>
+    val answers: List<Pair<String, String>>,  // a request's (yes link, no link)
+    val answerWords: List<Pair<String, String>>, // (words, tip) of yes, of no
+    val tip: String,
+)
 
 data class LinkCard(
     val url: String, val title: String, val provider: String, val image: String,
@@ -147,10 +154,9 @@ data class PostItem(
     val boosted: Pair<String, String>? = null,  // "♻ boosted by X · 14:02" → their profile
     val contextLine: Pair<String, String>? = null,  // the parent's line when it isn't here yet
     val quoteOff: Boolean = false,   // the card's words leave the quote out (feed.quotes = "off")
-    // a lane of rules' events (likes, follows… — `event = …`) next to this post, in the
-    // server's order: the ones that came just before it, and (the last post) after it
-    val eventsBefore: List<Pair<String, String>> = emptyList(),
-    val eventsAfter: List<Pair<String, String>> = emptyList(),
+    // not a post but an event's row of the lane (likes, follows, a follow request…): its
+    // key "event:<id>" — seen on screen as a post is (Core.read)
+    val event: EventItem? = null,
 )
 
 /** A lane's switches from its header (common/lane.py, the windows' and the page's). */
@@ -161,6 +167,7 @@ data class LaneSwitches(
     val convOffered: Boolean, val convOn: Boolean, val convWords: List<String>,
     val mediaActive: Boolean, val mediaLabel: String, val mediaAll: String,
     val media: List<Triple<String, String, Boolean>>,   // (kind, words, on)
+    val clear: Pair<String, String>? = null,            // a lane of events only: (words, tip)
 )
 
 /** A question the core asked, to answer in a dialog. */
@@ -259,8 +266,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var title by mutableStateOf("")
     var posts by mutableStateOf(listOf<PostItem>())
     var divider by mutableStateOf<Pair<String, String>?>(null) // (post key, "new below · N")
-    var placePage by mutableStateOf<PlacePage?>(null) // activity, requests: rows, not posts
-    var placeConfirm by mutableStateOf<Pair<String, PlaceButton>?>(null) // "sure?" first
     var opening by mutableStateOf(0) // grows each time a lane opens anew: the list re-aims
     var aimed = 0                     // the opening the list last aimed at
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title
@@ -592,7 +597,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         title = laneTitle(name)
         posts = emptyList()
         divider = null
-        placePage = null
         places = emptyList()
         viewModelScope.launch { loadLane(name, keep = false) }
     }
@@ -608,15 +612,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         Core.failed(got)?.let { message = it; return }
         if (name != current) return // the reader moved on meanwhile
         title = got.optString("title").ifBlank { laneTitle(name) }
-        placePage = got.optJSONObject("page")?.let { parsePlace(it) }
-        if (placePage != null) {
-            posts = emptyList()
-            laneOlder = false
-            divider = null
-            loadHub() // on screen the activity is seen: its count goes
-            if (!keep) opening += 1
-            return
-        }
         laneSwitches = parseSwitches(got)
         var list = withEvents(parsePosts(got.optJSONArray("posts")), got.optJSONArray("events"))
         if (newestFirst) list = list.reversed()
@@ -645,7 +640,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             (0 until cw.length()).map { cw.optString(it) },
             media.optBoolean("active"), str(media, "label"), str(media, "all"),
             (0 until kinds.length()).map { kinds.getJSONArray(it) }
-                .map { Triple(it.optString(0), it.optString(1), it.optBoolean(2)) })
+                .map { Triple(it.optString(0), it.optString(1), it.optBoolean(2)) },
+            o.optJSONObject("clear")?.let { str(it, "label") to str(it, "tip") })
+    }
+
+    /** "Clear" over a lane of events only: every notification, on the server too (asked first). */
+    fun laneClear(confirmed: Boolean = false) {
+        val name = current ?: return
+        viewModelScope.launch {
+            val got = Core.laneClear(name, confirmed)
+            Core.failed(got)?.let { message = it; return@launch }
+            str(got, "confirm").takeIf { it.isNotBlank() }?.let {
+                asking = Asking.Confirm(it, { laneClear(confirmed = true) })
+                return@launch
+            }
+            loadLane(name, keep = true)
+            loadHub()
+        }
     }
 
     /** A switch of the lane's header: {filter} | {conversations} | {media, on}. */
@@ -1539,7 +1550,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun pageAct(b: PlaceButton, values: JSONObject?, confirmed: Boolean = false, answer: String? = null) {
         viewModelScope.launch {
             val got = Core.placeAct(b.act, confirmed, values, answer)
-            got.optJSONObject("page")?.let { placePage = parsePlace(it) }
             handle(got) { c, _, a -> pageAct(b, values, c || confirmed, a ?: answer) }
             loadHub()
         }
@@ -1990,34 +2000,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (o.isNull("group")) null else o.optString("group"))
     }
 
-    /** A place's button: a thread opens here; the rest the core does (and may ask first). */
-    fun placeAct(b: PlaceButton, confirmed: Boolean = false) {
-        placeConfirm = null
-        if (b.act.size == 3 && b.act[0] == "post" && b.act[1] == "thread") {
-            openThread(b.act[2])
-            return
-        }
-        pageAct(b, null, confirmed, null)
-    }
-
     private fun parseButton(o: JSONObject?): PlaceButton? = o?.let { b ->
         val act = b.optJSONArray("act") ?: JSONArray()
         PlaceButton(b.optString("label"), List(act.length()) { act.optString(it) },
             b.optBoolean("primary"), b.optString("tip"))
-    }
-
-    private fun parsePlace(o: JSONObject): PlacePage {
-        val arr = o.optJSONArray("rows") ?: JSONArray()
-        val rows = List(arr.length()) { i ->
-            val r = arr.getJSONObject(i)
-            val bs = r.optJSONArray("buttons") ?: JSONArray()
-            val title = r.optString("title")
-            PlaceRow(title.removePrefix("● "), r.optString("line"), r.optString("key"),
-                (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) },
-                fresh = title.startsWith("● "))
-        }
-        return PlacePage(rows, o.optString("empty"), parseButton(o.optJSONObject("submit")),
-            parseButton(o.optJSONObject("more")))
     }
 
 
@@ -2127,21 +2113,43 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun str(o: JSONObject?, key: String): String =
         if (o == null || o.isNull(key)) "" else o.optString(key)
 
-    /** A lane of rules' events (web lane "events": {bit, before}) put next to their posts. */
+    /** The lane's rows in the server's order (oldest first): its posts and, among them, the
+     *  events it takes (web lane "events": {key, event, before}) — each before the post it
+     *  came before, the rest after the last; a lane of events only has nothing else. */
     private fun withEvents(list: List<PostItem>, events: JSONArray?): List<PostItem> {
-        if (events == null || events.length() == 0 || list.isEmpty()) return list
-        val before = HashMap<String, MutableList<Pair<String, String>>>()
-        val after = mutableListOf<Pair<String, String>>()
+        if (events == null || events.length() == 0) return list
+        val before = HashMap<String, MutableList<PostItem>>()
+        val after = mutableListOf<PostItem>()
         for (i in 0 until events.length()) {
             val e = events.optJSONObject(i) ?: continue
-            val b = bit(e.optJSONObject("bit")) ?: continue
+            val row = parseEvent(e) ?: continue
             val at = str(e, "before")
-            if (at.isBlank()) after += b else before.getOrPut(at) { mutableListOf() } += b
+            if (at.isBlank()) after += row else before.getOrPut(at) { mutableListOf() } += row
         }
-        return list.mapIndexed { i, p ->
-            p.copy(eventsBefore = before[p.id] ?: emptyList(),
-                   eventsAfter = if (i == list.size - 1) after else emptyList())
-        }
+        return list.flatMap { p -> (before[p.id] ?: emptyList()) + p } + after
+    }
+
+    private fun pairs(arr: JSONArray?): List<Pair<String, String>> =
+        if (arr == null) emptyList() else (0 until arr.length()).mapNotNull { arr.optJSONArray(it) }
+            .map { it.optString(0) to it.optString(1) }
+
+    /** An event's row ({key, event: EventParts}) as a row of the lane: a PostItem whose
+     *  `event` is set, its key "event:<id>" (what Core.read marks seen). */
+    private fun parseEvent(e: JSONObject): PostItem? {
+        val key = str(e, "key").takeIf { it.isNotBlank() } ?: return null
+        val x = e.optJSONObject("event") ?: return null
+        val ev = EventItem(kind = str(x, "kind"), people = pairs(x.optJSONArray("people")),
+            more = str(x, "more"), what = str(x, "what"), whenText = str(x, "when"),
+            notice = str(x, "notice"), post = str(x, "post"), postLink = str(x, "post_link"),
+            hide = str(x, "hide"), hideTip = str(x, "hide_tip"),
+            answers = pairs(x.optJSONArray("answers")),
+            answerWords = pairs(x.optJSONArray("answer_words")), tip = str(x, "tip"))
+        return PostItem(key = key, id = key, sid = key, alias = "", name = "", handle = "",
+            avatar = "", created = "", text = "", warning = "", sensitive = false,
+            media = emptyList(), card = null, poll = "", html = "", url = "", shared = false,
+            bookmarked = false, unread = x.optBoolean("unread"), sharedBy = "",
+            contextHandle = "", contextText = "", replies = 0, shares = 0, likes = 0,
+            liked = false, number = null, depth = 0, event = ev)
     }
 
     /** A line around a card ({text, link}) as (words, link); null — none. */

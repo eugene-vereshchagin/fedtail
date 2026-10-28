@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...core.view import ACTIVITY_FILTERS as FILTERS  # the quick filters over Activity
-from ...core.view import activity_keeps as keeps  # noqa: F401 — for the interfaces
 from ...i18n import _
 
 MAX_NAMES = 3
@@ -48,26 +46,6 @@ def notice_text(n):
     if n.kind == "warning":
         return _("act_warning", action=_("warn_" + (n.action or "none")), text=n.text[:300])
     return ""
-
-
-def filter_words(which):
-    """(words, tip) of a quick filter."""
-    return _("actf_" + which), _("actf_" + which + "_tip")
-
-
-def chosen(view):
-    """The quick filter chosen now (this run only)."""
-    now = getattr(view, "activity_filter_now", None)
-    got = now() if callable(now) else None
-    return got if isinstance(got, str) and got in FILTERS else "all"
-
-
-def offered(view):
-    """The quick filters this Activity has (a lane of follow requests of its own takes
-    them out of Activity: no "Requests" filter then, unless approvals wait there too)."""
-    got = getattr(view, "activity_filters_offered", None)
-    got = got() if callable(got) else None
-    return tuple(got) if isinstance(got, (list, tuple)) else FILTERS
 
 
 def groups(entries):
@@ -160,3 +138,60 @@ def rows(entries, seen, date, oldest_first=True):
     if oldest_first:
         out.reverse()
     return out
+
+
+@dataclass
+class EventParts:
+    """An event's row (a Row), in the parts every interface draws the same way — the
+    windows, GTK, the terminal, the web page, the phone — in any lane that takes events.
+    Every action is a fedtail: link (common/links.py), so each interface only shows
+    them: a name opens the person, the post line the thread, × (`hide`) dismisses the
+    row's events, a request's two buttons answer it."""
+    kind: str             # act_key of the row: for a stylesheet, a test
+    people: list          # [(name, "fedtail:account/<id>")], at most MAX_NAMES
+    more: str             # "and 5 more", or ""
+    what: str             # "liked", "followed you"…
+    when: str
+    notice: str           # the server's own notice in words ("" — none)
+    post: str             # «a snippet of the post it is about», or ""
+    post_link: str
+    hide: str             # fedtail:eventhide/<ids> — × on the row
+    hide_tip: str
+    answers: list         # [(yes_link, no_link)] — one pair per request waiting
+    tip: str              # who, when — each of the row's events
+    unread: bool
+
+
+def event_parts(row, date, dismiss_one=True):
+    """A Row → its EventParts. date: the theme's way of writing a time (the Row's
+    `when` is already written by it); dismiss_one: whether the server dismisses one
+    notification (× then says so) or × hides it here only."""
+    from urllib.parse import quote
+
+    from ...model.text import snippet
+    from .cardtext import name_of
+    from .links import thread_url
+    people = [(name_of(p), f"fedtail:account/{p.id}") for p in row.people]
+    es = row.entries
+    post = row.post
+    answers = [(f"fedtail:eventyes/{quote(a.id, safe='')}",
+                f"fedtail:eventno/{quote(a.id, safe='')}") for a in es] if row.request else []
+    tip = "\n".join(f"{date(a.created) if a.created else ''}  "
+                    f"{'@' + a.who.handle if a.who else ''}" for a in es[:30]) \
+        if len(es) > 1 else ""
+    times = sorted((a.created for a in es if a.created), reverse=True)
+    when = date(times[0]) if times else ""
+    if len(times) > 1 and date(times[-1]) != when:
+        when = f"{date(times[-1])} … {when}"
+    return EventParts(
+        kind=row.kind, people=people,
+        more=_("act_more", n=row.more) if row.more > 0 else "",
+        what=row.what, when=when, notice=row.notice,
+        post=f"«{snippet(post, 160)}»" if post is not None else "",
+        post_link=thread_url(post.id) if post is not None else "",
+        hide="fedtail:eventhide/" + ",".join(quote(a.id, safe="") for a in es),
+        hide_tip=_("activity_dismiss_tip" if dismiss_one else "activity_hide_tip"),
+        answers=answers, tip=tip, unread=row.unread)
+
+
+ANSWER_WORDS = (("ok_interaction", "approve_tip"), ("no_interaction", "reject_tip"))

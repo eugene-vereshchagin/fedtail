@@ -1,6 +1,7 @@
 """The sidebar without a toolkit (frontends/common/sidebar.py): its sections, the count
-beside each lane (requests, activity, a lane browsed rather than counted), the icon's
-total, the badge's words and the folded groups kept in the profile's state."""
+beside each lane (the core's number for every lane, a lane of events too; a lane browsed
+rather than counted), the icon's total, the badge's words and the folded groups kept in
+the profile's state."""
 
 import types
 import unittest
@@ -21,16 +22,10 @@ class View:
         self.me = {"id": "ME"}
         self.state = {}
 
-    def follow_requests(self):
-        return [1, 2]
-
-    def activity_unread(self):
-        return 5
-
     def unread_count(self, name):
         if name == "replies":
             raise KeyError(name)  # a lane the core doesn't count
-        return 3
+        return {"requests": 2, "activity": 5}.get(name, 3)  # events not seen: the core's
 
     def lane_chosen(self, name, chosen, except_):
         return name in chosen and name not in except_

@@ -79,7 +79,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -133,7 +132,7 @@ fun LaneScreen(
                         },
                         actions = {
                             // "to the new": the first unread post, wherever reading stands
-                            if (model.placePage == null && model.posts.any { it.unread }) {
+                            if (model.posts.any { it.unread }) {
                                 val toNew = stringResource(R.string.to_new)
                                 IconButton(onClick = {
                                     scope.launch {
@@ -158,8 +157,7 @@ fun LaneScreen(
                     model.laneSwitches?.let { Switches(model, it) }
                     // what the lane holds now ("a filter on: 12 of 40"); when empty, the
                     // empty lane says it itself
-                    model.laneSwitches?.info?.takeIf { it.isNotBlank() && model.posts.isNotEmpty() &&
-                        model.placePage == null }?.let {
+                    model.laneSwitches?.info?.takeIf { it.isNotBlank() && model.posts.isNotEmpty() }?.let {
                         Text(it, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
@@ -208,18 +206,7 @@ fun LaneScreen(
                 model.aimed = model.opening
             }
             LaunchedEffect(model.opening) {
-                val page = model.placePage
-                if (page != null) {
-                    // activity read "as a forum": the newest rows are at the bottom — open on
-                    // the first unseen one, or on the end when all is seen
-                    if (model.opening != model.aimed) {
-                        if (!model.newestFirst && page.rows.isNotEmpty()) {
-                            val fresh = page.rows.indexOfFirst { it.fresh }
-                            state.scrollToItem(if (fresh >= 0) fresh else page.rows.size - 1)
-                        }
-                        model.aimed = model.opening
-                    }
-                } else if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
+                if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
                     aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
                         divider = model.divider?.first)
                     model.aimed = model.opening
@@ -231,10 +218,8 @@ fun LaneScreen(
                 if (model.laneOlder) Earlier(model.loadingOlder,
                     seen = { model.loadOlder(ahead = true) }) { model.loadOlder() }
             }
-            val page = model.placePage
-            if (page != null) PlaceList(model, page, name, state)
-            else PostList(model.posts, state, model.divider, act, model.hideSensitive,
-                prefetch = model.prefetch, newestFirst = model.newestFirst,
+            PostList(model.posts, state, model.divider, act, model.hideSensitive,
+                prefetch = model.prefetch,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 busy = model.busy,
                 header = if (model.newestFirst) null else earlier,
@@ -254,14 +239,6 @@ fun LaneScreen(
         }
     }
     if (switcher) Switcher(model) { switcher = false }
-    model.placeConfirm?.let { (ask, b) ->
-        AlertDialog(onDismissRequest = { model.placeConfirm = null },
-            text = { Text(ask) },
-            confirmButton = { TextButton(onClick = { model.placeAct(b, confirmed = true) }) {
-                Text(stringResource(R.string.yes_do)) } },
-            dismissButton = { TextButton(onClick = { model.placeConfirm = null }) {
-                Text(stringResource(R.string.cancel)) } })
-    }
     model.cmdConfirm?.let { ask ->
         AlertDialog(onDismissRequest = { model.cmdConfirm = null },
             text = { Text(ask) },
@@ -269,66 +246,6 @@ fun LaneScreen(
                 Text(stringResource(R.string.yes_do)) } },
             dismissButton = { TextButton(onClick = { model.cmdConfirm = null }) {
                 Text(stringResource(R.string.cancel)) } })
-    }
-}
-
-/**
- * Activity, follow requests: no posts but the windows' rows (common/places.py) — who did
- * what, when, about which post; a tap opens that post's thread; the row's buttons (answer
- * a request, × to hide it), then the place's own ("mark all read", "clear").
- */
-@Composable
-private fun PlaceList(model: AppModel, page: PlacePage, name: String, state: LazyListState) {
-    androidx.compose.foundation.lazy.LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (page.rows.isEmpty()) item {
-            Text(page.empty.ifBlank { stringResource(R.string.lane_empty) },
-                Modifier.fillMaxWidth().padding(vertical = 32.dp), textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        // keyed: new activity on a refresh comes in without moving what is being read
-        val keys = HashMap<String, Int>()
-        items(page.rows.mapIndexed { i, r ->
-            val base = r.key.ifBlank { "i:$i" }
-            val n = keys.merge(base, 1, Int::plus) ?: 1
-            (if (n == 1) base else "$base#$n") to r
-        }, key = { it.first }) { (_, r) -> PlaceRowCard(model, r) }
-        val own = listOfNotNull(page.more, page.submit)
-        if (own.isNotEmpty()) item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                own.forEach { b -> TextButton(onClick = { model.placeAct(b) }) { Text(b.label) } }
-            }
-        }
-        item { LaneEnd(model, name) }
-    }
-}
-
-@Composable
-private fun PlaceRowCard(model: AppModel, r: PlaceRow) {
-    val thread = r.buttons.firstOrNull { it.act.getOrNull(0) == "post" && it.act.getOrNull(1) == "thread" }
-    val rest = r.buttons.filter { it !== thread }
-    val ground = if (r.fresh) MaterialTheme.colorScheme.secondaryContainer
-                 else MaterialTheme.colorScheme.surface
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(ground)
-        .then(if (thread != null) Modifier.clickable { model.placeAct(thread) } else Modifier)
-        .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = if (rest.isEmpty()) 10.dp else 2.dp)) {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f).padding(end = 8.dp)) {
-                if (r.title.isNotBlank()) Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                    color = if (r.fresh) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurface)
-                if (r.line.isNotBlank()) Text(r.line, fontSize = 14.sp, maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        if (rest.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            rest.forEach { b ->
-                TextButton(onClick = { model.placeAct(b) }) {
-                    Text(b.label, fontWeight = if (b.primary) FontWeight.SemiBold else FontWeight.Normal)
-                }
-            }
-        }
     }
 }
 
@@ -543,7 +460,7 @@ private fun FindBar(model: AppModel) {
  *  conversation a card, which kinds of media. */
 @Composable
 private fun Switches(model: AppModel, sw: LaneSwitches) {
-    if (sw.filters.isEmpty() && !sw.convOffered && sw.media.isEmpty()) return
+    if (sw.filters.isEmpty() && !sw.convOffered && sw.media.isEmpty() && sw.clear == null) return
     var mediaOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
         .padding(horizontal = 8.dp, vertical = 2.dp),
@@ -577,6 +494,10 @@ private fun Switches(model: AppModel, sw: LaneSwitches) {
                     }
                 }
             }
+        }
+        // a lane of events only: every notification gone, on the server too (asked first)
+        sw.clear?.let { (words, _) ->
+            TextButton(onClick = { model.laneClear() }) { Text(words, fontSize = 13.sp) }
         }
     }
 }

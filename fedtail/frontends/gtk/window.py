@@ -18,7 +18,6 @@ from .. import richtext
 from ..common import results, sidebar
 from ..common.links import Links
 from . import login
-from .activity import ActivityLane, RequestsLane
 from .card import Card
 from .gi_setup import Gdk, Gio, GLib, Gtk, Pango, forget, gtk_version, tip
 from .lane import LaneView, y_in
@@ -27,7 +26,6 @@ log = logging.getLogger(__name__)
 
 BADGE_KIND = {"replies": "hot", "to_me": "hot",
               "bots": "quiet", "activity": "quiet"}  # as qt/window.py
-SPECIAL = {"activity": ActivityLane, "requests": RequestsLane}  # lanes that aren't posts
 
 
 @dataclass
@@ -1472,9 +1470,9 @@ class MainWindow(Gtk.ApplicationWindow):
         by_name = self.view.lane_by_name
         folded = sidebar.folded(self.view)
         for group, names in sidebar.groups(self.view, self.cfg):
-            # lanes that aren't status streams: only Activity and follow requests are known
+            # a lane shows posts, events, or both (Activity, Requests: events only)
             names = [n for n in names if n in by_name and
-                     (by_name[n].source is not None or n in SPECIAL)]
+                     (by_name[n].source is not None or by_name[n].events)]
             if not names:
                 continue
             if group:
@@ -1555,7 +1553,7 @@ class MainWindow(Gtk.ApplicationWindow):
         lv = self.lane_views.get(name)
         if lv is None:
             title = self.lane_title(name)
-            lv = SPECIAL[name](self) if name in SPECIAL else LaneView(self.ctx, name, title)
+            lv = LaneView(self.ctx, name, title)  # every lane, events' too: one kind
             self.lane_views[name] = lv
             self.stack.add_named(lv, name)
         return lv
@@ -1633,9 +1631,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self._slow_text()
             self._curtain_swing()
         elif name == "read_changed":  # marks only: no lane is rebuilt for them
-            for lname, lv in self.lane_views.items():
-                if lname in SPECIAL:
-                    continue
+            for lv in self.lane_views.values():
                 if lv.get_mapped() and hasattr(lv, "apply_read"):
                     lv.apply_read(payload or ())
                 else:
@@ -1644,8 +1640,6 @@ class MainWindow(Gtk.ApplicationWindow):
         elif name in ("lanes_updated", "parents", "arrived"):
             changed = payload if name == "lanes_updated" and isinstance(payload, dict) else None
             for lname, lv in self.lane_views.items():
-                if lname in SPECIAL:
-                    continue
                 if changed is None or lname in changed:
                     # only the lane on screen catches up now; the others when shown
                     if lv.get_mapped():
@@ -1682,9 +1676,10 @@ class MainWindow(Gtk.ApplicationWindow):
                 else:
                     lv.dirty = True
         elif name in ("activity_updated", "activity_seen", "requests_updated"):
-            lname = "requests" if name == "requests_updated" else "activity"
-            lv = self.lane_views.get(lname)
-            if lv is not None and name != "activity_seen":
+            # events came, were seen or answered: every lane that shows events looks again
+            for lname, lv in self.lane_views.items():
+                if not getattr(self.view.lane_by_name.get(lname), "events", False):
+                    continue
                 if lv.get_mapped():
                     lv.refresh()
                 else:

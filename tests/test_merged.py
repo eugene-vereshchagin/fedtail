@@ -127,12 +127,13 @@ class MergedRoutingTest(TmpDir):
         self.assertEqual(self.emitted("arrived")[-1], [("work~a", "work~b")])
         ev.emit("thread_grew", "500")
         self.assertEqual(self.emitted("thread_grew")[-1], "work~500")
-        ev.emit("notify", [("home", {"id": "500"}), ("activity", {"id": "x"}),
+        ev.emit("notify", [("home", {"id": "500"}),
+                           ("activity", {"id": "x", "type": "favourite"}),  # an event
                            ("list:WL", {"id": "501"})])
         self.assertEqual([(lane, st["id"]) for lane, st in self.emitted("notify")[-1]],
                          [("home", "work~500"), ("list:work~WL", "work~501")])
         n = len(self.emitted("notify"))
-        ev.emit("notify", [("requests", {"id": "x"})])  # only the main account's
+        ev.emit("notify", [("requests", {"id": "x", "type": "follow_request"})])  # main's only
         self.assertEqual(len(self.emitted("notify")), n)
         for name in ("parents", "lists_changed", "subs_changed", "sound"):
             ev.emit(name, {"p": 1})

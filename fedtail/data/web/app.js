@@ -649,7 +649,7 @@ async function copyText(text) {
 // in groups (their submenus: lanes and lists, for the tender, whom to read, the account
 // and the server, the look, debugging, help), a group's items beside it
 const MENU_GROUPS = [
-  ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "drafts", "slow", "stats", "requests", "activity"]],
+  ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "drafts", "slow", "stats"]],
   ["tender_menu", ["silence", "filtered"]],
   ["menu_people", ["trends", "suggestions", "directory", "collections", "remote"]],
   ["accounts", ["accounts", "sync", "profile_edit", "server", "probe", "announcements", "merge"]],
@@ -928,8 +928,23 @@ function laneBar(data) {  // the lane's choices, as the windows' header has them
     b.onclick = () => setCursor(state.me.order === "newest_first" ? 0 : state.posts.length - 1);
     bar.append(b);
   }
+  if (data.clear) {  // a lane of events only: every notification gone, the server's too
+    const b = el("button", "tool", data.clear.label);
+    b.type = "button";
+    b.title = data.clear.tip;
+    b.onclick = () => laneClear(data.name);
+    bar.append(b);
+  }
   if (data.info) bar.append(el("span", "muted", data.info));
   bar.hidden = !bar.childElementCount;
+}
+
+async function laneClear(name, confirmed) {
+  let r;
+  try { r = await api("/api/lane_clear", { name, confirmed: !!confirmed }); }
+  catch (e) { toast(e.message); return; }
+  if (r.confirm) { if (window.confirm(r.confirm)) await laneClear(name, true); return; }
+  await refresh();
 }
 
 async function selectLane(name, keep) {
@@ -947,13 +962,6 @@ async function selectLane(name, keep) {
     if (changed) api("/api/active", { name: data.name }).catch(() => {});  // a POST: GET only reads
   } catch (e) { toast(w("web_load_error", { err: e.message })); return; }
   if (state.lane !== name) return;  // another lane was picked meanwhile
-  if (data.place) {  // Activity, Requests: not posts — the place, in the lane's stead
-    $("#lanebar").hidden = true;
-    $("#title").textContent = data.title;
-    document.title = data.title + " — FedTail";
-    state.posts = [];
-    return openPlace(data.place, "", "", "", "main");
-  }
   const newestFirst = state.me.order === "newest_first";
   if (newestFirst) data.posts.reverse();
   const box = $("#posts");
@@ -964,42 +972,26 @@ async function selectLane(name, keep) {
   state.older = data.older;
   $("#title").textContent = data.title;
   document.title = data.title + " — FedTail";
-  countUnread();
   box.textContent = "";
   const more = olderButton();
   if (data.waiting) box.append(loadingBox(w("loading")));  // a browse lane: its server asked
   else if (!data.posts.length && !(data.events || []).length) box.append(emptyBox(w("web_empty")));
   if (more && !newestFirst) box.append(more);
-  // likes, follows… a lane of rules shows among its posts (not posts: no cursor stop)
-  const eventsBefore = new Map();
-  for (const ev of data.events || []) {
-    const k = ev.before || "";
-    if (!eventsBefore.has(k)) eventsBefore.set(k, []);
-    eventsBefore.get(k).push(bitEl(ev.bit, "event-line"));
-  }
-  const evs = (k) => eventsBefore.get(k) || [];
-  if (newestFirst) box.append(...evs("").reverse());
-  for (const p of data.posts) {
-    const card = renderPost(p, false);
-    const before = evs(p.id);
-    if (data.divider && data.divider.before === p.id) {  // "new below", fixed where reading stood
-      const d = el("div", "divider", data.divider.text);
-      if (newestFirst) box.append(card, ...before.reverse(), d);
-      else box.append(...before, d, card);
-      continue;
-    }
-    if (newestFirst) box.append(card, ...before.reverse()); else box.append(...before, card);
-  }
-  if (!newestFirst) box.append(...evs(""));
+  box.append(...laneRows(data, newestFirst));
   if (more && newestFirst) box.append(more);
   laneBar(data);
   if (data.empty_browse && !data.posts.length) box.textContent = w("browse_empty");
+  countUnread();
   watchRead(box);
-  const again = anchor && box.querySelector(`.post[data-id="${CSS.escape(anchor.dataset.id)}"]`);
+  const again = anchor && box.querySelector(`[data-id="${CSS.escape(anchor.dataset.id)}"]`);
   if (again) {
     box.scrollTop += again.getBoundingClientRect().top - oldTop;
     const ci = state.posts.findIndex((x) => x.id === cursorId);
     if (ci >= 0) markCursor(ci);
+  } else if (!data.posts.length) {  // events only: the oldest unseen row, else the newest end
+    const first = box.querySelector(".event.unread");
+    if (first && state.me.start_at !== "newest") first.scrollIntoView({ block: "start" });
+    else box.scrollTop = newestFirst ? 0 : box.scrollHeight;
   } else {
     const firstUnread = data.posts.findIndex((p) => p.unread);
     const lastUnread = data.posts.map((p) => p.unread).lastIndexOf(true);
@@ -1009,9 +1001,86 @@ async function selectLane(name, keep) {
     setCursor(start, false, "start");
   }
   if (state.me.mark_read === "on_open" && !keep) {  // the lane is read once it is open;
-    const ids = data.posts.filter((p) => p.unread).map((p) => p.id);  // the marks stay
-    if (ids.length) api("/api/read", { ids }).catch(() => {});        // till next time
+    const ids = data.posts.filter((p) => p.unread).map((p) => p.id)   // the marks stay
+      .concat(unseenEvents(data));                                    // till next time
+    if (ids.length) api("/api/read", { ids }).catch(() => {});
   }
+}
+
+// a lane's rows in the order they stand: its posts and, among them, the events it takes
+// (likes, follows, follow requests… — any lane of rules; a lane of events only has nothing
+// else), each event before the post it came before (none: after the last); "new below"
+// before the row it was fixed at — a post or an event. data.posts come oldest first.
+function laneRows(data, newestFirst) {
+  const eventsBefore = new Map();
+  for (const ev of data.events || []) {
+    const k = ev.before || "";
+    if (!eventsBefore.has(k)) eventsBefore.set(k, []);
+    eventsBefore.get(k).push(ev);
+  }
+  const rows = [];
+  const put = (node, key) => {
+    if (data.divider && data.divider.before === key)  // "new below", where reading stood
+      rows.push(el("div", "divider", data.divider.text));
+    rows.push(node);
+  };
+  const events = (k) => { for (const ev of eventsBefore.get(k) || []) put(renderEvent(ev), ev.key); };
+  for (const p of data.posts) {
+    events(p.id);
+    put(renderPost(p, false), p.id);
+  }
+  events("");
+  return newestFirst ? rows.reverse() : rows;
+}
+
+// an event's row (common/activity.EventParts — the windows' row, the phone's): who, what,
+// when, the post it is about, × and a request's yes / no. Every action is a fedtail: link:
+// a name, the post — the page opens them as any link; × and the answers — /api/link, the
+// windows' way. Unread until seen on screen, as a post; its key ("event:<id>") goes to
+// /api/read with the posts' ids.
+function renderEvent(ev) {
+  const x = ev.event;
+  const row = el("article", "event" + (x.unread ? " unread" : ""));
+  row.dataset.id = ev.key;
+  row.dataset.kind = x.kind;
+  const top = el("div", "ev-top");
+  const who = el("span", "ev-who");
+  if (x.notice) who.append(el("b", "", "⚠ " + x.notice));  // the server's own: no one did it
+  else {
+    x.people.forEach(([name, url], i) => {
+      if (i) who.append(", ");
+      const a = el("a", "ev-name", name);
+      a.href = url;
+      who.append(a);
+    });
+    if (x.more) who.append(" " + x.more);
+  }
+  who.append(el("span", "muted", " — " + x.what + (x.when ? " · " + x.when : "")));
+  if (x.tip) who.title = x.tip;
+  const hide = el("button", "tool ev-hide", "×");
+  hide.type = "button";
+  hide.title = x.hide_tip;
+  hide.onclick = () => linkAct(x.hide, null);
+  top.append(who, hide);
+  row.append(top);
+  for (const pair of x.answers) {  // waiting for my yes: answered right here
+    const line = el("div", "ev-answers");
+    pair.forEach((url, i) => {
+      const [words, tip] = x.answer_words[i] || ["", ""];
+      const b = el("button", i === 0 ? "primary small" : "tool", words);
+      b.type = "button";
+      b.title = tip;
+      b.onclick = () => linkAct(url, null);
+      line.append(b);
+    });
+    row.append(line);
+  }
+  if (x.post) {
+    const a = el("a", "ev-post", x.post);
+    a.href = x.post_link;
+    row.append(a);
+  }
+  return row;
 }
 
 function olderButton() {
@@ -1208,12 +1277,10 @@ function makePane(name) {
   const body = el("div", "colposts");
   body.tabIndex = -1;
   sec.append(head, body);
-  const p = { name, el: sec, head: title, body, count, posts: [], obs: null, place: false };
+  const p = { name, el: sec, head: title, body, count, posts: [], obs: null };
   head.onclick = (e) => { if (!e.target.closest("button")) goLane(name); };
-  // a click on a card: the column comes into focus, the cursor on that card; a place
-  // (Activity, Requests) — its first click only brings it into focus
+  // a click on a card: the column comes into focus, the cursor on that card
   body.addEventListener("click", async (e) => {
-    if (p.place) { e.preventDefault(); e.stopPropagation(); goLane(name); return; }
     const card = e.target.closest(".post");
     if (!card || e.target.closest(
       "a, button, summary, img, video, audio, input, label, .alias, .ctx")) return;
@@ -1232,48 +1299,25 @@ async function loadPane(p, keep) {
   } catch (e) { p.body.textContent = w("web_load_error", { err: e.message }); return; }
   if (cols.panes.get(p.name) !== p) return;  // closed or focused meanwhile
   p.head.textContent = data.title;
-  if (data.place) {  // Activity, Requests: the place, as the page shows it
-    p.place = true;
-    let pg;
-    try {
-      pg = await api("/api/page?" + new URLSearchParams({ name: data.place, arg: "", tab: "",
-                                                         cursor: "" }));
-    } catch (e) { p.body.textContent = w("web_load_error", { err: e.message }); return; }
-    if (cols.panes.get(p.name) !== p) return;
-    const top = p.body.scrollTop;
-    renderPlace(pg, p.body, true);
-    if (keep) p.body.scrollTop = top;
-    const l = state.lanes.find((x) => x.name === p.name);
-    p.count.textContent = l && l.unread ? "· " + l.unread : "";
-    return;
-  }
   const newestFirst = state.me.order === "newest_first";
   if (newestFirst) data.posts.reverse();
   let anchor = null, oldTop = 0;
   if (keep) {
     const box = p.body.getBoundingClientRect();
-    for (const c of p.body.querySelectorAll(".post")) {
+    for (const c of p.body.querySelectorAll(".post, .event")) {
       if (c.getBoundingClientRect().bottom > box.top + 4) { anchor = c.dataset.id; break; }
     }
-    if (anchor) oldTop = p.body.querySelector(`.post[data-id="${CSS.escape(anchor)}"]`)
+    if (anchor) oldTop = p.body.querySelector(`[data-id="${CSS.escape(anchor)}"]`)
       .getBoundingClientRect().top;
   }
   p.posts = data.posts;
   p.body.textContent = "";
-  if (!data.posts.length)
+  if (!data.posts.length && !(data.events || []).length)
     p.body.append(emptyBox(w(data.empty_browse ? "browse_empty" : "web_empty")));
-  for (const post of data.posts) {
-    const card = renderPost(post, false);
-    if (data.divider && data.divider.before === post.id) {
-      const d = el("div", "divider", data.divider.text);
-      if (newestFirst) p.body.append(card, d); else p.body.append(d, card);
-      continue;
-    }
-    p.body.append(card);
-  }
+  p.body.append(...laneRows(data, newestFirst));
   paneCount(p);
   paneRead(p);
-  const again = anchor && p.body.querySelector(`.post[data-id="${CSS.escape(anchor)}"]`);
+  const again = anchor && p.body.querySelector(`[data-id="${CSS.escape(anchor)}"]`);
   if (again) {
     p.body.scrollTop += again.getBoundingClientRect().top - oldTop;
   } else if (data.posts.length) {  // where the lane starts: the oldest new, else the newest
@@ -1285,13 +1329,17 @@ async function loadPane(p, keep) {
     if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
   }
   if (state.me.mark_read === "on_open" && !keep) {
-    const ids = data.posts.filter((x) => x.unread).map((x) => x.id);
+    const ids = data.posts.filter((x) => x.unread).map((x) => x.id).concat(unseenEvents(data));
     if (ids.length) api("/api/read", { ids }).catch(() => {});
   }
 }
 
+function unseenEvents(data) {  // the keys of a lane's event rows not seen yet ("event:<id>")
+  return (data.events || []).filter((ev) => ev.event.unread).map((ev) => ev.key);
+}
+
 function paneCount(p) {
-  const n = p.posts.filter((x) => x.unread).length;
+  const n = p.posts.filter((x) => x.unread).length + p.body.querySelectorAll(".event.unread").length;
   p.count.textContent = n ? "· " + n : "";
   navCount(p.name, n);
 }
@@ -1310,7 +1358,7 @@ function paneRead(p) {  // reading.mark_read = on_scroll: a card seen whole in a
       p.obs.unobserve(e.target);
     }
   }, { root: p.body, threshold: 0.9 });
-  for (const c of p.body.querySelectorAll(".post.unread")) p.obs.observe(c);
+  for (const c of p.body.querySelectorAll(".post.unread, .event.unread")) p.obs.observe(c);
 }
 
 // the windows' curtain: the opossum over an empty lane — swinging while a poll round is
@@ -1358,8 +1406,9 @@ function swing(busy) {
   }, left);
 }
 
-function countUnread() {
-  const unread = state.posts.filter((p) => p.unread).length;
+function countUnread() {  // the lane's posts and its events' rows not seen yet
+  const unread = state.posts.filter((p) => p.unread).length +
+    document.querySelectorAll("#posts .event.unread").length;
   $("#count").textContent = unread ? "· " + unread : "";
   navCount(state.lane, unread);
 }
@@ -1369,9 +1418,9 @@ function navCount(name, unread) {  // the lane's number in the sidebar, as read 
   if (a) { if (unread) a.textContent = String(unread); else a.remove(); }
 }
 
-function firstVisible() {
+function firstVisible() {  // the first card or event row in sight: where a redraw stays
   const box = $("#posts").getBoundingClientRect();
-  for (const c of document.querySelectorAll("#posts .post")) {
+  for (const c of document.querySelectorAll("#posts .post, #posts .event")) {
     const r = c.getBoundingClientRect();
     if (r.bottom > box.top + 4) return c;
   }
@@ -1390,7 +1439,7 @@ function watchRead(box) {
       observer.unobserve(e.target);
     }
   }, { root: box, threshold: 0.9 });
-  for (const c of box.querySelectorAll(".post.unread")) observer.observe(c);
+  for (const c of box.querySelectorAll(".post.unread, .event.unread")) observer.observe(c);
 }
 
 function unmark(card) {  // a card seen: no longer marked new; its id goes to the server
@@ -1417,16 +1466,16 @@ async function flushRead() {
   try { await api("/api/read", { ids }); } catch (e) { /* the next look marks them */ }
 }
 
-async function markAllRead() {
+async function markAllRead() {  // the lane's posts read, its events seen (all of them)
   const ids = state.posts.filter((p) => p.unread).map((p) => p.id);
-  for (const c of document.querySelectorAll("#posts .post.unread")) {
+  for (const c of document.querySelectorAll("#posts .post.unread, #posts .event.unread")) {
     c.classList.remove("unread");
     const dot = c.querySelector(".head .dot");
     if (dot) dot.remove();
   }
   for (const p of state.posts) p.unread = false;
   countUnread();
-  if (ids.length) await api("/api/read", { ids }).catch((e) => toast(e.message));
+  await api("/api/read", { ids, lane: state.lane }).catch((e) => toast(e.message));
   loadLanes();
 }
 
@@ -1976,8 +2025,7 @@ async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
   try { pg = await api("/api/page?" + q); }
   catch (e) { box.textContent = w("web_load_error", { err: e.message }); return; }
   if (into === "side" ? state.side !== token : state.side_main !== token) return;
-  if (into === "main" && state.lane && !["activity", "requests"].includes(state.lane)
-      && name !== state.lane) return;
+  if (into === "main" && state.lane && name !== state.lane) return;
   state.place = { name, arg: arg || "", tab: pg.tab, into };
   if (into === "side") $("#side-title").textContent = pg.title;
   renderPlace(pg, box);

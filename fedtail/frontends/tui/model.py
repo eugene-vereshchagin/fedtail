@@ -169,14 +169,12 @@ class DeleteGuard:
 
 
 def lane_label(core, name, width=22):
+    """(title, number) of a lane's row on the left. The number is the core's for every
+    lane alike (common/sidebar.count): unread posts, events not seen in a lane that
+    takes them; nothing for a browse lane."""
+    from ..common import sidebar
     title = core.lane_title(name) or _("lane_" + name)
-    lane = core.lane_by_name.get(name)
-    if name == "activity":  # not posts: its own "seen" mark
-        n = _safe(lambda: core.activity_unread())
-    elif name == "requests":
-        n = _safe(lambda: len(core.follow_requests()))
-    else:
-        n = 0 if lane is None or lane.lazy or lane.source is None else core.unread_count(name)
+    n = sidebar.count(core, name)
     count = f" {n}" if n else ""
     room = max(4, width - len(count))
     if len(title) > room:
@@ -184,61 +182,40 @@ def lane_label(core, name, width=22):
     return title, n
 
 
-def _safe(fn):
-    try:
-        return int(fn() or 0)
-    except (AttributeError, TypeError, ValueError):  # a core without it (an old fake)
-        return 0
-
-
-# Activity.kind → what the line says (the Qt window's words where it has them)
-ACTIVITY_WORD = {"like": "act_favourite", "share": "act_reblog", "follow": "act_follow",
-                 "poll": "act_poll", "update": "act_update", "post": "act_status",
-                 "mention": "act_mention", "quote": "act_quote", "reaction": "act_reaction",
-                 "follow_request": "act_follow_request"}
-REQUEST_WORD = {"follow": "act_follow_request", "reply": "act_pending.reply",
-                "like": "act_pending.favourite", "share": "act_pending.reblog"}
-
-
-def show_activity(a, width=80, unread=False):
-    """One activity row (an Activity of core.view) as Shown: who, what, when; the post
-    it is about below, in a line."""
-    out = Shown()
-    if a.who is not None:
-        out.head.append(("who", "@" + (a.who.handle or "?")))
-        name = (a.who.name or "").strip()
-        if name and name != a.who.username:
-            out.head.append(("name", name))
-    word = REQUEST_WORD.get(a.asks) if a.kind == "request" else ACTIVITY_WORD.get(a.kind)
-    if a.kind == "reaction" and a.emoji:
-        what = f"{a.emoji} " + _("act_reaction")
-    elif a.kind == "notice":
-        what = a.notice or _("act_other")
+def event_lines(parts):
+    """An event's row (common/activity.EventParts) as lines of (kind, text, link):
+    who (each name opens the person) — what · when, × (hides the row), a request's
+    yes / no, the post it is about (opens its thread). Every link is a fedtail: one
+    (common/links.py); link None — just words. The same parts the windows draw."""
+    from ..common.activity import ANSWER_WORDS
+    top = []
+    if parts.notice:  # from the server itself: what happened, not who did it
+        top.append(("notice", "⚠ " + parts.notice, None))
     else:
-        what = _(word) if word else _("act_other")
-    out.head.append(("boost", what))
-    if a.count > 1:  # a server's group: the rest of them
-        out.head.append(("time", _("act_more", n=a.count - 1)))
-    out.head.append(("time", when(a.created)))
-    if unread:
-        out.head.append(("unread", "●"))
-    if a.post is not None:
-        out.body = [snippet(a.post, max(20, width))]
-    return out
-
-
-def show_request(acc, width=80):
-    """A follow request as Shown: who asks; a / d — accept / reject."""
-    out = Shown()
-    out.head.append(("who", "@" + (acc.handle or "?")))
-    name = (acc.name or "").strip()
-    if name and name != acc.username:
-        out.head.append(("name", name))
-    note = html_to_text(acc.note or "").strip()
-    if note:
-        out.body = textwrap.wrap(note, max(20, width))[:3]
-    out.foot = _("tui_request_keys")
-    return out
+        for i, (who, link) in enumerate(parts.people):
+            if i:
+                top.append(("muted", ", ", None))
+            top.append(("who", who, link))
+        if parts.more:
+            top.append(("name", " " + parts.more, None))
+    top.append(("muted", " — " + parts.what + (f" · {parts.when}" if parts.when else ""),
+                None))
+    if parts.unread:
+        top.append(("unread", " ●", None))
+    top.append(("hide", "  [×]", parts.hide))
+    lines = [top]
+    for yes, no in parts.answers:  # waiting for my yes: answered right here
+        line = []
+        for url, (words, _tip) in zip((yes, no), ANSWER_WORDS, strict=True):
+            if line:
+                line.append(("muted", " ", None))
+            line.append(("yes" if url == yes else "no", f"[{_(words)}]", url))
+        lines.append(line)
+    if parts.post:
+        lines.append([("event_post", parts.post, parts.post_link)])
+    if parts.answers:
+        lines.append([("muted", _("tui_request_keys"), None)])
+    return lines
 
 
 def ordered_lanes(core):

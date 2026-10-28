@@ -141,8 +141,7 @@ def lane_menu(win, row):
             box.append(home)
     elif win.cfg["lists"]["enabled"]:
         item(_("list_new"), win.new_list)
-    if not name.startswith(("list:", "tags:")) and name in view.lane_by_name and \
-            name not in ("activity", "requests"):
+    if not name.startswith(("list:", "tags:")) and name in view.lane_by_name:
         item(_("le_edit_lane"), lambda: win.open_place("lane", name))
     item(_("le_title") + "…", lambda: win.open_place("lanes"))
     pop.set_child(box)

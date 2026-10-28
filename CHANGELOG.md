@@ -2,6 +2,16 @@
 
 ## 0.22.0 — in progress
 
+- Any event in any lane: events are posts' equals in the lanes' rules. Activity and
+  Follow requests are now lanes of events only, built by the same lane model as every other
+  lane (one counter, one "seen", the same ×, the same "mark all read"); Activity's quick
+  filters are its rule's switches (`switch`), editable like any lane's. A follow request
+  is an event a lane's rule may take (`event = "follow_request"`) — beside posts too — and
+  its row with "Approve" / "Reject" is the same in every lane and every interface (one
+  description, `fedtail:` links). The special Activity and Requests places of every
+  interface are gone; a lane of one's own written as `kind = "activity"` before 0.22 is
+  read as the set's rule.
+
 - Sync: a draft's pictures travel with it — the same picture, its description and focus
   point on the other device. Each is sealed with the account's key and named by a keyed
   hash, so it goes once however often the draft is saved; a sent or emptied draft takes

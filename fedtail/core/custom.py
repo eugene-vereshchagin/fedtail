@@ -6,9 +6,11 @@ A lane of one source is a view of that source's stream: its rule filters what th
 holds (Home, Bots, To me…), and the rest of fedtail treats it as it always did. A lane of
 several sources has a stream of its own, `custom:<name>`, filled by the core after each poll:
 the new items of its sources go through its rule (`route`); a new lane, or one whose rule
-changed, is filled from what is stored already (`backfill`). Activity, follow requests, the
-server's lists and the saved tag lanes are kinds of their own (kind = …).
-"""
+changed, is filled from what is stored already (`backfill`). A lane's conditions of events
+(`event = …`) take likes, follows, follow requests… — Activity and Requests are such lanes,
+of events only, and any other lane may take events among its posts. The server's lists and
+the saved tag lanes are slots (slot = "lists" / "tags"): where the lanes the server or the
+tag groups make stand among the others."""
 
 import hashlib
 import json
@@ -27,7 +29,7 @@ FEED_PREFIXES = ("list:", "tags:", "account:", "link:", "quotes:", "remote:", "s
                  "rss:")
 DEFAULT_FEED = "home"
 BACKFILL_ROWS = 3000  # per feed, the newest: what a new lane starts with
-KINDS = {"activity", "requests", "lists", "tags"}  # lanes that aren't a rule
+SLOTS = {"lists", "tags"}  # not a lane: where the lists' and tag groups' own lanes stand
 
 
 def is_custom(name):
@@ -73,6 +75,8 @@ class Custom:
         # conditions of events (likes, follows… — `event = …`): the lane shows those rows
         # of Activity too; they ask no stream of posts
         self.event_conds = [c for c in rule.any if "event" in c.sets]
+        # a lane of events only (Activity, Requests): no stream of posts at all
+        self.events_only = bool(self.event_conds) and len(self.event_conds) == len(rule.any)
         feeds = set()
         for cond in rule.any:
             if cond not in self.event_conds:
@@ -80,10 +84,12 @@ class Custom:
         bad = sorted(f for f in feeds if not _feedable(f))
         if bad:
             self.warnings.append(f"sources not in this version: {', '.join(bad)}")
-        self.feeds = {f for f in feeds if _feedable(f)} or {DEFAULT_FEED}
+        self.feeds = set() if self.events_only else \
+            ({f for f in feeds if _feedable(f)} or {DEFAULT_FEED})
         # one source: the lane is a view of its stream; several: a stream of its own
         self.routed = len(self.feeds) > 1
-        self.stream = PREFIX + self.name if self.routed else next(iter(self.feeds))
+        self.stream = None if self.events_only else \
+            PREFIX + self.name if self.routed else next(iter(self.feeds))
         self.needs = rule.needs  # every axis, chips' too (for the quick filters)
         # what deciding "in the lane or not" needs: a condition of `any` that asks nothing
         # (`{}`) takes every post, so then only `none` matters — Home's chips cost nothing
@@ -105,7 +111,19 @@ class Custom:
         from ..i18n import current_language
         return t.get(current_language()) or t.get("en") or next(iter(t.values()))
 
+    def wants_event(self, word):
+        """Can this lane show events of this word (atoms.EVENTS: "follow_request"…)? Its
+        `none` aside: whether the server is asked for them at all hangs on this."""
+        if any(set(n.sets) == {"event"} and word in n.sets["event"] and not n.counts
+               and not n.text and n.age is None and not n.inner for n in self.rule.none):
+            return False  # kept out whole (`none = [{ event = "…" }]`)
+        return any(word in c.sets["event"] for c in self.event_conds)
+
     def lane(self):
+        if self.events_only:  # no posts: its rows are the events it takes
+            return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
+                              group="standard" if self.rule.group == "standard"
+                              else "personal", events=True, open_at=self.rule.open_at)
         if self.routed:
             keep = lanes._all  # its stream holds what the rule took
         else:
@@ -121,7 +139,8 @@ class Custom:
                           window=self.rule.window.total_seconds() if self.rule.window else 0.0,
                           filter_context=self.rule.filter_context,
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
-                          view=self.rule.view, open_at=self.rule.open_at)
+                          view=self.rule.view, open_at=self.rule.open_at,
+                          events=bool(self.event_conds))
 
     def takes(self, status, world, source):
         world = world or atoms.World()
@@ -222,6 +241,18 @@ def rule_key(rule):
 
 
 # ---- the lanes of a config: the set's, with config.toml's own over them ----------------
+def slot_of(table):
+    """"lists" / "tags" when the table is a slot (`slot = …`; `kind = …` before 0.22),
+    else None."""
+    if not isinstance(table, dict):
+        return None
+    got = table.get("slot", table.get("kind"))
+    return got if got in SLOTS else None
+
+
+LEGACY_EVENT_KINDS = {"activity", "requests"}  # `kind = …` lanes before 0.22: rules now
+
+
 def _name(table):
     n = table.get("name") if isinstance(table, dict) else None
     return lanes.canonical(n) if isinstance(n, str) else n
@@ -238,6 +269,8 @@ def definitions(cfg):
         n = _name(t)
         if not isinstance(t, dict) or not n or n in own:  # the first of a name wins
             continue
+        if t.get("kind") in LEGACY_EVENT_KINDS and "any" not in t:
+            continue  # `kind = "activity"` of before 0.22: the set's rule of that name stands
         own.add(n)
         t = dict(t, name=n)
         if n in names:
@@ -284,11 +317,14 @@ def load(cfg):
             rule = atoms.Rule.parse(t)
             warnings += [f"lanes.custom[{i}] ?: {w}" for w in rule.warnings]
     for n, t, own in definitions(cfg):
-        if n in seen or (t.get("kind") in KINDS):
+        if n in seen or slot_of(t):
             continue
         seen.add(n)
-        rule = atoms.Rule.parse({k: v for k, v in t.items() if k not in ("kind",)})
+        rule = atoms.Rule.parse({k: v for k, v in t.items() if k not in ("kind", "slot")})
         rule.none = [c for c in rule.none if not c.apart or c.apart in shown]
+        if n == "activity" and not (cfg.get("activity") or {}).get("requests", True):
+            # activity.requests = false: the follow requests stay out of Activity
+            rule.none.append(atoms.Condition.parse({"event": "follow_request"}))
         title = t.get("title") if own else None
         if isinstance(title, dict):
             title = {k: v for k, v in title.items() if v} or None
@@ -308,7 +344,7 @@ def build(cfg, lists=(), tag_groups=()):
     one's own lanes lanes.enabled doesn't name come after; the lists and the tag lanes
     where their kind stands (else at the end); Unsorted at the very end."""
     rules = {c.name: c for c in load(cfg)[0]}
-    kinds = {n: t.get("kind") for n, t, _o in definitions(cfg) if t.get("kind") in KINDS}
+    kinds = {n: slot_of(t) for n, t, _o in definitions(cfg) if slot_of(t)}
     order = shown_names(cfg)
     out, seen = [], set()
     for n in order:
@@ -326,8 +362,6 @@ def build(cfg, lists=(), tag_groups=()):
                 if lane.name not in done:
                     done.add(lane.name)
                     out.append(lane)
-        elif kind in ("activity", "requests"):
-            out.append(lanes.Lane(n, None, lanes._all, group="personal"))
         elif n in rules:
             out.append(rules[n].lane())
     if cfg["lanes"].get("unsorted", True):  # shown only while it holds something (Core)

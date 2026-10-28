@@ -66,25 +66,6 @@ def _then(fut, fn):
     return out
 
 
-# the quick filters over Activity: which kinds of rows (fedtail.model) each one shows
-ACTIVITY_FILTERS = ("all", "reactions", "follows", "requests", "mine", "other")
-_ACTIVITY_KINDS = {
-    "reactions": {"like", "share", "quote", "reaction", "unliked"},
-    "follows": {"follow", "unfollow", "gone", "lost", "moved"},
-    "requests": {"request"},
-    "mine": {"my_follow"},
-}
-
-
-def activity_keeps(a, which):
-    """Does the quick filter `which` show this Activity? "other": what no filter has."""
-    if which in (None, "", "all"):
-        return True
-    if which == "other":
-        return not any(a.kind in kinds for kinds in _ACTIVITY_KINDS.values())
-    return a.kind in _ACTIVITY_KINDS.get(which, ())
-
-
 # Core attributes the frontends may use as they are: nothing in them is a server's JSON
 PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
@@ -354,8 +335,11 @@ class View:
         self._core.mark_read([i if isinstance(i, str) else i.id for i in ids])
 
     def mark_lane_read(self, lane):
+        """Every post of the lane read — and its events seen, if it takes any."""
         ids = sorted(self.unread(self.entries(lane)))
         self.mark_read(ids)
+        if getattr(self.lane_by_name.get(lane), "events", False):
+            self._core.mark_activity_seen()
         return ids
 
     def parents(self, entries):
@@ -600,30 +584,10 @@ class View:
         return _then(self._core.mute_thread(self._raw(real(post)), on), self._post_back)
 
     # ---- activity and follow requests (lanes that are not posts) -------------------
-    def activity(self, limit=300, which=None):
-        """[Activity] newest first: who liked, shared, followed, mentioned… — through the
-        quick filter chosen (common/activity.py FILTERS; which: another one, "all")."""
-        if which is None:
-            which = self.activity_filter_now()
-        out = [self._activity_of(n) for n in self._core.activity_entries(limit)]
-        return [a for a in out if activity_keeps(a, which)]
-
-    def activity_filters_offered(self):
-        """The quick filters this Activity has: ACTIVITY_FILTERS without the ones that
-        could show nothing here (Core.activity_filters)."""
-        got = getattr(self._core, "activity_filters", None)
-        return tuple(got()) if got else ACTIVITY_FILTERS
-
-    def activity_filter_now(self):
-        """The quick filter chosen (Core.choice: this run, or kept)."""
-        choice = getattr(self._core, "choice", None)
-        which = choice("activity_filter", "all") if choice else "all"
-        return which if which in self.activity_filters_offered() else "all"
-
-    def set_activity_filter(self, which):
-        """This run only — or kept, like every quick filter, with feed.remember_choices."""
-        self._core.set_choice("activity_filter", which if which in ACTIVITY_FILTERS else "all")
-        self._core.emit("activity_updated", None)
+    def activity(self, limit=300):
+        """[Activity] newest first: what the lane Activity takes (all of it, its chips
+        aside); without that lane — every event fedtail has."""
+        return [self._activity_of(n) for n in self._core.activity_entries(limit)]
 
     def lane_events(self, lane, limit=200):
         """[Activity] newest first: the events a lane of rules shows among its posts."""
@@ -711,11 +675,8 @@ class View:
             for name in names:
                 lane = c.lane_by_name.get(name)
                 last, total = None, 0
-                if name == "activity":
-                    unread = c.activity_unread()
-                elif name == "requests":
-                    reqs = getattr(c, "follow_requests", None) or ()
-                    unread = total = len(reqs)
+                if getattr(lane, "events", False) and not getattr(lane, "source", None):
+                    unread = total = c.unread_count(name)  # a lane of events only
                 elif getattr(lane, "lazy", False):
                     unread = 0  # a browsed lane: nothing is "unread" in it
                 else:

@@ -267,29 +267,50 @@ class BridgeTest(_Base):
         self.assertIn("grew", self.call("reveal", "home", 0))
         self.assertIn("threads", self.call("status"))
 
-    def test_activity_is_rows_not_an_empty_lane(self):
-        """Activity (and follow requests) are no posts: the lane brings the windows' rows
-        with their buttons, and on screen the activity is seen — its count goes."""
+    def test_activity_is_a_lane_of_events(self):
+        """Activity is a lane like any (a rule of events only): the lane brings its rows as
+        events in their parts, every button a fedtail: link the phone runs through link();
+        a row seen on screen goes to read() with its "event:<id>" key — its count goes."""
         self.demo()
-        self.bridge._core().store.kv_set("activity_seen", "")  # none of it seen yet
-        lanes = {x["name"]: x for s in self.call("hub")["sections"] for x in s["lanes"]}
+        core = self.bridge._core()
+        core.store.kv_set("activity_seen", "")  # none of it seen yet
+        hub = self.call("hub")
+        lanes = {x["name"]: x for s in hub["sections"] for x in s["lanes"]}
+        you = next(s for s in hub["sections"] if s["key"] == "you")
+        self.assertIn("activity", [x["name"] for x in you["lanes"]])  # by its rule, not name
         self.assertTrue(lanes["activity"]["unread"])
         got = self.call("lane", "activity")
-        self.assertEqual(got["place"], "activity")
-        rows = got["page"]["rows"]
+        self.assertNotIn("place", got)
+        self.assertNotIn("page", got)
+        self.assertEqual(got["posts"], [])
+        rows = {e["key"]: e["event"] for e in got["events"]}
         self.assertTrue(rows)
-        self.assertTrue(any(r["title"].startswith("● ") for r in rows))  # new ones marked
-        self.assertTrue(all(b["act"] for r in rows for b in r["buttons"]))
-        lanes = {x["name"]: x for s in self.call("hub")["sections"] for x in s["lanes"]}
-        # seen on screen: only the follow requests still waiting count (activity.requests)
-        self.assertEqual(lanes["activity"]["unread"], len(self.bridge._core().follow_requests))
-        # a row's ×: done through the place, which comes back drawn again (a request's ×
-        # leaves it waiting: its buttons answer it)
-        dismiss = next(b for r in rows for b in r["buttons"] if b["act"][1] == "dismiss"
-                       and not str(b["act"][-1]).startswith("follow_request:"))
-        after = self.call("place_act", json.dumps(dismiss["act"]))
-        self.assertEqual(len(after["page"]["rows"]), len(rows) - 1)
-        self.assertNotIn("requests", lanes)  # requests are in Activity now (activity.requests)
+        self.assertTrue(all(k.startswith("event:") for k in rows))
+        self.assertTrue(any(x["unread"] for x in rows.values()))
+        self.assertTrue(all(u.startswith("fedtail:account/") for x in rows.values()
+                            for _n, u in x["people"]))
+        self.assertTrue(got["clear"])  # a lane of events only: "Clear"
+        # a like seen on screen: seen, the count goes down by it
+        before = core.unread_count("activity")
+        like = next(k for k, x in rows.items() if x["kind"] == "favourite")
+        self.call("read", json.dumps([like]))
+        self.assertLess(core.unread_count("activity"), before)
+        # a request answered by its button (a fedtail: link, as a card's ⋯ item)
+        req = next(x for x in rows.values() if x["answers"])
+        self.assertTrue(self.call("link", req["answers"][0][0]).get("refresh"))
+        self.assertEqual(core.follow_requests, [])
+        # × hides a row
+        other = next(x for k, x in rows.items() if k != like and not x["answers"])
+        self.call("link", other["hide"])
+        after = {e["key"] for e in self.call("lane", "activity")["events"]}
+        self.assertEqual(len(after), len(rows) - 2)  # the answered request, the hidden row
+        # "mark all read" over the lane: its events all seen
+        self.call("read", "[]", "activity")
+        self.assertEqual(core.unread_count("activity"), 0)
+        # "Clear": asked first, then every notification goes
+        self.assertIn("confirm", self.call("lane_clear", "activity"))
+        self.assertEqual(self.call("lane_clear", "activity", True), {"refresh": True})
+        self.assertNotIn("requests", lanes)  # requests are in Activity (no lane of their own)
 
     def test_the_command_line_is_off_on_the_phone_unless_asked(self):
         self.demo()

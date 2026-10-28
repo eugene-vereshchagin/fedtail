@@ -93,8 +93,8 @@ class CoreTurnsTest(Base):
         api, core.api = core.api, None
         self.assertIsNone(core.poll_once())  # no API: no round
         core.api = api
-        core._note_fresh({}, (), ["a", "b"])  # activity that isn't a dict: by count
-        self.assertEqual(core._fresh["activity"], {"0", "1"})
+        core._note_fresh({}, (), ["a", "b"])  # activity that isn't a dict: none of a lane's
+        self.assertNotIn("activity", core._fresh)
         lanes = {k: v for k, v in core.lane_by_name.items() if k != "direct"}
         with mock.patch.object(core, "lane_by_name", lanes):
             self.assertEqual(core._carry_my_direct([]), 0)

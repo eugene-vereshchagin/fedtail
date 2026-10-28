@@ -104,24 +104,35 @@ class ActivityRowsTest(TmpDir):
         super().setUp()
         i18n.setup("en")
 
-    def test_activity_and_request_rows(self):
-        from fedtail.protocols.mastodon.adapter import account, activity
+    def test_event_lines(self):
+        """An event's row: the windows' parts (common/activity.event_parts) as lines,
+        each action a fedtail: link — names, ×, a request's yes / no, the post."""
+        from fedtail.frontends.common import activity as act
+        from fedtail.protocols.mastodon.adapter import activity
         mine = status("001", ME, minute=1, text="my post")
         a = activity({"id": "a1", "type": "favourite", "account": BOB, "status": mine,
                       "created_at": "2099-10-14T11:00:00.000Z"})
-        shown = model.show_activity(a, width=40, unread=True)
-        kinds = dict(shown.head)
-        self.assertEqual(kinds["who"], "@bob@social.example")
-        self.assertEqual(kinds["boost"], i18n._("act_favourite"))
-        self.assertIn("unread", kinds)
-        self.assertEqual(shown.body, ["my post"])
-        f = activity({"id": "a2", "type": "follow", "account": BOB,
-                      "created_at": "2099-10-14T11:01:00.000Z"})
-        self.assertEqual(dict(model.show_activity(f).head)["boost"], i18n._("act_follow"))
-        self.assertEqual(model.show_activity(f).body, [])
-        req = model.show_request(account(BOB))
-        self.assertEqual(dict(req.head)["who"], "@bob@social.example")
-        self.assertIn("a —", req.foot)
+        row = act.rows([a], "", model.when)[0]
+        lines = model.event_lines(act.event_parts(row, model.when))
+        top = lines[0]
+        self.assertEqual(top[0][0], "who")
+        self.assertTrue(top[0][2].startswith("fedtail:account/"))
+        self.assertIn(i18n._("act_favourite"), "".join(t for _k, t, _l in top))
+        self.assertIn(("unread", " ●", None), top)
+        self.assertEqual([x[2] for x in top if x[0] == "hide"], ["fedtail:eventhide/a1"])
+        self.assertEqual(lines[-1][0][0], "event_post")
+        self.assertIn("my post", lines[-1][0][1])
+        self.assertTrue(lines[-1][0][2].startswith("fedtail:thread"))
+        # a follow request waiting: its yes / no, and the keys for them
+        req = activity({"id": "follow_request:Q", "type": "follow_request",
+                        "account": BOB})
+        row = act.rows([req], "", model.when)[0]
+        lines = model.event_lines(act.event_parts(row, model.when))
+        answers = [x for line in lines for x in line if x[0] in ("yes", "no")]
+        self.assertEqual([x[2] for x in answers], ["fedtail:eventyes/follow_request%3AQ",
+                                                   "fedtail:eventno/follow_request%3AQ"])
+        self.assertIn(i18n._("ok_interaction"), answers[0][1])
+        self.assertEqual(lines[-1][0][1], i18n._("tui_request_keys"))
 
     def test_activity_and_requests_counted(self):
         from . import fakes
@@ -134,6 +145,7 @@ class ActivityRowsTest(TmpDir):
         core.poll_once()
         view = View(core)
         self.assertEqual(model.lane_label(view, "activity")[1], 1)
-        self.assertEqual(model.lane_label(view, "requests")[1], 1)
+        self.assertEqual(model.lane_label(view, "requests")[1], 1)  # the core's number
+        self.assertEqual(model.lane_label(view, "requests")[1], view.unread_count("requests"))
         self.assertEqual([a.kind for a in view.activity()], ["like", "follow"])
         self.assertEqual([x.handle for x in view.follow_requests()], ["quinn@example.org"])

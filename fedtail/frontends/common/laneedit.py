@@ -27,8 +27,8 @@ from ...core import atoms, config, config_edit, custom, presets
 from ...i18n import _, current_language
 from . import settings
 
-# the kinds of lanes that aren't rules: the editor moves them, nothing more
-NOT_RULES = custom.KINDS | {"lists", "tags"}
+# the slots, not lanes: where the lists' and tag groups' lanes stand — moved, nothing more
+NOT_RULES = custom.SLOTS
 SOURCES = tuple(sorted(custom.FEEDS))
 GROUPS = ("personal", "standard")
 READS = ("through", "browse")
@@ -146,13 +146,14 @@ def _groups(words):
 
 
 def problems(table):
-    """What the rule's parser says against a lane (a table): [] — it reads. A lane that
-    isn't a rule (Activity, requests, lists, tags: `kind`) has nothing to parse."""
-    kind = table.get("kind") if isinstance(table, dict) else None
-    if kind is not None or custom._name(table) in ("lists", "tags"):
-        return [] if kind in custom.KINDS or kind is None else \
-            [f"kind: {kind!r} — one of {', '.join(sorted(custom.KINDS))}"]
-    return list(atoms.Rule.parse(table).warnings)
+    """What the rule's parser says against a lane (a table): [] — it reads. A slot
+    (lists, tags: `slot`) has nothing to parse."""
+    if custom.slot_of(table) or custom._name(table) in custom.SLOTS:
+        return []
+    slot = table.get("slot") if isinstance(table, dict) else None
+    if slot is not None:
+        return [f"slot: {slot!r} — one of {', '.join(sorted(custom.SLOTS))}"]
+    return list(atoms.Rule.parse({k: v for k, v in table.items() if k != "kind"}).warnings)
 
 
 class Editor:
@@ -185,11 +186,10 @@ class Editor:
 
     # ---- what a lane is ------------------------------------------------------------------
     def kind(self, name):
-        """"rule", or what else it is: "lists", "tags", "activity", "requests"."""
-        if name in ("lists", "tags"):
+        """"rule", or the slot it is: "lists", "tags"."""
+        if name in custom.SLOTS:
             return name
-        t = self.tables.get(name) or {}
-        return t.get("kind") or "rule"
+        return custom.slot_of(self.tables.get(name) or {}) or "rule"
 
     def is_own(self, name):
         return name in self.own
@@ -205,8 +205,11 @@ class Editor:
         """Its table is the set's own, word for word (a copy written into the file)."""
         base = self.base.get(name)
         t = self.tables.get(name)
-        return base is not None and t is not None and dict(t, name=name) == dict(base,
-                                                                                 name=name)
+        if base is None or t is None:
+            return False
+        if custom.slot_of(t) and custom.slot_of(t) == custom.slot_of(base):
+            return True  # a slot, written `kind = …` before 0.22 or `slot = …`
+        return dict(t, name=name) == dict(base, name=name)
 
     def title(self, name):
         t = (self.tables.get(name) or {}).get("title")

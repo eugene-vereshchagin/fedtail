@@ -39,7 +39,7 @@ What's new in the latest versions, and the plans.
 - Who stopped following you
 - Activity says whom you followed
 - Someone new in a private talk — shown at once
-- Follow requests in Activity
+- Follow requests in any lane
 - A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself
 - `fedtail --check`: what the system lacks — and one apt line
 <!-- /include -->

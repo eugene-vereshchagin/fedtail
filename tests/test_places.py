@@ -182,21 +182,6 @@ class PlacesTest(unittest.TestCase):
         self.assertIn("account", [r.kind for r in p.rows])
         self.press(p, key="follow")
         self.assertIn("B", self.w.following)
-        self.w.requests = [BOB]
-        self.core.poll_once()
-        p = self.page("requests")
-        self.assertEqual([r.key for r in p.rows], ["B"])
-        self.press(p, key="yes")
-
-    def test_activity(self):
-        st = self.w.statuses["030"]
-        self.w.act("a1", "favourite", BOB, st, minute=1)
-        self.w.act("a2", "favourite", scenario.ALICE, st, minute=2)
-        self.core.poll_once()
-        p = self.page("activity")
-        self.assertEqual(len(p.rows), 1)  # two likes of one post: one row
-        self.assertIn("alice", p.rows[0].title.lower() + p.rows[0].title)
-        self.press(p, key="seen")
 
     def test_report_and_profile(self):
         p = self.page("report", "010")
@@ -248,7 +233,7 @@ class ReadUpToTest(unittest.TestCase):
         from fedtail.frontends.common.lane import read_up_to
         from fedtail.protocols.mastodon import adapter
 
-        from .fakes import BOB, status
+        from .fakes import status
         posts = [adapter.post(status(i, BOB, minute=m, vis="public"), "t")
                  for i, m in (("010", 10), ("012", 12), ("020", 20))]
         self.assertEqual(sorted(read_up_to(posts, "012")), ["010", "012"])

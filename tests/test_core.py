@@ -2271,7 +2271,8 @@ class CoreTest(TmpDir):
         w.requests = [BOB]
         core.poll_once()
         notes = [e for e in self.events if e[0] == "notify"]
-        self.assertEqual(notes[-1][1], [("requests", BOB)])
+        self.assertEqual([(lane, n["type"], n["account"]["id"]) for lane, n in notes[-1][1]],
+                         [("requests", "follow_request", "B")])  # an event, as Activity's
         core.poll_once()
         self.assertEqual(len([e for e in self.events if e[0] == "notify"]), len(notes))
         self.assertEqual(core.parent_of(core.store.get_status("014")), "missing")
@@ -2286,7 +2287,8 @@ class CoreTest(TmpDir):
         w.add(status("014", BOB, "xxx", "SOMEONE", minute=14), mention=True)  # excepted
         w.requests = [BOB]
         core.poll_once()
-        got = sorted((lane, x["id"]) for e in self.events if e[0] == "notify" for lane, x in e[1])
+        got = sorted((lane, (x.get("account") or {}).get("id") if "type" in x else x["id"])
+                     for e in self.events if e[0] == "notify" for lane, x in e[1])
         self.assertEqual(got, [("home", "010"), ("requests", BOB["id"])])
 
     def test_mentions_ordered_by_post_time(self):

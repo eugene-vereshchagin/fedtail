@@ -152,6 +152,15 @@ class LaneView(Gtk.Box):
         if not self.lazy:
             tools.append(read)
         tools.append(self._media_button())
+        # a lane of events only (Activity, Requests…): "Clear" — every notification, on
+        # the server too (where the server can)
+        self.clear_btn = None
+        if self.lm.events_only():
+            self.clear_btn = Gtk.Button(label=_("activity_clear"))
+            tip(self.clear_btn, _("activity_clear_tip"))
+            self.clear_btn.connect("clicked", lambda _b: self.clear())
+            self.clear_btn.set_visible(ctx.supports("dismiss"))
+            tools.append(self.clear_btn)
         refresh = Gtk.Button()  # as Qt's: the theme's picture alone, or the words
         self._dress(refresh, "refresh", _("refresh") + " (F5)")
         tip(refresh, _("refresh") + " (F5)")
@@ -217,6 +226,8 @@ class LaneView(Gtk.Box):
         self.dirty = False
         built = self.lm.build(self.positioned)
         self.info.set_text(built.info)
+        if self.clear_btn is not None:  # the server may have said it can't, meanwhile
+            self.clear_btn.set_visible(self.ctx.supports("dismiss"))
         # a live lane the server gives empty (mastodon.social and the like keep them
         # for their own): said in the lane, big, as Qt does
         self.empty_note.set_visible(bool(getattr(built, "empty", False)))
@@ -243,7 +254,10 @@ class LaneView(Gtk.Box):
         else:
             self._take_new(old_keys, index)
         for k in self.order:  # "you replied" under what's on screen: a reply just sent
-            self.rows[k].set_unread(k in self.unread)
+            card = self.rows[k]
+            if isinstance(card, EventRow) and card.ids != EventRow.ids_of(self.specs[k]):
+                card.update_spec(self.specs[k])  # its events changed: one more like…
+            card.set_unread(k in self.unread)
             self.rows[k].set_my_replies(self.specs[k].extra.get("my_replies", ()))
         self._pill(len(self.unread))
         self._older_visible()
@@ -255,6 +269,7 @@ class LaneView(Gtk.Box):
         scrolling was most of what a long lane cost (as Qt's apply_read)."""
         ids = set(ids)
         gone = [k for k in self.unread if self.specs.get(k) is not None
+                and self.specs[k].entry is not None  # an event's row: seen, not read
                 and (self.specs[k].entry.id in ids or real(self.specs[k].entry).id in ids)]
         if not gone:
             return
@@ -497,8 +512,8 @@ class LaneView(Gtk.Box):
     def _make(self, keys):
         for k in keys:
             sp = self.specs[k]
-            if sp.extra.get("event"):  # a like, a follow… a lane of rules shows: a line
-                card = EventLine(self.ctx, sp.extra["event"])
+            if sp.extra.get("event"):  # a like, a follow, a request… in any lane
+                card = EventRow(self.ctx, sp)
             else:
                 card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
                             short_id=sp.extra.get("short_id"),
@@ -648,6 +663,9 @@ class LaneView(Gtk.Box):
 
     def _older_visible(self):
         """'Earlier' only when the oldest post stored is on screen (or nothing is)."""
+        if self.lm.events_only():  # nothing older to fetch: events come with the poll
+            self.older.set_visible(False)
+            return
         if not self.keys:
             self.older.set_visible(not self.lazy)
             return
@@ -828,13 +846,19 @@ class LaneView(Gtk.Box):
         self._glimpsed = (self._glimpsed & self.unread) | glimpsed
         if unplaced:
             self._schedule_seen()
-        ids = self.lm.read([self.rows[k].entry.id for k in keys])
+        # an event's row goes by its key ("event:<id>"): LaneModel.read marks the events
+        # seen (up to the newest of them) and gives back the posts to mark read
+        events = [k for k in keys if self.rows[k].entry is None]
+        posts = [k for k in keys if self.rows[k].entry is not None]
+        ids = self.lm.read(events + [self.rows[k].entry.id for k in posts])
+        done = events + (posts if ids else [])
+        for k in done:
+            self.rows[k].set_unread(False)
+        self.unread -= set(done)
+        self._glimpsed -= set(done)
         if ids:
-            for k in keys:
-                self.rows[k].set_unread(False)
-            self.unread -= set(keys)
-            self._glimpsed -= set(keys)
             self.ctx.view.mark_read(ids)
+        if done:
             self._pill(len(self.unread))
         return GLib.SOURCE_REMOVE
 
@@ -864,6 +888,13 @@ class LaneView(Gtk.Box):
             card.set_unread(False)
         self.unread = set()
         self._pill(0)
+
+    def clear(self):
+        """Every notification gone, on the server too (a lane of events only): asked
+        first."""
+        view = self.ctx.view
+        self.ctx.win.confirm(_("activity_clear"), _("activity_clear_q"),
+                             lambda: self.ctx.win.call(view.clear_activity()))
 
     def load_older(self, fut=None):
         self.older.set_sensitive(False)
@@ -910,37 +941,92 @@ def y_in(widget, ancestor):
     return res[1] if res else None
 
 
-class EventLine(Gtk.Box):
-    """An event among a lane's posts (common/activity.py event_bit): who — what · when ·
-    about which post, one muted line; a click opens the post (or the person). Not a
-    post: never unread, nothing to mark."""
+class EventRow(Gtk.Box):
+    """An event's row in any lane that takes events — Activity, Requests, a lane of
+    one's own (common/activity.EventParts, the same parts every interface draws): who —
+    what · when, the post it is about, × and a request's yes / no. Every button is a
+    fedtail: link (common/links.py), handed to the window's link handler as a card's
+    links are. Unread until seen on screen, as a post is; its key ("event:<id>") goes to
+    LaneModel.read, so seen here is seen everywhere."""
 
-    entry = None
-    unread = False
+    entry = None  # not a post: what looks for a card's post finds none here
 
-    def __init__(self, ctx, entries):
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
-        from ..common.activity import event_bit
-        self.ctx = ctx
-        bit = event_bit(entries, ctx.theme.date)
-        lab = Gtk.Label(xalign=0, wrap=True)
-        lab.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        if bit.link:
-            lab.set_markup(link_markup(bit.link, bit.text))
-            lab.connect("activate-link", lambda _l, uri: (ctx.on_link(uri), True)[1])
+    def __init__(self, ctx, spec):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.ctx, self.key = ctx, spec.key
+        self.add_css_class("ft-card")
+        self.unread = None
+        self.update_spec(spec)
+
+    @staticmethod
+    def ids_of(spec):
+        """The events in a spec's row: the same ones — the same row, nothing to redo."""
+        return tuple(a.id for a in spec.extra.get("event") or ())
+
+    def update_spec(self, spec):
+        """The row drawn anew from its spec (its events changed: one more like…)."""
+        from ..common.activity import ANSWER_WORDS, event_parts
+        self.spec, self.ids = spec, self.ids_of(spec)
+        while (child := self.get_first_child()) is not None:
+            self.remove(child)
+            forget(child)
+        ctx = self.ctx
+        parts = event_parts(spec.extra["row"], ctx.theme.date, ctx.supports("dismiss_one"))
+        self.kind = parts.kind  # what it is about: tests, a stylesheet
+
+        def follow(_label, uri):
+            ctx.on_link(uri)
+            return True
+        esc = GLib.markup_escape_text
+        if parts.notice:  # from the server itself: what happened, not who did it
+            who = "<b>⚠ " + esc(parts.notice) + "</b>"
         else:
-            lab.set_text(bit.text)
-        lab.add_css_class("ft-event")
-        if bit.tip:
-            tip(lab, bit.tip)
-        self.append(lab)
+            who = ", ".join(link_markup(u, n) for n, u in parts.people)
+            who += (" " + esc(parts.more)) if parts.more else ""
+        line = Gtk.Label(xalign=0, wrap=True)
+        line.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        line.set_markup(f"{who} <span alpha='70%'>— {esc(parts.what)}"
+                        + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
+        line.set_hexpand(True)
+        if parts.tip:
+            tip(line, parts.tip)
+        line.connect("activate-link", follow)
+        x = Gtk.Button(label="×", valign=Gtk.Align.START, halign=Gtk.Align.END)
+        x.add_css_class("flat")
+        tip(x, parts.hide_tip)
+        x.connect("clicked", lambda _b, u=parts.hide: ctx.on_link(u))
+        # the words and × beside them — not a horizontal box (the words wrap: GTK 4.18)
+        self.append(side_by_side(line, x, 6))
+        for yes, no in parts.answers:  # waiting for my yes: answered right here
+            row = Gtk.Box(spacing=6)
+            row.set_halign(Gtk.Align.END)
+            for url, (words, about) in zip((yes, no), ANSWER_WORDS, strict=True):
+                b = Gtk.Button(label=_(words))
+                tip(b, _(about))
+                if url == yes:
+                    b.add_css_class("ft-primary")
+                b.connect("clicked", lambda _b, u=url: ctx.on_link(u))
+                row.append(b)
+            self.append(row)
+        if parts.post:
+            post = Gtk.Label(xalign=0, wrap=True)
+            post.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            post.set_markup(link_markup(parts.post_link, parts.post))
+            post.add_css_class("ft-muted")
+            post.connect("activate-link", follow)
+            self.append(post)
+        self.unread = None
+        self.set_unread(spec.unread)
 
-    def set_unread(self, _on):
-        pass
+    def set_unread(self, on):
+        on = bool(on)
+        if on == self.unread:
+            return
+        self.unread = on
+        (self.add_css_class if on else self.remove_css_class)("ft-unread")
 
     def set_my_replies(self, _replies):
         pass
 
     def update(self, _entry):
         pass
-

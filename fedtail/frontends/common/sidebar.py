@@ -19,15 +19,12 @@ def groups(view, cfg):
 
 
 def count(view, name):
-    """The number on a lane's row: unread posts; activity not seen; follow requests;
-    nothing for browse lanes (no "unread" there) or before login."""
+    """The number on a lane's row: unread posts — events not seen, in a lane of events
+    (the core counts both); nothing for browse lanes (no "unread" there) or before
+    login."""
     try:
         if not view.me:
             return 0
-        if name == "requests":
-            return len(view.follow_requests() or ())
-        if name == "activity":
-            return int(view.activity_unread() or 0)
         if getattr(view.lane_by_name.get(name), "lazy", False):
             return 0
         return int(view.unread_count(name) or 0)

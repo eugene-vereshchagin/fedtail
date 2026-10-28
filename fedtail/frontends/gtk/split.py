@@ -998,13 +998,13 @@ def post_at(lv, y=None):
             card = lv.rows[k]
             top = lv._y(card)
             if top is not None and top <= y < top + card.get_height():
-                return real(card.entry)
+                return real(card.entry) if card.entry is not None else None
     vtop = lv.adj.get_value()
     vbot = vtop + lv.adj.get_page_size()
     best = None
     for k in lv.order:
         card = lv.rows[k]
-        top = lv._y(card)
+        top = lv._y(card) if card.entry is not None else None  # an event's row: no post
         if top is None:
             continue
         if top >= vtop and top + card.get_height() <= vbot:

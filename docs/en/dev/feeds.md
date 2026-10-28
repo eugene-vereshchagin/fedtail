@@ -1,6 +1,6 @@
 # Free lanes: lanes you assemble yourself
 
-**Status: every lane is a rule** (27 Oct 2026: the sets are rules in `fedtail/data/presets.toml`, `core/presets.py`, `core/custom.py`). Before that — the first version: the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Since then: switches (chips), Unsorted, "Older" for a free lane, the sets written in rules, events in a lane (27 Oct). Not yet: follow requests in a lane of one's own (they stay in Activity), derived events (§2.4). The idea is the author's; this page is what it
+**Status: every lane is a rule** (27 Oct 2026: the sets are rules in `fedtail/data/presets.toml`, `core/presets.py`, `core/custom.py`). Before that — the first version: the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Since then: switches (chips), Unsorted, "Older" for a free lane, the sets written in rules, events in a lane (27 Oct), derived events (§2.4, `core/derived.py`); 28 Oct — events in any lane: Activity and Follow requests are lanes of events only, their quick filters the rule's switches, a follow request an event any lane's rule may take (`event = "follow_request"`), its row and buttons the same everywhere (`common/activity.EventParts`, `fedtail:eventyes|eventno|eventhide`). The idea is the author's; this page is what it
 becomes in fedtail, what it costs and where it bites. The current lanes are described in
 [architecture.md](architecture.md) §8.
 
