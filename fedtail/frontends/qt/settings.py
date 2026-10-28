@@ -179,6 +179,13 @@ QLabel#setSaved {{ color: {k('accent')}; font-weight: 600; }}
         self.list.setEnabled(not q)
         self._redraw()
 
+    def choose(self, key):
+        """Bring chapter `key` up, picked in the list on the left too."""
+        for i in range(self.list.count()):
+            if self.list.item(i).data(Qt.ItemDataRole.UserRole) == key:
+                self.list.setCurrentRow(i)
+                return
+
     def show_chapter(self, key):
         self.current = key
         self._redraw()

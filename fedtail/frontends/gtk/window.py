@@ -1173,14 +1173,17 @@ class MainWindow(Gtk.ApplicationWindow):
         profiles.launch(primary.paths.profile, after=0.5, wait_for=os.getpid())
         GLib.timeout_add(200, lambda: (self.quit_app(), False)[1])
 
-    def open_settings(self, query=""):
-        """The settings window (gtk/settings.py; what it shows: common/settings.py)."""
+    def open_settings(self, query="", chapter=""):
+        """The settings window (gtk/settings.py; what it shows: common/settings.py);
+        `chapter` — the one to show (a table's name: "sync")."""
         from .settings import SettingsWindow
         win = getattr(self, "_settings", None)
         if win is None or not win.get_visible():
             win = self._settings = SettingsWindow(self)
         if query:
             win.search.set_text(query)
+        if chapter:
+            win.choose(chapter)
         win.present()
 
     def add_account(self):

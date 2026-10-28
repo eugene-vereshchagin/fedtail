@@ -2645,8 +2645,9 @@ class MainWindow(QMainWindow):
         from .issue import IssueDialog
         IssueDialog(self).exec()
 
-    def open_settings(self, query=""):
-        """The settings window (qt/settings.py): one at a time, brought up again."""
+    def open_settings(self, query="", chapter=""):
+        """The settings window (qt/settings.py): one at a time, brought up again;
+        `chapter` — the one to show (a table's name: "sync")."""
         from .settings import SettingsDialog
         dlg = getattr(self, "_settings", None)
         try:
@@ -2657,6 +2658,8 @@ class MainWindow(QMainWindow):
             dlg = self._settings = SettingsDialog(self)
         if query:
             dlg.search.setText(query)
+        if chapter:
+            dlg.choose(chapter)
         dlg.show()
         dlg.raise_()
         dlg.activateWindow()

@@ -2044,6 +2044,21 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(self.win._settings.isVisible())
         self.win._settings.close()
 
+    def test_what_to_sync_opens_the_settings_window(self):
+        """≡ → Sync → "What to sync…": the settings window at its Sync chapter, not the
+        settings drawn as the place's form (28.10: a mess of fields)."""
+        from fedtail.frontends.common.places import Out
+        from fedtail.frontends.qt.place import PlaceDialog
+        pw = PlaceDialog(self.win, "sync")
+        pw.answered(None, Out(open={"page": "settings", "tab": "sync"}), None)
+        self.pump(0.1)
+        dlg = self.win._settings
+        self.assertTrue(dlg.isVisible())
+        self.assertEqual(dlg.current, "sync")
+        self.assertEqual(pw.name, "sync")  # the place stays where it was
+        dlg.close()
+        pw.close()
+
     def test_tray_icon_goes_at_exit_and_can_be_off(self):
         """The tray icon is dropped before fedtail leaves (Windows kept a dead one per
         restart), dropping it twice is harmless, and ui.tray = false makes none."""

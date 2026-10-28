@@ -1612,6 +1612,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         when {
             str(o, "thread").isNotBlank() -> openThread(str(o, "thread"))
             str(o, "account").isNotBlank() -> openProfile(str(o, "account"))
+            str(o, "page") == "settings" ->  // its own screen, not the place's form
+                openSettings(str(o, "arg").ifBlank { str(o, "tab") })
             o.has("page") -> {
                 val pg = o.opt("page")
                 if (pg is JSONArray) openPage(pg.optString(0), pg.optString(1))

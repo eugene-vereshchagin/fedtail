@@ -259,6 +259,9 @@ class PlaceWindow:
         elif o.get("back"):
             self.window.close()
             return
+        elif o.get("page") == "settings" and hasattr(self.win, "open_settings"):
+            self.win.open_settings(o.get("arg", ""), o.get("tab", ""))  # the real window
+            return
         elif o.get("page"):
             page = o["page"]
             if isinstance(page, (tuple, list)):

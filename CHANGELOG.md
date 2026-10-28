@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- Fixed: ≡ → Sync → "What to sync…" drew the settings as a heap of bare fields inside the
+  sync window; it opens the settings window at its Sync chapter now (Qt, GTK, the phone).
+
 - ≡ → Sync: the password for new devices is its own page now, saying plainly what it is
   (not the account's nor the server's — one you make up, so a new device needs it instead
   of the long key) and that it's optional; the done page only shows whether it's set.

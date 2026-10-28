@@ -152,6 +152,15 @@ class SettingsWindow(Gtk.Window):
         GLib.idle_add(lambda: (self._redraw(), False)[1])  # once the control's signal is done
 
     # ---- drawing -----------------------------------------------------------------------
+    def choose(self, key):
+        """Bring chapter `key` up, picked in the list on the left too."""
+        i = 0
+        while (row := self.list.get_row_at_index(i)) is not None:
+            if getattr(row, "key", None) == key:
+                self.list.select_row(row)
+                return
+            i += 1
+
     def _chosen(self, _lb, row):
         if row is not None:
             self.current = row.key
