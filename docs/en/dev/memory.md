@@ -186,6 +186,10 @@ So the order of the plan holds for the core, but the window's weight is in the c
   33 MB are the imports — steps 2–4 can win at most some 25 MB of it; the window is the
   bulk (220 MB: widgets, fonts, pictures). Left until a profile of a real, long-running
   window says the core's share has grown.
+* **Step 7, the imports measured**: the core's imports are 33 MB — 15 the interpreter itself,
+  13 `requests` (OpenSSL, urllib3), needed the moment the core connects; nothing heavy
+  besides is imported at start. Lazy imports have no memory to win in the core; what step 7
+  has left is the window's start.
 
 ## Decisions
 
