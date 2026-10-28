@@ -263,8 +263,8 @@ def at_start(frontend, err=None, quiet=False):
 def _say_soft_once(soft):
     """The nice-to-haves are said once for the same set of missing ones (not at every
     start): the set is kept in the user's cache folder."""
-    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-    path = os.path.join(base, "fedtail", "deps-said")
+    from .core.paths import cache_base
+    path = os.path.join(str(cache_base()), "deps-said")
     key = " ".join(sorted(n.key for n in soft))
     try:
         with open(path, encoding="utf-8") as f:

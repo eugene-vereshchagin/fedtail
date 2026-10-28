@@ -7,7 +7,6 @@ built-in of the same name. A copy of every built-in is kept up to date in
 """
 
 import copy
-import os
 import re
 import tomllib
 from pathlib import Path
@@ -101,8 +100,10 @@ class ThemeError(Exception):
 
 
 def user_dir():
-    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(base) / "fedtail" / "themes"
+    """The user's themes: beside the profiles' configs (~/.config/fedtail/themes, on
+    Windows %APPDATA%\\fedtail\\themes — not a ~/.config of its own there)."""
+    from ..core.paths import config_base
+    return config_base() / "themes"
 
 
 def available():

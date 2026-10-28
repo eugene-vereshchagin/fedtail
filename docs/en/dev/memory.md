@@ -29,7 +29,7 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 | step | what | status |
 |---|---|---|
 | 0 | **The bench**: a synthetic day — 10 000 posts, 20 lanes of rules, pictures, a day of polling; memory by parts (posts, lanes, the picture cache, the interface's widgets, modules; Qt's C++ side through its caches' sizes and object counts, tracemalloc doesn't see it); timings — the cold start to the first lane, opening a lane, scrolling 1000 posts, applying the lanes' rules; in a dev build these numbers in the log every few minutes; the first run's numbers here as the baseline | done: the baseline below |
-| 1 | **One store of posts**: one identity map in the core — one object per post for the whole program; lanes keep ids and order, no copies of posts; the same for accounts, attachments, threads | — |
+| 1 | **One store of posts**: one identity map in the core — one object per post for the whole program; lanes keep ids and order, no copies of posts; the same for accounts, attachments, threads | done for posts: `Store._parse` — one read-only `Stored` per post while anyone holds it (weak), shared by every lane |
 | 2 | **Compact objects instead of raw JSON**: the server's JSON only in SQLite; in memory light structures with the fields shown (`__slots__`, or msgspec Structs if Debian has the package); parsed in `protocols/` straight into them; repeated strings (accounts' URLs, servers, language codes) interned | — |
 | 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
 | 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
@@ -98,6 +98,25 @@ Counters at the end: 13 457 statuses and 15 656 items in the store (32.6 MB on d
 294 031 Python objects (gc), 518 modules, **14 497 Qt widgets** — step 5's target; every
 lane keeps its own parsed copy of each post it shows (`Core.lane_entries` → `json.loads`
 per lane) — step 1's.
+
+What the numbers say, three runs later (28 Oct):
+
+* **Python's own objects are a small part.** With `--trace` (2 h of polling) tracemalloc
+  sees about 95 MB of Python allocations of a USS of 517 MB: the core 18, the Qt layer's
+  Python 20, the common layer 4.5, json and the rest the remainder. The bulk is Qt's C++
+  side — widgets, their text layouts and styles.
+* **Freed memory stays in the process until it is trimmed.** `--ui qt --hours 2`: USS 349 MB
+  with every lane visited; the hidden lanes unloaded (as `ui.unload_hidden_minutes` does
+  after 10 minutes) — 854 widgets left of 9382, and still 349 MB; after glibc's
+  `malloc_trim(0)` — **193.5 MB**. A running fedtail trims every `debug.stats_minutes`
+  (`diag.trim_memory`), so that last number is the one to compare with life; the bench
+  prints all three.
+* **Step 1 on the core alone** (`--hours 2`, no window): USS 110.3 → 102.5 MB, opening
+  every lane 656 → 362 ms, two hours of polling 9.2 → 5.4 s (no lane parses a post another
+  lane has parsed already).
+
+So the order of the plan holds for the core, but the window's weight is in the cards
+(step 5): every card a score of widgets.
 
 ## Decisions
 

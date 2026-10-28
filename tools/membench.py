@@ -250,10 +250,20 @@ def run(args):
     result["counts"]["modules"] = len(sys.modules)
     if win is not None:
         result["counts"].update({f"qt.{k}": v for k, v in qt_counts(app, win).items()})
+        # the day above ran in minutes: ui.unload_hidden_minutes never came for the
+        # lanes out of sight. What they come to once it has (the steady state of a
+        # window kept open), and how much of it the C heap then gives back.
+        result["memory"]["hidden_unloaded"] = qt_unloaded(app, win)
+        result["counts"]["qt.widgets_unloaded"] = qt_counts(app, win)["widgets"]
+        result["memory"]["after_malloc_trim"] = trimmed()
     if args.trace:
         result["memory"]["python"] = split(tracemalloc.take_snapshot())
         tracemalloc.stop()
     print("\n  memory " + "  ".join(f"{k} {v}" for k, v in result["memory"]["after"].items()))
+    for state in ("hidden_unloaded", "after_malloc_trim"):
+        if result["memory"].get(state):
+            print(f"  memory, {state}: " + "  ".join(
+                f"{k} {v}" for k, v in result["memory"][state].items()))
     for part, mb in (result["memory"].get("python") or {}).items():
         print(f"    {part:<40} {mb:8.1f} MB")
     print("  " + "  ".join(f"{k} {v}" for k, v in result["counts"].items()))
@@ -273,6 +283,10 @@ def markdown(r):
              f"ui {r['ui']}, Python {r['python']}", "",
              "| memory | MB |", "|---|---|"]
     lines += [f"| {k} | {v} |" for k, v in r["memory"].get("after", {}).items()]
+    for state, words in (("hidden_unloaded", "hidden lanes unloaded"),
+                         ("after_malloc_trim", "and malloc_trim(0)")):
+        if r["memory"].get(state):
+            lines += [f"| {k}, {words} | {v} |" for k, v in r["memory"][state].items()]
     if r["memory"].get("python"):
         lines += ["", "| Python's part, by package | MB |", "|---|---|"]
         lines += [f"| {k} | {v} |" for k, v in r["memory"]["python"].items()]
@@ -308,6 +322,31 @@ def qt_scroll(app, win):
         seen += 3  # a page shows a few cards
         if bar.value() == before and before >= bar.maximum():
             break
+
+
+def qt_unloaded(app, win):
+    """Every lane but the one in front unloaded, as ui.unload_hidden_minutes does."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+    front = win.stack.currentWidget()
+    for w in list(win.lane_widgets.values()):
+        if w is not front and w.view.order:
+            w.hide()
+            w._unload()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.processEvents()
+    gc.collect()
+    return memory()
+
+
+def trimmed():
+    """memory() after glibc's malloc_trim(0): what freed C memory the process still
+    holds without using (Linux only; {} elsewhere)."""
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):
+        return {}
+    return memory()
 
 
 def qt_counts(app, win):

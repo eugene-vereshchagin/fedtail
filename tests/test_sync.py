@@ -282,6 +282,40 @@ class FolderSyncTest(Devices):
         self.assertEqual(got["text"], "x")
         self.assertEqual(got["media"], [["/sd/dog.jpg", ""]])  # nothing fetched: its own
 
+    def test_a_device_joining_later_gets_the_state(self):
+        """What was arranged and read before the other device came goes to it too — not
+        only what changes after (28.10: lists in another order, read posts unread)."""
+        self.desk.store.kv_set("list_order", ["L2", "L1"])
+        self.desk.mark_read(["101"])
+        self.desk.store.put_items("home", [("101", status("101", BOB), ""),
+                                           ("102", status("102", BOB), "")])
+        self.desk.store.mark_read(["102"])  # read before sync was there: no op recorded
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.assertEqual(self.phone.store.kv_get("list_order"), ["L2", "L1"])
+        self.assertEqual(self.phone.store.read_set(["101", "102"]), {"101", "102"})
+        sent = self.desk.store.sync_pending_count()
+        self.desk.sync_now()  # once per key, not every round
+        self.assertEqual(self.desk.store.sync_pending_count(), sent)
+
+    def test_events_seen_here_are_seen_there(self):
+        for core in (self.desk, self.phone):
+            core.store.activity_put([
+                {"id": f"n{i}", "type": "favourite", "account": BOB,
+                 "created_at": f"2099-10-14T10:0{i}:00.000Z", "status": None}
+                for i in range(1, 4)])
+        self.desk.mark_activity_seen()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.assertNotEqual(self.phone.activity_seen_mark(), self.desk.activity_seen_mark())
+        self.phone.sync_now()
+        self.assertEqual(self.phone.activity_seen_mark(), self.desk.activity_seen_mark())
+        self.assertIn("activity_seen", [n for n, _p in self.phone.events_seen])
+        # never back: an older mark from elsewhere changes nothing
+        self.phone.sync.apply({"d": "x", "ops": [{"as": "0"}]})
+        self.assertEqual(self.phone.activity_seen_mark(), self.desk.activity_seen_mark())
+
     def test_dismissed_activity_goes_everywhere(self):
         for core in (self.desk, self.phone):
             core.store.activity_put([

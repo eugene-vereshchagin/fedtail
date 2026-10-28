@@ -20,10 +20,15 @@ class WindowsPathsTest(unittest.TestCase):
                "LOCALAPPDATA": r"C:\Users\v\AppData\Local"}
         with mock.patch.object(paths, "WINDOWS", True), \
                 mock.patch.dict(os.environ, env, clear=False):
-            for var in ("XDG_CONFIG_HOME", "XDG_DATA_HOME"):
+            for var in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME"):
                 os.environ.pop(var, None)
             self.assertEqual(paths.config_base(), Path(env["APPDATA"]) / "fedtail")
             self.assertEqual(paths.data_base(), Path(env["LOCALAPPDATA"]) / "fedtail")
+            # nothing of fedtail's goes into a ~/.config or ~/.cache there (28.10)
+            from fedtail.frontends import themefile
+            self.assertEqual(themefile.user_dir(), Path(env["APPDATA"]) / "fedtail" / "themes")
+            self.assertEqual(paths.cache_base(),
+                             Path(env["LOCALAPPDATA"]) / "fedtail" / "cache")
             # XDG_* set by hand win there too (the tests, a portable setup)
             with mock.patch.dict(os.environ, {"XDG_DATA_HOME": "/x"}):
                 self.assertEqual(paths.data_base(), Path("/x") / "fedtail")

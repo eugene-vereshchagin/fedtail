@@ -34,7 +34,11 @@ derived from the post's id.
 ## How it works
 
 Every device keeps a journal of what it did and sends it, sealed, to a place all your
-devices reach; there it picks up the others' journals. The place is either
+devices reach; there it picks up the others' journals. The first time a device syncs
+under a key, it also sends once what it knew already — the order of lists, saved tag
+lanes, how far the events are seen, the read marks of the posts it keeps — so a device
+added later gets the state, not only what changed after it came (a real change anywhere
+beats that first picture). The place is either
 
 * a **fedtail-sync server** — one small program on a name of its own (`sync.url`); or
 * a **folder** every device sees — a NAS share, a WebDAV folder mounted (davfs2, rclone),

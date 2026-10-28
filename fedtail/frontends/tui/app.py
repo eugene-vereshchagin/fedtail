@@ -1004,6 +1004,8 @@ class FedtailApp(App, PostsMixin):
         on it folds the section (its unread stays as a number on the heading)."""
         from ..common import sidebar
         lv = self._main("#lanes", ListView)
+        if not lv.is_mounted:  # news before the screen is up, or while the app ends
+            return
         at = getattr(lv.highlighted_child, "lane", None) or \
             getattr(lv.highlighted_child, "group", None)
         await lv.clear()

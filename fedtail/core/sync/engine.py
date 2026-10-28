@@ -21,13 +21,21 @@ What travels — a switch for each in `[sync]`:
   store. Too big for the store, or one it dropped (it keeps the least used) — that
   picture stays on its own device, the rest goes.
 * "activity" — notifications I dismissed from Activity (the server can't always forget
-  them): hidden on every device. Like read marks, they only add up.
+  them): hidden on every device. Like read marks, they only add up. And how far events
+  are seen (kv "activity_seen", the sort of the newest seen — the server's time and id,
+  the same on every device): it only goes forward, the furthest wins.
 * "tiles" — which lanes the phone pins as tiles (kv "pinned_tiles", set through
   `Core.set_pinned_tiles`): one value, the newest wins.
 * "lane_rules" (off by default: it writes config.toml) — the lanes themselves: which set
   (`lanes.preset`), which lanes and in what order (`lanes.enabled`), one's own lanes
   (`[[lanes.custom]]`), `lanes.posts_only`. One value (kv "lane_rules"), the newest wins;
   a device that gets it writes it into its config.toml and shows the lanes anew.
+
+What a device already knows when it first syncs under a key goes out once too (`_snapshot`):
+the settings carried whole (not `lane_rules`), stamped time 0 so any real change anywhere
+beats them; how
+far events are seen; the read marks of the posts it keeps. A device that joins later
+gets the state, not only what changed after it came.
 
 Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server) or
 `sync.folder`. Nothing set — no sync, and nothing is recorded.
@@ -171,6 +179,12 @@ class Sync:
             self._drafts[key] = self._stamp_locked()
         self._wake.set()
 
+    def record_activity_seen(self, mark):
+        """Events seen here up to this sort (Core.mark_activity_seen)."""
+        if "activity" in self.what and mark:
+            self.store.sync_record({"as": str(mark)})
+            self._wake.set()
+
     def record_activity(self, hidden):
         """Notifications dismissed here: [(id, sort, group key or "")]."""
         if "activity" not in self.what:
@@ -198,6 +212,29 @@ class Sync:
                 self._drop_media(backend, self._draft_refs(dkey, []))
             self.store.sync_newer(f"d:{dkey}", at, self.device, json.dumps(value))
             self.store.sync_record({"dr": dkey, "v": value, "at": at})
+
+    SNAPSHOT_READ = 5000  # read marks of the newest posts kept, sent with the snapshot
+
+    def _snapshot(self, key):
+        """Once per key: what this device knows already goes into the journal — so a
+        device joining later gets the state, not only the changes made after it came."""
+        kid = crypto.key_id(key).hex()
+        if self.store.kv_get("sync.snapshot") == kid:
+            return
+        for k, switch in SETTINGS.items():
+            value = self.store.kv_get(k)
+            # not the lanes themselves: they write the other device's config.toml, and a
+            # device joining mustn't have its lanes replaced by what it merely met there
+            if k != "lane_rules" and switch in self.what and value not in (None, [], {}):
+                # time 0: any device's real change beats it; between snapshots alone the
+                # device id decides, the same everywhere
+                self.store.sync_record({"k": k, "v": value, "at": 0})
+        if "activity" in self.what:
+            self.record_activity_seen(self.store.kv_get("activity_seen"))
+        if "read" in self.what:
+            self.record_read(self.store.recent_read(self.SNAPSHOT_READ))
+        self.store.kv_set("sync.snapshot", kid)
+        log.info("sync: what this device knows sent once for key %s", kid)
 
     # ---- the drafts' pictures ------------------------------------------------------
     MEDIA_SENT_KEEP = 500  # names this device put on the store: not put again
@@ -362,6 +399,7 @@ class Sync:
                 key = self._key(backend)
                 if key is None:
                     return None
+                self._snapshot(key)
                 self._media_at = (backend, key)  # for the drafts' pictures, this round
                 self._flush_drafts(backend, key)
                 sent = self._push(backend, key)
@@ -518,6 +556,7 @@ class Sync:
         """Another device's batch → this store. → how many ops it carried."""
         reads, threads, lanes, hidden, drafts, tiles = [], [], [], [], [], False
         people = False
+        seen_to = None  # how far events are seen elsewhere, when further than here
         device = str(payload.get("d") or "")
         seen = 0
         for op in payload.get("ops") or []:
@@ -545,6 +584,11 @@ class Sync:
                         people = True
                     else:
                         tiles = True
+            elif isinstance(op.get("as"), str):
+                if "activity" in self.what and op["as"] > (self.store.kv_get("activity_seen")
+                                                           or ""):
+                    self.store.kv_set("activity_seen", op["as"])
+                    seen_to = op["as"]
             elif isinstance(op.get("h"), list):
                 if "activity" in self.what:
                     hidden += [tuple(str(x) for x in r) for r in op["h"]
@@ -584,7 +628,10 @@ class Sync:
             self.core.emit("activity_updated", None)
         if drafts:
             self.core.emit("drafts_changed", drafts)
-        return len(reads) + len(threads) + len(lanes) + int(tiles) + len(hidden) + len(drafts)
+        if seen_to:
+            self.core.emit("activity_seen", seen_to)
+        return len(reads) + len(threads) + len(lanes) + int(tiles) + len(hidden) + \
+            len(drafts) + int(bool(seen_to))
 
     def _apply_draft(self, key, value):
         """Another device's version of a draft, with its pictures fetched; one without

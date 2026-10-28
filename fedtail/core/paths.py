@@ -35,6 +35,14 @@ def data_base():
     return _xdg("XDG_DATA_HOME", ".local/share") / APP
 
 
+def cache_base():
+    """fedtail's own small cache of the user's (not a profile's): ~/.cache/fedtail
+    (XDG_CACHE_HOME), on Windows %LOCALAPPDATA%\\fedtail\\cache."""
+    if WINDOWS and not os.environ.get("XDG_CACHE_HOME"):
+        return data_base() / "cache"
+    return _xdg("XDG_CACHE_HOME", ".cache") / APP
+
+
 @dataclass(frozen=True)
 class Paths:
     profile: str

@@ -2,6 +2,25 @@
 
 ## 0.22.0 — in progress
 
+- Sync: the first time a device syncs under a key it sends once what it knew already —
+  the order of lists, saved tag lanes, tiles, how far events are seen, the read marks of
+  the posts it keeps. A device added later got only the changes made after it came: lists
+  in another order, posts read elsewhere still unread (28.10's report). A real change
+  anywhere still beats that first picture.
+- Windows: the user's themes and fedtail's small cache live in `%APPDATA%\fedtail\themes`
+  and `%LOCALAPPDATA%\fedtail\cache`, not in a `~/.config` / `~/.cache` of their own.
+
+- Fixed: an event's row in the window (Activity, Requests, a lane taking events) cut its
+  text's last line off, and its × shrank to a dot in a roomy theme (28.10's report): the
+  words take the height they need, the button the width its padding needs.
+- Sync carries how far the events are seen too: Activity read on one device is read on
+  the others (`sync.activity`; the mark only goes forward). Before, every device kept its
+  own, and a home computer showed the day's events as new after a day at the office.
+- Lighter and quicker: the store parses a post once and every lane shares that one
+  (read-only) object, instead of each lane parsing its own copy; a post nobody holds goes
+  (docs/en/dev/memory.md, step 1). On the bench's day: the core 110 → 102 MB, opening every
+  lane 656 → 362 ms, polling ~40 % quicker.
+
 - The lane editor builds a condition from its parts, with no syntax to remember: a lane's
   conditions stand in words over its form ("The author: I follow · Kind: a reply"), each
   opens a page of its own — "Ask" at a key (the author, the kind, what the post has, the

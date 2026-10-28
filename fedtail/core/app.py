@@ -1738,6 +1738,8 @@ class Core(SocialMixin):
             newest = min(newest, upto) if newest else ""
         if newest and newest > self.activity_seen_mark():
             self.store.kv_set("activity_seen", newest)
+            if self.sync is not None:  # seen here, seen on the account's other devices
+                self.sync.record_activity_seen(newest)
             self.emit("activity_seen", newest)
 
     # ---- lists ---------------------------------------------------------------------

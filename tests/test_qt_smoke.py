@@ -532,6 +532,15 @@ class QtSmokeTest(unittest.TestCase):
                    if isinstance(aw.view.rows.get(k), EventRow) and
                    aw.view.rows[k].card.property("kind") == "favourite")
         self.assertEqual(len(two.spec.extra["event"]), 2)  # two likes, one row
+        # the words take the height they need (a plain QLabel lost its last line deep in
+        # the layouts), the × is as wide as the theme's padding needs
+        from PySide6.QtWidgets import QLabel, QPushButton
+
+        from fedtail.frontends.qt.card import WrapLabel
+        for lab in two.card.findChildren(QLabel):
+            self.assertIsInstance(lab, WrapLabel)
+        x = next(b for b in two.card.findChildren(QPushButton) if b.text() == "×")
+        self.assertGreaterEqual(x.width(), x.sizeHint().width())
         # seen is what is on screen, as for posts: the window in the background — not
         # yet; the reader looking at it — the rows on screen count, the events seen
         aw.view._window_active = lambda: False

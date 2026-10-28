@@ -205,7 +205,7 @@ class EventRow(QWidget):
             who = ", ".join(f'<a href="{esc(u)}" style="text-decoration:none;color:{text};">'
                             f"<b>{esc(n)}</b></a>" for n, u in parts.people)
             who += (" " + esc(parts.more)) if parts.more else ""
-        top = QLabel(f'{who} <span style="color:{muted};">— {esc(parts.what)}'
+        top = WrapLabel(f'{who} <span style="color:{muted};">— {esc(parts.what)}'
                      + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
@@ -214,8 +214,8 @@ class EventRow(QWidget):
         line = QHBoxLayout()
         line.addWidget(top, 1)
         x = QPushButton("×")
-        x.setObjectName("tool")
-        x.setFixedWidth(28)
+        x.setObjectName("tool")  # as wide as the theme's padding needs (a fixed 28 px cut the
+        # cross down to a dot in a roomy theme)
         x.setToolTip(parts.hide_tip)
         x.clicked.connect(lambda _c=False, u=parts.hide: link(u))
         line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
@@ -231,7 +231,7 @@ class EventRow(QWidget):
                 row.addWidget(b)
             v.addLayout(row)
         if parts.post:
-            post = QLabel(f'<a href="{esc(parts.post_link)}" style="text-decoration:none;'
+            post = WrapLabel(f'<a href="{esc(parts.post_link)}" style="text-decoration:none;'
                           f'color:{muted};">{esc(parts.post)}</a>')
             post.setTextFormat(Qt.TextFormat.RichText)
             post.setWordWrap(True)

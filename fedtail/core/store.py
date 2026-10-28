@@ -5,12 +5,14 @@ method is a short transaction, so contention is negligible.
 """
 
 import contextlib
+import copy
 import hashlib
 import json
 import logging
 import sqlite3
 import threading
 import time
+import weakref
 from datetime import UTC, datetime
 
 log = logging.getLogger(__name__)
@@ -185,6 +187,38 @@ HIDDEN_KEEP = 2000  # notifications hidden by hand, remembered
 GROUPS_KEEP = 2000  # the server's notification groups: key → the row standing for it
 
 
+
+class Frozen(dict):
+    """A stored status as parsed once and shared by every lane, thread and card that
+    reads it (Store._parse: one object per post for the whole program, not one per lane).
+    Shared, so read-only: whoever wants to change one copies it first — `dict(st)`,
+    `{**st, …}`, `copy.deepcopy(st)` give plain dicts."""
+
+    __slots__ = ()
+
+    def _readonly(self, *_a, **_k):
+        raise TypeError("a stored status is shared: copy it (dict(st)) to change it")
+
+    __setitem__ = __delitem__ = __ior__ = _readonly
+    update = setdefault = pop = popitem = clear = _readonly
+
+    def __copy__(self):
+        return dict(self)
+
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(dict(self), memo)
+
+    def __reduce__(self):
+        return (dict, (dict(self),))
+
+
+class Stored(Frozen):
+    """The top of a stored status (Store._parse): weakly mapped by its id, with the hash
+    of the text it was parsed from."""
+
+    __slots__ = ("__weakref__", "_text_hash")
+
+
 class Store:
     def __init__(self, path):
         self.me_id = None  # set once connected: my own posts go in as read
@@ -195,6 +229,9 @@ class Store:
         # bumped on every change, so callers can cache what they derive from the store
         self.items_version = {}
         self.status_version = 0
+        # status id → its Stored form, while anyone holds it (weak: a post no lane, thread
+        # or card keeps goes with the last of them)
+        self._parsed = weakref.WeakValueDictionary()
         self.read_version = 0  # bumped by every read mark (Core caches unread counts by it)
         # every read mark, in memory: the sidebar counts every lane after each read mark
         # and asking SQLite for thousands of ids each time froze the window (413 ms on a
@@ -524,10 +561,30 @@ class Store:
                     self._count_tag(name)
             return self._tags
 
+    def _parse(self, sid, text):
+        """The status of this stored text, parsed once: the same object while the text
+        doesn't change and someone holds it (the identity map of docs/en/dev/memory.md,
+        step 1)."""
+        h = hash(text)
+        hit = self._parsed.get(sid)
+        if hit is not None and hit._text_hash == h:
+            return hit
+        st = Stored(json.loads(text, object_hook=Frozen))
+        object.__setattr__(st, "_text_hash", h)
+        self._parsed[sid] = st
+        return st
+
+    def recent_read(self, limit):
+        """Ids of the newest stored posts marked read, at most `limit`."""
+        with self._reading() as db:
+            return [r[0] for r in db.execute(
+                "SELECT r.status_id FROM read r JOIN statuses s ON s.id = r.status_id "
+                "ORDER BY s.created_at DESC LIMIT ?", (int(limit),))]
+
     def get_status(self, sid):
         with self._reading() as db:
             row = db.execute("SELECT data FROM statuses WHERE id=?", (sid,)).fetchone()
-        return json.loads(row[0]) if row else None
+        return self._parse(sid, row[0]) if row else None
 
     def get_statuses(self, ids):
         ids = list(ids)
@@ -537,13 +594,14 @@ class Store:
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
                 q = f"SELECT id, data FROM statuses WHERE id IN ({marks})"
-                out.update({r[0]: json.loads(r[1]) for r in db.execute(q, chunk)})
+                out.update({r[0]: self._parse(r[0], r[1]) for r in db.execute(q, chunk)})
         return out
 
     def delete_status(self, sid):
         with self._tx() as db:
             db.execute("DELETE FROM statuses WHERE id=?", (sid,))
             db.execute("DELETE FROM items WHERE status_id=?", (sid,))
+            self._parsed.pop(sid, None)
             self.status_version += 1
 
     def mark_missing(self, sid):
@@ -558,10 +616,10 @@ class Store:
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
-                q = (f"SELECT reply_to, data FROM statuses WHERE reply_to IN ({marks}) "
+                q = (f"SELECT reply_to, id, data FROM statuses WHERE reply_to IN ({marks}) "
                      f"AND author = ? ORDER BY created_at")
-                for pid, data in db.execute(q, chunk + [author_id]):
-                    out.setdefault(pid, []).append(json.loads(data))
+                for pid, sid, data in db.execute(q, chunk + [author_id]):
+                    out.setdefault(pid, []).append(self._parse(sid, data))
         return out
 
     def aliases(self, status_ids):
@@ -779,7 +837,7 @@ class Store:
         the last one ended (sort, item_id), not at an OFFSET: going deep into a big
         source stays linear instead of re-walking everything before each chunk."""
         done, last = 0, None
-        base = ("SELECT i.item_id, s.data, i.sort FROM items i JOIN statuses s "
+        base = ("SELECT i.item_id, s.data, i.sort, s.id FROM items i JOIN statuses s "
                 "ON s.id = i.status_id WHERE i.source=? ")
         order = "ORDER BY i.sort DESC, i.item_id DESC LIMIT ?"
         while max_rows is None or done < max_rows:
@@ -790,7 +848,7 @@ class Store:
                     rows = db.execute(base + "AND (i.sort, i.item_id) < (?, ?) " + order,
                                            (source, last[0], last[1], chunk)).fetchall()
             for r in rows:
-                yield r[0], json.loads(r[1])
+                yield r[0], self._parse(r[3], r[1])
             if len(rows) < chunk:
                 return
             done += chunk
@@ -800,9 +858,10 @@ class Store:
         """Newest `limit` items of a source, returned oldest → newest."""
         with self._reading() as db:
             rows = db.execute(
-                "SELECT i.item_id, s.data FROM items i JOIN statuses s ON s.id = i.status_id "
-                "WHERE i.source=? ORDER BY i.sort DESC LIMIT ?", (source, limit)).fetchall()
-        return [(r[0], json.loads(r[1])) for r in reversed(rows)]
+                "SELECT i.item_id, s.data, s.id FROM items i JOIN statuses s "
+                "ON s.id = i.status_id WHERE i.source=? ORDER BY i.sort DESC LIMIT ?",
+                (source, limit)).fetchall()
+        return [(r[0], self._parse(r[2], r[1])) for r in reversed(rows)]
 
     def prune(self, source, keep):
         with self._tx() as db:

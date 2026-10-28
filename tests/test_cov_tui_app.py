@@ -406,6 +406,8 @@ class AppKeysTest(Base):
         async with app.run_test(size=(120, 40)) as pilot:
             await self.started(pilot, app)
             posts = app.query_one("#posts", ListView)
+            await self.wait(pilot, lambda: any(isinstance(x, PostItem) for x in posts.children),
+                            what="the lane's posts")
             item = next(x for x in posts.children if isinstance(x, PostItem))
             with mock.patch.object(app.lane_model("home"), "read",
                                    return_value=["001", "x"]):
