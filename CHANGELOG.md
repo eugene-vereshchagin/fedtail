@@ -19,11 +19,13 @@
   waiting for its replies (Qt, GTK, the web page), "fetching replies: 3 of 12" on it
   while a "remote" thread waits.
 
-- **Sync set up in the window, no terminal:** ≡ → Sync (or a click on "⇅") — where the
-  devices meet (written into config.toml and used at once, no restart), the login to the
-  sync server, the key: shown to copy, pasted from another device, **put into the journal
-  under a password and taken from there with the password alone** (when the device with
-  the key isn't at hand), or made anew. The same in Qt, GTK, the terminal, the web page
+- **Sync set up in the window, step by step, no terminal:** ≡ → Sync (or a click on
+  "⇅") — three steps marked ✓ / ▶ / ·: where the devices meet (written into config.toml
+  and used at once, no restart), the login to the sync server, then the fork — **"this is
+  my first device"** (the key made here) or **"I'm adding this device to those already
+  syncing"** (the key pasted from another device, or **taken out of the journal with its
+  password alone**, or started anew). Done — how it goes, "Copy the key" for the next
+  device, the key put into the journal under a password, what to sync, turning it off. The same in Qt, GTK, the terminal, the web page
   and the phone; `fedtail sync keep` / `unlock` in the terminal.
 
 - `fedtail --check`: what fedtail needs from the system — the must-haves, each

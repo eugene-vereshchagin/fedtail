@@ -2286,6 +2286,25 @@ class Core(SocialMixin):
         from .sync import engine
         return engine.take_escrow(self, password)
 
+    def sync_first_key(self):
+        from .sync import engine
+        return engine.first_key(self)
+
+    def sync_journal_there(self):
+        """Has another device written into the store already? (None — can't tell now.)"""
+        from .sync import crypto
+        if self.sync is None:
+            return None
+        try:
+            backend = self.sync.backend()
+            if backend is None:
+                return None
+            blobs, _c, _m = backend.pull(None, self.sync.device)
+        except Exception as e:  # noqa: BLE001 — the store away: not known
+            log.info("sync: looking at the journal: %s", e)
+            return None
+        return any(not crypto.is_escrow(b) for b in blobs)
+
     def sync_fresh_key(self):
         from .sync import engine
         return engine.fresh_key(self)

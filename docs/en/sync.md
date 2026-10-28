@@ -52,31 +52,29 @@ and files your journal under that answer: no accounts or passwords of its own.
 
 ## Turning it on
 
-All of it is in the window: **≡ → Sync** (or a click on "⇅" in the status bar). Three
-tabs — the same in the Qt window, GTK, the terminal, the web page and the phone.
+All of it is in the window: **≡ → Sync** (or a click on "⇅" in the status bar). On top —
+three steps marked ✓ (done), ▶ (now) and · (later); below — only what the current step
+needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
 
-1. **Where** — the sync server's address your admin gave you (`https://sync.example.org`),
-   or a folder all your devices see (`~/Sync/fedtail`). "Save and turn on" writes it into
-   config.toml (`sync.url` / `sync.folder`) and turns sync on at once, no restart. There
-   too — how it goes and "Sync now"; "What to sync…" opens the settings chapter with the
-   switches.
-2. **Login** (with a server only, once on each device) — "Open the login page": your
-   fediverse server's page opens, allow "fedtail sync" and paste the code from it.
-3. **Key** — one for all your devices. The first device makes it by itself at the first
-   sync. Each next one needs it carried over in one of two ways:
-   * **copied from another device**: there "Show the key (copy)", here — paste it into
-     "The key from another device" and "Take the key" (through a password manager, a chat
-     with yourself — it's a secret: whoever has the key and your token reads the journal);
-   * **by a password, with no other device at hand**: beforehand, on a device with the key —
-     "Put the key into the journal under a password". The key goes into the journal
-     itself, sealed by that password (scrypt, slow to guess — still, take a long one). On a
-     new device the "Key" tab shows a "password of the key in the journal" field — the
-     password will do.
+1. **Where the devices meet** — the sync server's address your admin gave you
+   (`https://sync.example.org`), or a folder all your devices see (`~/Sync/fedtail`).
+   "Next" writes it into config.toml (`sync.url` / `sync.folder`) and turns sync on at
+   once, no restart.
+2. **Login to the sync server** (with a server only) — "Open the login page": your
+   fediverse server's page opens, allow "fedtail sync", paste the code, "Next".
+3. **The key** — a fork, what this device is:
+   * **"This is my first device"** — sync isn't set up anywhere yet: the key is made
+     here, and this device starts the journal. If the store holds someone's journal
+     already, fedtail says so and offers the other way.
+   * **"I'm adding this device to those already syncing"** — on the old device
+     ≡ → Sync → "Copy the key", here — paste it. Or, if the key was put into the
+     journal under a password there, the password alone, no old device needed. Neither
+     at hand — "Start again with a new key…" (what was read before won't come here, and
+     the other devices will have to take the new key later).
 
-   Neither at hand (the key stayed home, you're at the office) — "Start again with a new
-   key…": this device makes a new key and lets the old one's entries pass silently; take
-   the new key on the others afterwards. What was read on the other devices before won't
-   come here — only what comes after.
+Once it's all done, the same page shows how it goes, "Sync now", "Copy the key" for the
+next device, "Put the key into the journal under a password" (then the next device joins
+with the password alone), what to sync, changing the server, turning it off.
 
 A device without the key that finds someone's journal in the store doesn't make a key of
 its own: it says the key is needed (and that it can be taken by a password, if it is in

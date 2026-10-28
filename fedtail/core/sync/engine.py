@@ -552,6 +552,25 @@ def take_escrow(core, password):
     return _take(core, crypto.escrow_open(blob, password))
 
 
+def first_key(core):
+    """The first device of the account: its key made now. ValueError when the journal
+    holds another device's entries already (then this one joins, it doesn't start)."""
+    sync = core.sync
+    if sync is None:
+        raise RuntimeError("sync is off")
+    if crypto.load_key(key_path(core.paths)) is not None:
+        return crypto.key_id(crypto.load_key(key_path(core.paths))).hex()
+    if not crypto.available():
+        raise crypto.CryptoMissing("no cryptography")
+    backend = sync.backend()
+    if backend is None:
+        raise RuntimeError(_("sync_login_first"))
+    blobs, _cur, _more = backend.pull(None, sync.device)
+    if [b for b in blobs if not crypto.is_escrow(b)]:
+        raise ValueError("a journal is there already")
+    return _take(core, crypto.new_key())
+
+
 def fresh_key(core):
     """A new key for the account (the old one isn't at hand): the journal's blobs of the
     other key are let go of — they pass silently from now on. → the new key's id."""

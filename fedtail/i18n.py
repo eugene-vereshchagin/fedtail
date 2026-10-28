@@ -62,12 +62,13 @@ _STRINGS = {
         "sync_login_first": "Синхронизация: нет входа на сервер синхронизации — "
                             "≡ → Синхронизация → Вход (или fedtail sync login)",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
-                         "устройства — перенеси ключ: ≡ → Синхронизация → Ключ "
-                         "(«Показать ключ» там, вставить здесь)",
+                         "устройства — перенеси ключ: там ≡ → Синхронизация → «Скопировать ключ», "
+                         "здесь ≡ → Синхронизация → «Добавить к настроенным»",
         "sync_need_key_pass": "Синхронизация: у аккаунта есть журнал, а ключ к нему лежит "
-                              "в нём под паролем — ≡ → Синхронизация → Ключ, введи пароль",
+                              "в нём под паролем — ≡ → Синхронизация → «Добавить к "
+                              "настроенным», введи пароль",
         "sync_other_key": "Синхронизация: в хранилище журнал с другим ключом — "
-                          "≡ → Синхронизация → Ключ",
+                          "≡ → Синхронизация → «Добавить к настроенным»",
         "sync_no_crypto": "Синхронизации нужен пакет cryptography (Debian: "
                           "python3-cryptography)",
         "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
@@ -148,6 +149,57 @@ _STRINGS = {
         "sent_background": "Отправляю в фоне…",
         "sent_background_failed": "Пост не ушёл: {err} — черновик сохранён",
         "held_info": "новых: {n} — «Обновить» покажет",
+        "sync_step_where": "Где встречаются устройства",
+        "sync_step_where_what": "сервер синхронизации или общая папка",
+        "sync_step_login": "Вход на сервер синхронизации",
+        "sync_step_login_what": "одноразовый код со страницы твоего сервера",
+        "sync_step_key": "Ключ",
+        "sync_step_key_what": "первое устройство — или ключ с уже настроенного",
+        "sync_login_folder_short": "с папкой не нужен",
+        "sync_next": "Дальше →",
+        "sync_back_where": "← Другой сервер или папка",
+        "sync_back_fork": "← Назад",
+        "sync_turn_off": "Выключить синхронизацию",
+        "sync_off_sure": "Выключить синхронизацию на этом устройстве? Ключ и вход остаются — "
+                         "включишь снова, укажи то же место.",
+        "sync_where_none": "Укажи сервер синхронизации или папку",
+        "sync_login_opened": "Страница входа открыта в браузере — разреши там «fedtail sync» и "
+                             "скопируй код",
+        "sync_fork_hint": "Ключ шифрует всё, что уходит в журнал, и он один на все твои "
+                          "устройства. Выбери, что это за устройство:",
+        "sync_first_title": "Это моё первое устройство",
+        "sync_first_line": "Синхронизация ещё нигде не настроена: ключ сделается здесь, остальные "
+                           "устройства потом возьмут его отсюда.",
+        "sync_first_btn": "Первое устройство",
+        "sync_join_title": "Добавляю это устройство к уже настроенным",
+        "sync_join_line": "На другом устройстве синхронизация уже работает: нужен его ключ — "
+                          "скопировать оттуда или достать паролем из журнала.",
+        "sync_join_btn": "Добавить к настроенным",
+        "sync_journal_there": "В хранилище уже есть журнал другого устройства — скорее всего, "
+                              "нужно «Добавить к настроенным».",
+        "sync_first_hint": "Здесь сделается новый ключ, и это устройство начнёт журнал. Потом на "
+                           "каждом следующем устройстве выбери «Добавить к настроенным».",
+        "sync_first_go": "Сделать ключ и начать",
+        "sync_first_done": "Ключ готов (id {kid}), синхронизация идёт",
+        "sync_first_but_journal": "В хранилище уже есть журнал другого устройства — это не первое: "
+                                  "возьми его ключ",
+        "sync_join_hint": "На устройстве, где синхронизация уже работает: ≡ → Синхронизация → "
+                          "«Скопировать ключ», и вставь его сюда (мессенджер с самим собой, "
+                          "менеджер паролей). Если ключ там клали в журнал под паролем — "
+                          "достаточно пароля.",
+        "sync_lost_title": "Старого устройства под рукой нет и пароля нет?",
+        "sync_lost_line": "Можно начать заново с новым ключом: прочитанное до этого сюда не "
+                          "придёт, а старым устройствам потом надо будет взять новый ключ.",
+        "sync_done_hint": "Синхронизация работает: окно само обменивается с остальными "
+                          "устройствами раз в sync.interval_seconds и вскоре после того, как ты "
+                          "что-то прочитал.",
+        "sync_next_device_title": "Подключить ещё устройство",
+        "sync_next_device_line": "На новом устройстве пройди те же шаги и выбери «Добавить к "
+                                 "настроенным» — туда нужен этот ключ.",
+        "sync_what_title": "Что синхронизировать и где",
+        "sync_what_line": "Прочитанное, треды, ленты, черновики… — переключатели в настройках; "
+                          "сервер или папку можно сменить.",
+        "sync_change_where": "Сменить сервер или папку",
         "sync_title": "Синхронизация",
         "sync_tab_where": "Где",
         "sync_tab_login": "Вход",
@@ -184,7 +236,7 @@ _STRINGS = {
         "sync_key_hint": "Всё, что уходит в журнал, зашифровано ключом аккаунта: хранилище видит "
                          "только непрозрачные байты. Ключ один на все твои устройства — его "
                          "переносят с устройства на устройство.",
-        "sync_key_show_btn": "Показать ключ (скопировать)",
+        "sync_key_show_btn": "Скопировать ключ",
         "sync_key_show_sure": "Ключ открывает всё, что синхронизируется. Скопировать его в буфер "
                               "обмена?",
         "sync_key_copied": "Ключ в буфере обмена — вставь его на другом устройстве (≡ → "
@@ -1524,12 +1576,12 @@ _STRINGS = {
         "sync_login_first": "Sync: not logged in to the sync server — ≡ → Sync → Login "
                             "(or fedtail sync login)",
         "sync_need_key_pass": "Sync: the account has a journal, and its key is in it under "
-                              "a password — ≡ → Sync → Key, type the password",
+                              "a password — ≡ → Sync → “Add to those set up”, the password",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
-                         "device's key — carry the key over: ≡ → Sync → Key "
-                         "(“Show the key” there, paste it here)",
+                         "device's key — carry the key over: there ≡ → Sync → “Copy the key”, "
+                         "here ≡ → Sync → “Add to those set up”",
         "sync_other_key": "Sync: the store holds a journal sealed by another key — "
-                          "≡ → Sync → Key",
+                          "≡ → Sync → “Add to those set up”",
         "sync_no_crypto": "Sync needs the cryptography package (Debian: python3-cryptography)",
         "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
         "sync_full": "Sync: no room left on the server (quota)",
@@ -1604,6 +1656,55 @@ _STRINGS = {
         "sent_background": "Sending in the background…",
         "sent_background_failed": "The post didn't go: {err} — the draft is kept",
         "held_info": "{n} new — Refresh shows them",
+        "sync_step_where": "Where the devices meet",
+        "sync_step_where_what": "a sync server or a shared folder",
+        "sync_step_login": "Login to the sync server",
+        "sync_step_login_what": "a one-time code from your server's page",
+        "sync_step_key": "The key",
+        "sync_step_key_what": "the first device — or the key from one already set up",
+        "sync_login_folder_short": "a folder needs none",
+        "sync_next": "Next →",
+        "sync_back_where": "← Another server or folder",
+        "sync_back_fork": "← Back",
+        "sync_turn_off": "Turn sync off",
+        "sync_off_sure": "Turn sync off on this device? The key and the login stay — to turn it on "
+                         "again, name the same place.",
+        "sync_where_none": "Name a sync server or a folder",
+        "sync_login_opened": "The login page is open in the browser — allow “fedtail sync” there "
+                             "and copy the code",
+        "sync_fork_hint": "The key seals everything that goes into the journal, and it's one for "
+                          "all your devices. Pick what this device is:",
+        "sync_first_title": "This is my first device",
+        "sync_first_line": "Sync isn't set up anywhere yet: the key is made here, and your other "
+                           "devices take it from here later.",
+        "sync_first_btn": "First device",
+        "sync_join_title": "I'm adding this device to those already syncing",
+        "sync_join_line": "Sync already works on another device: its key is needed — copied from "
+                          "there, or taken out of the journal by its password.",
+        "sync_join_btn": "Add to those set up",
+        "sync_journal_there": "The store holds another device's journal already — most likely you "
+                              "want “Add to those set up”.",
+        "sync_first_hint": "A new key is made here, and this device starts the journal. Then on "
+                           "every next device pick “Add to those set up”.",
+        "sync_first_go": "Make the key and start",
+        "sync_first_done": "The key is ready (id {kid}), sync is on",
+        "sync_first_but_journal": "The store holds another device's journal already — this isn't "
+                                  "the first: take its key",
+        "sync_join_hint": "On a device where sync already works: ≡ → Sync → “Copy the key”, and "
+                          "paste it here (a chat with yourself, a password manager). If the key "
+                          "was put into the journal under a password there — the password will do.",
+        "sync_lost_title": "No old device at hand and no password?",
+        "sync_lost_line": "You can start again with a new key: what was read before won't come "
+                          "here, and the old devices will have to take the new key later.",
+        "sync_done_hint": "Sync works: the window trades with your other devices every "
+                          "sync.interval_seconds and soon after you read something.",
+        "sync_next_device_title": "Add one more device",
+        "sync_next_device_line": "On the new device go through the same steps and pick “Add to "
+                                 "those set up” — it needs this key.",
+        "sync_what_title": "What to sync, and where",
+        "sync_what_line": "What was read, threads, lanes, drafts… — the switches are in the "
+                          "settings; the server or folder can be changed.",
+        "sync_change_where": "Change the server or folder",
         "sync_title": "Sync",
         "sync_tab_where": "Where",
         "sync_tab_login": "Login",
@@ -1639,7 +1740,7 @@ _STRINGS = {
         "sync_key_hint": "Everything that goes into the journal is sealed with the account's key: "
                          "the store sees opaque bytes only. One key for all your devices — it is "
                          "carried from one to another.",
-        "sync_key_show_btn": "Show the key (copy)",
+        "sync_key_show_btn": "Copy the key",
         "sync_key_show_sure": "The key opens everything that is synced. Copy it to the clipboard?",
         "sync_key_copied": "The key is on the clipboard — paste it on the other device (≡ → Sync → "
                            "Key)",

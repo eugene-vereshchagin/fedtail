@@ -1,14 +1,20 @@
-"""≡ → Sync: setting up sync between the account's devices without a terminal — the
-same steps as `fedtail sync …`, in every interface (the windows, GTK, the terminal's
-places, the web page, the phone's place list).
+"""≡ → Sync: setting up sync between the account's devices step by step, without a
+terminal — the same in every interface (the windows, GTK, the terminal's places, the
+web page, the phone).
 
-Three tabs:
-  where — the sync server's address or a shared folder (written into config.toml and
-          used at once), how it stands, "Sync now";
-  login — the sync server's own narrow token: the browser's page, then its code;
-  key   — the account's key: shown to copy to another device, taken from another
-          device, kept in the journal under a password (and taken from there with the
-          password alone), or made anew when the old one isn't at hand.
+The place shows where the setup stands and the one next step:
+
+  1. where   — the sync server's address, or a shared folder (config.toml, used at once);
+  2. login   — the sync server's narrow token (a folder needs none): the browser's page,
+               then its code;
+  3. key     — the fork: "this is my first device" (the key is made here) or "I'm adding
+               this device to those already syncing" (the key pasted from another
+               device, or taken out of the journal with its password);
+  done       — how it goes, "Sync now", the key shown for the next device, the key put
+               into the journal under a password, what to sync, where, turning it off.
+
+`tab` picks a step by hand ("where" to change the server, "join" / "first" for the
+two ways at step 3); none — the step it stands at.
 """
 
 from __future__ import annotations
@@ -20,92 +26,154 @@ from ...i18n import _
 log = logging.getLogger(__name__)
 
 _LOGIN = {}  # profile → the sync login under way (core.sync_login_begin's pending)
+STEPS = ("where", "login", "key")
 
 
 class SyncPlaces:
+    def _sync_state(self):
+        """(status or None, the step it stands at: "where" | "login" | "key" | "done")."""
+        v = self.view
+        st = v.sync_status()
+        if st is None:
+            return None, "where"
+        if st.get("backend") == "server" and not st.get("login"):
+            return st, "login"
+        if not st.get("key") and not v.sync_key():
+            return st, "key"
+        return st, "done"
+
+    def _sync_steps(self, page, st, at):
+        """The three steps on top: ✓ done, ▶ now, · later — each with what it holds."""
+        from .places import Row
+        order = list(STEPS)
+        now = order.index(at) if at in order else len(order)
+        s = self.view.cfg["sync"]
+        said = {"where": s.get("url") or s.get("folder") or "",
+                "login": (st or {}).get("login") or (
+                    _("sync_login_folder_short") if (st or {}).get("backend") == "folder"
+                    else ""),
+                "key": (st or {}).get("key") or ""}
+        for i, step in enumerate(order):
+            mark = "✓" if i < now else ("▶" if i == now else "·")
+            line = said[step] if i < now else _("sync_step_" + step + "_what")
+            page.rows.append(Row("text", f"{mark} {i + 1}. {_('sync_step_' + step)}", line,
+                                 key="step:" + step))
+
     def _p_sync(self, _arg, tab, _cur):
         from .places import Btn, Field, Page, Row
         v = self.view
-        tab = tab if tab in ("where", "login", "key") else "where"
-        page = Page("sync", _("sync_title"), tab=tab, tabs=(
-            ("where", _("sync_tab_where")), ("login", _("sync_tab_login")),
-            ("key", _("sync_tab_key"))))
-        st = v.sync_status()
+        st, at = self._sync_state()
+        step = tab if tab in ("where", "join", "first") else at
+        page = Page("sync", _("sync_title"), tab=step)
+        self._sync_steps(page, st, "key" if step in ("join", "first") else
+                         ("where" if step == "where" else at))
         s = v.cfg["sync"]
-        if tab == "where":
+
+        if step == "where":
             page.hint = _("sync_where_hint")
-            if st is None:
-                page.rows.append(Row("text", _("sync_off_title"), _("sync_off_line")))
-            else:
-                last = st.get("last") or {}
-                nothing = _("sync_nothing")
-                page.rows += [
-                    Row("text", _("sync_f_where"), f"{st['backend']}: {st['where']}"),
-                    Row("text", _("sync_f_login"), st.get("login") or nothing),
-                    Row("text", _("sync_f_key"), st.get("key") or nothing),
-                    Row("text", _("sync_f_pending"), str(st.get("pending", 0))),
-                    Row("text", _("sync_f_last"), " ".join(
-                        x for x in (last.get("at", ""), last.get("error", "")) if x)
-                        or nothing, buttons=(self._btn(_("sync_now_btn"), "sync", "now"),)),
-                ]
             page.form = (Field("url", _("sync_f_url"), str(s.get("url") or ""),
                                tip=_("sync_f_url_tip")),
                          Field("folder", _("sync_f_folder"), str(s.get("folder") or ""),
                                tip=_("sync_f_folder_tip")))
-            page.submit = Btn(_("sync_save_where"), ("sync", "where", ""), True)
-            page.more = Btn(_("sync_what_btn"), ("sync", "what", ""))
+            page.submit = Btn(_("sync_next"), ("sync", "where", ""), True)
+            if st is not None:
+                page.more = Btn(_("sync_turn_off"), ("sync", "off", ""))
             return page
-        if tab == "login":
+
+        if step == "login":
             page.hint = _("sync_login_hint")
-            if st is not None and st.get("backend") == "folder":
-                page.rows.append(Row("text", _("sync_login_folder")))
-                return page
-            if st is not None and st.get("login"):
-                page.rows.append(Row("text", _("sync_f_login"), st["login"]))
             got = _LOGIN.get(v.paths.profile)
             if got is None:
-                page.submit = Btn(_("sync_login_go") if not (st or {}).get("login")
-                                  else _("sync_login_again"), ("sync", "login", ""), True)
+                page.submit = Btn(_("sync_login_go"), ("sync", "login", ""), True)
+                page.more = Btn(_("sync_back_where"), ("sync", "goto", "where"))
                 return page
-            page.rows.append(Row("text", _("login_browser_opened", url=got["url"]), key="url",
+            page.rows.append(Row("text", _("sync_login_opened"), got["url"], key="url",
                                  buttons=(self._btn(_("open_browser"), "sync", "open"),)))
             page.form = (Field("code", _("sync_login_code_f"), ""),)
-            page.submit = Btn(_("login_step2"), ("sync", "code", ""), True)
+            page.submit = Btn(_("sync_next"), ("sync", "code", ""), True)
+            page.more = Btn(_("sync_login_again"), ("sync", "login", ""))
             return page
-        # the key
-        page.hint = _("sync_key_hint")
-        has_key = bool((st or {}).get("key")) or bool(v.sync_key())
-        if has_key:
-            page.rows.append(Row("text", _("sync_f_key"), (st or {}).get("key") or "✓",
-                                 buttons=(self._btn(_("sync_key_show_btn"), "sync", "show"),)))
+
+        if step == "key":  # the fork: the first device, or one more
+            page.hint = _("sync_fork_hint")
+            there = v.sync_journal_there()
+            first = Row("item", _("sync_first_title"), _("sync_first_line"),
+                        key="first", buttons=(self._btn(_("sync_first_btn"), "sync", "goto",
+                                                        "first", primary=not there),))
+            join = Row("item", _("sync_join_title"), _("sync_join_line"), key="join",
+                       buttons=(self._btn(_("sync_join_btn"), "sync", "goto", "join",
+                                          primary=bool(there)),))
+            page.rows += [join, first] if there else [first, join]
+            if there:
+                page.rows.append(Row("text", _("sync_journal_there")))
+            return page
+
+        if step == "first":
+            page.hint = _("sync_first_hint")
+            page.submit = Btn(_("sync_first_go"), ("sync", "first", ""), True)
+            page.more = Btn(_("sync_back_fork"), ("sync", "goto", "key"))
+            return page
+
+        if step == "join":
+            escrow = st is not None and v.sync_has_escrow()
+            page.hint = _("sync_join_hint")
+            fields = [Field("key", _("sync_key_paste_f"), "", tip=_("sync_key_paste_tip"))]
+            if escrow:
+                fields.append(Field("password", _("sync_password_take"), "", "secret",
+                                    tip=_("sync_password_take_tip")))
+            page.form = tuple(fields)
+            page.submit = Btn(_("sync_take_btn"), ("sync", "take", ""), True)
+            page.more = Btn(_("sync_back_fork"), ("sync", "goto", "key"))
             if st is not None:
-                page.rows.append(Row("text", _("sync_escrow_title"), _("sync_escrow_line")))
-                page.form = (Field("password", _("sync_password"), "", "secret"),
-                             Field("password2", _("sync_password_again"), "", "secret"))
-                page.submit = Btn(_("sync_escrow_put"), ("sync", "escrow", ""))
+                page.rows.append(Row("text", _("sync_lost_title"), _("sync_lost_line"),
+                                     key="lost", buttons=(self._btn(
+                                         _("sync_fresh_btn"), "sync", "fresh"),)))
             return page
-        page.rows.append(Row("text", _("sync_no_key_title"), _("sync_no_key_line")))
-        escrow = st is not None and v.sync_has_escrow()
-        fields = [Field("key", _("sync_key_paste_f"), "", tip=_("sync_key_paste_tip"))]
-        if escrow:
-            fields.append(Field("password", _("sync_password_take"), "", "secret",
-                                tip=_("sync_password_take_tip")))
-        page.form = tuple(fields)
-        page.submit = Btn(_("sync_take_btn"), ("sync", "take", ""), True)
-        if st is not None:
-            page.more = Btn(_("sync_fresh_btn"), ("sync", "fresh", ""))
+
+        # done: how it goes, and what one does with it from here
+        last = (st or {}).get("last") or {}
+        nothing = _("sync_nothing")
+        page.hint = _("sync_done_hint")
+        page.rows += [
+            Row("text", _("sync_f_pending"), str((st or {}).get("pending", 0))),
+            Row("text", _("sync_f_last"), " ".join(
+                x for x in (last.get("at", ""), last.get("error", "")) if x) or nothing,
+                buttons=(self._btn(_("sync_now_btn"), "sync", "now", primary=True),)),
+            Row("item", _("sync_next_device_title"), _("sync_next_device_line"),
+                key="show", buttons=(self._btn(_("sync_key_show_btn"), "sync", "show"),)),
+            Row("item", _("sync_escrow_title"), _("sync_escrow_line"), key="escrow"),
+            Row("item", _("sync_what_title"), _("sync_what_line"), key="what",
+                buttons=(self._btn(_("sync_what_btn"), "sync", "what"),
+                         self._btn(_("sync_change_where"), "sync", "goto", "where"))),
+        ]
+        page.form = (Field("password", _("sync_password"), "", "secret"),
+                     Field("password2", _("sync_password_again"), "", "secret"))
+        page.submit = Btn(_("sync_escrow_put"), ("sync", "escrow", ""))
         return page
 
     # ---- the buttons ---------------------------------------------------------------
+    def _a_sync_goto(self, step, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"page": "sync", "tab": step})
+
     def _a_sync_where(self, _d, values, _c, _ans):
         from .places import Out
         v = self.view
         url = str(values.get("url") or "").strip()
         folder = str(values.get("folder") or "").strip()
+        if not url and not folder:
+            return Out(error=_("sync_where_none"))
         if url and not url.startswith(("https://", "http://")):
             url = "https://" + url
-        on = v.sync_setup(url=url, folder=folder)
-        return Out(message=_("sync_saved_on") if on else _("sync_saved_off"), refresh=True)
+        v.sync_setup(url=url, folder=folder)
+        return Out(message=_("sync_saved_on"), open={"page": "sync"})
+
+    def _a_sync_off(self, _d, _v, confirmed, _ans):
+        from .places import Out
+        if not confirmed:
+            return Out(confirm=_("sync_off_sure"))
+        self.view.sync_setup(url="", folder="")
+        return Out(message=_("sync_saved_off"), open={"page": "sync"})
 
     def _a_sync_what(self, _d, _v, _c, _ans):
         from .places import Out
@@ -152,7 +220,20 @@ class SyncPlaces:
         _LOGIN.pop(v.paths.profile, None)
         v.sync_setup()  # the token there now: the engine anew, with it
         return Out(message=_("sync_login_ok", instance=got["instance"]),
-                   open={"page": "sync", "tab": "key"})
+                   open={"page": "sync"})
+
+    def _a_sync_first(self, _d, _v, _c, _ans):
+        from .places import Out
+        v = self.view
+        try:
+            kid = v.sync_first_key()
+        except ValueError:
+            return Out(error=_("sync_first_but_journal"), open={"page": "sync", "tab": "join"})
+        v.sync_setup()
+        done = v.sync_now()
+        return Out(message=_("sync_first_done", kid=kid) +
+                   (" · " + _("sync_round", sent=done[0], got=done[1]) if done else ""),
+                   open={"page": "sync"})
 
     def _a_sync_show(self, _d, _v, confirmed, _ans):
         from .places import Out
@@ -191,7 +272,10 @@ class SyncPlaces:
         except ValueError:
             return Out(error=_("sync_join_bad"))
         v.sync_setup()
-        return Out(message=_("sync_join_ok", kid=kid), open={"page": "sync", "tab": "where"})
+        done = v.sync_now()
+        return Out(message=_("sync_join_ok", kid=kid) +
+                   (" · " + _("sync_round", sent=done[0], got=done[1]) if done else ""),
+                   open={"page": "sync"})
 
     def _a_sync_fresh(self, _d, _v, confirmed, _ans):
         from .places import Out
@@ -199,4 +283,4 @@ class SyncPlaces:
             return Out(confirm=_("sync_fresh_sure"))
         kid = self.view.sync_fresh_key()
         self.view.sync_setup()
-        return Out(message=_("sync_fresh_done", kid=kid), refresh=True)
+        return Out(message=_("sync_fresh_done", kid=kid), open={"page": "sync"})
