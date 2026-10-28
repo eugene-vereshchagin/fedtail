@@ -11,7 +11,7 @@ from ...i18n import _
 from ...model import real
 from ..common.places import PLACES, Places
 from .dialogs import _box, _window
-from .gi_setup import Gtk, tip
+from .gi_setup import Gtk, tip, vscroll
 
 
 def _plain(text):
@@ -36,7 +36,7 @@ class PlaceWindow:
         outer.append(self.hint)
         self.tabs = Gtk.Box(spacing=6)
         outer.append(self.tabs)
-        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll = vscroll(vexpand=True)
         self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         scroll.set_child(self.rows)
         outer.append(scroll)

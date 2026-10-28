@@ -26,6 +26,10 @@
   running (`fedtail --ui web` — "qt"), and from the phone "Linux <kernel>" with no model
   and no Android; now the phone's model, Android and screen, and the interface that runs —
   in the issue, the bug report and the log's session line.
+- Fixed (GTK): in the windows of rows with buttons (≡ → Lanes and every other place, the
+  settings, the profile editor, the lists of filters, scheduled and filtered posts) the
+  scrollbar was drawn over the buttons at the right edge ("Take", "Edit…"); now it has
+  a strip of its own beside them, as in Qt.
 
 ## 0.21.0 — 2026-10-28
 

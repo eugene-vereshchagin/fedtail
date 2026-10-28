@@ -620,6 +620,37 @@ class GtkSmokeTest(_GtkBase):
         pw.window.close()
         put.window.close()
 
+    def test_place_and_settings_scrollbars_beside_the_buttons(self):
+        """A place (≡ → Lanes) and the settings: the scrollbar takes a strip of its own,
+        as in Qt — not GTK's overlay one drawn over "Take", "Edit…" at the right edge;
+        the content ends left of the scrollbar."""
+        from gi.repository import Graphene
+
+        from fedtail.frontends.gtk.settings import SettingsWindow
+        pw = self.win.open_place("lanes")
+        self.assertTrue(pump(lambda: any(isinstance(w, Gtk.Button)
+                                         for w in _walk(pw.rows)), 3))
+        sw = Gtk.ScrolledWindow
+        scroll = pw.rows.get_ancestor(sw)
+        self.assertFalse(scroll.get_overlay_scrolling())
+        s = SettingsWindow(self.win)
+        s.present()
+        pump(timeout=0.3)
+        # the chapters and the page (a drop-down's own popup list is GTK's business)
+        for w in (s.list.get_ancestor(sw), s.scroll):
+            self.assertFalse(w.get_overlay_scrolling())
+        # the rows' right edge stops where the vertical scrollbar begins
+        pw.window.set_default_size(640, 200)
+        pump(timeout=0.3)
+        bar = scroll.get_vscrollbar()
+        if bar.get_mapped() and bar.get_width() > 0:
+            ok, pt = pw.rows.compute_point(scroll, Graphene.Point().init(
+                pw.rows.get_width(), 0))
+            self.assertTrue(ok)
+            self.assertLessEqual(pt.x, bar.get_allocation().x + 0.5)
+        s.close()
+        pw.window.close()
+
     def test_a_lists_menu_in_the_sidebar(self):
         """A right click on a list: who's in it, up/down, rename, exclusive, delete —
         as in Qt; on another lane: a new list."""

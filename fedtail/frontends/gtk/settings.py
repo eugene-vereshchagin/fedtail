@@ -9,7 +9,7 @@ import logging
 
 from ...i18n import _
 from ..common import settings as model_of
-from .gi_setup import GLib, Gtk
+from .gi_setup import GLib, Gtk, vscroll
 
 log = logging.getLogger(__name__)
 
@@ -74,12 +74,12 @@ class SettingsWindow(Gtk.Window):
             row.key = ch.key
             self.list.append(row)
         self.list.connect("row-selected", self._chosen)
-        side = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
+        side = vscroll(hscrollbar_policy=Gtk.PolicyType.NEVER)
         side.set_child(self.list)
         side.set_size_request(200, -1)
         paned.set_start_child(side)
         paned.set_resize_start_child(False)
-        self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, hexpand=True)
+        self.scroll = vscroll(hscrollbar_policy=Gtk.PolicyType.NEVER, hexpand=True)
         paned.set_end_child(self.scroll)
         paned.set_position(210)
         outer.append(paned)

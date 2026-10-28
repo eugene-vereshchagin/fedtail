@@ -9,7 +9,7 @@ import logging
 from ...i18n import _
 from ..common import server
 from .dialogs import _box, _buttons, _window
-from .gi_setup import GLib, Gtk, tip
+from .gi_setup import GLib, Gtk, tip, vscroll
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class ProfileEditor:
         self.avatar_path = self.header_path = None
         self.dlg = dlg = _window(win, _("profile_title"), 600, 680)
         outer = _box()
-        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll = vscroll(vexpand=True)
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         box = _box(0)
         scroll.set_child(box)

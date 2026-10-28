@@ -10,7 +10,7 @@ import logging
 from ...i18n import _
 from .. import pango
 from ..common import timed
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import GLib, Gtk, Pango, tip, vscroll
 
 log = logging.getLogger(__name__)
 
@@ -242,7 +242,7 @@ def silence(win, tab="filters"):
     def listbox():
         lb = Gtk.ListBox()
         lb.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        sc = Gtk.ScrolledWindow(vexpand=True)
+        sc = vscroll(vexpand=True)
         sc.set_child(lb)
         return lb, sc
 
@@ -424,7 +424,7 @@ def scheduled(win):
     dlg = _window(win, _("scheduled_title"), 560, 380)
     box = _box()
     lb = Gtk.ListBox()
-    sc = Gtk.ScrolledWindow(vexpand=True)
+    sc = vscroll(vexpand=True)
     sc.set_child(lb)
     box.append(sc)
     cancel = Gtk.Button(label=_("scheduled_cancel"), halign=Gtk.Align.START)
@@ -566,7 +566,7 @@ def filtered(win):
     note = Gtk.Label(label=_("filtered_loading"), xalign=0, wrap=True)
     box.append(note)
     lb = Gtk.ListBox()
-    sc = Gtk.ScrolledWindow(vexpand=True)
+    sc = vscroll(vexpand=True)
     sc.set_child(lb)
     box.append(sc)
     accept = Gtk.Button(label=_("filtered_accept"))

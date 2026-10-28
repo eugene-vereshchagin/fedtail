@@ -152,6 +152,16 @@ def hscroll(child, end=False):
     return sc
 
 
+def vscroll(**props):
+    """A scrolled window for rows with buttons or a form (a place, the settings, the
+    lists of the ≡ windows): the scrollbar takes its own strip beside the content, as
+    Qt's does, instead of GTK's overlay one drawn over the buttons at the right edge.
+    The card lanes keep the overlay scrollbar: nothing of theirs sits under it."""
+    sc = Gtk.ScrolledWindow(**props)
+    sc.set_overlay_scrolling(False)
+    return sc
+
+
 HINTS = {"on": False}
 
 
