@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Lighter: avatars are decoded at their box (twice it for HiDPI) in every window, not as
+  feed pictures up to 1200 px — measured, 3–13 MB less in the bench's window.
+
 - The phone quotes piece by piece, as the windows and the web page: a tap on the post
   answered shows it whole, select a piece, "❝ Quote in reply" puts it where the cursor is.
 

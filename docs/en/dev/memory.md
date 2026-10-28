@@ -136,6 +136,12 @@ So the order of the plan holds for the core, but the window's weight is in the c
 
   Below 64 nothing more goes: the pictures on screen are held by their cards whatever the
   cache. The default is 64 MB now (step 6) — 60 MB of the 380 a window kept open holds.
+* **Faces decoded at their box** (`images.face`: twice the box, at least 64 px — they
+  were decoded as feed pictures, up to 1200 px, a 400-px avatar whole for a 40-px circle):
+  after the trim −3…−13 MB (two runs each, A/B). Tried and dropped: keeping in the cache a
+  card's picture as its box shows it instead of the decoded one (each on screen was there
+  twice) — +12…+23 MB, measured, so not done. The bench left a different lane in front
+  from run to run (1062 widgets or 1936, 20 MB apart): it puts Home in front now.
 
 ## Decisions
 

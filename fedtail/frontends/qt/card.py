@@ -1298,20 +1298,17 @@ class PostRow(QWidget):
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
         ▶ on it; a video without one says it's a video, not a broken picture."""
-        def shaped(pm):  # as the box shows it: what the cache keeps (images.get's fit)
-            pm = _fit(pm, tw, th, radius, focus)
-            return _play_mark(pm) if kind != "image" else pm
-        fit = (("box", tw, th, radius, focus, kind != "image"), shaped)
-
         def show(pm):
+            pm = _fit(pm, tw, th, radius, focus)
+            if kind != "image":
+                pm = _play_mark(pm)
             try:
                 lab.setPixmap(pm)
             except RuntimeError:  # the card was rebuilt meanwhile
                 return
             if upgrade:
-                self.ctx.images.get(upgrade, lambda big: _set(lab, big), big=True, owner=lab,
-                                    fit=(("box", tw, th, radius, None, False),
-                                         lambda big: _fit(big, tw, th, radius)),
+                self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)),
+                                    big=True, owner=lab,
                                     **({"max_side": side} if side else {}))
 
         def failed():
@@ -1325,7 +1322,7 @@ class PostRow(QWidget):
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
         self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big,
-                            owner=lab, fit=fit, **({"max_side": side} if side else {}))
+                            owner=lab, **({"max_side": side} if side else {}))
 
 
 def _set(lab, pm):

@@ -156,7 +156,6 @@ class Cache:
         # a hundred 1200-px photos alone are half a gigabyte
         self.mem = OrderedDict()
         self.mem_bytes = 0
-        self._keep = {}  # key → whether the decoded picture is kept once it comes
         self.mem_budget = int(core.cfg["ui"].get("image_cache_mb", MEM_MB)) * 1024 * 1024
         self.waiting = {}
         self.broken = {}  # url -> when it last failed (monotonic)
@@ -589,7 +588,7 @@ class Cache:
         self.get(url, callback, max_side=face_side(size), owner=owner)
 
     def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False, original=None,
-            big=False, owner=None, fit=None, keep=True):
+            big=False, owner=None):
         """callback(picture on screen) now or later; for a broken or unreachable image
         failed() is called instead (if given). retry: ask again even if it just failed.
         original: the full picture this one is a preview of — if the preview gives up and
@@ -599,31 +598,10 @@ class Cache:
         owner: the widget the picture is for. The cache then keeps its callbacks only
         weakly (the owner keeps them): a card thrown away isn't held alive by a picture
         still on its way or one that failed and is waited for — in GTK every card of every
-        closed tab stayed so (25.10).
-        fit: (key, fn) — the picture as the box shows it, fn(picture) → what the widget
-        takes (cut to the box, rounded): that is kept in memory, under key, and not the
-        decoded one besides — a card held its own copy cut to its box while the cache kept
-        the decoded picture too, each picture on screen twice (28.10). keep=False: the
-        decoded one isn't kept (what fit asks for underneath)."""
+        closed tab stayed so (25.10)."""
         if owner is not None:
             callback = _weakly(owner, callback)
             failed = _weakly(owner, failed) if failed else None
-        if fit is not None and url:
-            fkey = (url, max_side, fit[0])
-            if fkey in self.mem:
-                self.mem.move_to_end(fkey)
-                callback(self.mem[fkey])
-                return
-            make = fit[1]
-
-            def fitted(pm, fkey=fkey, make=make, callback=callback):
-                out = self.mem.get(fkey)
-                if out is None:
-                    out = make(pm)
-                    self._remember(fkey, out)
-                callback(out)
-            self.get(url, fitted, max_side, failed, retry, original, big, keep=False)
-            return
         if not url:
             if failed:
                 failed()
@@ -649,7 +627,6 @@ class Cache:
             self.mem.move_to_end(key)
             callback(self.mem[key])
             return
-        self._keep[key] = self._keep.get(key, False) or keep
         if key in self.waiting:
             self.waiting[key].append((callback, failed))
             since = time.monotonic() - self.asked.get(key, time.monotonic())
@@ -706,7 +683,6 @@ class Cache:
             return
         self.patient.discard(key)
         self.broken[key[0]] = time.monotonic()
-        self._keep.pop(key, None)
         waiting = self.waiting.pop(key, [])
         for cb, failed in waiting:
             self._give_up(key[0], key[1], cb, failed)
@@ -768,8 +744,7 @@ class Cache:
         t = time.monotonic()
         with diag.busy(f"picture in ({len(callbacks)} cards)"):
             pm = self.to_screen(img)
-            if self._keep.pop(key, True):
-                self._remember(key, pm)
+            self._remember(key, pm)
             for cb in callbacks:
                 try:
                     cb(pm)

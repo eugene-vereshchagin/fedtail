@@ -374,6 +374,10 @@ def qt_scroll(app, win):
 def qt_unloaded(app, win):
     """Every lane but the one in front unloaded, as ui.unload_hidden_minutes does."""
     from PySide6.QtCore import QCoreApplication, QEvent
+    # Home in front, always: which lane was left there varied (1062 widgets left one
+    # run, 1936 the next — 20 MB of noise between two runs of the same code)
+    win.select_lane("home")
+    app.processEvents()
     front = win.stack.currentWidget()
     for w in list(win.lane_widgets.values()):
         if w is not front and w.view.order:
