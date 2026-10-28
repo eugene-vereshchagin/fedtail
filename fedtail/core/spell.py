@@ -10,7 +10,12 @@ say so once (spell_unavailable); nothing else changes.
 A word is fine when any of the languages takes it (a Russian post with English words in
 it is the usual thing), or it is in my own dictionary (<config folder>/spelling.txt, one
 word a line — "Add to dictionary" writes there, any editor may too). Links, @names,
-#tags, :emoji:, `code` and words with digits are never checked."""
+#tags, :emoji:, `code` and words with digits are never checked.
+
+A word is judged only by dictionaries of its own script: a Cyrillic word by ru / uk…,
+a Latin one by en / de…. The languages asked for have none of its script (an English
+interface, a Russian post — 28.10: every word underlined) — the installed dictionaries
+of that script are taken; none installed — the word isn't judged at all."""
 
 from __future__ import annotations
 
@@ -19,6 +24,7 @@ import ctypes.util
 import logging
 import re
 import threading
+import unicodedata
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -171,6 +177,31 @@ def languages():
         return []
 
 
+# the script a language is written in, where it isn't Latin
+SCRIPTS = {**dict.fromkeys(("ru", "uk", "be", "bg", "sr", "mk", "kk", "ky", "tg", "mn", "tt",
+                            "ba", "cv"), "CYRILLIC"),
+           "el": "GREEK", "hy": "ARMENIAN", "ka": "GEORGIAN",
+           **dict.fromkeys(("he", "yi"), "HEBREW"),
+           **dict.fromkeys(("ar", "fa", "ur", "ps"), "ARABIC"),
+           **dict.fromkeys(("hi", "mr", "ne"), "DEVANAGARI"), "th": "THAI"}
+
+
+def script_of_tag(tag):
+    """"ru_RU" → "CYRILLIC", "en_US" → "LATIN"."""
+    return SCRIPTS.get((tag or "").replace("-", "_").split("_")[0].lower(), "LATIN")
+
+
+def script_of_word(word):
+    """The script of a word's first letter: "LATIN", "CYRILLIC", "GREEK"…"""
+    for ch in word:
+        if ch.isalpha():
+            try:
+                return unicodedata.name(ch).split()[0]
+            except ValueError:
+                return ""
+    return ""
+
+
 def pick(wanted, installed):
     """The installed dictionaries for the wanted languages: "ru" finds ru_RU, "en"
     en_US (or another en_*); an exact tag wins."""
@@ -203,14 +234,33 @@ class Checker:
         self.dicts = []
         self.tags = []
         for tag in pick(langs, languages()) if b else []:
-            try:
-                d = b.open(tag)
-            except Exception as e:  # noqa: BLE001
-                log.debug("spell %s: %s", tag, e)
-                d = None
-            if d is not None:
-                self.dicts.append(d)
-                self.tags.append(tag)
+            self._open(tag)
+        self._scripts = {script_of_tag(t) for t in self.tags}  # those looked for already
+
+    def _open(self, tag):
+        b = backend()
+        try:
+            d = b.open(tag)
+        except Exception as e:  # noqa: BLE001
+            log.debug("spell %s: %s", tag, e)
+            d = None
+        if d is not None:
+            self.dicts.append(d)
+            self.tags.append(tag)
+
+    def _of_script(self, script):
+        """The dictionaries for words of this script: the languages asked for, or else
+        every installed one of that script (opened once); [] — none here."""
+        if script not in self._scripts:
+            self._scripts.add(script)
+            for tag in languages():
+                if script_of_tag(tag) == script and tag not in self.tags:
+                    self._open(tag)
+            if any(script_of_tag(t) == script for t in self.tags):
+                log.info("spell: words in %s checked by %s too", script.lower(),
+                         ", ".join(t for t in self.tags if script_of_tag(t) == script))
+        return [d for d, t in zip(self.dicts, self.tags, strict=True)
+                if script_of_tag(t) == script]
 
     @property
     def working(self):
@@ -234,7 +284,10 @@ class Checker:
             return True
         b = backend()
         with self._lock:
-            for d in self.dicts:
+            dicts = self._of_script(script_of_word(word))
+            if not dicts:  # no dictionary of its script here: not ours to judge
+                return True
+            for d in dicts:
                 try:
                     if b.check(d, word):
                         return True
@@ -252,7 +305,7 @@ class Checker:
         b = backend()
         out = []
         with self._lock:
-            for d in self.dicts:
+            for d in self._of_script(script_of_word(word)):
                 try:
                     for s in b.suggest(d, word):
                         if s not in out:

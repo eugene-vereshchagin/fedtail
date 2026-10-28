@@ -52,6 +52,21 @@ class SpellTest(unittest.TestCase):
         self.assertEqual(c.suggest("wrold"), ["world"])
         self.assertEqual(c.wrong("NASA I"), [])  # acronyms and one letter pass
 
+    def test_a_word_by_its_own_scripts_dictionaries(self):
+        """28.10: an English interface, a Russian post — every word was underlined (the
+        English dictionary judged Cyrillic). A word goes to its script's dictionaries:
+        those asked for, else the installed ones; none — not judged."""
+        c = spell.Checker(["en"])
+        self.assertEqual(c.tags, ["en_US"])
+        self.assertEqual([w for *_x, w in c.wrong("привет мир hello wrold привт")],
+                         ["wrold", "привт"])  # ru_RU taken for the Cyrillic ones
+        self.assertIn("ru_RU", c.tags)
+        self.assertEqual(c.suggest("привт"), ["привет"])
+        self.assertEqual(c.wrong("γεια σου"), [])  # no Greek dictionary: not judged
+        self.assertEqual(spell.script_of_tag("uk_UA"), "CYRILLIC")
+        self.assertEqual(spell.script_of_tag("de_DE"), "LATIN")
+        self.assertEqual(spell.script_of_word("Ёж"), "CYRILLIC")
+
     def test_my_own_dictionary(self):
         with tempfile.TemporaryDirectory() as d:
             own = Path(d) / "spelling.txt"

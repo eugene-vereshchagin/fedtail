@@ -6,6 +6,11 @@ Sync set up in the window step by step, "Commented posts" as on Point, a library
 pictures, where a thread opens as one setting, lanes of rules brought to the end, and a
 crash on a flaky connection fixed:
 
+- Fixed: the spell check underlined every word of a Russian post written with an English
+  interface — the English dictionary judged Cyrillic. A word now goes to the dictionaries
+  of its own script: those asked for, else the installed ones of that script; none — it
+  isn't judged.
+
 - **A lane without a seam** (`reading.older_ahead`, off by default): read to within a
   screen of what a lane shows, and fedtail fetches a page of older posts itself, as the
   "older" button does — one at a time, and none any more once a page brought nothing (the
