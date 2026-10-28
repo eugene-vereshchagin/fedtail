@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: a profile copied to another computer (state.db and all) synced with nothing — both
+  carried one device id, and each took the other's journal for its own (28.10's report: a
+  Linux profile moved onto a Windows VM). The id is bound to the computer and the folder it
+  was made in now: a copy makes its own and reads the journal from the start. Ids from
+  before are made anew once, the same way.
+
 - Sync: the first time a device syncs under a key it sends once what it knew already —
   the order of lists, saved tag lanes, tiles, how far events are seen, the read marks of
   the posts it keeps. A device added later got only the changes made after it came: lists

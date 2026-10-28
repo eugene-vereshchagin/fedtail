@@ -142,11 +142,31 @@ class Sync:
         self._lock_at = threading.Lock()  # guards both
 
     def _device(self):
+        """This device's id in the journal. It is bound to where it was made (the
+        machine's name and the profile's folder): a profile copied to another computer
+        (28.10: Linux's onto a Windows VM) makes an id of its own there — two devices
+        under one id take each other's journal for their own and never see it."""
         d = self.store.kv_get("sync.device")
+        here = self._here()
+        # an id from before 0.22 has no place of its own yet: made anew once (cheap — the
+        # journal is read again from its start, every op in it can be taken twice)
+        if d and self.store.kv_get("sync.device_at") != here:
+            log.info("sync: a new device id here (the profile was made elsewhere, or by an "
+                     "older fedtail); the journal read from its start")
+            d = None
+            self.store.kv_set("sync.cursor", None)
+            self.store.kv_set("sync.snapshot", None)  # what this one knows goes out too
         if not d:
             d = uuid.uuid4().hex[:16]
             self.store.kv_set("sync.device", d)
+        self.store.kv_set("sync.device_at", here)
         return d
+
+    def _here(self):
+        import hashlib
+        import platform
+        where = f"{platform.node()}\0{Path(self.paths.data_dir).resolve()}"
+        return hashlib.sha256(where.encode()).hexdigest()[:16]
 
     # ---- recording (any thread; the core calls these) ----------------------------
     def record_read(self, status_ids):

@@ -299,6 +299,28 @@ class FolderSyncTest(Devices):
         self.desk.sync_now()  # once per key, not every round
         self.assertEqual(self.desk.store.sync_pending_count(), sent)
 
+    def test_a_copied_profile_is_a_device_of_its_own(self):
+        """state.db copied to another computer carries the device id: there it gets one
+        of its own, or the two would skip each other's journal as their own."""
+        from unittest import mock
+        self.desk.mark_read(["101"])
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.store.kv_set("sync.device", self.desk.sync.device)  # as if copied
+        self.phone.store.kv_set("sync.device_at", self.desk.store.kv_get("sync.device_at"))
+        with mock.patch("platform.node", lambda: "another-computer"):
+            again = engine.Sync(self.phone)
+        self.assertNotEqual(again.device, self.desk.sync.device)
+        self.phone.sync = again
+        self.phone.sync_now()
+        self.assertEqual(self.phone.store.read_set(["101"]), {"101"})
+        self.assertEqual(engine.Sync(self.desk).device, self.desk.sync.device)  # at home: kept
+        # an id of an older fedtail (no place recorded): made anew once, then kept
+        self.desk.store.kv_set("sync.device_at", None)
+        fresh = engine.Sync(self.desk).device
+        self.assertNotEqual(fresh, self.desk.sync.device)
+        self.assertEqual(engine.Sync(self.desk).device, fresh)
+
     def test_events_seen_here_are_seen_there(self):
         for core in (self.desk, self.phone):
             core.store.activity_put([
