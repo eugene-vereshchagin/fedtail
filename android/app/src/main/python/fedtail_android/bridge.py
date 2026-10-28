@@ -68,12 +68,16 @@ def _answer(fn):
 
 # ---- the stage ------------------------------------------------------------------------
 
-def start(files_dir, cache_dir, lang="", demo=False, logs=False):
+def start(files_dir, cache_dir, lang="", demo=False, logs=False, device_json=None):
     """Set the stage for the core and make it; → info() as JSON. logs: the desktop's
     session logs and crash traces (diag.setup) in the profile's data folder — the app
-    asks for them; the tests on a desktop don't."""
+    asks for them; the tests on a desktop don't. device_json: the phone's facts
+    (SelfCheck.kt's deviceFacts) — the log's header, the bug report and the issue's
+    draft say the phone and its Android, not "Linux" and a kernel."""
     global _started
+    from fedtail import diag
     t = time.monotonic()
+    diag.running("android", json.loads(device_json) if device_json else None)
     os.environ["XDG_CONFIG_HOME"] = os.path.join(files_dir, "config")
     os.environ["XDG_DATA_HOME"] = os.path.join(files_dir, "data")
     os.environ["XDG_CACHE_HOME"] = cache_dir
@@ -122,7 +126,7 @@ def _make(demo):
     if _s.get("logs") and not _s.get("logging"):
         from fedtail import diag
         diag.setup(where, cfg)
-        diag.session_header(where.profile, {"ui": "android"})
+        diag.session_header(where.profile)
         _s["logging"] = True
     core = Core(cfg, where, **kw)
     held = []

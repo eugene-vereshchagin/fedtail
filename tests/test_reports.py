@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest import mock
 from urllib.parse import parse_qs, urlsplit
 
-from fedtail import i18n, issue, reportsend
+from fedtail import diag, i18n, issue, reportsend
 
 HAVE_GIT = shutil.which("git") is not None
 
@@ -232,10 +232,12 @@ class DraftTest(unittest.TestCase):
         paths = SimpleNamespace(profile="work", data_dir=Path(self._tmp.name))
         cfg = {"ui": {"theme": "paper", "layout": "single", "frontend": "qt"},
                "debug": {"issue_repo": ""}}
+        _running(self, "gtk")  # `fedtail --ui gtk` with ui.frontend = "qt"
         with mock.patch("fedtail.diag.logs_dir", return_value=self.logs):
-            d = issue.draft(paths, cfg, known=["my.server"], toolkit="gtk")
+            d = issue.draft(paths, cfg, known=["my.server"])
         self.assertIn("### " + i18n._("issue_what"), d.body)
         self.assertIn("interface gtk", d.body)
+        self.assertNotIn("interface qt", d.body)
         self.assertIn("theme paper", d.body)
         self.assertNotIn("my.server", d.body)
         url = issue.issue_url(cfg, "", d.body)
@@ -251,11 +253,54 @@ class DraftTest(unittest.TestCase):
         url = issue.issue_url({}, "t", body)
         self.assertLessEqual(len(url), issue.MAX_URL)
         self.assertIn("…", parse_qs(urlsplit(url).query)["body"][0])
-        with mock.patch.object(issue.sys, "frozen", True, create=True), \
+        _running(self, "")
+        with mock.patch.object(diag.sys, "frozen", True, create=True), \
                 mock.patch("fedtail.diag.logs_dir", return_value=self.logs):
-            d = issue.draft(SimpleNamespace(profile="default"), {}, toolkit="")
+            d = issue.draft(SimpleNamespace(profile="default"), {})
         self.assertIn("one-file build", d.body)
-        self.assertIn("interface ?", d.body)
+        self.assertIn("interface ?", d.body)  # nobody said, and no config: unknown
+
+    def test_a_phone_says_itself(self):
+        """From the phone: its model and Android, not "Linux <kernel>" and "desktop —";
+        the private facts (memory, notifications) stay out of the public issue but go
+        into the bug report."""
+        _running(self, "android", {"device": "Google Pixel 8", "android": "15 (API 35)",
+                                   "memory": "7600 MB, free 2100 MB", "notifications": "OFF",
+                                   "push": ""})
+        with mock.patch("fedtail.diag.logs_dir", return_value=self.logs):
+            d = issue.draft(SimpleNamespace(profile="default"),
+                            {"ui": {"frontend": "qt"}})
+        self.assertIn("interface android", d.body)
+        self.assertIn("device Google Pixel 8", d.body)
+        self.assertIn("android 15 (API 35)", d.body)
+        self.assertNotIn("desktop", d.body)
+        self.assertNotIn("memory", d.body)
+        self.assertNotIn("notifications", d.body)
+        full = "\n".join(diag.system_lines())
+        self.assertIn("memory 7600 MB", full)
+        self.assertIn("notifications OFF", full)
+        self.assertNotIn("push", full)  # an empty fact isn't a line
+        self.assertEqual(diag.device()["device"], "Google Pixel 8")
+        paths = SimpleNamespace(profile="default", config_file=Path(self._tmp.name) / "c",
+                                data_dir=Path(self._tmp.name),
+                                db_file=Path(self._tmp.name) / "state.db")
+        summary = diag._system_summary(paths, {})
+        self.assertIn("interface android", summary)
+        self.assertIn("notifications OFF", summary)
+
+    def test_the_session_header_says_what_runs(self):
+        _running(self, "web")
+        with self.assertLogs("fedtail.diag", "INFO") as logs:
+            diag.session_header("default", {"logs": "x"})
+        self.assertIn('"ui": "web"', logs.output[0])
+
+
+
+def _running(test, interface, device=None):
+    """diag.running for one test, put back as it was afterwards."""
+    was = (diag.interface({}), diag.device())
+    diag.running(interface, device)
+    test.addCleanup(lambda: diag.running("" if was[0] == "?" else was[0], was[1]))
 
 
 class PlaceAndFlagTest(unittest.TestCase):

@@ -20,7 +20,7 @@ class IssueWindow(Gtk.Window):
             getattr(box, f"set_margin_{m}")(12)
         note = Gtk.Label(label=_("issue_check"), xalign=0, wrap=True)
         box.append(note)
-        d = issue.draft(win.view.paths, win.cfg, known=self.mine, toolkit="gtk")
+        d = issue.draft(win.view.paths, win.cfg, known=self.mine)
         self.text = Gtk.TextView(monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR)
         self.text.get_buffer().set_text(d.body)
         scroll = Gtk.ScrolledWindow(vexpand=True)

@@ -341,6 +341,61 @@ def quiet_console():
         _state["console"] = None
 
 
+# ---- what this process is: the interface it draws and, on a phone, the device -----------
+# Said once at start (__main__ for the desktop's interfaces, the Android bridge for the
+# phone); the session header, the bug report and the issue's draft all read it from here,
+# so none of them says what the config wished instead of what runs (`--ui web` with
+# ui.frontend = "qt", the phone).
+_running = {"interface": "", "device": {}}
+# a phone's facts fit for a public issue (the bug report, private, carries them all)
+PUBLIC_DEVICE = ("android", "device", "abi", "screen", "app")
+
+
+def running(interface, device=None):
+    """Says what this process is.
+
+    Args:
+        interface: "qt", "gtk", "tui", "web", "cli" or "android".
+        device: a phone's facts as its app gathers them ({"device": "Google Pixel 8",
+            "android": "15 (API 35)", "abi", "memory", "screen", "app", …}); None on a
+            desktop, where the system says it itself.
+    """
+    _running["interface"] = str(interface or "")
+    _running["device"] = {str(k): str(v) for k, v in (device or {}).items() if v not in
+                          (None, "")}
+
+
+def interface(cfg=None):
+    """The interface this process draws; before anyone said — the config's wish."""
+    return _running["interface"] or ((cfg or {}).get("ui") or {}).get("frontend", "?")
+
+
+def device():
+    """A phone's facts (a copy), {} on a desktop."""
+    return dict(_running["device"])
+
+
+def system_lines(cfg=None, public=False):
+    """The system in a few lines, the same wherever it's told: fedtail and Python, then a
+    phone's model and Android or a desktop's OS and session, then the interface.
+    public: only what may go into a public issue (a phone's memory, notifications and
+    the like stay in the private report)."""
+    from . import version
+    lines = [f"fedtail {version.full()}", f"Python {platform.python_version()}"]
+    dev = _running["device"]
+    if dev:
+        keys = PUBLIC_DEVICE if public else tuple(dev)
+        lines += [f"{k} {dev[k]}" for k in keys if k in dev]
+    else:
+        lines += [f"{platform.system()} {platform.release()} ({platform.machine()})",
+                  f"desktop {os.environ.get('XDG_CURRENT_DESKTOP', '') or '—'} "
+                  f"{os.environ.get('XDG_SESSION_TYPE', '')}".strip()]
+    lines.append(f"interface {interface(cfg)}")
+    if getattr(sys, "frozen", False):
+        lines.append("one-file build")
+    return lines
+
+
 def session_header(profile, extra=None):
     from . import version
     info = version.info()
@@ -351,6 +406,9 @@ def session_header(profile, extra=None):
         "desktop": os.environ.get("XDG_CURRENT_DESKTOP", ""),
         "session": os.environ.get("XDG_SESSION_TYPE", ""),
     }
+    if _running["interface"]:
+        lines["ui"] = _running["interface"]
+    lines.update({k: v for k, v in _running["device"].items()})
     lines.update(extra or {})
     log.info("==== session start: %s", json.dumps(lines, ensure_ascii=False))
 
@@ -851,7 +909,7 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
     out = dest / name
     folder = logs_dir(paths, cfg)
     since = time.time() - hours * 3600
-    summary = _system_summary(paths)
+    summary = _system_summary(paths, cfg)
     with tarfile.open(out, "w:gz") as tar:
         if folder.exists():
             for f in sorted(folder.iterdir()):
@@ -870,12 +928,9 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
     return out
 
 
-def _system_summary(paths):
-    from . import version
-    lines = [f"fedtail {version.full()}", f"python {sys.version}",
-             f"platform {platform.platform()}",
-             f"desktop {os.environ.get('XDG_CURRENT_DESKTOP', '')} "
-             f"{os.environ.get('XDG_SESSION_TYPE', '')}",
+def _system_summary(paths, cfg=None):
+    lines = system_lines(cfg) + [
+             f"python {sys.version}", f"platform {platform.platform()}",
              f"profile {paths.profile}", f"config {paths.config_file}",
              f"data {paths.data_dir}"]
     for mod in ("PySide6", "requests", "urllib3"):

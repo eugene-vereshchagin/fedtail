@@ -290,13 +290,14 @@ def main(argv=None):
         return 0
 
     from . import diag
+    ui = args.ui or cfg["ui"]["frontend"]
+    diag.running(ui)  # what runs, not what the config wished: the log, reports, the issue
     folder = diag.setup(where, cfg, console_debug=args.debug)
     diag.session_header(where.profile, {"logs": str(folder)})
     if not getattr(sys, "frozen", False):  # from the source: say where to look
         print(f"fedtail: logs in {folder} (latest.log)", file=sys.stderr)
     diag.start_stats(cfg)
 
-    ui = args.ui or cfg["ui"]["frontend"]
     if not deps.at_start(ui):  # the interface's own pieces, said with the command
         return 3
     frontend = frontends.load(ui)
@@ -366,6 +367,7 @@ def _terminal(args, cfg, where):
         print("fedtail: terminal commands are off (cli.enabled = false)", file=sys.stderr)
         return 2
     from . import diag
+    diag.running("cli")
     diag.setup(where, cfg, console_debug=args.debug)
     diag.session_header(where.profile, {"cli": args.command})
     core = Core(cfg, where)

@@ -22,8 +22,10 @@ object Core {
 
     fun failed(o: JSONObject): String? = if (o.has("error")) o.optString("error") else null
 
+    /** The phone's facts go along: the log, the bug report and the issue say the phone. */
     suspend fun start(context: Context, lang: String, demo: Boolean): JSONObject = obj(
-        "start", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang, demo, true)
+        "start", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang, demo, true,
+        deviceFacts(context).toString())
 
     suspend fun selfcheckSteps(): JSONArray = JSONArray(call("selfcheck_steps"))
     suspend fun selfcheckStep(name: String) = obj("selfcheck_step", name)

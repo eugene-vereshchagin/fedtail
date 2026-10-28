@@ -34,6 +34,8 @@ class _Base(TmpDir):
         self.addCleanup(i18n.setup, i18n.current_language())
         self.bridge = load_bridge()
         self.addCleanup(lambda: self.bridge._s["core"] and self.bridge._s["core"].shutdown())
+        from fedtail import diag
+        self.addCleanup(diag.running, "")  # start() says "android": not for the next tests
 
     def call(self, name, *args):
         got = json.loads(getattr(self.bridge, name)(*args))
@@ -48,6 +50,23 @@ class _Base(TmpDir):
 
 
 class BridgeTest(_Base):
+    def test_the_phone_says_itself(self):
+        """The phone's facts given to start(): the issue's draft and the report say the
+        phone, its Android and "interface android" — not the config's "qt"."""
+        from types import SimpleNamespace
+
+        from fedtail import diag, issue
+        facts = {"device": "Google Pixel 8", "android": "15 (API 35)", "memory": "7 GB"}
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", True,
+                                           False, json.dumps(facts)))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.assertEqual(diag.interface({"ui": {"frontend": "qt"}}), "android")
+        body = issue.draft(SimpleNamespace(profile="default", data_dir=self.files),
+                           {"ui": {"frontend": "qt"}}).body
+        self.assertIn("device Google Pixel 8", body)
+        self.assertIn("interface android", body)
+        self.assertNotIn("7 GB", body)
+
     def test_the_core_starts_in_the_apps_folders(self):
         got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False))
         self.assertNotIn("error", got, got.get("trace"))

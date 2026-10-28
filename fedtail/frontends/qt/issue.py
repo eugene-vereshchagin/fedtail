@@ -29,7 +29,7 @@ class IssueDialog(QDialog):
         note = QLabel(_("issue_check"))
         note.setWordWrap(True)
         lay.addWidget(note)
-        d = issue.draft(win.core.paths, win.cfg, known=self.mine, toolkit="qt")
+        d = issue.draft(win.core.paths, win.cfg, known=self.mine)
         self.text = QPlainTextEdit(d.body)
         lay.addWidget(self.text, 1)
         row = QHBoxLayout()

@@ -12,9 +12,7 @@ them to read and edit, then opened in the browser as a new issue of debug.issue_
 from __future__ import annotations
 
 import os
-import platform
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlsplit
@@ -95,20 +93,15 @@ def recent_errors(log_dir, limit=ERROR_LINES):
     return out[-limit:]
 
 
-def draft(paths, cfg, known=(), toolkit=""):
-    """The issue as the person will see it before anything leaves."""
-    from . import diag, version
+def draft(paths, cfg, known=()):
+    """The issue as the person will see it before anything leaves: the system as
+    diag.system_lines tells it (the interface that runs, a phone's model and Android)."""
+    from . import diag
     errors = recent_errors(diag.logs_dir(paths, cfg))
     known = list(known) + [paths.profile if paths.profile not in ("default", "main") else ""]
-    system = [f"fedtail {version.full()}", f"Python {platform.python_version()}",
-              f"{platform.system()} {platform.release()} ({platform.machine()})",
-              f"desktop {os.environ.get('XDG_CURRENT_DESKTOP', '') or '—'} "
-              f"{os.environ.get('XDG_SESSION_TYPE', '')}".strip(),
-              f"interface {toolkit or (cfg.get('ui') or {}).get('frontend', '?')}",
-              f"theme {(cfg.get('ui') or {}).get('theme', '?')}, "
-              f"layout {(cfg.get('ui') or {}).get('layout', '?')}"]
-    if getattr(sys, "frozen", False):
-        system.append("one-file build")
+    ui = cfg.get("ui") or {}
+    system = diag.system_lines(cfg, public=True) + [
+        f"theme {ui.get('theme', '?')}, layout {ui.get('layout', '?')}"]
     body = "\n".join([
         "### " + _("issue_what"), "", _("issue_what_hint"), "",
         "### " + _("issue_steps"), "", "1. ", "",
