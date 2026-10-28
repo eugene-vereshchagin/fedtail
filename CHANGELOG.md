@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Lightness held by a test: `tests/test_budgets.py` runs the memory bench (2000 posts, 20
+  lanes, an hour of polling) — the core alone and the Qt window — against ceilings of
+  memory, time, widgets and the picture cache; CI's `budgets` job runs it and a release
+  waits for it.
+
 - Lighter: only the lanes opened last keep their cards out of sight (`ui.keep_hidden_lanes`,
   3) — one opened before lets them go the moment another lane comes to the front, besides
   `unload_hidden_minutes`. Every lane opened in the bench's window: 573 → 405 MB (a lane

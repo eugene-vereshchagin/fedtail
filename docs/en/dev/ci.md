@@ -14,6 +14,7 @@ A commit with `[skip ci]` in its message runs nothing.
 | `security` | every push and PR | the sync code faces the internet: `bandit` and ruff's bandit rules over `fedtail/core/sync`; the client against the real server (a checkout of fedtail-syncserver's main, whose version must be fedtail's), on Python 3.11 and 3.13 — the server's own tests run in its repository |
 | `audit` | every push and PR | known vulnerabilities in what fedtail runs on (`pip-audit`): warnings only, a new CVE upstream never holds a release |
 | `test` | every push and PR | all the tests on Python 3.11, 3.12 and 3.13 with Qt from pip, offscreen; then fedtail installed as a package and started |
+| `budgets` | every push and PR | the memory bench (`tools/membench.py`: 2000 posts, 20 lanes, an hour of polling) — the core alone and the Qt window — against ceilings of memory, time, widgets and the picture cache (`tests/test_budgets.py`, docs/en/dev/memory.md, step 8); `release` waits for it |
 | `debian` | every push and PR | all the tests on Debian 13 with Qt and GTK 4 from apt, under Xvfb — the real target |
 | `windows` | every push and PR | all the tests on Windows with Qt from pip (docs/en/dev/windows.md uses the same packages and command, a test checks) |
 | `windows-build` | a push to `main` | `fedtail.exe` as one file (PyInstaller, `packaging/build.py`), started once; the installer `fedtail-setup.exe` (Inno Setup, `packaging/windows/fedtail.iss`); both signed when the code-signing certificate is there (secrets `WINDOWS_CERT_PFX` — the .pfx in base64 — and `WINDOWS_CERT_PASSWORD`), unsigned otherwise |
@@ -27,7 +28,9 @@ A commit with `[skip ci]` in its message runs nothing.
 
 `android.yml` builds the phone's dev APK (its own id, `online.dmesg.fedtail.dev`, the dev key) on a push to `main`
 touching `android/` or the core, starts it on an emulator — screenshots and the UI tests (`android/app/src/androidTest`),
-pushed to the `android-shots` branch — and attaches the APK to the run (android/README.md).
+pushed to the `android-shots` branch — and attaches the APK to the run (android/README.md). With the release key in
+the secrets it also builds the same commit signed with it, `online.dmesg.fedtail`
+(`fedtail-android-update-N`): that one installs over the released app, its login and data kept.
 
 When a test fails, `.github/annotate.py` turns the failures into annotations on the run (job logs
 can't always be downloaded).

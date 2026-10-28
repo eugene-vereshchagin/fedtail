@@ -14,6 +14,7 @@
 | `security` | каждый пуш и PR | код синхронизации смотрит в интернет: `bandit` и правила bandit в ruff по `fedtail/core/sync`; клиент против настоящего сервера (main репозитория fedtail-syncserver, его версия должна быть версией fedtail), на Python 3.11 и 3.13 — собственные тесты сервера идут в его репозитории |
 | `audit` | каждый пуш и PR | известные уязвимости в том, на чём работает fedtail (`pip-audit`): только предупреждения, новая CVE у зависимости релиз не держит |
 | `test` | каждый пуш и PR | все тесты на Python 3.11, 3.12 и 3.13 с Qt из pip, без экрана; потом fedtail ставится как пакет и запускается |
+| `budgets` | каждый пуш и PR | стенд памяти (`tools/membench.py`: 2000 постов, 20 лент, час опроса) — одно ядро и окно Qt — против потолков памяти, времени, виджетов и кэша картинок (`tests/test_budgets.py`, docs/ru/dev/memory.md, шаг 8); `release` его ждёт |
 | `debian` | каждый пуш и PR | все тесты на Debian 13 с Qt и GTK 4 из apt, под Xvfb — настоящая цель |
 | `windows` | каждый пуш и PR | все тесты на Windows с Qt из pip (docs/ru/dev/windows.md использует те же пакеты и команду, тест проверяет) |
 | `windows-build` | пуш в `main` | `fedtail.exe` одним файлом (PyInstaller, `packaging/build.py`), один раз запускается; установщик `fedtail-setup.exe` (Inno Setup, `packaging/windows/fedtail.iss`); оба подписываются, если есть сертификат для подписи кода (секреты `WINDOWS_CERT_PFX` — .pfx в base64 — и `WINDOWS_CERT_PASSWORD`), иначе без подписи |
@@ -31,7 +32,9 @@
 
 `android.yml` собирает dev-APK для телефона (свой id `online.dmesg.fedtail.dev`, dev-ключ) при пуше в `main`, задевающем
 `android/` или ядро, запускает его на эмуляторе — скриншоты и UI-тесты (`android/app/src/androidTest`) в ветку
-`android-shots` — и прикладывает APK к прогону (android/README.md).
+`android-shots` — и прикладывает APK к прогону (android/README.md). Если релизный ключ есть в секретах, он ещё
+собирает тот же коммит, подписанный им, `online.dmesg.fedtail` (`fedtail-android-update-N`): этот ставится поверх
+вышедшего приложения, с его входом и данными.
 ## `site.yml`: сайт
 
 | задача | когда | что делает |
