@@ -228,7 +228,8 @@ fun LaneScreen(
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
             // "earlier" where the older posts would come: on top, or at the end when newest first
             val earlier: @Composable () -> Unit = {
-                if (model.laneOlder) Earlier(model.loadingOlder) { model.loadOlder() }
+                if (model.laneOlder) Earlier(model.loadingOlder,
+                    seen = { model.loadOlder(ahead = true) }) { model.loadOlder() }
             }
             val page = model.placePage
             if (page != null) PlaceList(model, page, name, state)
@@ -333,7 +334,9 @@ private fun PlaceRowCard(model: AppModel, r: PlaceRow) {
 
 /** "Earlier": the older posts of this lane, from the server. */
 @Composable
-private fun Earlier(busy: Boolean, onClick: () -> Unit) {
+private fun Earlier(busy: Boolean, seen: () -> Unit = {}, onClick: () -> Unit) {
+    // composed — the list is near it: reading.older_ahead may fetch by itself (the core says)
+    LaunchedEffect(Unit) { seen() }
     Box(Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
         if (busy) CircularProgressIndicator(Modifier.size(28.dp))
         else TextButton(onClick = onClick) { Text(stringResource(R.string.earlier)) }

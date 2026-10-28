@@ -37,7 +37,7 @@ object Core {
     suspend fun lanes() = JSONArray(call("lanes"))
     suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)
     suspend fun hub() = obj("hub")
-    suspend fun older(name: String) = obj("older", name)
+    suspend fun older(name: String, ahead: Boolean = false) = obj("older", name, ahead)
     suspend fun laneSet(body: JSONObject) = obj("lane_set", body.toString())
     suspend fun find(name: String, q: String) = obj("find", name, q)
     suspend fun findEverywhere(q: String) = obj("find_everywhere", q)

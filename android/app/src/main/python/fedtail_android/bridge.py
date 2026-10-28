@@ -675,10 +675,11 @@ def _peek(core, name):
     return ""
 
 
-def older(name):
+def older(name, ahead=False):
     """"Earlier" at a lane's top: older posts from the server (as the windows' button;
-    history counts as read). → {"n": how many came}."""
-    return _answer(lambda: _s["web"].older(name))
+    history counts as read). → {"n": how many came}. ahead: the button came in sight —
+    core.older_ahead decides (reading.older_ahead); "asked": False when it didn't."""
+    return _answer(lambda: _s["web"].older(name, bool(ahead)))
 
 
 def read(ids_json):

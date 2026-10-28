@@ -90,6 +90,7 @@ DEFAULTS = {
         "page_size": 40,
         "catch_up_limit": 400,
         "render_limit": 300,
+        "older_ahead": False,     # the end of a lane in sight: a page older by itself
         "repeat_boosts": False,
         "build_at_once": 40,
         "first_run_mark_read": True,
@@ -480,7 +481,8 @@ FILE_LAYOUT = (
                              "extra_minutes tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
-                              "build_at_once remember_choices first_run_mark_read stats")
+                              "older_ahead build_at_once remember_choices first_run_mark_read "
+                              "stats")
      + _keys("read", "mark_read read_button")),
     ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "

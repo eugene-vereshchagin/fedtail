@@ -1046,6 +1046,8 @@ class LaneWidget(QWidget):
                                  self.load_older, name="older")
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
         self.btn_older.setVisible(not self.unread_only_on())
+        # reading.older_ahead: the "older" end in sight — the core fetches a page itself
+        self.view.verticalScrollBar().valueChanged.connect(self._older_in_sight)
 
     # ---- what to show, and how ---------------------------------------------------
     @property
@@ -1256,10 +1258,27 @@ class LaneWidget(QWidget):
                              ok=lambda n: self._older_done(n),
                              fail=lambda e: (self.btn_older.setEnabled(True), self.win.error(e)))
 
+    def _older_in_sight(self, value):
+        """Within a screen of the "older" end: ask the core (core.older_ahead decides —
+        the setting, one at a time, none after an empty page)."""
+        if not self.btn_older.isVisible() or not self.btn_older.isEnabled():
+            return
+        bar = self.view.verticalScrollBar()
+        screen = self.view.viewport().height()
+        near = value >= bar.maximum() - screen if self.newest_first else value <= screen
+        if not near:
+            return
+        fut = self.core.older_ahead(self.name)
+        if fut is not None:
+            self.btn_older.setEnabled(False)
+            self.btn_older.setText(_("loading"))
+            self.win.bridge.call(fut, ok=self._older_done,
+                                 fail=lambda e: self.btn_older.setEnabled(True))
+
     def _older_done(self, n):
         self.btn_older.setEnabled(True)
-        if not n:
-            self.btn_older.setText(_("no_older"))
+        self.btn_older.setText(_("no_older") if not n else
+                               _("older_down") if self.newest_first else _("older_up"))
 
     def apply_read(self, ids):
         self.view.set_unread(ids, False)

@@ -60,6 +60,29 @@ class ParentsTest(CoreCase):
         self.assertFalse(c.store.is_missing("p"))  # not marked missing: tried again later
         self.assertEqual(c.load_older("activity").result(timeout=T), 0)  # no source
 
+    def test_older_ahead_is_the_cores_call(self):
+        """reading.older_ahead: the end of a lane in sight asks the core; it fetches only
+        with the setting on, one page at a time, and stops after a page brought nothing."""
+        from concurrent.futures import Future
+        c = self.connect()
+        c.poll_once()
+        self.assertIsNone(c.older_ahead("home"))  # off by default
+        c.cfg["feed"]["older_ahead"] = True
+        self.assertIsNone(c.older_ahead("no such lane"))
+        waiting = Future()
+        with mock.patch.object(c, "load_older", return_value=waiting) as asked:
+            self.assertIs(c.older_ahead("home"), waiting)
+            self.assertIsNone(c.older_ahead("home"))  # one on its way already
+            waiting.set_result(5)
+            self.assertIsNotNone(c.older_ahead("home"))  # done, more came: on
+            self.assertEqual(asked.call_count, 2)
+        empty = Future()
+        with mock.patch.object(c, "load_older", return_value=empty):
+            self.assertIs(c.older_ahead("home"), empty)
+            empty.set_result(0)  # nothing older
+            self.assertIsNone(c.older_ahead("home"))  # asked no more
+        self.assertIsInstance(c.load_older("home").result(timeout=T), int)  # the button may
+
     def test_warm_lanes_survives_a_lane(self):
         c = self.connect()
         with mock.patch.object(c, "unread_count", boom()):

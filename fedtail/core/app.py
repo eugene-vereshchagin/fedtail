@@ -2821,6 +2821,29 @@ class Core(SocialMixin):
                 self.sync.record_read(status_ids)
             self._read_conversations(status_ids)
 
+    def older_ahead(self, name):
+        """The end of lane `name` came in sight (a frontend says so as one scrolls):
+        a page older by itself — reading.older_ahead — unless one is on its way already
+        or the server gave nothing older the last time. A future of how many came, or
+        None (nothing asked). Every interface asks only this; the core decides."""
+        if not self.cfg["feed"].get("older_ahead") or name not in self.lane_by_name:
+            return None
+        busy = self.__dict__.setdefault("_older_busy", set())
+        if name in busy or name in self.__dict__.get("_older_none", set()):
+            return None
+        busy.add(name)
+        fut = self.load_older(name)
+
+        def done(f):
+            busy.discard(name)
+            # nothing came (the start of it, or a rule that took none of a page): asked
+            # no more by itself — a lane drawn anew at its end would ask on and on; the
+            # button still may
+            if f.exception() is not None or not f.result():
+                self.__dict__.setdefault("_older_none", set()).add(name)
+        fut.add_done_callback(done)
+        return fut
+
     def load_older(self, name):
         lane = self.lane_by_name[name]
         if lane.feeds:

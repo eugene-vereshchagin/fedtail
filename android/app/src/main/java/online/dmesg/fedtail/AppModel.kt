@@ -745,12 +745,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var loadingOlder by mutableStateOf(false)
 
     /** "Earlier" at the lane's top: older posts from the server (history counts as read). */
-    fun loadOlder() {
+    /** "Earlier": older posts from the server. ahead: the button came in sight
+     *  (reading.older_ahead) — the core decides whether to ask (core.older_ahead). */
+    fun loadOlder(ahead: Boolean = false) {
         val name = current ?: return
         if (loadingOlder) return
         loadingOlder = true
         viewModelScope.launch {
-            val got = Core.older(name)
+            val got = Core.older(name, ahead)
+            if (ahead && !got.optBoolean("asked", true)) { loadingOlder = false; return@launch }
             Core.failed(got)?.let { message = it }
             if (got.optInt("n") == 0 && !got.has("error")) laneOlder = false
             loadLane(name, keep = true)

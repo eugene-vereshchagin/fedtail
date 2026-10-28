@@ -1019,14 +1019,27 @@ function olderButton() {
   // the windows' words: "▼ earlier" at the end when newest first, "▲ earlier" on top
   const b = el("button", "older", w(state.me.order === "newest_first" ? "older_down" : "older_up"));
   b.type = "button";
-  b.onclick = async () => {
+  const fetch = async (ahead) => {
     b.disabled = true;
     try {
-      const r = await api("/api/older", { name: state.lane });
+      const r = await api("/api/older", { name: state.lane, ahead });
+      if (ahead && !r.asked) { b.disabled = false; return; }  // the core didn't ask
       if (!r.n) { b.textContent = w("no_older"); return; }
       await selectLane(state.lane, true);
     } catch (e) { toast(e.message); b.disabled = false; }
   };
+  b.onclick = () => fetch(false);
+  // reading.older_ahead: the button a screen away — the core fetches a page itself
+  // (core.older_ahead: one at a time, none after an empty page)
+  if (state.me.older_ahead && "IntersectionObserver" in window) {
+    const seen = new IntersectionObserver((got) => {
+      if (got.some((x) => x.isIntersecting) && !b.disabled) {
+        b.textContent = w("loading");
+        fetch(true);
+      }
+    }, { rootMargin: "100% 0px" });
+    seen.observe(b);
+  }
   return b;
 }
 

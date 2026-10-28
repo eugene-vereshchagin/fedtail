@@ -1439,6 +1439,14 @@ class FedtailApp(App, PostsMixin):
         if e.list_view.id != "posts" or not isinstance(e.item, PostItem) or \
                 not self.screen_stack:  # no screens: it came in as the app was closing
             return
+        lv = e.list_view
+        if self.lane and self.screen is self.screen_stack[0] and lv.index is not None:
+            # reading.older_ahead: a few posts from the "older" end — the core fetches a
+            # page itself (core.older_ahead: one at a time, none after an empty page)
+            oldest_first = self.core.cfg["feed"]["order"] == "oldest_first"
+            left = lv.index if oldest_first else len(lv.children) - 1 - lv.index
+            if left < 5:
+                self.call_next(self._older_ahead)
         if self.core.cfg["read"]["mark_read"] == "on_scroll":
             entry = e.item.entry
             ids = [entry.id]
@@ -2031,6 +2039,13 @@ class FedtailApp(App, PostsMixin):
                 lv.focus()
                 return
         self.notify(_("to_new_tip") + ": —")
+
+    async def _older_ahead(self):
+        if not self.lane or self.lane in ("activity", "requests"):
+            return
+        fut = self.core.older_ahead(self.lane)
+        if fut is not None and await asyncio.wrap_future(fut):
+            await self.refresh_posts()
 
     async def action_older(self):
         """j past the last post: older ones from the server, or "nothing older"."""

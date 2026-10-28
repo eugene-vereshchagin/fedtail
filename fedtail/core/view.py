@@ -93,7 +93,7 @@ PASS = {
     "open_at",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
-    "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
+    "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
     "pause_polling",  # the phone's app out of sight
     "poll_state",  # plain {"busy", "ok_at", "failing"}: "updating…", "updated at 14:32"

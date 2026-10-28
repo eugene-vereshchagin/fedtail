@@ -2,6 +2,13 @@
 
 ## 0.21.0 — in progress
 
+- **A lane without a seam** (`reading.older_ahead`, off by default): read to within a
+  screen of what a lane shows, and fedtail fetches a page of older posts itself, as the
+  "older" button does — one at a time, and none any more once a page brought nothing (the
+  button still may). The frontends only say "the end is in sight" (`core.older_ahead`
+  decides): the windows, GTK, the terminal (a few posts from the end), the web page and
+  the phone.
+
 - **Where a thread opens, one setting for everything:** `threads.open_at` — "post" (the
   default) or "first_unread" (the first unread comment; none — the post); a lane of
   rules may say its own (`open_at`, "A thread opens" in the lane editor — "Commented

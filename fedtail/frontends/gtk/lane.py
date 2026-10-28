@@ -198,6 +198,8 @@ class LaneView(Gtk.Box):
             viewport.set_scroll_to_focus(False)
         self.adj = self.scroll.get_vadjustment()
         self.adj.connect("value-changed", lambda _a: self._scrolled())
+        # reading.older_ahead: the "older" end in sight — the core fetches a page itself
+        self.adj.connect("value-changed", lambda _a: self._older_in_sight())
         self.adj.connect("changed", lambda _a: self._adjusted())
         self.append(self.scroll)
 
@@ -860,16 +862,31 @@ class LaneView(Gtk.Box):
         self.unread = set()
         self._pill(0)
 
-    def load_older(self):
+    def load_older(self, fut=None):
         self.older.set_sensitive(False)
 
         def done(n):
             self.older.set_sensitive(True)
-            if not n:
-                self.older.set_label(_("no_older"))
-        self.ctx.bridge.call(self.ctx.view.load_older(self.name), done,
+            self.older.set_label(_("no_older") if not n else
+                                 _("older_down") if self.newest_first else _("older_up"))
+        self.ctx.bridge.call(fut or self.ctx.view.load_older(self.name), done,
                              lambda err: (self.older.set_sensitive(True),
                                           self.ctx.status(_("error", err=err))))
+
+    def _older_in_sight(self):
+        """Within a screen of the "older" end: ask the core (core.older_ahead decides —
+        the setting, one at a time, none after an empty page)."""
+        if not self.older.get_visible() or not self.older.get_sensitive():
+            return
+        a = self.adj
+        screen = a.get_page_size()
+        near = a.get_value() >= a.get_upper() - 2 * screen if self.newest_first \
+            else a.get_value() <= screen
+        if near:
+            fut = self.ctx.view.older_ahead(self.name)
+            if fut is not None:
+                self.older.set_label(_("loading"))
+                self.load_older(fut)
 
 
 FULL = 100_000  # "no limit" for the clamp

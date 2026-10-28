@@ -708,6 +708,7 @@ class Web:
                 "version": __version__, "server": (self.core.auth or {}).get("server"),
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
+                "older_ahead": bool(c["feed"].get("older_ahead")),
                 "visibility": self.core.default_visibility(),
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),
@@ -1109,9 +1110,15 @@ class Web:
         name = self._lane_name(name)
         return {"grew": bool(self.core.reveal_in_lane(name, _int(index, 0)))}
 
-    def older(self, name):
-        """Older posts of a lane from the server (the "More" at its end)."""
+    def older(self, name, ahead=False):
+        """Older posts of a lane from the server (the "More" at its end); ahead: its end
+        came in sight — core.older_ahead decides (reading.older_ahead), "asked": False
+        when it didn't ask."""
         name = self._lane_name(name)
+        if ahead:
+            fut = self.core.older_ahead(name)
+            return {"n": fut.result() or 0, "asked": True} if fut is not None else \
+                {"n": None, "asked": False}
         return {"n": self.core.load_older(name).result() or 0}
 
     def activate(self, name):
@@ -2086,7 +2093,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/add_language": lambda: web.add_language(body.get("code")),
             "/api/preview": lambda: web.preview(body),
             "/api/save": lambda: web.save_media(body.get("url")),
-            "/api/older": lambda: web.older(body.get("name")),
+            "/api/older": lambda: web.older(body.get("name"), bool(body.get("ahead"))),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
             "/api/command": lambda: web.command(str(body.get("line", "")),
