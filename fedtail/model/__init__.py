@@ -160,6 +160,26 @@ class Poll:
     voted: bool = False
     my_votes: tuple[int, ...] = ()
 
+    @property
+    def people(self):
+        """How many voted, as the server says — but never fewer than the votes of one
+        option (a poll of several choices whose voters_count lags behind its counts,
+        28.10: "1 person", 4 votes for "yes"). None: the server doesn't say."""
+        if self.voters is None:
+            return None
+        top = max((o.votes or 0 for o in self.options), default=0)
+        return max(self.voters, top if self.multiple else 0)
+
+    @property
+    def total(self):
+        """What an option's share is of: the people for a poll of several choices
+        (each picks some), the votes for one choice — never less than the counts
+        themselves, so no option is ever over 100 %. 0: no votes."""
+        counts = [o.votes or 0 for o in self.options]
+        if self.multiple:
+            return max(self.people or 0, max(counts, default=0), 0) or self.votes or 0
+        return max(self.votes or 0, sum(counts))
+
 
 @dataclass(frozen=True, slots=True)
 class Card:

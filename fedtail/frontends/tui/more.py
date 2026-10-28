@@ -78,7 +78,7 @@ class PollScreen(ModalScreen):
         the count with its share when the results are to be seen."""
         poll = self.poll
         show = self.peek or not self.open_ended()
-        total = max(1, poll.votes or 0)
+        total = max(1, poll.total)
         out = []
         for i, o in enumerate(poll.options):
             title = o.title or _("poll_option", n=i + 1)

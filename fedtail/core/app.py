@@ -926,6 +926,9 @@ class Core(SocialMixin):
                             browse_changed.add(name)  # its lane says so (see below)
                     except Exception as e:
                         self.emit("error", f"{name}: {e}")
+                    if name in self._browse_waiting:  # answered (or failed): drawn anew
+                        self._browse_waiting.discard(name)
+                        browse_changed.add(name)
                     continue
                 try:
                     new_by_source[name] = sources.catch_up(
@@ -2475,7 +2478,18 @@ class Core(SocialMixin):
         self._active_lane = name
         lane = self.lane_by_name.get(name)
         if lane is not None and lane.lazy:
+            self._browse_waiting.add(lane.source)  # "loading…" till the server answers
             self.poll_now()
+
+    @property
+    def _browse_waiting(self):
+        return self.__dict__.setdefault("_browse_waiting_set", set())
+
+    def lane_waiting(self, name):
+        """A browse lane (Federated, Local) just opened, its server not answered yet:
+        the lane says "loading…" (with the opossum) instead of looking empty."""
+        lane = self.lane_by_name.get(name)
+        return bool(lane is not None and lane.lazy and lane.source in self._browse_waiting)
 
     def set_active_lanes(self, names):
         """Columns side by side: every lane on screen at once (the browse ones among
@@ -4717,25 +4731,30 @@ class Core(SocialMixin):
         self._poll_max_s = 0.0
         return out
 
+    EXIT_WAIT = 4.0  # seconds the exit waits, all in all, for what is still running
+
     def shutdown(self):
+        # one deadline for everything: on a slow network each wait used to take its own
+        # 3–5 s, and the exit dragged on for a quarter of a minute (28.10), holding the
+        # profile's lock — "already running" when started again
+        deadline = time.monotonic() + self.EXIT_WAIT
         self._stop.set()
         self._wake.set()
         if self.sync:
-            self.sync.stop()  # its last round sends what was marked just now
+            self.sync.stop(wait=min(3.0, self.EXIT_WAIT))  # its last round: the marks
         if getattr(self, "_stream", None) is not None:
             self._stream.stop()
         self.pool.shutdown(wait=False, cancel_futures=True)
         self.bg.shutdown(wait=False, cancel_futures=True)
         if self._poller:
-            self._poller.join(timeout=3)
+            self._poller.join(timeout=max(0.1, deadline - time.monotonic()))
         # what is running already finishes (a little while) before the database closes
         # under it: no "closed database" from a badge count or a reminder at exit
-        deadline = time.monotonic() + 3
         for pool in (self.pool, self.bg):
             pool.join(deadline)
         # a poll stuck in a slow request must not hold the exit: what's written is
         # committed already, an unclosed database is fine
-        if self._poll_lock.acquire(timeout=3):
+        if self._poll_lock.acquire(timeout=max(0.1, deadline - time.monotonic())):
             try:
                 self.store.close()
             finally:

@@ -1168,6 +1168,13 @@ class LaneWidget(QWidget):
             self.view.header.addWidget(self.empty_note)
         if self.empty_note is not None:
             self.empty_note.setVisible(empty)
+        # a browse lane just opened (Federated, Local), its server not answered yet:
+        # "loading…" with the opossum, not an empty lane
+        waiting = bool(getattr(self.core, "lane_waiting", lambda _n: False)(self.name)) and \
+            not any(s.entry is not None for s in specs)
+        if waiting or getattr(self, "_waiting", False):
+            self._waiting = waiting
+            self.show_plate(waiting)
         log.debug("lane %s drawn: %d rows, %d unread, %.0f ms", self.name, len(specs),
                   built.unread, (time.monotonic() - t0) * 1000)
 

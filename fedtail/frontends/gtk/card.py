@@ -642,7 +642,7 @@ class Card(Gtk.Box):
         self.poll_shown, self.poll_peek = poll, peek
         mine = p.author.id == self.ctx.me_id
         if poll.voted or poll.expired or mine or peek:
-            total = max(1, (poll.voters if poll.multiple else None) or poll.votes or 0)
+            total = max(1, poll.total)
             for i, opt in enumerate(poll.options):
                 row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
                 pct = (opt.votes or 0) * 100 // total if opt.votes is not None else None
@@ -694,8 +694,8 @@ class Card(Gtk.Box):
             row.append(vote)
             row.append(peek_b)
             box.append(row)
-        n = poll.voters if poll.voters is not None else poll.votes
-        parts = [_("poll_people" if poll.voters is not None else "poll_votes", n=n)]
+        n = poll.people if poll.people is not None else poll.votes
+        parts = [_("poll_people" if poll.people is not None else "poll_votes", n=n)]
         if poll.expired:
             parts.append(_("poll_closed"))
         elif poll.expires:

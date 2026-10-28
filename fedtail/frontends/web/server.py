@@ -192,7 +192,7 @@ def media_json(m):
 def poll_json(poll):
     if poll is None:
         return None
-    total = poll.votes or sum(o.votes or 0 for o in poll.options)
+    total = poll.total
     return {"id": poll.id if hasattr(poll, "id") else poll.ref.id,
             "options": [{"title": o.title, "votes": o.votes,
                          "share": round(100 * (o.votes or 0) / total) if total else 0}
@@ -201,7 +201,7 @@ def poll_json(poll):
             "mine": list(poll.my_votes),
             # how many people, where the server says (Qt's footer); else the votes
             "summary": " · ".join(x for x in (
-                _("poll_people", n=poll.voters) if poll.voters is not None else
+                _("poll_people", n=poll.people) if poll.people is not None else
                 _("poll_votes", n=poll.votes),
                 _("poll_closed") if poll.expired else
                 (_("poll_until", when=poll.expires.astimezone().strftime("%d.%m %H:%M"))
@@ -1019,6 +1019,7 @@ class Web:
         events += [dict(x, before=None) for x in waiting]  # after the last post
         lane = core.lane_by_name[name]
         return {"name": name, "title": title, "posts": posts, "info": built.info,
+                "waiting": bool(core.lane_waiting(name)) and not posts,  # browse: asked
                 "divider": divider, "events": events,
                 "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
                 "filters": [[f, *m.filter_words(f)] for f in m.filters]
@@ -1884,7 +1885,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "notify_test_body", "accounts_merge", "accounts_merge_tip", "try_theme",
          "web_push", "web_push_tip",
          "try_theme_tip", "a11y_avatar",
-         "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
+         "group_fold_tip", "thread_loading", "loading", "find_deeper", "find_deeper_tip",
          "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
          "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",
          "discard", "discard_q", "discard_q_title", "lang_other_title", "lang_other_ask",

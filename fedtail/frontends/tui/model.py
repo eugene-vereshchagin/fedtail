@@ -39,8 +39,8 @@ def poll_line(poll, date=None):
     """A poll in words, as the windows' card says it: how many (people or votes), closed
     or until when, several may be picked."""
     date = date or when
-    n = poll.voters if poll.voters is not None else poll.votes
-    parts = [_("poll_people" if poll.voters is not None else "poll_votes", n=n)]
+    n = poll.people if poll.people is not None else poll.votes
+    parts = [_("poll_people" if poll.people is not None else "poll_votes", n=n)]
     if poll.expired:
         parts.append(_("poll_closed"))
     elif poll.expires is not None:

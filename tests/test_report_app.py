@@ -237,3 +237,33 @@ class HoldTest(FreeBase):
         core.poll_once()
         view._cache.clear()
         self.assertIn("004", keys(m.build(True)))
+
+
+class PollShareTest(unittest.TestCase):
+    def test_never_over_a_hundred(self):
+        from fedtail.model import Poll, PollOption, Ref
+        lagging = Poll(Ref("m", "", "p"), (PollOption("yes", 4), PollOption("no", 1),
+                                      PollOption("depends", 1)), multiple=True,
+                       votes=6, voters=1)  # 28.10: "1 person", 4 votes for "yes"
+        self.assertEqual(lagging.people, 4)
+        self.assertEqual(lagging.total, 4)
+        self.assertLessEqual(max(100 * o.votes // lagging.total for o in lagging.options),
+                             100)
+        one = Poll(Ref("m", "", "q"), (PollOption("a", 3), PollOption("b", 2)), votes=4)
+        self.assertEqual(one.total, 5)  # the counts ran ahead of votes_count
+        none = Poll(Ref("m", "", "r"), (PollOption("a", 0),), votes=0)
+        self.assertEqual(none.total, 0)
+
+
+class BrowseWaitingTest(FreeBase):
+    def test_federated_says_loading_till_the_server_answers(self):
+        core, w = self.make([])
+        core.connect().result()
+        lane = next((x for x in core.lanes if x.lazy), None)
+        if lane is None:
+            self.skipTest("no browse lane in this set")
+        self.assertFalse(core.lane_waiting(lane.name))
+        core.set_active_lane(lane.name)
+        self.assertTrue(core.lane_waiting(lane.name))
+        core.poll_once()
+        self.assertFalse(core.lane_waiting(lane.name))

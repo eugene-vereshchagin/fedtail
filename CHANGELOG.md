@@ -2,6 +2,15 @@
 
 ## 0.21.0 — in progress
 
+- Fixed: a poll of several choices whose server's "how many voted" lags behind its
+  counts showed 400 % — a share is now never over 100 % and "N people" never fewer than
+  one option's votes (every interface and the phone).
+- Federated and Local, just opened: "loading…" with the opossum till their server
+  answers, instead of an empty lane (Qt, the web page and the phone).
+- The exit no longer drags on a slow network: everything still running gets 4 s in all
+  (it was 3–5 s for each part), so starting again doesn't find the old one "already
+  running".
+
 - **"Commented posts"** (the extra set's `commented`, as on Point): your posts, threads
   you commented in and those followed by hand — the ones with new comments, a card a
   thread with how many are new; a click opens the thread at the first new comment. Any

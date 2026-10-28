@@ -967,7 +967,8 @@ async function selectLane(name, keep) {
   countUnread();
   box.textContent = "";
   const more = olderButton();
-  if (!data.posts.length && !(data.events || []).length) box.append(emptyBox(w("web_empty")));
+  if (data.waiting) box.append(loadingBox(w("loading")));  // a browse lane: its server asked
+  else if (!data.posts.length && !(data.events || []).length) box.append(emptyBox(w("web_empty")));
   if (more && !newestFirst) box.append(more);
   // likes, follows… a lane of rules shows among its posts (not posts: no cursor stop)
   const eventsBefore = new Map();

@@ -948,7 +948,7 @@ class PostRow(QWidget):
             getattr(self, "poll_results", False) or self.ctx.vote is None
         options = poll.options
         if results:
-            total = (poll.voters if poll.multiple else None) or poll.votes or 0
+            total = poll.total
             own = set(poll.my_votes)
             top = max((o.votes or 0 for o in options), default=0)
             for i, o in enumerate(options):
@@ -1011,7 +1011,7 @@ class PostRow(QWidget):
 
     def _poll_footer(self, p):
         poll = p.poll
-        voters = poll.voters
+        voters = poll.people
         n = voters if voters is not None else poll.votes
         parts = [_("poll_people" if voters is not None else "poll_votes", n=n)]
         if poll.expired:
