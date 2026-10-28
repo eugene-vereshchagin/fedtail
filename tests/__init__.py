@@ -8,6 +8,9 @@ _os.environ.setdefault("FEDTAIL_NO_DIALOGS", "1")
 # and draw a theme's pictures in their own colours, not the development version's red
 # for what comes from the fallback set (frontends/iconpack.py; its own test turns it on)
 _os.environ.setdefault("FEDTAIL_MARK_MISSING", "0")
+# what this machine has installed decides nothing in a test (the CI's Debian job lacks some
+# Qt modules: a start through main() exited 3); tests/test_deps.py checks the check itself
+_os.environ.setdefault("FEDTAIL_NO_DEPCHECK", "1")
 
 
 def _offline():

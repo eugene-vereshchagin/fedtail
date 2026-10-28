@@ -139,7 +139,10 @@ class NickColorTest(FreeBase):
             who, Relationship(), False, cfg, lambda *_a: True)])
 
     def test_the_interfaces_draw_it(self):
-        from fedtail.frontends.tui.app import render
+        try:
+            from fedtail.frontends.tui.app import render
+        except ImportError:  # the CI's Debian job has no Textual
+            self.skipTest("needs textual")
         from fedtail.frontends.tui.model import Shown
         from fedtail.frontends.web.server import account_json
         from fedtail.protocols.mastodon import adapter

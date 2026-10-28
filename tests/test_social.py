@@ -136,11 +136,17 @@ class SocialTest(TmpDir):
         w.conversations.append({"id": "c1", "unread": True, "accounts": [BOB],
                                 "last_status": dm})
         core.poll_once()
+        import time
         core.mark_read(["120"])
-        core.bg.submit(lambda: None).result()  # the read went out in the background
+
+        def sent(n=1):  # the read goes out in the background (a pool: no order to wait on)
+            end = time.monotonic() + 5
+            while len(w.read_conversations) < n and time.monotonic() < end:
+                time.sleep(0.01)
+        sent()
         self.assertEqual(w.read_conversations, ["c1"])
         core.mark_read(["120"])  # once is enough
-        core.bg.submit(lambda: None).result()
+        time.sleep(0.2)
         self.assertEqual(w.read_conversations, ["c1"])
 
     def test_dismiss_and_clear_activity(self):

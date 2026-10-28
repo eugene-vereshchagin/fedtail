@@ -6,6 +6,10 @@ Sync set up in the window step by step, "Commented posts" as on Point, a library
 pictures, where a thread opens as one setting, lanes of rules brought to the end, and a
 crash on a flaky connection fixed:
 
+- Fixed (GTK, before it ever shipped): opening a thread or a lane failed on the "loading…"
+  box — it asked the Qt notifier's question of GTK's; it reads `ui.app_icon` as the curtain
+  does.
+
 - Fixed: the spell check underlined every word of a Russian post written with an English
   interface — the English dictionary judged Cyrillic. A word now goes to the dictionaries
   of its own script: those asked for, else the installed ones of that script; none — it

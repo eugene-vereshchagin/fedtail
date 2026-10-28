@@ -30,7 +30,9 @@ class SyncPlaceTest(Devices):
         self.assertTrue(p.act("sync", "where", "", {}).error)  # nothing named
         out = p.act("sync", "where", "", {"url": "", "folder": str(self.tmp / "meet")})
         self.assertEqual(out.open, {"page": "sync"})
-        self.assertIn(str(self.tmp / "meet"), core.paths.config_file.read_text("utf-8"))
+        import tomllib  # as TOML reads it (Windows' backslashes are escaped in the file)
+        written = tomllib.loads(core.paths.config_file.read_text("utf-8"))
+        self.assertEqual(written["sync"]["folder"], str(self.tmp / "meet"))
         page = p.page("sync")  # a folder: no login — on to the key, the fork
         self.assertEqual(page.tab, "key")
         self.assertEqual(marks(page), ["✓", "✓", "▶"])

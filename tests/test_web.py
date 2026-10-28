@@ -640,7 +640,7 @@ class CssTest(unittest.TestCase):
         then widened the lane past a phone's screen (27.10)."""
         import re
         from pathlib import Path
-        css = (Path(web.__file__).parents[2] / "data" / "web" / "app.css").read_text()
+        css = (Path(web.__file__).parents[2] / "data" / "web" / "app.css").read_text("utf-8")
         rule = re.search(r"\.post \.ctx \{([^}]*)\}", css).group(1)
         self.assertIn("display: block", rule)
 

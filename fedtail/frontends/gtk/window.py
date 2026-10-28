@@ -655,9 +655,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def loading_box(self, text):
         """"Loading…" with the opossum swinging beside it (ui.app_icon = "possum"), as
         Qt's plate: the frames turn while the box is on screen, and stop with it."""
-        from . import notify as notify_module
         box = Gtk.Box(spacing=10, halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
-        frames = self._swing_frames() if notify_module.possum_style() else []
+        frames = self._swing_frames() if self.cfg["ui"].get("app_icon") != "bubble" else []
         if frames:
             pic = Gtk.Image.new_from_paintable(frames[0][0])
             pic.set_pixel_size(36)

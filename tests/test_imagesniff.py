@@ -9,18 +9,37 @@ import unittest
 from fedtail.frontends.common import imagesniff as s
 
 
+def _picture(fmt):
+    """An 8×8 red picture in fmt: by Pillow, else by Qt (the CI's Windows and Debian
+    jobs have one of them only); neither — the test is skipped."""
+    try:
+        from PIL import Image
+        out = io.BytesIO()
+        Image.new("RGB", (8, 8), "red").save(out, fmt.upper())
+        return out.getvalue()
+    except ImportError:
+        pass
+    try:
+        from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+        from PySide6.QtGui import QColor, QImage
+    except ImportError:
+        raise unittest.SkipTest("needs Pillow or PySide6") from None
+    img = QImage(8, 8, QImage.Format.Format_RGB32)
+    img.fill(QColor("red"))
+    data = QByteArray()
+    buf = QBuffer(data)
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    img.save(buf, fmt.upper())
+    buf.close()
+    return bytes(data)
+
+
 def png():
-    from PIL import Image
-    out = io.BytesIO()
-    Image.new("RGB", (8, 8), "red").save(out, "PNG")
-    return out.getvalue()
+    return _picture("png")
 
 
 def jpeg():
-    from PIL import Image
-    out = io.BytesIO()
-    Image.new("RGB", (8, 8), "red").save(out, "JPEG")
-    return out.getvalue()
+    return _picture("jpeg")
 
 
 class SniffTest(unittest.TestCase):
