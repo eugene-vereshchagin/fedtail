@@ -295,7 +295,7 @@ compose_size = 0
 #   "custom:<имя>" — своя лента ([[lanes.custom]]).
 # federated и local не считаются никогда (их листают, непрочитанного там нет).
 # Пример: ["replies", "mentions", "lists"] или ["all"] + except = ["home", "bots"].
-icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
+icon_count = ["to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
 
 # Какие ленты не считать на иконке, даже если они есть в icon_count (например, при
 # icon_count = ["all"]): те же имена — "home", "bots", "lists", "list:Новости"…
@@ -1018,7 +1018,7 @@ enabled = true
 #   "all" — все ленты сразу (только в первом из пары; лишнее убирается в except).
 #   "custom:<имя>" — своя лента ([[lanes.custom]]).
 # Пример: ["replies", "mentions", "list:Друзья"] или ["all"] + except = ["home", "bots"].
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "activity", "requests"]
 
 # О чём не уведомлять никогда, даже если оно есть в lanes (например, при lanes = ["all"]):
 # те же имена — "bots", "federated", "lists", "list:Новости"…
@@ -1063,7 +1063,7 @@ enabled = "auto"
 # отдельном списке звуков ниже, звенят звуком «новое сообщение».
 #   direct → «личное», replies → «ответ», mentions → «упоминание», subs → «в треде»,
 #   requests → «заявка», activity → «активность», всё остальное → «сообщение».
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
 
 # Не звенеть никогда, даже если лента есть в lanes.
 except = []

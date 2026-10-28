@@ -251,6 +251,24 @@ class MarkersTest(CoreCase):
             c._sync_markers()
         self.assertTrue(any("can't set" in x for x in logs.output))
 
+    def test_a_server_without_markers_is_asked_once(self):
+        """Sharkey (28.10): /api/v1/markers is 404 — said once, asked no more."""
+        from fedtail.protocols.base import ServerError
+        c = self.connect()
+        c.poll_once()
+        calls = []
+
+        def none(*_a, **_k):
+            calls.append(1)
+            raise ServerError(404, "Unknown API endpoint.")
+        with mock.patch.object(c.api, "markers", none), \
+                self.assertLogs("fedtail.core.app", "INFO") as logs:
+            c._sync_markers()
+            c._sync_markers()
+            self.assertEqual(c._unread_by_marker([]), set())
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(sum("has none" in x for x in logs.output), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -295,7 +295,7 @@ compose_size = 0
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # federated and local are never counted (they are browsed, there's no unread in them).
 # For example: ["replies", "mentions", "lists"] or ["all"] + except = ["home", "bots"].
-icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
+icon_count = ["to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
 
 # Which lanes not to count on the icon, even if they are in icon_count (say, with
 # icon_count = ["all"]): the same names — "home", "bots", "lists", "list:News"…
@@ -1021,7 +1021,7 @@ enabled = true
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # For example: ["replies", "mentions", "list:Friends"] or ["all"] + except = ["home", "bots"].
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "activity", "requests"]
 
 # What never to notify about, even if it's in lanes (say, with lanes = ["all"]):
 # the same names — "bots", "federated", "lists", "list:News"…
@@ -1066,7 +1066,7 @@ enabled = "auto"
 # Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:
 #   direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",
 #   requests → "request", activity → "activity", every other lane → "message".
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
 
 # Never chime about these, even if lanes names them.
 except = []

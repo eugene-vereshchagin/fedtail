@@ -1093,6 +1093,24 @@ class Core(SocialMixin):
 
     # ---- read position shared with other clients (markers) -------------------------
     MARKERS = {"home": "home", "notifications": "mentions"}  # marker timeline -> our source
+    NO_SUCH = (404, 405, 410, 501)  # a server's "no such thing here"
+
+    def _markers_get(self, timelines):
+        """The server's markers, or None: none there (Sharkey, Misskey, Pleroma's older:
+        28.10 — "markers: HTTP 404" in every round) asked no more till a restart, said
+        once in words; another failure, in the log, asked again next round."""
+        if getattr(self, "_no_markers", False):
+            return None
+        try:
+            return self.api.markers(timelines) or {}
+        except Exception as e:  # noqa: BLE001 — an old server, a network gone
+            if getattr(e, "status", None) in self.NO_SUCH:
+                self._no_markers = True
+                log.info("markers: the server has none (%s) — the reading place isn't "
+                         "shared with other clients here", e.status)
+            else:
+                log.info("markers: %s", e)
+            return None
 
     def _unread_by_marker(self, statuses):
         """First start: the ids newer than where the server's home marker says reading
@@ -1101,10 +1119,8 @@ class Core(SocialMixin):
         nothing kept (all read, as feed.first_run_mark_read says)."""
         if not self.cfg["read"].get("sync_markers", True):
             return set()
-        try:
-            remote = self.api.markers(("home",))
-        except Exception as e:  # noqa: BLE001 — an old server without markers
-            log.info("markers at first start: %s", e)
+        remote = self._markers_get(("home",))
+        if remote is None:
             return set()
         last = ((remote or {}).get("home") or {}).get("last_read_id")
         if not last:
@@ -1121,10 +1137,8 @@ class Core(SocialMixin):
         (read.sync_markers)"""
         if not self.cfg["read"].get("sync_markers", True):
             return
-        try:
-            remote = self.api.markers(tuple(self.MARKERS))
-        except Exception as e:  # noqa: BLE001 — an old server without markers: just skip
-            log.info("markers: %s", e)
+        remote = self._markers_get(tuple(self.MARKERS))
+        if remote is None:
             return
         push = {}
         for timeline, source in self.MARKERS.items():
@@ -1158,6 +1172,8 @@ class Core(SocialMixin):
                     self.store.kv_set(f"marker.{timeline}", mine)
                 log.debug("markers: read up to %s", push)
             except Exception as e:  # noqa: BLE001
+                if getattr(e, "status", None) in self.NO_SUCH:
+                    self._no_markers = True
                 log.info("markers: can't set: %s", e)
 
     def _new_statuses(self, new_by_source):

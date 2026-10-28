@@ -2,6 +2,13 @@
 
 ## 0.21.0 — in progress
 
+- fedtail's set of lanes: "Subscriptions" (every comment of the followed threads, one by
+  one) is out of it, "Commented posts" (a card a thread with news) does that now; it
+  stays in the extra set, and the notifications, sounds and the icon's number count
+  "Commented posts" as they counted it.
+- A server without markers (Sharkey, Misskey; 28.10's report): "markers: HTTP 404" in
+  every round — now said once, in words, and not asked again until a restart.
+
 - **Pictures for lanes, a library of 44** (`fedtail/data/icons/lanes`, drawn by
   `tools/lane_pictures.py`): people, heart, fire, news, RSS, search, link, camera, film,
   music, book, code, a gamepad, mountains, a fish, a car, a plane, a cup… — for one's own

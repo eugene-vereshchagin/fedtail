@@ -72,14 +72,6 @@ any = [
 ]
 none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
 
-[[fedtail]]
-name = "subs"
-group = "personal"
-source = "subs"
-sort = "post_time"
-any = [{}]
-none = [{ me = "reply" }]
-
 # "Commented posts", as on Point: threads with new comments, a card each
 [[fedtail]]
 name = "commented"
@@ -396,6 +388,16 @@ kind = "tags"
 # ══════════════════════════════════════════════════════════════════════════════════════
 # Lanes no set shows by default but any config may turn on (lanes.enabled) or take as a
 # start for its own: the ones before To me, Follow requests as a lane, My likes.
+
+# Followed threads read as a stream of comments — fedtail's set shows "Commented
+# posts" instead (a card a thread with news); any set may turn this on
+[[extra]]
+name = "subs"
+group = "personal"
+source = "subs"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }]
 
 # "Commented posts", as on Point — fedtail's set has it; any other may turn it on
 [[extra]]
