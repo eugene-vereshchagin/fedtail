@@ -1783,6 +1783,38 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(self.win.curtain_shown())
         self.assertIn("replies", self.win.lane_widgets)
 
+    def test_the_curtain_swings_from_the_first_frame(self):
+        """The window opens on the curtain with its opossum swinging — made and shown,
+        nothing connected yet; first_paint runs the start only once a frame is out;
+        the lanes come and lift it; after the first round the swing runs out."""
+        from fedtail.frontends.qt.window import first_paint
+        self.assertIsNone(self.core.me)  # nothing asked of the server yet
+        self.assertTrue(self.win.curtain_shown())
+        self.assertTrue(self.win._swinging)
+        self.assertEqual(self.win._swing.state(), self.win._swing.MovieState.Running)
+        started = []
+        first_paint(self.win.curtain, lambda: started.append(self.win._swinging))
+        self.assertEqual(started, [])  # not before a frame
+        self.win.curtain.repaint()
+        self.pump(until=lambda: started)
+        self.assertEqual(started, [True])  # the opossum swung before the start began
+        self.win.cfg["ui"]["start_lane"] = "home"
+        self.core.start_polling = lambda: None  # the first round by hand, below
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.pump(until=lambda: not self.win.curtain_shown())  # the start lane lifts it
+        self.win.close_all()
+        self.assertTrue(self.win._swinging)  # still starting: the first round not in
+        self.core.poll_once()
+        self.pump(until=lambda: getattr(self.win, "_swing_ending", False) or
+                  not self.win._swinging)
+        self.win._swing_frame(self.win._swing.frameCount() - 1)
+        self.assertFalse(self.win._swinging)
+        # a click on a lane still lifts the curtain
+        self.win.select_lane("home")
+        self.pump(0.05)
+        self.assertFalse(self.win.curtain_shown())
+
     def test_tabs_and_the_curtain(self):
         """A tab already open, called from under the curtain, comes out of it (my own
         profile from my name); Enter in the sidebar search opens the search, not the last

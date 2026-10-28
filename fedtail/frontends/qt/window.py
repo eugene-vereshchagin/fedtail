@@ -5,7 +5,17 @@ import sys
 import time
 from dataclasses import dataclass
 
-from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QPointF, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import (
+    QCoreApplication,
+    QEvent,
+    QObject,
+    QPoint,
+    QPointF,
+    QSize,
+    Qt,
+    QTimer,
+    QUrl,
+)
 from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
@@ -242,7 +252,7 @@ class ViewContext:
     supports: object = lambda _feature: True  # can my server do this (core.supports)
     play_video: object = None      # Media -> play it (or open in the browser)
     loop_gifv: object = None       # (label, Media, fit) -> loop a gifv in its card
-    audio_bar: object = None       # Media -> a small audio player widget
+    audio_bar: object = None       # Media -> a small audio player widget (or None)
     long_form: object = None       # post -> the whole of it from the author's server
     act_as: object = None          # post -> [(account tag, "@acct")] that could act on it
     do_act_as: object = None       # (post, tag, "fav" | "boost" | "reply") -> do it
@@ -334,10 +344,12 @@ class MainWindow(QMainWindow):
         self.ctx.play_video = self.play_video
         from . import player
         player.choose_decoding(self.cfg["ui"].get("video_decode", "software"))
-        if self.cfg["ui"].get("video_player", "internal") == "internal" and player.available():
+        if self.cfg["ui"].get("video_player", "internal") == "internal":
+            # QtMultimedia is imported when the first card needs it (player.available,
+            # once), not on the way to the window's first frame
             if self.cfg["ui"].get("gifv", "play") == "play":
-                self.ctx.loop_gifv = player.InlineLoop
-            self.ctx.audio_bar = player.AudioBar
+                self.ctx.loop_gifv = player.inline_loop
+            self.ctx.audio_bar = player.audio_bar
         self.ctx.save_image = self.save_image
         self.ctx.vote = self.vote
         self.ctx.refresh_poll = True
@@ -432,6 +444,10 @@ class MainWindow(QMainWindow):
         self.curtain = self._build_curtain()
         self.right_stack.addWidget(self.curtain)
         self.split.addWidget(self.right_stack)
+        # the curtain is what the window opens on, its opossum swinging from the first
+        # frame (the core is starting: busy) — the lanes come out from under it when
+        # they're in (_open_start_lane), not before anything at all is painted
+        self.right_stack.setCurrentWidget(self.curtain)
         self.split.setStretchFactor(0, 0)
         self.split.setStretchFactor(1, 1)
         self.split.setSizes([self._sidebar_width(), 10_000])
@@ -504,6 +520,7 @@ class MainWindow(QMainWindow):
             self.tabs.currentChanged.connect(lambda _i: self.dock.follow(
                 self.tabs.currentWidget()))
         self.menuBar().hide()
+        self._curtain_swing()  # (the curtain is in front: see right_stack above)
         # left in the status bar: which profile this is and who (★ the main one)
         self.profile_label = QLabel()
         self.profile_label.setObjectName("statusText")
@@ -925,7 +942,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self.base_title)
 
     def _footer_text(self):
-        """Version and build, then who made it."""
+        """Version and build, then who made it (version.info is worked out once a run,
+        by the log's header before the window: no git asked on the way to the first
+        frame)."""
         info = version.info()
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
         self.footer.setText(f"{version.NAME} {build}<br>{_('made_by')}")
@@ -2760,18 +2779,15 @@ class MainWindow(QMainWindow):
     CURTAIN_ICON = 96
 
     def _curtain_swing(self):
-        """The curtain's opossum swings while the lanes are being updated (a poll
-        round on), and stands still otherwise — "nothing new" reads as nothing new."""
+        """The curtain's opossum swings while the lanes are being updated (starting, a
+        poll round on: common/sidebar.polling, as GTK's), and stands still otherwise —
+        "nothing new" reads as nothing new."""
         icon = getattr(self, "curtain_icon", None)
         if icon is None:
             return
         from . import notify as notify_module
         movie = getattr(self, "_swing", None)
-        try:
-            state = self.ctx.view.poll_state() or {}
-        except Exception:  # noqa: BLE001 — a core that doesn't say (all accounts in one)
-            state = {}
-        busy = bool(state.get("busy")) and self.curtain_shown() and \
+        busy = sidebar.polling(self.ctx.view) and self.curtain_shown() and \
             notify_module.possum_style()
         if busy:
             self._swing_ending = False  # busy again before the swing ran out: it goes on
@@ -2926,6 +2942,43 @@ class MainWindow(QMainWindow):
         self.close()
         self.drop_tray()
         QApplication.quit()
+
+
+FIRST_PAINT_WAIT_MS = 3000  # a window never painted (started hidden): go on anyway
+
+
+class _FirstPaint(QObject):
+    """first_paint's watcher: the widget's first paint (or its window's expose), once."""
+
+    def __init__(self, widget, then, wait_ms):
+        super().__init__(widget)
+        self.widget, self.then, self.done = widget, then, False
+        widget.installEventFilter(self)
+        QTimer.singleShot(wait_ms, self, self._go)
+
+    def eventFilter(self, obj, e):
+        if not self.done and e.type() in (QEvent.Type.Paint, QEvent.Type.Expose):
+            # after the frame is out (flushed to the screen), not inside its painting
+            QTimer.singleShot(0, self, self._go)
+        return False
+
+    def _go(self):
+        if self.done:
+            return
+        self.done = True
+        try:
+            self.widget.removeEventFilter(self)
+        except RuntimeError:  # the widget is gone
+            return
+        self.then()
+
+
+def first_paint(widget, then, wait_ms=FIRST_PAINT_WAIT_MS):
+    """then() once the widget has painted its first frame — the start's work
+    (connecting, the lanes counted) waits for the curtain to be on screen, so the
+    swinging opossum is the first thing seen (as GTK's first_paint). A widget that is
+    never painted gets then() after wait_ms all the same."""
+    return _FirstPaint(widget, then, wait_ms)
 
 
 def _let_go(tab):

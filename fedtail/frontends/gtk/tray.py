@@ -232,26 +232,46 @@ class Tray:
             inv.return_value(None)
 
 
-def make(win):
-    """The tray for the window, or None: no session bus, no tray watcher on it."""
+def make(win, done):
+    """The tray for the window, handed to done(tray) — done(None): no session bus, no
+    tray watcher on it. The bus is asked without waiting (GetNameOwner took up to a
+    second on the GUI thread, before the window's first frame): done comes later, from
+    the main loop."""
+    menu = [(_("show"), win.show_from_tray), (_("write"), win.compose), None,
+            (_("quit"), win.quit_app)]
+
+    def build(bus):
+        try:
+            return Tray(bus, win.toggle_from_tray, menu, win.get_title() or "fedtail")
+        except GLib.Error as e:
+            log.warning("tray: %s", e.message)
+            return None
+
+    def owner(bus, res):
+        try:
+            bus.call_finish(res)
+        except GLib.Error:
+            log.info("tray: no StatusNotifierWatcher on the bus — no tray icon")
+            done(None)
+            return
+        done(build(bus))
+
+    def ask(bus):
+        bus.call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+                 "GetNameOwner", GLib.Variant("(s)", (WATCHER,)), None,
+                 Gio.DBusCallFlags.NONE, 1000, None, owner)
+
+    def got_bus(_src, res):
+        try:
+            bus = Gio.bus_get_finish(res)
+        except GLib.Error:
+            done(None)
+            return
+        ask(bus)
+
     app = win.get_application()
     bus = app.get_dbus_connection() if app is not None else None
     if bus is None:
-        try:
-            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        except GLib.Error:
-            return None
-    try:
-        bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
-                      "GetNameOwner", GLib.Variant("(s)", (WATCHER,)), None,
-                      Gio.DBusCallFlags.NONE, 1000, None)
-    except GLib.Error:
-        log.info("tray: no StatusNotifierWatcher on the bus — no tray icon")
-        return None
-    menu = [(_("show"), win.show_from_tray), (_("write"), win.compose), None,
-            (_("quit"), win.quit_app)]
-    try:
-        return Tray(bus, win.toggle_from_tray, menu, win.get_title() or "fedtail")
-    except GLib.Error as e:
-        log.warning("tray: %s", e.message)
-        return None
+        Gio.bus_get(Gio.BusType.SESSION, None, got_bus)
+    else:
+        ask(bus)

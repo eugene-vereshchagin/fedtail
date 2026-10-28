@@ -58,7 +58,7 @@ def run(core, instance, argv):
     from ...desktop import desktop_id
     from . import theme as themes
     from .bridge import Bridge
-    from .window import MainWindow
+    from .window import MainWindow, first_paint
     app_id = desktop_id(core.paths.profile)  # Wayland finds the .desktop entry by it
     GLib.set_prgname("fedtail")  # X11: WM_CLASS, as the entry's StartupWMClass says
     # fedtail has its own single-instance socket: GTK must not make a second one
@@ -120,7 +120,9 @@ def run(core, instance, argv):
                 ", ".join(f"{n} {x * 1000:.0f} ms" for n, x in steps))
             return GLib.SOURCE_REMOVE
         GLib.timeout_add(1500, warm_menu)
-        GLib.idle_add(lambda: (win.start(), GLib.SOURCE_REMOVE)[1])
+        # connecting (the lanes counted, the news fetched) only once the curtain with
+        # its swinging opossum is on screen: the first frame, then the work
+        first_paint(front, win.start)
 
     app.connect("activate", activate)
     for sig in (signal.SIGINT, signal.SIGTERM):  # Ctrl+C; logout or shutdown

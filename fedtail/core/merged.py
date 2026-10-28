@@ -167,7 +167,7 @@ class MergedCore:
                      if lane not in ("requests", "activity")]
             if items:
                 self.events.emit(name, items)
-        elif name in ("parents", "lists_changed", "subs_changed", "sound"):
+        elif name in ("parents", "lists_changed", "subs_changed", "sound", "poll_state"):
             self.events.emit(name, payload)
         elif name == "ready":
             self.events.emit("lists_changed", self.lists)
@@ -635,6 +635,26 @@ class MergedCore:
     def shutdown(self):
         for core in [*self.others.values(), self.primary]:
             core.shutdown()
+
+    def poll_state(self):
+        """The lanes' freshness over every account: busy while any of them is starting
+        or in a round (the curtain's opossum swings), failing as the worst of them, and
+        ok_at the oldest last good round of those that had one — the window is as fresh
+        as its stalest account. One not logged in, or that can't say, is left out."""
+        states = []
+        for tag, core in [(None, self.primary), *self.others.items()]:
+            if tag is not None and not core.logged_in:
+                continue  # never connects: says nothing of the window's freshness
+            try:
+                st = core.poll_state()
+            except Exception:  # noqa: BLE001 — a core that doesn't say
+                continue
+            if isinstance(st, dict):
+                states.append(st)
+        oks = [st["ok_at"] for st in states if isinstance(st.get("ok_at"), (int, float))]
+        return {"busy": any(st.get("busy") for st in states),
+                "ok_at": min(oks) if oks else None,
+                "failing": max([int(st.get("failing") or 0) for st in states] or [0])}
 
     def pause_polling(self, on=True):
         """A phone's app out of sight: every account's rounds stop, and come back."""

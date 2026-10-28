@@ -98,6 +98,18 @@ def available():
         return False
 
 
+def inline_loop(label, m, fit):
+    """A gifv looping in its card (InlineLoop) — or its still frame alone where this Qt
+    has no QtMultimedia: asked here, at the first gifv, not at the window's start."""
+    return InlineLoop(label, m, fit) if available() else None
+
+
+def audio_bar(m):
+    """An audio attachment's player in its card (AudioBar), or None where this Qt has no
+    QtMultimedia (the card links the file then, as any other attachment)."""
+    return AudioBar(m) if available() else None
+
+
 def media_url(m):
     """A media attachment's file (fedtail.model Media)."""
     return m.url or m.remote_url

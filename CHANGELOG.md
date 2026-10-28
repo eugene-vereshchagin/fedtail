@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The window opens on the curtain with the opossum swinging from its very first frame;
+  connecting, counting the lanes and fetching the news start only once it is on screen
+  (before, the window thought first and showed the curtain after). The core counts
+  "starting" as busy until the first round ends (all accounts in one window too); GTK
+  asks the session bus for the tray without waiting, Qt loads QtMultimedia at the first
+  video or audio, not at start (the windows, GTK).
+
 - Fixed: "Why is it here?" fell over on a lane whose condition didn't match the post
   (its words had a field named like the lookup's own argument); a test keeps every word
   of the interface clear of it.

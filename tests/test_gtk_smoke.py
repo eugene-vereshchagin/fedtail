@@ -48,6 +48,7 @@ def pump(until=None, timeout=3.0):
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class _GtkBase(unittest.TestCase):
     UI = {}  # more of [ui] for a test class of its own (the split layout)
+    START = True  # False: the window made and shown, start() left to the test
 
     def setUp(self):
         from fedtail.core.view import View
@@ -82,6 +83,8 @@ class _GtkBase(unittest.TestCase):
         self.win = MainWindow(None, self.core, self.view, self.bridge, self.theme)
         self.bridge.on_error = self.errors.append  # the window's own goes: catch them
         self.win.present()
+        if not self.START:
+            return
         self.win.start()
         self.assertTrue(pump(lambda: self.win.lane_rows, 5), "never connected")
         self.core.poll_once()
@@ -104,6 +107,62 @@ class _GtkBase(unittest.TestCase):
         window has the focus (or the screen is locked, at night) it never is."""
         if not pump(lambda: self.win.is_active(), 2):
             self.skipTest("the window isn't active (another one has the focus)")
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkFirstFrameTest(_GtkBase):
+    START = False
+
+    def test_the_curtain_swings_from_the_first_frame(self):
+        """As Qt's: the window opens on the curtain with its opossum swinging, nothing
+        connected; first_paint runs the start (and so the tray's asking) only once a
+        frame is out; the start lane lifts the curtain; after the first round the swing
+        runs out."""
+        from unittest import mock
+
+        from fedtail.frontends.gtk import tray
+        from fedtail.frontends.gtk.window import first_paint
+        self.assertIsNone(self.core.me)
+        self.assertTrue(self.win.curtain_shown())
+        self.assertTrue(self.win._swing_on)
+        self.core.start_polling = lambda: None  # the first round by hand, below
+        made = []
+        painted = []
+        with mock.patch.object(tray, "make", lambda win, done: made.append(painted[:])):
+            first_paint(self.win, lambda: (painted.append(self.win._swing_on),
+                                           self.win.start()))
+            self.assertEqual((painted, made), ([], []))  # not before a frame
+            self.assertTrue(pump(lambda: made, 5))
+        self.assertEqual(painted, [True])  # the opossum swung before the start began
+        self.assertEqual(made, [[True]])  # the tray asked for after the first frame
+        self.assertTrue(pump(lambda: not self.win.curtain_shown(), 5))  # home lifts it
+        self.win.close_all()
+        self.assertTrue(self.win._swing_on)  # still starting: the first round not in
+        self.core.poll_once()
+        self.assertTrue(pump(lambda: not self.win._swing_on, 5))
+        self.win.select_lane("home")  # a click on a lane still lifts the curtain
+        self.assertFalse(self.win.curtain_shown())
+
+    def test_the_tray_comes_without_waiting(self):
+        """tray.make asks the bus and hands the tray over later (or None): the window's
+        start never stands on it."""
+        from unittest import mock
+
+        from fedtail.frontends.gtk import tray
+        got = []
+        tray.make(self.win, got.append)
+        self.assertTrue(pump(lambda: got, 5))
+        self.assertTrue(got[0] is None or isinstance(got[0], tray.Tray))
+        if got[0] is not None:
+            got[0].close()
+        # handed to the window: kept, and one coming after the window went is let go
+        fake = mock.Mock()
+        self.win._tray_made(fake)
+        self.assertIs(self.win.tray, fake)
+        late = mock.Mock()
+        self.win._tray_made(late)
+        late.close.assert_called_once()
+        self.win.tray = None
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")

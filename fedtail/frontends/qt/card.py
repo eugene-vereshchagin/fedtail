@@ -1105,9 +1105,10 @@ class PostRow(QWidget):
                 elif m.kind != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m.kind) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
-            elif m.kind == "audio" and self.ctx.audio_bar is not None:
+            elif m.kind == "audio" and self.ctx.audio_bar is not None and \
+                    (bar := self.ctx.audio_bar(m)) is not None:
                 row = -(-pos // 3)  # a row of its own, under the pictures
-                grid.addWidget(self.ctx.audio_bar(m), row, 0, 1, 3)
+                grid.addWidget(bar, row, 0, 1, 3)
                 pos = (row + 1) * 3
             else:
                 kind = _("media_" + (m.kind or "unknown"))

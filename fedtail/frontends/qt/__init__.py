@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 from . import notify
 from . import theme as themes
 from .bridge import Bridge
-from .window import MainWindow
+from .window import MainWindow, first_paint
 
 _translators = []
 
@@ -100,7 +100,9 @@ def run(core, instance, argv):
     else:
         win.show()
     QTimer.singleShot(1500, win, lambda: _log_size(win))
-    QTimer.singleShot(0, win.start)
+    # connecting (the lanes counted, the news fetched) only once the curtain with its
+    # swinging opossum is on screen: the first frame, then the work (as GTK's)
+    first_paint(win.roster if win.roster is not None else win, win.start)
     try:
         return app.exec()
     finally:

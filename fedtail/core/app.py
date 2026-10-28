@@ -272,6 +272,10 @@ class Core(SocialMixin):
         self._silence_checked = None
         self._gc_done = None  # monotonic time of the last store gc; None: not this run
         self._poll_count = 0
+        # starting: from here until the first round ends (or connecting fails) the lanes
+        # are being got — busy for poll_state, so the curtain's opossum swings from the
+        # window's first frame, not only once polling begins
+        self._starting = self.auth is not None  # (logged out: the login comes first)
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._active_lanes = set()  # all of them on screen, side by side (ui.layout)
         self._last_poll_s = None
@@ -485,6 +489,17 @@ class Core(SocialMixin):
 
     def connect(self):
         def job():
+            if not getattr(self, "_poll_count", 0):  # (connecting anew later: not starting)
+                self._starting = True
+                self.emit("poll_state", True)
+            try:
+                return connect()
+            except BaseException:
+                self._starting = False  # nothing is coming: the opossum stands still
+                self.emit("poll_state", False)
+                raise
+
+        def connect():
             if not api_module.cleartext_ok(self.auth["server"]):
                 log.warning("server is plain http on the internet: the token goes in the "
                             "clear (log in anew with https://)")
@@ -819,6 +834,7 @@ class Core(SocialMixin):
             raise
         finally:
             self._polling = False
+            self._starting = False  # the first round is over, however it went
             self.emit("poll_state", False)
             took = time.monotonic() - t
             self._round_requests = getattr(self.api, "requests", 0) - before
@@ -847,7 +863,8 @@ class Core(SocialMixin):
         a row since: what the window says of the lanes' freshness (common/sidebar.py
         poll_words) — so an empty lane reads as "nothing new", not "is it broken?"."""
         ok = getattr(self, "_last_poll_ok", None)
-        return {"busy": bool(getattr(self, "_polling", False)), "ok_at": ok,
+        busy = getattr(self, "_polling", False) or getattr(self, "_starting", False)
+        return {"busy": bool(busy), "ok_at": ok,
                 "failing": int(getattr(self, "_fails_in_row", 0) or 0)}
 
     def _step(self, name):

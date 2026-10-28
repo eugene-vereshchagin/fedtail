@@ -235,3 +235,56 @@ class PollStateTest(unittest.TestCase):
             Core.poll_once(core)
         self.assertEqual(core.poll_state(), {"busy": False, "ok_at": core._last_poll_ok,
                                              "failing": 1})
+
+    def test_busy_from_the_start_until_the_first_round_ends(self):
+        """The curtain's opossum swings from the window's first frame: a Core is busy
+        (starting) from its making, through connecting, until its first round is over —
+        and not after a connect that failed (nothing is coming)."""
+        import tempfile
+        from pathlib import Path
+
+        from fedtail.core import auth, config, paths
+        from fedtail.core.app import Core
+
+        from . import fakes
+        from .fakes import FakeApi
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = world = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        seen = []
+        core.events.on("poll_state", lambda _n, on: seen.append(on))
+        self.assertTrue(core.poll_state()["busy"])  # made, nothing asked yet
+        core.connect().result(timeout=10)
+        self.assertTrue(core.poll_state()["busy"])  # connected: the lanes still coming
+        self.assertEqual(seen, [True])
+        core.poll_once()
+        self.assertFalse(core.poll_state()["busy"])
+        self.assertEqual(seen[-1], False)
+        # connecting anew later (the network back): not "starting" again
+        core.connect().result(timeout=10)
+        self.assertFalse(core.poll_state()["busy"])
+
+        # a connect that fails: busy no more, and said so
+        world.fail_auth = True
+        other = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(other.shutdown)
+        said = []
+        other.events.on("poll_state", lambda _n, on: said.append(on))
+        self.assertTrue(other.poll_state()["busy"])
+        with self.assertRaises(api_mod.ApiError):
+            other.connect().result(timeout=10)
+        self.assertFalse(other.poll_state()["busy"])
+        self.assertEqual(said, [True, False])
+
+        # logged out: the login comes first — nothing is being got
+        p.auth_file.unlink()
+        out = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(out.shutdown)
+        self.assertFalse(out.logged_in)
+        self.assertFalse(out.poll_state()["busy"])

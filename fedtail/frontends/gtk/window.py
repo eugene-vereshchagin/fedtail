@@ -158,6 +158,51 @@ class SectionRow(Gtk.ListBoxRow):
         self.badge.set_text(sidebar.badge_text(unread))
 
 
+FIRST_PAINT_WAIT_MS = 3000  # a window never painted (started hidden): go on anyway
+
+
+def first_paint(widget, then, wait_ms=FIRST_PAINT_WAIT_MS):
+    """then() once the widget's window has painted its first frame — the start's work
+    (connecting, the lanes counted) waits for the curtain to be on screen, so the
+    swinging opossum is the first thing seen (as Qt's first_paint). The frame clock's
+    after-paint once, or the window's map first when it has no clock yet; a window
+    that is never painted gets then() after wait_ms all the same."""
+    state = {"done": False}
+
+    def go():
+        if not state["done"]:
+            state["done"] = True
+            then()
+        return GLib.SOURCE_REMOVE
+
+    def after_frame():
+        GLib.idle_add(go)  # after the frame is out, not inside its painting
+
+    def hook():
+        clock = widget.get_frame_clock()
+        if clock is None:
+            return False
+        sig = []
+
+        def painted(c):
+            if sig:
+                c.disconnect(sig.pop())
+            after_frame()
+        sig.append(clock.connect("after-paint", painted))
+        widget.queue_draw()  # a frame asked for: after-paint comes
+        return True
+    if not hook():
+        mapped = []
+
+        def on_map(w):
+            if mapped:
+                w.disconnect(mapped.pop())
+            if not hook():
+                after_frame()
+        mapped.append(widget.connect("map", on_map))
+    GLib.timeout_add(wait_ms, go)
+
+
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app, core, view, bridge, theme):
         super().__init__(application=app, title="fedtail")
@@ -338,6 +383,11 @@ class MainWindow(Gtk.ApplicationWindow):
         outer.append(bar)
         self.set_child(outer)
 
+        # the curtain is what the window opens on, its opossum swinging from the first
+        # frame (the core is starting: busy) — the lanes come out from under it when
+        # they're in (_rebuild_sidebar's start lane), as Qt's
+        self.stack.set_visible_child(self.curtain)
+        self._curtain_swing()
         self._shortcuts()
         self.connect("notify::is-active", lambda *_a: self._activated())
         self.connect("close-request", self._close_request)
@@ -680,16 +730,13 @@ class MainWindow(Gtk.ApplicationWindow):
         return box
 
     def _curtain_swing(self):
-        """The curtain's opossum swings while the lanes are being updated (a poll round
-        on), and stands still otherwise — as Qt's."""
+        """The curtain's opossum swings while the lanes are being updated (starting, a
+        poll round on: common/sidebar.polling), and stands still otherwise — as Qt's."""
         icon = getattr(self, "curtain_icon", None)
         if icon is None:
             return
-        try:
-            busy = bool((self.view.poll_state() or {}).get("busy"))
-        except Exception:  # noqa: BLE001 — a core that doesn't say
-            busy = False
-        busy = busy and self.curtain_shown() and self.cfg["ui"].get("app_icon") != "bubble"
+        busy = sidebar.polling(self.view) and self.curtain_shown() and \
+            self.cfg["ui"].get("app_icon") != "bubble"
         if busy:
             self._swing_ending = False  # busy again before the swing ran out: it goes on
         if busy and not getattr(self, "_swing_on", False):
@@ -1340,13 +1387,28 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- start -----------------------------------------------------------------------
     def start(self):
-        if getattr(self, "tray", None) is None and self.cfg["ui"].get("tray", True):
+        if getattr(self, "tray", None) is None and self.cfg["ui"].get("tray", True) and \
+                not getattr(self, "_tray_asked", False):
+            # asked of the session bus without waiting (it took up to a second): the
+            # connecting goes on meanwhile, the icon comes when the bus answers
             from . import tray
-            self.tray = tray.make(self)  # (None: the desktop shows no tray)
+            self._tray_asked = True
+            tray.make(self, self._tray_made)
         if not self.core.logged_in:
             login.LoginDialog(self, self._connect).present()
             return
         self._connect()
+
+    def _tray_made(self, made):
+        """The tray icon, once the session bus said there is a tray (None: there is none)."""
+        self._tray_asked = False
+        if made is None:
+            return
+        if self.quitting or getattr(self, "tray", None) is not None:
+            made.close()  # the window went meanwhile, or has one already
+            return
+        self.tray = made
+        self.update_badges()  # the count it should say already
 
     def _connect(self):
         self.status(_("connecting"), seconds=0)

@@ -371,6 +371,30 @@ class MergedRoutingTest(TmpDir):
         m.revoke_quote(st, quotes[0]).result(timeout=T)
 
     # ---- the family ------------------------------------------------------------------
+    def test_poll_state_over_every_account(self):
+        """Busy while any account is starting or in a round (the curtain's opossum
+        swings in the merged window too); failing as the worst; ok_at the stalest; the
+        poll_state events of the other account reach the window."""
+        m = self.m
+        self.assertFalse(m.poll_state()["busy"])  # both polled once in setUp
+        self.events.clear()
+        self.w._polling = True
+        self.w.emit("poll_state", True)
+        self.assertTrue(m.poll_state()["busy"])
+        self.assertIn(("poll_state", True), self.events)
+        self.w._polling = False
+        self.p._last_poll_ok, self.w._last_poll_ok = 2000.0, 1000.0
+        self.p._fails_in_row, self.w._fails_in_row = 0, 3
+        self.assertEqual(m.poll_state(), {"busy": False, "ok_at": 1000.0, "failing": 3})
+        # one that never had a good round, or can't say, doesn't hide the others' time
+        self.w._last_poll_ok = None
+        self.w.poll_state = lambda: (_ for _ in ()).throw(AttributeError("old core"))
+        self.assertEqual(m.poll_state(), {"busy": False, "ok_at": 2000.0, "failing": 0})
+        from fedtail.core.view import View
+        from fedtail.frontends.common import sidebar
+        self.p._starting = True  # the main one starting: the View says busy
+        self.assertTrue(sidebar.polling(View(m)))
+
     def test_connect_poll_shutdown_reach_every_account(self):
         m = self.m
         seen = []
