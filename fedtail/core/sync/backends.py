@@ -51,6 +51,15 @@ class HttpBackend:
         self.s.headers["Authorization"] = f"Bearer {token}"
         self.s.headers["X-Fedtail-Instance"] = instance
 
+    def _net(self, e):
+        """Not got through: in words — no such name, refused, no answer, a bad
+        certificate (core/neterr.py), naming the host, not "ConnectionError"."""
+        from urllib.parse import urlsplit
+
+        from .. import neterr
+        log.info("sync server %s: %s: %s", self.url, e.__class__.__name__, e)
+        return neterr.words(e, urlsplit(self.url).hostname or self.url)
+
     def _check(self, r):
         if r.status_code in (401, 403):
             raise BackendError("auth", f"sync server: {r.status_code} (token refused)")
@@ -67,7 +76,7 @@ class HttpBackend:
                             headers={"Content-Type": "application/octet-stream",
                                      "X-Fedtail-Device": device})
         except requests.RequestException as e:
-            raise BackendError("other", f"sync server: {e.__class__.__name__}") from e
+            raise BackendError("other", f"sync server: {self._net(e)}") from e
         self._check(r)
 
     def pull(self, cursor, device):
@@ -77,7 +86,7 @@ class HttpBackend:
             r = self.s.get(f"{self.url}/v1/blobs", timeout=TIMEOUT,
                            params={"after": after, "limit": PAGE, "exclude": device})
         except requests.RequestException as e:
-            raise BackendError("other", f"sync server: {e.__class__.__name__}") from e
+            raise BackendError("other", f"sync server: {self._net(e)}") from e
         self._check(r)
         try:
             data = r.json()

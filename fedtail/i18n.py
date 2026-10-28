@@ -74,6 +74,11 @@ _STRINGS = {
         "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
         "sync_full": "Синхронизация: место на сервере кончилось (квота)",
         "sync_failed": "Синхронизация не удалась: {why}",
+        "net_no_name": "не нахожу сервер «{host}» — проверьте адрес (опечатка?) и DNS",
+        "net_refused": "«{host}» отказал в соединении — сервер не запущен или порт не тот",
+        "net_timeout": "«{host}» не ответил вовремя — сеть или сервер медленные",
+        "net_tls": "у «{host}» неверный сертификат (HTTPS) — адрес не тот или прокси",
+        "net_down": "не достучаться до «{host}» — нет сети или сервер недоступен",
         "sync_off": "синхронизации нет: это отдельный сервис, укажи sync.url "
                     "(или sync.folder) в конфиге — как, см. docs/ru/sync.md",
         "sync_bar_off": "⇅ нет",
@@ -1668,6 +1673,12 @@ _STRINGS = {
         "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
         "sync_full": "Sync: no room left on the server (quota)",
         "sync_failed": "Sync failed: {why}",
+        "net_no_name": "cannot find the server \"{host}\" — check the address (a typo?) and DNS",
+        "net_refused": "\"{host}\" refused the connection — the server isn't running or "
+                       "the port is wrong",
+        "net_timeout": "\"{host}\" didn't answer in time — the network or the server is slow",
+        "net_tls": "\"{host}\" has a wrong certificate (HTTPS) — not the right address, or a proxy",
+        "net_down": "cannot reach \"{host}\" — no network, or the server is down",
         "sync_off": "no sync: it is a service of its own — set sync.url (or sync.folder) "
                     "in the config; how: docs/en/sync.md",
         "sync_bar_off": "⇅ off",

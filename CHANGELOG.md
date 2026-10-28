@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Sync says why it can't reach its server, naming it: "cannot find the server
+  "fedsync.example.org" — check the address (a typo?) and DNS", refused, no answer in
+  time, a wrong certificate — instead of a bare "sync server: ConnectionError"
+  (`core/neterr.py`, for whatever else reaches a server that isn't the account's own).
+
 - **Formatting buttons over the text** (`post.format_bar`): B, I, S, code (several lines —
   a block), a link, a quote, a list — the Markdown marks put around the selection, pressed
   again taken off; Ctrl+B, Ctrl+I, Ctrl+K. "auto" (the default) — when the server
