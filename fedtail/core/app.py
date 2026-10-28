@@ -604,7 +604,23 @@ class Core(SocialMixin):
         if name == "requests":
             return len(got & {a["id"] for a in self.follow_requests or ()})
         entries = [e for e in self.lane_entries(name) if e[0] in got]
-        return len(self.unread_ids(entries)) if entries else 0
+        if not entries:
+            return 0
+        unread = self.unread_ids(entries)
+        if self._by_thread(name):  # a card a thread: the threads the news came to
+            return self._threads_of([e for e in entries if e[1]["id"] in unread])
+        return len(unread)
+
+    def _by_thread(self, name):
+        """A lane that shows a card a thread (view = "threads": "Commented posts"): its
+        number counts threads with news, as many as the cards — not every comment."""
+        return getattr(self.lane_by_name.get(name), "view", "") == "threads"
+
+    def _threads_of(self, entries):
+        """How many threads these lane entries belong to (core/threads.py: by the
+        highest post known of each), the way the lane draws them."""
+        from .threads import conversations
+        return len(conversations(entries, self.store.get_status, set()))
 
     def _start_stream(self):
         """poll.stream: the server's live stream wakes the poller when something
@@ -2787,7 +2803,9 @@ class Core(SocialMixin):
         got = cache.get(name)
         if got and got[0] == key:
             return got[1]
-        n = len(self.unread_ids(entries))
+        unread = self.unread_ids(entries)
+        n = self._threads_of([e for e in entries if e[1]["id"] in unread]) \
+            if self._by_thread(name) else len(unread)
         cache[name] = (key, n)
         return n
 

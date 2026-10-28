@@ -143,6 +143,12 @@ class ThreadsViewTest(unittest.TestCase):
         self.assertEqual([s.entry.id for s in specs], ["100"])  # one card: the post
         self.assertEqual(specs[0].extra["conversation"]["unread"], 2)
         self.assertFalse(m.conversations_offered())  # always threads: no switch
+        # the number on the lane is the threads with news (the cards), not the comments:
+        # one card here, two comments in it (28.10's report: "64 +64" for a few cards)
+        self.assertEqual(core.unread_count("commented"), 1)
+        self.assertEqual(core.fresh_count("commented"), 1)
+        from fedtail.frontends.common import sidebar
+        self.assertEqual(sidebar.count(view, "commented"), 1)
         # where its thread opens: the lane says "first_unread" — the card's links say it
         self.assertEqual(specs[0].open_at, "first_unread")
         self.assertEqual(view.open_at("commented"), "first_unread")

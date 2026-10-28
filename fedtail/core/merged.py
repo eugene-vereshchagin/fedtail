@@ -261,6 +261,11 @@ class MergedCore:
         return out
 
     def unread_count(self, name):
+        """A lane of a card a thread ("Commented posts") counts threads, as each
+        account's own core does; any other lane — its unread posts."""
+        if getattr(self.lane_by_name.get(name), "view", "") == "threads":
+            return sum(core.unread_count(own) for core, _t, own in self._own_lane(name)
+                       if own in core.lane_by_name)
         return len(self.unread_ids(self.lane_entries(name)))
 
     def fresh_count(self, name):

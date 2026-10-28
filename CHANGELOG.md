@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: "Commented posts" (a card a thread) said "64 +64" over a handful of cards — the
+  number counted every new comment. A lane of a card a thread now counts the threads with
+  news, as many as its cards, "of them new" too; the core counts it, every interface and
+  the phone show the same (all accounts in one window as well).
+
 - Sync says why it can't reach its server, naming it: "cannot find the server
   "fedsync.example.org" — check the address (a typo?) and DNS", refused, no answer in
   time, a wrong certificate — instead of a bare "sync server: ConnectionError"
