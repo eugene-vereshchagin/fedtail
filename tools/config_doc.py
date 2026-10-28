@@ -27,7 +27,7 @@ BANNER = re.compile(r"^#\s*═{5,}\s*$")
 CHAPTER = re.compile(r"^#\s+(\d+)\.\s+(.+?)\s*$")
 SUB = re.compile(r"^#\s*──\s*(.+?)\s*─+\s*$")
 SECTION = re.compile(r"^\[([A-Za-z0-9_]+)\]\s*$")
-OPTION = re.compile(r"^#?\s*([A-Za-z0-9_]+)\s*=")
+OPTION = re.compile(r"^([A-Za-z0-9_]+)\s*=")
 FLAG = re.compile(r"^#\s{2,}(\S.*?)\s{2,}(\S.*)$")  # "#   -p, --profile ИМЯ    профиль…"
 
 L = {
@@ -171,8 +171,10 @@ def build(example_text, lang="ru"):
                 ch[2].append([f"`[{section}]`", intro, []])
             comments = []
             continue
-        if raw.startswith("#") and not OPTION.match(raw.lstrip("# ")[:0] + raw) or \
-                (raw.startswith("# ") and not re.match(r"^#\s?[A-Za-z0-9_]+\s*=", raw)):
+        if raw.startswith("#"):
+            # a comment is always a comment: an option is a live `key = value` line. Prose
+            # may well start with "key = …" (`# open_at = "…" in its table`), and taking it
+            # for a commented-out option made rows in one language only
             comments.append(raw[1:])
             continue
         m = OPTION.match(raw)

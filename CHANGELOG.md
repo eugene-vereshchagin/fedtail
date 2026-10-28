@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: the config reference (`docs/<lang>/config.md`, the help's "Settings") listed a few
+  options twice or in one language only — an explanation that begins with "open_at = …"
+  was taken for an option of its own. Now only live `key = value` lines are options, and a
+  test keeps the Russian and English tables row for row.
+
 - Fixed: "Commented posts" (a card a thread) said "64 +64" over a handful of cards — the
   number counted every new comment. A lane of a card a thread now counts the threads with
   news, as many as its cards, "of them new" too; the core counts it, every interface and

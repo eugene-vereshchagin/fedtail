@@ -149,6 +149,24 @@ class DocsBuildTest(unittest.TestCase):
         self.assertIn("| Arts mode |", self.files[root / "docs" / "en" / "features.md"])
         self.assertIn("| Режим arts |", self.files[root / "docs" / "ru" / "features.md"])
 
+    def test_config_reference_rows_are_the_options(self):
+        """docs/<lang>/config.md lists every live option of the example once, the same
+        rows in both languages. Prose that starts with "key = …" is not an option (the
+        0.21.0 reference had rows in one language only, and the website refused it)."""
+        import re
+        import tomllib
+        root = self.mod.ROOT
+        rows = {}
+        for lang in ("ru", "en"):
+            text = self.files[root / "docs" / lang / "config.md"]
+            rows[lang] = re.findall(r"^\| `([a-z_]+\.[a-z_]+)` \|", text, re.M)
+            example = (root / "fedtail" / "data" / f"config.example.{lang}.toml").read_text(
+                "utf-8")
+            live = [f"{sec}.{key}" for sec, table in tomllib.loads(example).items()
+                    if isinstance(table, dict) for key in table]
+            self.assertEqual(sorted(rows[lang]), sorted(live), lang)
+        self.assertEqual(rows["ru"], rows["en"])
+
     def test_config_keys_of_features_exist(self):
         """Every `section.key` in the config column of a feature fedtail has (or lacks)
         is a real option — planned and turned-down ones may name keys yet to be."""

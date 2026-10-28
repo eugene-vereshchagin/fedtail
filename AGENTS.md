@@ -103,9 +103,11 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   `docs/<lang>/dev/` from main), and
   links the release files by the names the `release` job gives them. So keep those
   files' places, the `## X.Y.Z — date` headings and the asset names stable, and keep
-  links in those docs repo-rooted (`/docs/…`). The `release` job pokes the site's deploy
-  hook (secret `SITE_DEPLOY_HOOK`) once a release is out; `site.yml` does the same nightly
-  and by hand.
+  links in those docs repo-rooted (`/docs/…`). After a release CI's `site` job runs
+  `site.yml` (also nightly and by hand): it pokes the site's deploy hook (secret
+  `SITE_DEPLOY_HOOK`) and fails unless the live site's `/version.txt` names the release
+  within 20 minutes. The site's own checks only warn about these docs: keep their RU/EN
+  twins equal here (tests do).
 * No shortcut on F1 or Shift+F1, ever: they sit next to Esc.
 * Docstrings: Google style; every module starts with what it is for.
 

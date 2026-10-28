@@ -21,8 +21,9 @@ A commit with `[skip ci]` in its message runs nothing.
 | `deb` | every push and PR | the `.deb` for Debian 13 (`packaging/deb.py`), installed with apt and started |
 | `apk` | a push to `main` | only when `fedtail/__init__.py` holds an untagged release version: the Android APK built and signed with the release key (secrets `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; android/README.md, "Releases"); without the key — a warning, the release goes without it |
 | `screenshots` | by hand (Actions → CI → Run workflow), `main` only | every theme rendered with made-up data, the PNGs force-pushed to the `screenshots` branch |
-| `release` | a push to `main`, once everything above is green | if `fedtail/__init__.py` holds a release version that has no tag yet: tags the commit `vX.Y.Z`, publishes a GitHub release with the CHANGELOG section as notes and the files — Windows (the .exe and the installer), Linux, Debian and Android (when signed) — and pokes the site's deploy hook |
+| `release` | a push to `main`, once everything above is green | if `fedtail/__init__.py` holds a release version that has no tag yet: tags the commit `vX.Y.Z`, publishes a GitHub release with the CHANGELOG section as notes and the files — Windows (the .exe and the installer), Linux, Debian and Android (when signed) |
 | `apt` | after `release` published one | the release's `.deb` into the apt repository: the `apt` branch (GitHub Pages serves it), its indexes made anew and signed with the repository's key (secret `APT_GPG_KEY`, an armored private key without a passphrase; `packaging/apt_repo.py`); without the key — a warning, nothing published; by hand for a release already out — `apt.yml` (Actions → apt → Run workflow, the version) |
+| `site` | after `release` published one (and after `apt`) | `site.yml` for the new version: the site rebuilt and waited for until it shows that release (below) |
 
 `android.yml` builds the phone's dev APK (its own id, `online.dmesg.fedtail.dev`, the dev key) on a push to `main`
 touching `android/` or the core, starts it on an emulator — screenshots and the UI tests (`android/app/src/androidTest`),
@@ -35,10 +36,13 @@ can't always be downloaded).
 
 | job | when | what it does |
 |---|---|---|
-| `rebuild` | every night at 05:37 Tbilisi time and by hand | calls the site's deploy hook (secret `SITE_DEPLOY_HOOK` or `DOCS_UPDATE`), so "coming next" follows `main` |
+| `rebuild` | every night at 05:37 Tbilisi time, after a release (ci.yml's `site`) and by hand | calls the site's deploy hook (secret `SITE_DEPLOY_HOOK` or `DOCS_UPDATE`), so "coming next" follows `main`; then waits up to 20 minutes for the live site's `/version.txt` to name the release (the given one, else the latest tag) and fails otherwise — the site's build refused something and Cloudflare kept the old version; the run's summary names the Cloudflare build to look at |
 
 The site lives in a repo of its own and builds itself from this one: the docs of the latest release,
-the developer docs from `main`, the release files' links. A release rebuilds it at once.
+the developer docs from `main`, the release files' links. A release rebuilds it at once. Its build
+checks itself (`tools/check_site.py` there): a broken page fails the build and the old site stays
+online, which `rebuild` turns into a red run. The docs taken from here only warn there: their
+RU/EN twins are checked here, by the tests.
 
 ## Making a release
 

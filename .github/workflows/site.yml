@@ -1,19 +1,40 @@
 # Rebuild the project's website (a private repo of its own, hosted on Cloudflare
-# Workers): nightly, so its "coming next" page follows main's CHANGELOG, and by hand
-# (Actions → site → Run workflow). Releases rebuild it from ci.yml's release job.
+# Workers) and make sure it really went live: nightly, so its "coming next" page follows
+# main's CHANGELOG; after every release (ci.yml's `site` job calls this with the version);
+# and by hand (Actions → site → Run workflow).
 # Lives here because this repo is public: Actions minutes are free.
 # Needs the secret SITE_DEPLOY_HOOK (or DOCS_UPDATE) — the Workers Builds deploy hook URL.
+#
+# The site's build fails, and Cloudflare keeps the old version online, when its checks find
+# a broken page — and nothing would say so. So after poking the hook this waits for the
+# live site's /version.txt (written by the site's build.sh) to name the expected release,
+# and goes red if it doesn't within 20 minutes: GitHub mails the failed run, and its
+# summary names the Cloudflare build to look at.
 name: site
 on:
   schedule:
     - cron: "37 1 * * *"   # 05:37 in Tbilisi
   workflow_dispatch:
+    inputs:
+      version:
+        description: "The release the site must show (empty: the latest vX.Y.Z tag)"
+        required: false
+        default: ""
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ""
 permissions: {}
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    env:
+      SITE: https://fedtail.dmesg.online
     steps:
       - name: Call the site's deploy hook
+        id: hook
         env:
           HOOK: ${{ secrets.SITE_DEPLOY_HOOK || secrets.DOCS_UPDATE }}
         run: |
@@ -21,6 +42,40 @@ jobs:
             echo "::error::no SITE_DEPLOY_HOOK secret in this repo: the site can't be rebuilt"
             exit 1
           fi
-          out=$(curl -fsS -X POST "$HOOK")
+          # Cloudflare answers with the build it queued: its id goes to the run's page, so
+          # a site that didn't update can be traced to its build log
+          out=$(curl -fsS --retry 3 --retry-all-errors -X POST "$HOOK")
           id=$(printf '%s' "$out" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['build_uuid'])" 2>/dev/null || true)
           echo "::notice::site build requested${id:+: $id}"
+          echo "build=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait until the live site shows the release
+        env:
+          WANT: ${{ inputs.version }}
+          BUILD: ${{ steps.hook.outputs.build }}
+          REPO: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          if [ -z "$WANT" ]; then
+            WANT=$(git ls-remote --tags --refs "$REPO" 'v*' | sed -nE 's#.*refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$#\1#p' | sort -V | tail -1)
+          fi
+          echo "waiting for $SITE/version.txt to say $WANT"
+          have=""
+          for i in $(seq 1 40); do   # 40 × 30 s = 20 minutes
+            have=$(curl -fsS -H 'Cache-Control: no-cache' "$SITE/version.txt?run=$GITHUB_RUN_ID-$i" 2>/dev/null | tr -d '[:space:]' || true)
+            if [ "$have" = "$WANT" ]; then
+              echo "::notice::the site shows $WANT"
+              exit 0
+            fi
+            sleep 30
+          done
+          msg="the site still shows ${have:-nothing} instead of $WANT after 20 minutes: its build failed or never ran"
+          echo "::error::$msg — Cloudflare → Workers & Pages → fedtail-site → Deployments${BUILD:+, build $BUILD}"
+          {
+            echo "### The site did not update"
+            echo
+            echo "$msg."
+            echo
+            echo "Look at the build log: Cloudflare → Workers & Pages → \`fedtail-site\` → Deployments${BUILD:+ (build \`$BUILD\`)}."
+            echo "The site's own checks (\`tools/check_site.py\`) print what they refused at its end."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
