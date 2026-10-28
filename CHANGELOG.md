@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- Windows (and any pip install): video opened in the browser because the player's part of
+  Qt, QtMultimedia, is in PySide6-Addons, which the install line left out. The README says
+  `pip install requests PySide6-Essentials PySide6-Addons` now (`pip install .[qt,media]`),
+  `--check` asks for Addons at the version of the Essentials there (a mismatched pair
+  doesn't load) with quotes cmd takes too, and the window says once, at the first video
+  going to the browser that way, what would bring the player.
+
 - Fixed: Activity froze the window for good (28.10): with its short rows, building cards
   near an edge and letting far ones go undid each other every few hundred ms. Far cards go
   by distance now (four screens either side), never within what building reaches. Seen

@@ -127,11 +127,12 @@ python3 fedtail              # папкой — тоже работает
 пакетом (deb — в планах); до тех пор в примерах ниже подставляй `python3 -m fedtail`.
 Все ключи: `python3 -m fedtail --help`.
 
-Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials`, дальше так же
+Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials PySide6-Addons`
+(Addons — видео и звук прямо в окне; без него они открываются в браузере), дальше так же
 (`python3 -m fedtail --check` подскажет pip-строку и для остального).
 
-На Windows из исходников — так же, через `pip install requests PySide6-Essentials` и
-`python -m fedtail`. Собрать однофайловую версию самому: `pip install pyinstaller` и
+На Windows из исходников — так же, через `pip install requests PySide6-Essentials
+PySide6-Addons` и `python -m fedtail`. Собрать однофайловую версию самому: `pip install pyinstaller` и
 `python3 packaging/build.py` (появится в `dist/`).
 
 При первом запуске fedtail спросит адрес сервера, откроет страницу входа в браузере и будет

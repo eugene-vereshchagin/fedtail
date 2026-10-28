@@ -599,7 +599,15 @@ class QtSmokeTest(unittest.TestCase):
             self.assertGreaterEqual(b.width(), b.sizeHint().width(), said)
             self.assertLessEqual(right, prof.info.width(), said)  # and none sticks out
         self.win.on_link("fedtail:tag/linux")
-        self.assertIsInstance(self.win.tabs.currentWidget(), TagWidget)
+        tag_tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tag_tab, TagWidget)
+        # muted in one click, and shown again (into the filter of muted hashtags)
+        self.assertEqual(tag_tab.mute_btn.text(), i18n._("tag_mute_btn"))
+        tag_tab.mute_btn.click()
+        self.pump(until=lambda: self.core.tag_muted("linux"))
+        self.pump(until=lambda: tag_tab.mute_btn.text() == i18n._("tag_unmute_btn"))
+        tag_tab.mute_btn.click()
+        self.pump(until=lambda: not self.core.tag_muted("linux"))
         self.win.close_tab(self.win.tabs.currentIndex())
         self.win.close_tab(self.win.tabs.indexOf(prof))
 
@@ -2634,6 +2642,25 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(2.0)
         del view._set_specs
         self.assertLessEqual(len(calls), 1, "the window keeps rebuilding while nobody moves")
+
+    def test_no_player_says_why_once(self):
+        """A Qt without QtMultimedia (Windows with PySide6-Essentials alone): videos go to
+        the browser, and the window says once what would bring the player."""
+        from unittest import mock
+
+        from fedtail.frontends.qt import player
+        from fedtail.model import Media, Ref
+        opened, said = [], []
+        m = Media(Ref("m", "", "v"), kind="video", url="https://x/v.mp4")
+        with mock.patch.object(player, "available", lambda: False), \
+                mock.patch.object(self.win, "open_url", opened.append), \
+                mock.patch.object(self.win.statusBar(), "showMessage",
+                                  lambda text, _ms=0: said.append(text)):
+            self.win.play_video(m)
+            self.win.play_video(m)
+        self.assertEqual(opened, ["https://x/v.mp4"] * 2)
+        self.assertEqual(len(said), 1)
+        self.assertIn("QtMultimedia", said[0])
 
     def test_cards_far_behind_are_let_go(self):
         """Reading a long lane from the oldest to the newest: cards far behind go again,

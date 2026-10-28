@@ -185,9 +185,22 @@ def install_line(missing):
     if debian_like():
         pkgs = list(dict.fromkeys(p for n in missing for p in n.deb.split() if p))
         return "sudo apt install " + " ".join(pkgs) if pkgs else ""
-    reqs = list(dict.fromkeys(r for n in missing for r in n.pip.split() if r))
+    reqs = list(dict.fromkeys(_pinned(r) for n in missing for r in n.pip.split() if r))
+    # double quotes: PowerShell and cmd take them, a POSIX shell too (cmd doesn't take '…')
     return (sys.executable.rsplit(os.sep, 1)[-1] + " -m pip install --user "
-            + " ".join(f"'{r}'" for r in reqs)) if reqs else ""
+            + " ".join(f'"{r}"' for r in reqs)) if reqs else ""
+
+
+def _pinned(req):
+    """PySide6's parts must be one version: Addons (video, audio) is asked for at the
+    version of the Essentials already installed — a newer one pulls a mismatched pair."""
+    if req.startswith("PySide6-Addons"):
+        try:
+            from importlib.metadata import version
+            return f"PySide6-Addons=={version('PySide6-Essentials')}"
+        except Exception:  # noqa: BLE001 — Essentials not from pip (Debian): as it was
+            return req
+    return req
 
 
 def missing(groups, levels=("need", "want")):

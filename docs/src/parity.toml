@@ -744,3 +744,9 @@ in = ["tui", "web"]
 why.ru = "«Всё прочитано» в терминале — клавиша x (её подсказка — `tui_*`), в вебе — кнопка ✓ со своей подсказкой (`web_mark_read`)."
 why.en = "“Mark all read” in the terminal is the x key (its hint a `tui_*` word), on the web page the ✓ button with its own tip (`web_mark_read`)."
 keys = ["mark_all_read"]
+
+[[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "«Видео открывается в браузере: нет QtMultimedia» — только у окна Qt: плеер в окне — модуль Qt, которого может не быть (pip без PySide6-Addons). GTK играет видео своим Gtk.Video, терминал и веб отдают видео браузеру всегда."
+why.en = "“Video opens in the browser: no QtMultimedia” is the Qt window's alone: its player is a Qt module that may be missing (pip without PySide6-Addons). GTK plays video with its own Gtk.Video; the terminal and the web page always hand video to the browser."
+keys = ["player_missing"]

@@ -1380,6 +1380,8 @@ _STRINGS = {
         "player_mute_tip": "Звук (M)",
         "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · S — скачать · "
                        "O — в браузере · Esc — закрыть",
+        "player_missing": "Видео открывается в браузере: в этом Qt нет QtMultimedia. Для "
+                          "плеера в окне: {how}",
         "player_failed": "Не играется: {err}. O — открыть в браузере",
         "browse_empty": "Сервер отдаёт эту ленту пустой: похоже, живые ленты у него "
                         "выключены (так на mastodon.social)",
@@ -3148,6 +3150,8 @@ _STRINGS = {
         "player_mute_tip": "Sound (M)",
         "player_keys": "Space pause · ← → 5 seconds · M sound · S download · O browser · "
                        "Esc close",
+        "player_missing": "Video opens in the browser: this Qt has no QtMultimedia. For the "
+                          "player in the window: {how}",
         "player_failed": "Can't play it: {err}. O opens it in the browser",
         "browse_empty": "The server gives this feed empty: its live feeds seem to be off "
                         "(as on mastodon.social)",

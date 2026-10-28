@@ -2286,8 +2286,9 @@ class TagWidget(_PagedTab):
         self.win.bridge.call(
             self.core.mute_tag(self.tag, on),
             ok=lambda _r: (self.mute_btn.setEnabled(True), self._show_mute(),
-                           self.win.status(_("tag_muted_msg" if on else "tag_unmuted_msg",
-                                             tag=self.tag))),
+                           self.win.statusBar().showMessage(
+                               _("tag_muted_msg" if on else "tag_unmuted_msg", tag=self.tag),
+                               6000)),
             fail=lambda e: (self.mute_btn.setEnabled(True), self.win.error(e)))
 
     def _info(self, t):

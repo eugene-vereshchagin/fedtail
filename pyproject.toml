@@ -37,6 +37,7 @@ Changelog = "https://github.com/eugene-vereshchagin/fedtail/blob/main/CHANGELOG.
 
 [project.optional-dependencies]
 qt = ["PySide6-Essentials>=6.5"]
+media = ["PySide6-Addons>=6.5"]  # video and audio inside the window (QtMultimedia)
 tui = ["textual>=0.86", "Pillow>=9.1"]
 sync = ["cryptography>=3.4"]
 langs = ["langdetect>=1.0.9"]

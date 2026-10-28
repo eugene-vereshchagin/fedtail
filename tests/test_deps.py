@@ -47,7 +47,7 @@ class DepsTest(unittest.TestCase):
                 mock.patch.dict("os.environ", {"FEDTAIL_NO_DEPCHECK": ""}):
             self.assertTrue(deps.at_start("qt", err))  # not the terminal: fine
             self.assertFalse(deps.at_start("tui", err))
-        self.assertIn("pip install --user 'textual>=0.86'", err.getvalue())
+        self.assertIn('pip install --user "textual>=0.86"', err.getvalue())  # cmd takes "…"
 
     def test_the_nice_to_haves_said_once(self):
         err = io.StringIO()
@@ -78,9 +78,6 @@ class DepsTest(unittest.TestCase):
         for g in deps.GROUPS:
             self.assertNotEqual(i18n._(deps.GROUP_WORDS[g]), deps.GROUP_WORDS[g])
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ReadmeTest(unittest.TestCase):
@@ -130,3 +127,18 @@ class ServerAddressTest(unittest.TestCase):
             api.assert_called_with("https://dmesg.online")
         self.assertIn("Couldn't reach dmesg.online", str(e.exception))
         self.assertTrue(Core)
+
+
+class AddonsPinnedTest(unittest.TestCase):
+    def test_video_asked_for_at_the_installed_version(self):
+        """Video in the window needs PySide6-Addons of the very version of the Essentials
+        there (28.10: Windows opened every video in the browser)."""
+        from unittest import mock
+        need = [n for n in deps.NEEDS if n.key == "PySide6 QtMultimedia"]
+        with mock.patch.object(deps, "debian_like", lambda: False), \
+                mock.patch("importlib.metadata.version", lambda name: "6.8.1"):
+            self.assertTrue(deps.install_line(need).endswith('"PySide6-Addons==6.8.1"'))
+
+
+if __name__ == "__main__":
+    unittest.main()

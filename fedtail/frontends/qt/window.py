@@ -2310,12 +2310,16 @@ class MainWindow(QMainWindow):
         """A video or a gifv: over the window (ui.video_player), or in the browser.
         items: all the videos and gifs of the post, to go between them there."""
         from . import player
-        if self.cfg["ui"].get("video_player", "internal") == "internal" and \
-                player.available():
+        internal = self.cfg["ui"].get("video_player", "internal") == "internal"
+        if internal and player.available():
             player.VideoOverlay(self, self.ctx, m, loop=m.kind == "gifv",
                                 items=items)
-        else:
-            self.open_url(player.media_url(m))
+            return
+        if internal and not getattr(self, "_said_no_player", False):
+            # asked for inside the window, but this Qt can't play: said once, with the cure
+            self._said_no_player = True
+            self.statusBar().showMessage(_("player_missing", how=player.install_hint()), 20000)
+        self.open_url(player.media_url(m))
 
     def show_images(self, media, index):
         if self.cfg["ui"]["image_viewer"] == "browser":

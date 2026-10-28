@@ -128,11 +128,12 @@ Options are the same for both: `python3 -m fedtail --profile croco`,
 installed as a package (a deb is planned); until then use `python3 -m fedtail` in the examples
 below. All options: `python3 -m fedtail --help`.
 
-Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same
-(`python3 -m fedtail --check` gives the pip line for the rest too).
+Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials PySide6-Addons`
+(Addons — video and audio inside the window; without it they open in the browser), then the
+same (`python3 -m fedtail --check` gives the pip line for the rest too).
 
-On Windows from the source: the same, with `pip install requests PySide6-Essentials` and
-`python -m fedtail`. To build the one-file version yourself: `pip install pyinstaller` and
+On Windows from the source: the same, with `pip install requests PySide6-Essentials
+PySide6-Addons` and `python -m fedtail`. To build the one-file version yourself: `pip install pyinstaller` and
 `python3 packaging/build.py` (it lands in `dist/`).
 
 On first start fedtail asks for your server, opens the login page in the browser and waits

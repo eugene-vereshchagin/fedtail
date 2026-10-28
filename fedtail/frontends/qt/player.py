@@ -98,6 +98,13 @@ def available():
         return False
 
 
+def install_hint():
+    """The command that brings QtMultimedia here (deps.install_line), or its package."""
+    from ... import deps
+    need = [n for n in deps.NEEDS if n.key == "PySide6 QtMultimedia"]
+    return deps.install_line(need) or "PySide6-Addons"
+
+
 def inline_loop(label, m, fit):
     """A gifv looping in its card (InlineLoop) — or its still frame alone where this Qt
     has no QtMultimedia: asked here, at the first gifv, not at the window's start."""
