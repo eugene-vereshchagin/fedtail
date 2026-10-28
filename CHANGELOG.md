@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: a comment in a followed thread that came only as a mention (an unlisted reply into
+  a public thread, say) went to "To me" and not to Commented posts. The thread is now found
+  through the comment's chain of parents (up to 40 known posts), and its comments are
+  counted as the thread's from then on.
+
 - Fixed: "Translate" could vanish though the server translates (28.10's report). Whether
   it does is now also asked of the list of what it translates (a server whose instance
   document doesn't say so, or whose newer document came late), and a late or broken

@@ -939,6 +939,12 @@ class Store:
             return {r[0] for r in db.execute(
                 "SELECT status_id FROM sub_members WHERE root_id=?", (root_id,))}
 
+    def sub_add_members(self, root_id, members):
+        """Posts known to belong to a followed thread (found up their parents)."""
+        with self._tx() as db:
+            db.executemany("INSERT OR IGNORE INTO sub_members VALUES (?, ?)",
+                           [(m, root_id) for m in members])
+
     def sub_checked(self, root_id, checked, last_activity, members):
         with self._tx() as db:
             db.execute("UPDATE subs SET checked=?, last_activity=MAX(last_activity, ?) "

@@ -171,3 +171,55 @@ class ThreadsViewTest(unittest.TestCase):
         self.assertEqual(len([s for s in m.build(True).specs if s.entry]), 1)  # kept now
         m.left()
         self.assertEqual([s for s in m.build(False).specs if s.entry], [])  # nothing new
+
+
+class CommentAsMentionTest(unittest.TestCase):
+    """28.10: a comment in a followed thread that came only as a mention (an unlisted
+    reply to me in a public thread) went to "To me" alone — the thread's membership was
+    learned at its next check — and "Commented posts" didn't come up. Up its parents it
+    is a member at once now."""
+
+    def test_the_thread_comes_up_at_once(self):
+        import tempfile
+        from pathlib import Path
+
+        from fedtail import i18n
+        from fedtail.core import auth, config, paths
+        from fedtail.core.app import Core
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        from tests import fakes
+        from tests.fakes import BOB, ME, FakeApi, status
+        i18n.setup("en")
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = w = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "lanes": {"enabled": ["home", "to_me", "commented"]}})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        core.cfg["subs"]["interval_minutes"] = 0
+        core.poll_once()
+        root = w.add(status("100", ME, minute=1, vis="public"), home=True)
+        core.poll_once()  # my post: followed (subs.auto = posts), its thread checked
+        self.assertTrue(core.subscribed(root))
+        mine = w.add(status("101", ME, "100", "ME", minute=2, vis="public"), home=True)
+        core.poll_once()
+        core.mark_read(["100", "101"])
+        # the thread isn't checked again before the reply comes (a long interval)
+        core.cfg["subs"]["interval_minutes"] = 600
+        w.add(status("102", BOB, mine["id"], "ME", minute=3, vis="unlisted"), mention=True)
+        core.poll_once()
+        self.assertEqual(core.followed_root("102"), "100")
+        self.assertEqual(core.store.sub_root_of("102"), "100")  # a member from now on
+        view = View(core)
+        specs = [s for s in LaneModel(view, "commented").build(False).specs
+                 if s.entry is not None]
+        self.assertEqual([s.entry.id for s in specs], ["100"])  # the thread came up
+        self.assertEqual(core.unread_count("commented"), 1)
+        self.assertIsNone(core.followed_root("nope"))

@@ -1055,7 +1055,9 @@ class Core(SocialMixin):
             # rules that ask about the parent (a reply to my post or to a comment, whose
             # reply it is) sort a reply only once its parent is known: fetched first
             # (feeds.md §8, "atoms known late"), a few at most — the rest come after
-            if any(c.routed and {"parent", "me"} & set(c.needs) for c in self.customs):
+            # (and "state" — "subscribed" is known up a reply's parents)
+            if any(c.routed and {"parent", "me", "state"} & set(c.needs)
+                   for c in self.customs):
                 self._fetch_parents([st for st in new_statuses
                                      if real(st).get("in_reply_to_id")][:PARENTS_FIRST])
             new_by_source.update(self._route_custom(new_by_source))
@@ -1319,7 +1321,7 @@ class Core(SocialMixin):
 
         class _Subscribed:  # state = "subscribed": the post is in a followed thread
             def __contains__(self, sid):
-                return core.store.sub_root_of(sid) is not None
+                return core.followed_root(sid) is not None
 
         lc = self.cfg["lanes"]
         host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
@@ -2303,9 +2305,33 @@ class Core(SocialMixin):
 
     def _sub_root(self, status):
         st = real(status)
-        parent = st.get("in_reply_to_id")
-        return self.store.sub_root_of(st["id"]) or \
-            (parent and self.store.sub_root_of(parent)) or None
+        return self.store.sub_root_of(st["id"]) or self.followed_root(st["id"])
+
+    SUB_CHAIN = 40  # how far up a reply's stored parents are followed to find its thread
+
+    def followed_root(self, status_id):
+        """The followed thread a post is in, known at once: its own membership, else up
+        its stored parents to a post of a followed thread — and then it is a member from
+        now on. A comment that came as a mention (to me, unlisted in a public thread…)
+        used to be one only after the thread's own next check, and so went to "To me"
+        and never brought its thread up in "Commented posts" (28.10's report)."""
+        store = self.store
+        root = store.sub_root_of(status_id)
+        if root is not None:
+            return root
+        seen, cur = {status_id}, status_id
+        for _ in range(self.SUB_CHAIN):
+            st = store.get_status(cur)
+            parent = real(st).get("in_reply_to_id") if st else None
+            if not parent or parent in seen:
+                return None
+            root = store.sub_root_of(parent)
+            if root is not None:
+                store.sub_add_members(root, list(seen))
+                return root
+            seen.add(parent)
+            cur = parent
+        return None
 
     def unsubscribe(self, status):
         """Leave the thread: no more "Subscriptions" from it — and, with
