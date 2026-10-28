@@ -11,7 +11,9 @@
   the key is never made by itself: nothing there can be seen without one). The key under a
   password is kept on the server apart from the journal, under an id derived from the
   password. A server of protocol 1 is told, not talked to; after updating both, every
-  device sends its state once more.
+  device sends its state once more. When the server wants the invite code, ≡ → Sync goes
+  back to step 1 by itself, says why on top, and the code typed there makes the journal at
+  once (the error named a "Where" one couldn't find).
 
 - Fixed: a lane's funnel ("only video…") and a free lane's switches filtered the newest
   posts after the lane's window was cut — a handful of videos out of the newest few

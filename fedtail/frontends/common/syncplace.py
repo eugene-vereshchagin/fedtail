@@ -44,9 +44,17 @@ class SyncPlaces:
             return None, "where"
         if st.get("backend") == "webdav" and not st.get("login"):
             return st, "login"
+        if self._invite_wanted(st):  # the server won't make the journal: step 1 again
+            return st, "where"
         if not st.get("key") and not v.sync_key():
             return st, "key"
         return st, "done"
+
+    @staticmethod
+    def _invite_wanted(st):
+        """The last round met a server that wants an invite code for the journal."""
+        return (st or {}).get("backend") == "server" and \
+            ((st or {}).get("last") or {}).get("error_kind") == "invite"
 
     def _sync_steps(self, page, st, at):
         """The three steps on top: ✓ done, ▶ now, · later — each with what it holds."""
@@ -80,6 +88,9 @@ class SyncPlaces:
 
         if step == "where":
             page.hint = _("sync_where_hint")
+            if self._invite_wanted(st):  # why the page stands here: said on top of it
+                page.rows.append(Row("text", _("sync_invite_needed_title"),
+                                     _("sync_invite_needed_line"), key="invite"))
             page.form = (Field("url", _("sync_f_url"), str(s.get("url") or ""),
                                tip=_("sync_f_url_tip")),
                          Field("invite", _("sync_f_invite"), "", tip=_("sync_f_invite_tip")),
@@ -185,8 +196,13 @@ class SyncPlaces:
             url = "https://" + url
         if dav and not dav.startswith(("https://", "http://")):
             dav = "https://" + dav
-        v.sync_setup(url=url, folder=folder, webdav=dav,
-                     invite=str(values.get("invite") or "").strip() or None)
+        invite = str(values.get("invite") or "").strip() or None
+        v.sync_setup(url=url, folder=folder, webdav=dav, invite=invite)
+        if invite and v.sync_key():  # the code for a journal that waits for it: tried now
+            done = v.sync_now()
+            if done:
+                return Out(message=_("sync_round", sent=done[0], got=done[1]),
+                           open={"page": "sync"})
         return Out(message=_("sync_saved_on"), open={"page": "sync"})
 
     def _a_sync_dav(self, _d, values, _c, _ans):

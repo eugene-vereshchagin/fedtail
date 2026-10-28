@@ -510,7 +510,10 @@ class Sync:
     def _problem(self, kind, text):
         self._trouble = text
         last = self.store.kv_get("sync.last") or {}
-        self.store.kv_set("sync.last", {**last, "error": text, "error_at": _iso()})
+        # its kind too: the window's place goes back to the step that mends it (an invite
+        # code wanted → "where", where the code is typed)
+        self.store.kv_set("sync.last", {**last, "error": text, "error_at": _iso(),
+                                        "error_kind": kind})
         self.core.emit("sync_changed", None)
         if kind not in self._said:
             self._said.add(kind)

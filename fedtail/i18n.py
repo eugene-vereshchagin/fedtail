@@ -63,8 +63,12 @@ _STRINGS = {
                                 "Синхронизация → «Это моё первое устройство» или «Добавляю "
                                 "это устройство» (fedtail sync first / join)",
         "sync_invite_needed": "Синхронизация: серверу нужен код приглашения для нового "
-                              "журнала (его даёт админ сервера) — ≡ → Синхронизация → Где, "
-                              "или fedtail sync invite КОД",
+                              "журнала (его даёт админ сервера) — ≡ → Синхронизация, поле "
+                              "«Код приглашения», или fedtail sync invite КОД",
+        "sync_invite_needed_title": "Нужен код приглашения",
+        "sync_invite_needed_line": "Сервер не заводит журнал без кода, который даёт его админ "
+                                   "(fedtail_sync.py invite add …). Впиши его ниже и нажми "
+                                   "«Дальше» — нужен только этому, первому устройству.",
         "sync_invite_saved": "Код приглашения сохранён: первое устройство создаст по нему журнал",
         "sync_login_none": "Серверу синхронизации и общей папке вход не нужен: журнал "
                            "определяется ключом (fedtail sync first / join). Вход — только "
@@ -1881,7 +1885,12 @@ _STRINGS = {
                                 "first device” or “Adding this device” (fedtail sync first / "
                                 "join)",
         "sync_invite_needed": "Sync: the server needs an invite code for a new journal (its "
-                              "admin gives it) — ≡ → Sync → Where, or fedtail sync invite CODE",
+                              "admin gives it) — ≡ → Sync, the “Invite code” field, or "
+                              "fedtail sync invite CODE",
+        "sync_invite_needed_title": "An invite code is needed",
+        "sync_invite_needed_line": "The server makes no journal without a code its admin "
+                                   "gives (fedtail_sync.py invite add …). Type it below and "
+                                   "press “Next” — only this first device needs it.",
         "sync_invite_saved": "The invite code is kept: the first device makes the journal with it",
         "sync_login_none": "A sync server and a shared folder need no login: the journal is "
                            "the key's (fedtail sync first / join). Logging in is for WebDAV "

@@ -607,6 +607,7 @@ class ClientServerTest(TmpDir):
             c.connect().result()
             return c
         desk, phone = core("desk"), core("phone")
+        self._place_asks_for_the_code(core("third"))
         self.assertIsNone(desk.sync_now())  # no key yet: says so, makes none by itself
         self.assertIsNone(desk.sync_key())
         desk.sync_first_key()
@@ -624,6 +625,23 @@ class ClientServerTest(TmpDir):
         phone.sync_now()
         self.assertEqual(phone.store.read_set(["101"]), {"101"})
         del world
+
+    def _place_asks_for_the_code(self, c):
+        """28.10: "go to Sync → Where" — and no Where to be seen. The place itself goes
+        back to step 1 with the code's field when the server wants one, and the code
+        typed there makes the journal at once."""
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+        p = Places(View(c))
+        self.assertEqual(p.page("sync").tab, "key")  # a server: no login step
+        p.act("sync", "first", "")
+        page = p.page("sync")
+        self.assertEqual(page.tab, "where")  # no code: the journal wasn't made
+        self.assertIn("invite", [r.key for r in page.rows])
+        self.assertIn("invite", [f.name for f in page.form])
+        out = p.act("sync", "where", "", {"url": self.url, "invite": self.code})
+        self.assertFalse(out.error, out.error)
+        self.assertEqual(p.page("sync").tab, "done")
 
 
 class CliSyncTest(Devices):
