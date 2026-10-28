@@ -98,10 +98,14 @@ class FlowTest {
 
     private fun back() = scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
+    /** The overview of lanes is up: its title. ("Read in a row" was its mark until the
+     *  button went, 112da6a8 — five tests waited 90 s for it in vain since.) */
+    private fun overview() = waitText("Lanes", 90_000)
+
     @Test
     fun theOverviewOpensALaneAndAThread() {
         launch()
-        waitText("Read in a row")
+        overview()
         compose.onAllNodesWithText("Home").onFirst().performClick()
         waitDescription("Switch lane")                 // a lane's title bar
         // a card — whichever stands first: the screenshots before have read some already,
@@ -122,7 +126,7 @@ class FlowTest {
         back()
         waitDescription("Switch lane")                 // back in the lane…
         back()
-        waitText("Read in a row")                       // …and back on the overview
+        overview()                                      // …and back on the overview
     }
 
     @Test
@@ -137,14 +141,6 @@ class FlowTest {
         // back in the thread, standing on what was just written — not thrown to the top
         waitText(words, 30_000)
         waitText("Thread")
-    }
-
-    @Test
-    fun readInARowLeavesTheOverviewForALaneWithNews() {
-        launch()
-        waitText("Read in a row")
-        compose.onAllNodesWithText("Read in a row").onFirst().performClick()
-        waitDescription("Switch lane")
     }
 
     @Test
@@ -184,19 +180,19 @@ class FlowTest {
     @Test
     fun theTilesCanBeChanged() {
         launch()
-        waitText("Read in a row")
+        overview()
         compose.onAllNodesWithText("change").onFirst().performClick()
         waitText("✕")
         compose.onAllNodesWithText("✕").onFirst().performClick()  // the first tile goes
         waitText("PINNED")                              // a chosen order now (headings: caps)
         compose.onAllNodesWithText("done").onFirst().performClick()
-        waitText("Read in a row")
+        overview()
     }
 
     @Test
     fun theMenuOpensAPlaceOfTheWindows() {
         launch()
-        waitText("Read in a row")
+        overview()
         compose.onAllNodesWithContentDescription("More").onFirst().performClick()
         waitText("Places…", 15_000)
         compose.onAllNodesWithText("Places…").onFirst().performClick()

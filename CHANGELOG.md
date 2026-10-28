@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Fixed (the phone): writing crashed with the formatting buttons on a side (the default,
+  left) — a scrolling column of them inside the scrolling editor. The UI tests waited for
+  the overview's "Read in a row", gone since that button went: they wait for its title.
+
 - The phone: "Mark all read" on a lane's bar, as the windows' button — the whole lane in
   the core, not only the posts loaded; "to the new" says how many there are ("↓ 12")
   instead of a bare arrow; the end of a lane is one row (✓ read · the next lane with news),

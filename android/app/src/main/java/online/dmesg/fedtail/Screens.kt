@@ -581,7 +581,10 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 }
             }
             val formatColumn: @Composable () -> Unit = {
-                if (formats.isNotEmpty()) Column(Modifier.verticalScroll(rememberScrollState())) {
+                // no scroll of its own: the editor scrolls already, and a scrolling column
+                // inside a scrolling one has no height to measure — Compose throws (28.10:
+                // every reply crashed). Seven buttons fit beside the text anyway.
+                if (formats.isNotEmpty()) Column {
                     formats.forEach { formatButton(it) }
                 }
             }
