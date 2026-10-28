@@ -684,6 +684,16 @@ def read(ids_json, lane=None):
                                           lane or None))
 
 
+def lane_read(name):
+    """"Mark all read" over a lane, as the windows' button: every post of it (not only
+    the ones loaded on the phone), its events seen too → {ok, n}."""
+    def go():
+        web = _s["web"]
+        ids = web.core.mark_lane_read(web._lane_name(name))
+        return {"ok": True, "n": len(ids)}
+    return _answer(go)
+
+
 def lane_clear(name, confirmed=False):
     """"Clear" over a lane of events only: every notification, on the server too →
     {confirm} first, then {refresh}."""

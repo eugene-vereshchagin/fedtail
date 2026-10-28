@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- The phone: "Mark all read" on a lane's bar, as the windows' button — the whole lane in
+  the core, not only the posts loaded; "to the new" says how many there are ("↓ 12")
+  instead of a bare arrow; the end of a lane is one row (✓ read · the next lane with news),
+  not a card half the screen high.
+
 - Windows (and any pip install): video opened in the browser because the player's part of
   Qt, QtMultimedia, is in PySide6-Addons, which the install line left out. The README says
   `pip install requests PySide6-Essentials PySide6-Addons` now (`pip install .[qt,media]`),

@@ -784,6 +784,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** "Mark all read", as the windows' button: the whole lane in the core, not only
+     *  the posts loaded here; the overview's counts follow. */
+    fun markLaneRead() {
+        val name = current ?: return
+        posts = posts.map { if (it.unread) it.copy(unread = false) else it }
+        viewModelScope.launch {
+            Core.laneRead(name)
+            loadHub()
+        }
+    }
+
     fun markRead(keys: Collection<String>, inThread: Boolean = false) {
         val list = if (inThread) threadPosts else posts
         val ids = list.filter { it.key in keys && it.unread }.map { it.id }

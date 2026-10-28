@@ -138,6 +138,10 @@ class BridgeTest(_Base):
         self.assertNotEqual(self.bridge.wait(v, 2), v)
         again = self.call("lane", "home", True)
         self.assertFalse(next(p for p in again["posts"] if p["id"] == unread[0])["unread"])
+        # "mark all read", as the windows' button: the whole lane, in the core
+        got = self.call("lane_read", "home")
+        self.assertTrue(got["ok"])
+        self.assertFalse([p for p in self.call("lane", "home", True)["posts"] if p["unread"]])
         self.assertEqual(self.call("pause", True), {"ok": True})
         self.assertEqual(self.call("pause", False), {"ok": True})
         self.assertEqual(self.call("refresh"), {"ok": True})

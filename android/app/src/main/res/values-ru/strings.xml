@@ -78,9 +78,6 @@
     <string name="switch_lane">Сменить ленту</string>
     <string name="lane_done">«%1$s» дочитана</string>
     <string name="next_lane">дальше</string>
-    <string name="swipe_hint">или свайп влево — следующая лента с новым</string>
-    <string name="nothing_next">В других лентах нового нет</string>
-    <string name="to_overview">К лентам</string>
     <string name="find_lane">лента, список или #тег</string>
     <string name="cmd_hint">#abc текст или команда</string>
     <string name="yes_do">Да</string>
@@ -162,4 +159,5 @@
     <string name="scan_prompt">Наведи камеру на QR-код ключа на другом устройстве</string>
     <string name="edit_lane">Изменить ленту</string>
     <string name="lanes_editor">Ленты…</string>
+    <string name="mark_all_read">Всё прочитано</string>
 </resources>

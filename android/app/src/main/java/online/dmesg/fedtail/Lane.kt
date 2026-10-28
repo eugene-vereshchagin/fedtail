@@ -45,6 +45,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -131,17 +132,24 @@ fun LaneScreen(
                             }
                         },
                         actions = {
-                            // "to the new": the first unread post, wherever reading stands
-                            if (model.posts.any { it.unread }) {
+                            // "to the new" with how many there are, and "mark all read" — the
+                            // windows' lane buttons (a bare arrow told nothing)
+                            val unread = model.posts.count { it.unread }
+                            if (unread > 0) {
                                 val toNew = stringResource(R.string.to_new)
-                                IconButton(onClick = {
+                                TextButton(onClick = {
                                     scope.launch {
                                         aim(state, model.posts, model.newestFirst,
                                             before = if (model.newestFirst) 0 else 1,
                                             divider = model.divider?.first)
                                     }
                                 }, modifier = Modifier.semantics { contentDescription = toNew }) {
-                                    Text("⤓", fontSize = 20.sp)
+                                    Text((if (model.newestFirst) "↑ " else "↓ ") + unread, fontSize = 15.sp)
+                                }
+                                val allRead = stringResource(R.string.mark_all_read)
+                                IconButton(onClick = { model.markLaneRead() },
+                                    modifier = Modifier.semantics { contentDescription = allRead }) {
+                                    Icon(Glyphs.Done, allRead)
                                 }
                             }
                             IconButton(onClick = { model.findOpen = !model.findOpen }) {
@@ -296,41 +304,29 @@ private fun StripChip(title: String, count: String, on: Boolean, onClick: () -> 
     }
 }
 
-/** The end of a lane: read — what's next (the next lane with news, yours first). */
+/** The end of a lane, one row: ✓ read — and the next lane with news (yours first) as a
+ *  button; none — nothing. (It was a card half the screen high: a done mark, a big
+ *  button, a hint, a link — the grid at the top goes to the lanes anyway, a swipe too.) */
 @Composable
 private fun LaneEnd(model: AppModel, name: String) {
     val next = model.nextLane(after = name)
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp))
-        .background(MaterialTheme.colorScheme.surface)
-        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-        .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Glyphs.Done, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.lane_done, model.title), fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.tertiary)
-        }
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(Glyphs.Done, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.lane_done, model.title), fontSize = 14.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.tertiary)
         if (next != null) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primary)
-                .clickable { model.showLane(next.name) }.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.next_lane), fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimary)
-                    Text("${next.title} · ${next.count}", fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
-                }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, null,
-                    tint = MaterialTheme.colorScheme.onPrimary)
+            Button(onClick = { model.showLane(next.name) },
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                Text("${next.title} · ${next.count}", maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, stringResource(R.string.next_lane),
+                    Modifier.size(18.dp))
             }
-            Text(stringResource(R.string.swipe_hint), fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            Text(stringResource(R.string.nothing_next), fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        TextButton(onClick = { model.toOverview() }) { Text(stringResource(R.string.to_overview)) }
     }
 }
 

@@ -79,9 +79,6 @@
     <string name="switch_lane">Switch lane</string>
     <string name="lane_done">“%1$s” read</string>
     <string name="next_lane">next</string>
-    <string name="swipe_hint">or swipe left: the next lane with news</string>
-    <string name="nothing_next">Nothing new in the other lanes</string>
-    <string name="to_overview">To the lanes</string>
     <string name="find_lane">lane, list or #tag</string>
     <string name="cmd_hint">#abc text, or a command</string>
     <string name="yes_do">Yes</string>
@@ -163,4 +160,5 @@
     <string name="scan_prompt">Point the camera at the key's QR code on the other device</string>
     <string name="edit_lane">Edit the lane</string>
     <string name="lanes_editor">Lanes…</string>
+    <string name="mark_all_read">Mark all read</string>
 </resources>
