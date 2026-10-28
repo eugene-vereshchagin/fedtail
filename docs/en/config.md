@@ -37,6 +37,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `--install-desktop` | add fedtail (this profile) to the menu with its icon — and exit |
 | `--debug` | a detailed log for this run, into the terminal too |
 | `--bug-report` | pack the logs and system details into an archive for a bug report — and exit |
+| `--check` | what the system lacks and how to install it — and exit |
 | `-V, --version` | the version — and exit |
 | `COMMAND` | work in the terminal without a window: lanes, show, tail, read, post (fedtail COMMAND -h — about each one in detail) |
 

@@ -2,6 +2,12 @@
 
 ## 0.21.0 — in progress
 
+- `fedtail --check`: what fedtail needs from the system — the must-haves, each
+  interface's, the extras — what is there, what each gives, and one `sudo apt install …`
+  (or pip) line for what is missing. At start, a missing must-have (or the interface's)
+  is said with that line instead of a traceback; a missing extra in one line, once.
+  packaging/deb.py takes its Depends / Recommends / Suggests from the same table.
+
 - **From the competitors' report** (every one behind a key, off by default):
   - lanes of rules from someone's wall filtered by its server
     (`account:<id>/posts|media|noboosts|pinned|tag:<tag>`), from a search (`search:…`)

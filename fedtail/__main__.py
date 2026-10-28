@@ -12,7 +12,18 @@ if not __package__:
 
     sys.exit(main())
 
-from . import frontends, i18n, version  # noqa: E402
+from . import deps, i18n  # noqa: E402  (the standard library only: before the rest)
+
+if "--check" in sys.argv[1:] or not deps.at_start(None, quiet=True):
+    # `fedtail --check`, or a must-have (requests…) missing: said in words, with the
+    # command that installs it — never a traceback from the imports below
+    i18n.setup("auto")
+    if "--check" in sys.argv[1:]:
+        sys.exit(deps.report())
+    deps.at_start(None)
+    sys.exit(3)
+
+from . import frontends, version  # noqa: E402
 from .core import config, config_update, paths  # noqa: E402
 from .core.app import Core  # noqa: E402
 from .core.instance import SingleInstance  # noqa: E402
@@ -77,6 +88,9 @@ def parse_args(argv):
                    help="add fedtail (this profile) to the desktop menu, with its icon, and exit")
     p.add_argument("--debug", action="store_true",
                    help="also print the full log to the terminal (the log file is always kept)")
+    p.add_argument("--check", action="store_true",
+                   help="what fedtail needs from the system: what is there, what is "
+                        "missing and the command that installs it — and exit")
     p.add_argument("--bug-report", action="store_true",
                    help="pack logs, crash traces and system info into an archive in your home "
                         "folder (no token, no database) and exit")
@@ -131,6 +145,8 @@ def _config_trouble(path, err):
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.check:
+        return deps.report()
     if args.profiles:
         from .core import profiles
         for prof in profiles.listing():
@@ -281,6 +297,8 @@ def main(argv=None):
     diag.start_stats(cfg)
 
     ui = args.ui or cfg["ui"]["frontend"]
+    if not deps.at_start(ui):  # the interface's own pieces, said with the command
+        return 3
     frontend = frontends.load(ui)
     diag.debug_context(where, cfg, ui)  # a dev version: the log holds a bug report's all
     if ui in ("qt", "gtk") and cfg["ui"]["desktop_entry"]:

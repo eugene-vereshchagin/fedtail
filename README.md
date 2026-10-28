@@ -90,6 +90,7 @@ sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-reques
     qt6-image-formats-plugins
 git clone https://github.com/eugene-vereshchagin/fedtail.git
 cd fedtail
+python3 -m fedtail --check   # what is there and what is missing, with the apt line
 python3 -m fedtail
 ```
 

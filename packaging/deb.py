@@ -18,15 +18,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from fedtail import __version__  # noqa: E402
+from fedtail import __version__, deps  # noqa: E402
 from fedtail.desktop import entry_text  # noqa: E402
 from fedtail.version import APP_ID  # noqa: E402
 
-DEPENDS = "python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets"
-RECOMMENDS = ("python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, "
-              "python3-pyside6.qtmultimediawidgets, python3-cryptography, "
-              "python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, python3-langdetect")
-SUGGESTS = "python3-textual, python3-pil"
+# from the table fedtail --check reads (fedtail/deps.py): one list for both
+DEPENDS, RECOMMENDS, SUGGESTS = deps.deb_fields()
 MAINTAINER = "Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>"
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"
 
