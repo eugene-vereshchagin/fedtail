@@ -1039,8 +1039,8 @@ class LaneWidget(QWidget):
         lay.addWidget(self.view, 1)
         # "loading…" over the lane while it's being drawn: the click switches at once,
         # the drawing comes after (a lane of a few hundred cards takes a moment)
-        self.plate = QLabel(_("loading"), self)
-        self.plate.setObjectName("loadingPlate")
+        from .loading import LoadingPlate
+        self.plate = LoadingPlate(_("loading"), self)  # the swinging opossum beside it
         self.plate.hide()
         self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
                                  self.load_older, name="older")
@@ -1359,8 +1359,31 @@ class ThreadWidget(QWidget):
         self.view = FeedView(win.ctx)
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
+        from .loading import LoadingPlate
+        self.plate = LoadingPlate(_("thread_loading"), self)  # till the thread is drawn
+        self.plate.hide()
         self.statuses = set()
         self.reload()
+
+    def _plate(self, on, text=None):
+        if text is not None:
+            self.plate.setText(text)
+        if on:
+            self.plate.adjustSize()
+            self.plate.move(max(0, (self.width() - self.plate.width()) // 2),
+                            self.header.sizeHint().height() + 24)
+            self.plate.raise_()
+        self.plate.setVisible(on)
+
+    def resizeEvent(self, e):  # noqa: N802 — the plate stays in the middle
+        super().resizeEvent(e)
+        if not self.plate.isHidden():
+            self._plate(True)
+
+    def showEvent(self, e):  # noqa: N802 — sized only now (a tab made before it's shown)
+        super().showEvent(e)
+        if not self.plate.isHidden():
+            self._plate(True)
 
     def _seen(self, ids):
         if self.core.cfg["read"]["mark_read"] != "manual":
@@ -1369,14 +1392,21 @@ class ThreadWidget(QWidget):
     def reload(self, quiet=False):
         if not quiet:
             self.header.info.setText(_("loading"))
-        self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
-                             fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
+            if not self.loaded:  # nothing drawn yet: the plate, with the opossum
+                self._plate(True, _("thread_loading"))
+
+        def failed(e):
+            self._plate(False)
+            self.header.info.setText(_("load_failed", err=e))
+        self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded, fail=failed)
 
     def show_progress(self, step):
         """threads.thread_progress: the header says how fetching replies goes; once done
         (a few seconds later) it says the thread's own line again."""
         from ..common.progress import thread_words
         words = thread_words(step)
+        if not self.loaded and words:  # still waiting ("remote"): the plate says how it goes
+            self._plate(True, _("thread_loading") + " " + words)
         base = self.info_text if self.loaded else _("loading")
         self.header.info.setText(base + (" · " + words if words and base else words))
         if step and step.get("stage") in ("done", "failed"):
@@ -1426,6 +1456,7 @@ class ThreadWidget(QWidget):
 
     def _loaded(self, items):
         """items: [ThreadItem] in reading order, the root first."""
+        self._plate(False)
         posts = [n.post for n in items]
         self.statuses = {p.id for p in posts}
         unread = self.core.unread(posts)

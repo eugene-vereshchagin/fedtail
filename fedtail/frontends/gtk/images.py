@@ -10,14 +10,28 @@ from ..common import images as common
 from ..common.images import FEED_SIDE  # noqa: F401  (the size of a feed picture)
 from .gi_setup import GLib
 
+# imagesniff's names → GdkPixbuf's loaders
+_LOADER = {"jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp", "bmp": "bmp",
+           "avif": "avif", "heic": "heif", "jxl": "jxl", "tiff": "tiff", "ico": "ico",
+           "svg": "svg"}
 
-def decode(data, max_side):
-    """A Gdk.Texture of the picture in data, no bigger than max_side — or None."""
+
+def decode(data, max_side, fmt=None):
+    """A Gdk.Texture of the picture in data, no bigger than max_side — or None. fmt:
+    read by that loader only, not by whichever claims the bytes (common/imagesniff.py)."""
     import gi
     gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import GdkPixbuf
 
-    loader = GdkPixbuf.PixbufLoader()
+    if fmt is None:
+        from ..common import imagesniff
+        fmt, _why = imagesniff.readable(data)
+        if fmt is None:
+            return None
+    try:
+        loader = GdkPixbuf.PixbufLoader.new_with_type(_LOADER.get(fmt, fmt))
+    except GLib.Error:  # no loader for it here: Pillow may know it
+        return _with_pillow(data, max_side)
 
     def prepared(ld, w, h):
         if max(w, h) > max_side:
@@ -77,8 +91,8 @@ class Images(common.Cache):
     FORMAT_HINT = ("GTK can't read this format — WebP needs webp-pixbuf-loader "
                    "(or python3-pil), AVIF libavif-gdk-pixbuf")
 
-    def decode(self, data, max_side):
-        return decode(data, max_side)
+    def decode(self, data, max_side, fmt=None):
+        return decode(data, max_side, fmt)
 
     def size(self, picture):
         return picture.get_width(), picture.get_height()

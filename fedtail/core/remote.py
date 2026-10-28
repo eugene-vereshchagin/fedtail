@@ -104,6 +104,12 @@ def read(r, limit):
         out += chunk
         if len(out) > limit:
             raise Refused(f"more than {limit} B")
+    # a connection let go before the end: what came is not the file (urllib3 says so
+    # itself mostly; not always — a proxy that closes quietly, an old urllib3)
+    if size and size.isdigit() and not r.headers.get("Content-Encoding") and \
+            len(out) < int(size):
+        raise requests.exceptions.ChunkedEncodingError(
+            f"cut short: {len(out)} of {size} B")
     return bytes(out)
 
 

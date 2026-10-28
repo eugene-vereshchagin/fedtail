@@ -652,6 +652,34 @@ class MainWindow(Gtk.ApplicationWindow):
             frames.clear()
         return frames
 
+    def loading_box(self, text):
+        """"Loading…" with the opossum swinging beside it (ui.app_icon = "possum"), as
+        Qt's plate: the frames turn while the box is on screen, and stop with it."""
+        from . import notify as notify_module
+        box = Gtk.Box(spacing=10, halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
+        frames = self._swing_frames() if notify_module.possum_style() else []
+        if frames:
+            pic = Gtk.Image.new_from_paintable(frames[0][0])
+            pic.set_pixel_size(36)
+            box.append(pic)
+            state = {"i": 0, "on": True}
+
+            def turn():
+                if not state["on"] or pic.get_root() is None:
+                    state["on"] = False
+                    return GLib.SOURCE_REMOVE
+                state["i"] = (state["i"] + 1) % len(frames)
+                pic.set_from_paintable(frames[state["i"]][0])
+                GLib.timeout_add(frames[state["i"]][1], turn)
+                return GLib.SOURCE_REMOVE
+            GLib.timeout_add(frames[0][1], turn)
+            box.connect("unmap", lambda *_a: state.update(on=False))
+        label = Gtk.Label(label=text)
+        label.add_css_class("ft-muted")
+        box.append(label)
+        box.words = label
+        return box
+
     def _curtain_swing(self):
         """The curtain's opossum swings while the lanes are being updated (a poll round
         on), and stands still otherwise — as Qt's."""
@@ -1568,7 +1596,13 @@ class MainWindow(Gtk.ApplicationWindow):
             for key, page in list(self.threads.items()):
                 posts = getattr(page, "posts", None) or []
                 if key == payload or (posts[0].id == payload if posts else True):
-                    page.head.show_progress(self.view.thread_progress(payload))
+                    step = self.view.thread_progress(payload)
+                    page.head.show_progress(step)
+                    wait = getattr(page, "wait", None)
+                    if wait is not None and wait.get_parent() is not None:  # still waiting
+                        from ..common.progress import thread_words
+                        wait.words.set_text((_("thread_loading") + " " +
+                                             thread_words(step)).strip())
         elif name == "thread_grew":  # replies from other servers, or asked again
             for key, page in list(self.threads.items()):
                 posts = getattr(page, "posts", None) or []
@@ -1646,8 +1680,12 @@ class MainWindow(Gtk.ApplicationWindow):
         from .threadhead import ThreadHead
         page.head = ThreadHead(self, root)  # as Qt's: what it is, Subscribe, Refresh
         box.append(page.head)
+        wait = page.wait = self.loading_box(_("thread_loading"))  # till the thread is drawn
+        box.append(wait)
 
         def got(items):
+            if wait.get_parent() is not None:
+                box.remove(wait)
             ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True,
                       images=self.images)
             posts = [it.post for it in items]
@@ -1677,8 +1715,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.view.mark_read(sorted(unread))
             if focus is not None:
                 GLib.idle_add(lambda: (_scroll_to(page, box, focus), GLib.SOURCE_REMOVE)[1])
-        self.bridge.call(self.view.thread(root), got,
-                         lambda err: title.set_text(_("load_failed", err=err)))
+        def failed(err):
+            if wait.get_parent() is not None:
+                box.remove(wait)
+            title.set_text(_("load_failed", err=err))
+        self.bridge.call(self.view.thread(root), got, failed)
 
     def reload_thread(self, root):
         """The thread anew from the server, in the same place among the tabs."""

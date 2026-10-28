@@ -68,8 +68,14 @@ class Cache(images.Cache):
         self.timers = []
         super().__init__(core, Bridge())
 
-    def decode(self, data, max_side):
+    def decode(self, data, max_side, fmt=None):
         return None if data.startswith(b"bad") else ("pic", data, max_side)
+
+    @staticmethod
+    def _readable(data):  # the test's bytes stand for pictures (imagesniff: its own test)
+        if data.startswith(b"cut"):
+            return None, "cut short"
+        return "png", ""
 
     def size(self, picture):
         return (10, 10)
@@ -408,6 +414,25 @@ class ImagesTest(unittest.TestCase):
         self.assertNotIn(("https://a/late", 1), self.c.asked)
 
     # ---- ahead of time, videos, saving --------------------------------------------------
+    def test_a_picture_cut_short_is_neither_decoded_nor_kept(self):
+        url = "https://a/half.jpeg"
+        self.net[url] = Answer(b"cut jpeg", kind="image/jpeg")
+        got, _failed = self.get(url)
+        self.assertEqual(got, [])
+        self.assertEqual(self.c.why[url], ("network", "cut short"))
+        self.assertTrue(self.c.timers)  # asked again later, as after any network trouble
+        self.assertFalse(file_of(self.c, url).exists())
+        self.net["https://a/half2.jpeg"] = Answer(b"cut too", kind="image/jpeg")
+        self.c.prefetch(["https://a/half2.jpeg"])
+        self.c.pre_pool.shutdown(wait=True)
+        self.assertFalse(file_of(self.c, "https://a/half2.jpeg").exists())
+
+    def test_a_body_shorter_than_its_length_is_refused(self):
+        from fedtail.core import remote
+        with self.assertRaises(requests.exceptions.ChunkedEncodingError):
+            remote.read(Answer(b"12345", length=10), 1000)
+        self.assertEqual(remote.read(Answer(b"12345", length=5), 1000), b"12345")
+
     def test_prefetch(self):
         self.net["https://a/pre.png"] = Answer(b"PNGpre")
         self.net["https://a/page"] = Answer(b"<html>", kind="text/html")

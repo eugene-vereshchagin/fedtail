@@ -19,29 +19,41 @@ from ..common.images import (  # noqa: F401  (Qt's names for them)
 )
 
 
-def decode(data, max_side):
+def decode(data, max_side, fmt=None):
     """The picture in data, already no bigger than max_side: the decoder makes it small
     (a JPEG is read at a fraction of its size) instead of decoding all of a 4000-px
-    photo and shrinking it after — less time, less memory, the GUI thread waits less."""
+    photo and shrinking it after — less time, less memory, the GUI thread waits less.
+    fmt: read as that format only — Qt doesn't go asking every plugin installed
+    (common/imagesniff.py says why)."""
+    if fmt is None:
+        from ..common import imagesniff
+        fmt, _why = imagesniff.readable(data)
+        if fmt is None:
+            return QImage()
+    name = fmt.encode()
+    if name not in {bytes(f) for f in QImageReader.supportedImageFormats()}:
+        return QImage()  # no plugin for it here (qt6-image-formats-plugins)
     buf = QBuffer()
     buf.setData(QByteArray(data))
     buf.open(QIODevice.OpenModeFlag.ReadOnly)
-    reader = QImageReader(buf)
+    reader = QImageReader(buf, name)
+    reader.setDecideFormatFromContent(False)
+    reader.setAutoDetectImageFormat(False)
     size = reader.size()
     if size.isValid() and max(size.width(), size.height()) > max_side:
         reader.setScaledSize(size.scaled(max_side, max_side,
                                          Qt.AspectRatioMode.KeepAspectRatio))
     img = reader.read()
-    if img.isNull():  # some plugins can't read scaled: the plain way
-        img = QImage.fromData(data)
+    if img.isNull():  # some plugins can't read scaled: the plain way, the same format
+        img = QImage.fromData(data, fmt)
     return img
 
 
 class Images(common.Cache):
     FORMAT_HINT = "Qt can't show this format (qt6-image-formats-plugins?)"
 
-    def decode(self, data, max_side):
-        img = decode(data, max_side)
+    def decode(self, data, max_side, fmt=None):
+        img = decode(data, max_side, fmt)
         if img.isNull():
             return None
         if max(img.width(), img.height()) > max_side:  # read the plain way: big

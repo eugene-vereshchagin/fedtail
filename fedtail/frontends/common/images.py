@@ -101,9 +101,33 @@ class Cache:
     BIG_WORKERS = 3   # originals (a single picture made sharp, the viewer, saving)
 
     # ---- what a toolkit gives ------------------------------------------------------------
-    def decode(self, data, max_side):
-        """In a worker: the picture in data, no bigger than max_side — or None."""
+    def decode(self, data, max_side, fmt=None):
+        """In a worker: the picture in data, no bigger than max_side — or None. fmt: what
+        imagesniff found it to be (the toolkit reads it as that, and only as that)."""
         raise NotImplementedError
+
+    # the formats read by plugins outside the toolkit's own (KDE's kimageformats,
+    # GdkPixbuf's extra loaders): one at a time — some aren't safe in two threads at once
+    _alone = threading.Lock()
+
+    @staticmethod
+    def _readable(data):
+        from . import imagesniff
+        return imagesniff.readable(data)
+
+    def _decode(self, data, max_side):
+        """decode(), but only for bytes that are one of a post's picture formats and
+        came whole: anything else never reaches a decoder (see imagesniff)."""
+        from . import imagesniff
+        fmt, why = self._readable(data)
+        if fmt is None:
+            log.debug("image: %d B not decoded: %s", len(data), why)
+            self._t.why = why
+            return None
+        if fmt in imagesniff.RISKY:
+            with self._alone:
+                return self.decode(data, max_side, fmt)
+        return self.decode(data, max_side, fmt)
 
     def size(self, picture):
         """(width, height) of a decoded picture or of what to_screen made of it."""
@@ -250,7 +274,7 @@ class Cache:
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
         img = None
         if p.exists():
-            img = self.decode(p.read_bytes(), max_side)
+            img = self._decode(p.read_bytes(), max_side)
             if img is None:
                 p.unlink(missing_ok=True)  # a broken file from before: fetch again
             else:
@@ -267,7 +291,7 @@ class Cache:
             if not mine:  # another worker is fetching it: its file, when it's there
                 ev.wait(150)
                 if p.exists():
-                    img = self.decode(p.read_bytes(), max_side)
+                    img = self._decode(p.read_bytes(), max_side)
                     if img is not None:
                         return img
                 raise requests.ConnectionError(f"{_where(url)}: the same download failed")
@@ -337,7 +361,12 @@ class Cache:
             self.why[url] = ("network", what)
             raise
         self._t.got = (len(data), time.monotonic() - t)
-        img = self.decode(data, max_side)
+        self._t.why = ""
+        img = self._decode(data, max_side)
+        if img is None and self._t.why == "cut short":  # the connection let go mid-file
+            self.why[url] = ("network", "cut short")
+            log.info("image %s: %d B, cut short — asked again later", _where(url), len(data))
+            raise requests.ConnectionError(f"{_where(url)}: cut short")
         if img is None:  # downloaded fine, but can't be read (webp, avif, heic…)
             self.why[url] = ("format", kind or "?")
             said = self.__dict__.setdefault("_formats_said", set())
@@ -384,6 +413,10 @@ class Cache:
             log.debug("prefetch %s: %s", url, e.__class__.__name__)
             return
         if not data:
+            return
+        fmt, why = self._readable(data)
+        if fmt is None:  # cut short, or not a picture: never into the cache
+            log.debug("prefetch %s: %d B, %s — not kept", url, len(data), why)
             return
         p.write_bytes(data)
         self._count_write()

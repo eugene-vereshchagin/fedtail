@@ -278,8 +278,10 @@ QWidget#laneHeader {{ background: {self._bg('header')}; {self._stripes_css()} {s
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QWidget#laneHeader[slim="true"] QLabel#laneTitle {{ font-size: {round(base_pt * 1.15, 1)}pt; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
-QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};
+QLabel#loadingPlate, QFrame#loadingPlate {{ background: {k('view')}; color: {k('muted')};
     border: 1px solid {k('header_border')}; border-radius: 12px; padding: 8px 18px; }}
+QFrame#loadingPlate {{ padding: 0; }}
+QLabel#loadingWords {{ color: {k('muted')}; background: transparent; border: none; }}
 QLabel#newPill {{ background: {k('new_pill')}; color: {k('on_new_pill')}; border-radius: 11px;
     padding: 2px 10px; font-weight: 600; }}
 QPushButton#tool, QToolButton#tool {{ background: {self._bg('button')}; color: {k('text')};

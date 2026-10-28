@@ -2,6 +2,17 @@
 
 ## 0.21.0 — in progress
 
+- **Fixed: the window crashed on a flaky connection (mobile internet).** A picture came
+  cut short or wasn't what its name said, and Qt handed it to every image plugin installed
+  to guess its format — KDE's kimageformats among them, some of which read far past the
+  end and abort the process. Now fedtail names the format by its first bytes and only
+  that decoder reads it; a file that ended early never reaches a decoder or the disk
+  cache (it's asked for again later); the rarer formats (AVIF, HEIF, JXL, TIFF…) are
+  decoded one at a time. GTK reads with the named loader the same way.
+- "Loading…" comes with the swinging opossum: over a lane being drawn and a thread
+  waiting for its replies (Qt, GTK, the web page), "fetching replies: 3 of 12" on it
+  while a "remote" thread waits.
+
 - **Sync set up in the window, no terminal:** ≡ → Sync (or a click on "⇅") — where the
   devices meet (written into config.toml and used at once, no restart), the login to the
   sync server, the key: shown to copy, pasted from another device, **put into the journal

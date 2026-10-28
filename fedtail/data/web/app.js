@@ -1310,6 +1310,16 @@ function emptyBox(text) {
   return box;
 }
 
+// "loading…" and the opossum swinging, whatever the poll does (a thread, a place)
+function loadingBox(text) {
+  const box = el("div", "empty loading");
+  const img = el("img", "possum");
+  img.alt = "";
+  img.src = "/possum.gif?" + Date.now();
+  box.append(img, el("div", "", text));
+  return box;
+}
+
 // one swing of the sticker, ms (the GIF's frames all together): it comes back to where it
 // stands still, so a round that ends lets the swing run out instead of cutting it off
 const SWING_MS = 2610;
@@ -1563,10 +1573,13 @@ function watchThreadProgress(id, token, show) {
 
 async function openThread(id) {
   const token = showSide(w("web_thread"));
-  $("#side-body").textContent = w("thread_loading");
+  // "loading…" with the opossum swinging beside it, as the windows have it
+  const wait = loadingBox(w("thread_loading"));
+  $("#side-body").textContent = "";
+  $("#side-body").append(wait);
   let loading = true;
   watchThreadProgress(id, token, (text) => {
-    if (loading) $("#side-body").textContent = w("thread_loading") + (text ? " " + text : "");
+    if (loading) wait.lastChild.textContent = w("thread_loading") + (text ? " " + text : "");
   });
   try {
     const t = await api("/api/thread?id=" + encodeURIComponent(id));
