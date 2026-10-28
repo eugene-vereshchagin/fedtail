@@ -134,7 +134,8 @@ PLACES = {
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
     "slow": "slow_title", "log": "debug_log_title", "react": "react_title",
-    "lane": "le_title", "why": "why_here", "around": "around_post", "raw": "raw_json",
+    "lane": "le_title", "cond": "le_cond_parts", "condpart": "le_cond_parts",
+    "why": "why_here", "around": "around_post", "raw": "raw_json",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "drafts",
         "slow", "stats", "trends", "suggestions", "directory", "remote", "server", "probe",

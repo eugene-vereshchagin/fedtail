@@ -2,6 +2,14 @@
 
 ## 0.22.0 — in progress
 
+- The lane editor builds a condition from its parts, with no syntax to remember: a lane's
+  conditions stand in words over its form ("The author: I follow · Kind: a reply"), each
+  opens a page of its own — "Ask" at a key (the author, the kind, what the post has, the
+  event, the language, words, counts…), tick its values, type what the list hasn't
+  (`@nick@host`, `tag:x`, `>10`); the quick filter and the whole line are there too. Every
+  key and value has its words in both languages. On the phone the editor has its own doors
+  now: ⋮ → "Lanes…" in the overview and ⚙ on a lane's bar (it was only among the places).
+
 - Any event in any lane: events are posts' equals in the lanes' rules. Activity and
   Follow requests are now lanes of events only, built by the same lane model as every other
   lane (one counter, one "seen", the same ×, the same "mark all read"); Activity's quick

@@ -114,6 +114,9 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                     onClick = { menu = false; model.tryTheme() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },
                                     onClick = { menu = false; model.openSync() })
+                                // the lane editor: the set, the order, one's own lanes, their rules
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lanes_editor)) },
+                                    onClick = { menu = false; model.openPage("lanes") })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.settings)) },
                                     onClick = { menu = false; model.openSettings() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.config)) },

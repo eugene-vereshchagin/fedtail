@@ -1499,6 +1499,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** A lane's rule in the lane editor; a lane that isn't a rule of its own (a list's, a
+     *  tag group's: "list:…", "tags:…") — the editor's list of every lane. */
+    fun editLane(name: String) {
+        if (':' in name) openPage("lanes") else openPage("lane", name)
+    }
+
     /** A place: pushed over what is open (a tab or the next rows of the same place: in its stead). */
     fun openPage(name: String, arg: String = "", tab: String = "", cursor: String = "") {
         val top = place

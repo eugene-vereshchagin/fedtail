@@ -53,6 +53,8 @@ class PlacesTest(unittest.TestCase):
         args["collection"] = self.core.save_collection(None, "Друзья").result()["id"]
         args["collect"] = "B"
         args["lane"] = "home"
+        args["cond"] = "home|any|0"
+        args["condpart"] = "home|any|0|author"
         for name in PLACES:
             with self.subTest(place=name):
                 try:

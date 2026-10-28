@@ -153,14 +153,39 @@ class PlaceTest(FreeBase):
         out = self.places.act("lanes", "new", answer="pics")
         self.assertEqual(out.open, {"page": "lane", "arg": "pics"})
         page = self.places.page("lane", "pics")
-        names = [f.name for f in page.form]
-        self.assertIn("any.0", names)
-        self.assertIn("any.new", names)
+        keys = [r.key for r in page.rows]
+        self.assertIn("any.0", keys)  # its first condition: a row, edited on its page
+        self.assertIn("any.new", keys)
+        self.assertNotIn("any.0", [f.name for f in page.form])
         values = {f.name: f.value for f in page.form}
-        values.update({"title": "Pictures", "icon": "list", "any.0": "has: image, video",
-                       "any.0.switch": "pics", "any.new": "author: me; kind: post",
-                       "none.new": "author: bot"})
+        values.update({"title": "Pictures", "icon": "list"})
         out = self.places.act("lane", "save", "pics", values)
+        self.assertFalse(out.error, out.error)
+        # the first condition: "author: me" → "has: image, video", ticked, with a switch
+        out = self.places.act("lane", "cond", "pics|any|0")
+        self.assertEqual(out.open, {"page": "cond", "arg": "pics|any|0"})
+        cond = self.places.page("cond", "pics|any|0")
+        self.assertIn("k:author", [r.key for r in cond.rows])
+        out = self.places.act("cond", "unask", "pics|any|0|author")
+        self.assertFalse(out.error, out.error)
+        part = self.places.page("condpart", "pics|any|0|has")
+        ticked = next(f for f in part.form if f.name == "ticked")
+        self.assertIn(("image", i18n._("lv_has_image")), ticked.choices)
+        out = self.places.act("condpart", "save", "pics|any|0|has",
+                              {"ticked": ["image", "video"], "typed": ""})
+        self.assertEqual(out.open, {"page": "cond", "arg": "pics|any|0"})
+        cond = self.places.page("cond", "pics|any|0")
+        values = {f.name: f.value for f in cond.form}
+        self.assertEqual(values["line"], "has: image, video")
+        values["switch"] = "pics"
+        out = self.places.act("cond", "save", "pics|any|0", values)
+        self.assertEqual(out.open, {"page": "lane", "arg": "pics"})
+        # a new one by its parts: "author: me; kind: post"; one to keep out typed as a line
+        out = self.places.act("condpart", "save", "pics|any|new|author",
+                              {"ticked": ["me"], "typed": ""})
+        self.assertEqual(out.open, {"page": "cond", "arg": "pics|any|1"})
+        self.places.act("condpart", "save", "pics|any|1|kind", {"ticked": ["post"]})
+        out = self.places.act("cond", "save", "pics|none|new", {"line": "author: bot"})
         self.assertFalse(out.error, out.error)
         lane = next(t for t in self.file()["lanes"]["custom"] if t["name"] == "pics")
         self.assertEqual(lane["title"], "Pictures")
@@ -169,15 +194,49 @@ class PlaceTest(FreeBase):
         self.assertEqual(lane["none"], [{"author": "bot"}])
         self.assertIn("pics", self.core.lane_by_name)
         self.assertEqual(self.core.lane_title("pics"), "Pictures")
+        # in words on the lane's page; removed with a "sure?"
+        rows = {r.key: r for r in self.places.page("lane", "pics").rows}
+        self.assertIn(i18n._("lv_has_image"), rows["any.0"].title)
+        self.assertTrue(self.places.act("lane", "conddrop", "pics|none|0").confirm)
+        self.places.act("lane", "conddrop", "pics|none|0", confirmed=True)
+        lane = next(t for t in self.file()["lanes"]["custom"] if t["name"] == "pics")
+        self.assertNotIn("none", lane)
+
+    def test_typed_words_and_values_not_in_the_list(self):
+        self.places.act("lanes", "new", answer="ka")
+        self.places.act("condpart", "save", "ka|any|0|author",
+                        {"ticked": ["followed"], "typed": "@bob@x.org"})
+        self.places.act("condpart", "save", "ka|any|0|text",
+                        {"typed": "georgia + tbilisi, sakartvelo"})
+        self.places.act("condpart", "save", "ka|any|0|likes", {"typed": ">10"})
+        self.places.act("condpart", "save", "ka|any|0|text_case", {"one": "true"})
+        lane = next(t for t in self.file()["lanes"]["custom"] if t["name"] == "ka")
+        self.assertEqual(lane["any"][0], {"author": ["followed", "@bob@x.org"],
+                                          "text": [["georgia", "tbilisi"], ["sakartvelo"]],
+                                          "likes": ">10", "text_case": True})
+        part = {f.name: f for f in self.places.page("condpart", "ka|any|0|author").form}
+        self.assertEqual(part["ticked"].value, ["followed"])
+        self.assertEqual(part["typed"].value, "@bob@x.org")
+        # nothing ticked: the key leaves the condition
+        self.places.act("condpart", "save", "ka|any|0|author", {"ticked": [], "typed": ""})
+        lane = next(t for t in self.file()["lanes"]["custom"] if t["name"] == "ka")
+        self.assertNotIn("author", lane["any"][0])
+
+    def test_every_word_of_a_condition_has_its_words(self):
+        from fedtail.frontends.common import laneedit
+        for lang in ("ru", "en"):
+            have = i18n.keys(lang)
+            for key, values in laneedit.KEYS.items():
+                self.assertIn("lk_" + key, have, lang)
+                for v in values or ():
+                    self.assertIn(f"lv_{key}_{v}", have, lang)
 
     def test_bad_line_saves_nothing(self):
         before = self.core.paths.config_file.read_text("utf-8")
-        values = {f.name: f.value for f in self.places.page("lane", "bots").form}
-        values["any.new"] = "colour: red"
-        out = self.places.act("lane", "save", "bots", values)
+        out = self.places.act("cond", "save", "bots|any|new", {"line": "colour: red"})
         self.assertTrue(out.error)
-        values["any.new"] = "author: nobody_word"
-        self.assertTrue(self.places.act("lane", "save", "bots", values).error)
+        out = self.places.act("cond", "save", "bots|any|new", {"line": "author: nobody_word"})
+        self.assertTrue(out.error)
         self.assertEqual(self.core.paths.config_file.read_text("utf-8"), before)
 
     def test_untouched_form_changes_nothing(self):

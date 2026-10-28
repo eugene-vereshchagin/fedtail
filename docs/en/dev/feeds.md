@@ -76,11 +76,15 @@ a condition with `event` matches Activity's rows, not posts, and asks no stream 
 lane shows them among its posts by time, one muted line each run of one kind about one post
 ("bob, ann — ★ favourited · 14:20 · «the post»", a click opens the post or the person) —
 `core/custom.py` `Custom.takes_event`, `Core.lane_events`, `common/lane.py` `_with_events`,
-`common/activity.py` `event_bit`. Events are never unread, aren't counted, and don't stop the
-cursor; a quick filter (`switch`, `shown = false`) parts them as it parts posts; while "New"
-or the media funnel is on, none are shown; older than the oldest post shown — none (unless the
-lane has no posts). Activity is polled when its lane is shown or a lane takes events.
-`follow_request` isn't taken this way: it is answered with buttons, in Activity.
+`common/activity.py` `EventParts`. Among posts events are never unread, aren't counted, and
+don't stop the cursor; a quick filter (`switch`, `shown = false`) parts them as it parts posts;
+while "New" or the media funnel is on, none are shown; older than the oldest post shown —
+none. A lane of events only (28 Oct: Activity, Requests — `Custom.events_only`) is an ordinary
+lane of the same model: its event is unread till seen, counted in its number, × and "mark all
+read" mark it seen (`mark_activity_seen`, one mark for all such lanes). A follow request is an
+event too (`follow_request`, from `follow_requests`), any lane's rule takes it; its row with
+"Approve" / "Reject" is `fedtail:eventyes|eventno` in every interface. Activity is polled when
+its lane is shown or a lane takes events.
 
 ```toml
 [[lanes.custom]]
@@ -95,7 +99,7 @@ any = [{ author = "me" },
 | `favourite` — my post liked | yes | yes | Activity |
 | `reblog` — my post boosted | yes | yes | Activity |
 | `follow` — followed me | yes | yes | Activity |
-| `follow_request` | yes | yes | lane Requests |
+| `follow_request` | yes | yes | Activity (Requests, when shown) |
 | `poll` — a poll I voted in or made is over | yes | yes | Activity (off by default) |
 | `update` — a post I boosted was edited | yes | yes | Activity (off by default) |
 | `status` — a watched account posted | yes | yes | Activity (off by default) |

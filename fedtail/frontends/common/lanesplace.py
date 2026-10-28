@@ -1,7 +1,10 @@
 """The lane editor as a place (common/laneedit.py does the work): "lanes" — every lane, in
 its order, shown or not, with ↑ ↓, show / hide, edit, "back to the set's", delete; "lane" —
-one lane as a form: its title, picture, section, sources, how it is read, and its
-conditions, one line each, with the quick filter each makes. A change is written into
+one lane as a form: its title, picture, section, sources, how it is read, and over the form
+its conditions in words; "cond" — one condition, key by key (what it asks, what else it may
+ask), its quick filter, the whole of it as a line; "condpart" — one key's values to tick
+(or words to type). No syntax needed: the words of every key and value are in i18n
+(lk_*, lv_*, lt_*). A change is written into
 config.toml at once and the lanes follow; every interface draws it (Qt's and GTK's
 place windows, the web page, the terminal)."""
 
@@ -219,8 +222,7 @@ class LanePlaces:
         t = ed.tables.get(name)
         if t is None or ed.kind(name) != "rule":
             raise KeyError(name)
-        page = Page("lane", _("le_lane_title", title=ed.title(name)), arg=name,
-                    hint=_("le_cond_hint", keys=", ".join(sorted(laneedit.KEYS))))
+        page = Page("lane", _("le_lane_title", title=ed.title(name)), arg=name)
         tools = [self._btn(_("le_back"), "lane", "back", name)]
         if ed.changed(name):
             tools.append(self._btn(_("le_reset"), "lanes", "reset", name,
@@ -229,6 +231,24 @@ class LanePlaces:
                              else _("le_own"), key="_tools", buttons=tuple(tools)))
         for w in laneedit.problems(t):
             page.rows.append(Row("text", "⚠ " + w))
+        for part in ("any", "none"):  # the conditions: each a row, edited on a page of its own
+            page.rows.append(Row("heading", _("le_conds_" + part)))
+            for i, c in enumerate(_conds(t, part)):
+                line = laneedit.cond_line(c)
+                if c.get("switch"):
+                    line += " · ⇄ " + str(c["switch"]) + (" (" + _("le_f_hidden") + ")"
+                                                          if c.get("shown") is False else "")
+                arg = _cond_arg(name, part, i)
+                page.rows.append(Row("item", f"{i + 1}. " + laneedit.cond_words(c), line,
+                                     key=f"{part}.{i}", buttons=(
+                                         self._btn(_("le_edit"), "lane", "cond", arg,
+                                                   primary=True),
+                                         self._btn(_("le_cond_drop"), "lane", "conddrop",
+                                                   arg))))
+            page.rows.append(Row("item", _("le_cond_add"), _("le_cond_add_tip"),
+                                 key=f"{part}.new", buttons=(self._btn(
+                                     _("le_cond_add"), "lane", "cond",
+                                     _cond_arg(name, part, NEW)),)))
         title = ed.title(name)  # its own, or the built-in word it shows
         icons = (("", _("le_f_icon_none")),) + tuple(sorted(
             ((i, _("pic_" + i)) for i in atoms.LANE_ICONS), key=lambda c: c[1].casefold()))
@@ -264,24 +284,202 @@ class LanePlaces:
                    ("first_unread", _("le_open_at_first_unread"))),
                   tip=_("le_f_open_at_tip")),
         ]
-        for part in ("any", "none"):
-            conds = t.get(part) or []
-            conds = [conds] if isinstance(conds, dict) else list(conds)
-            for i, c in enumerate(conds):
-                label = _("le_f_" + part, n=i + 1)
-                form.append(Field(f"{part}.{i}", label, laneedit.cond_line(c),
-                                  tip=_("le_f_cond_tip")))
-                if part == "any":
-                    form.append(Field(f"{part}.{i}.switch", _("le_f_switch"),
-                                      str(c.get("switch") or ""), tip=_("le_f_switch_tip")))
-                    form.append(Field(f"{part}.{i}.hidden", _("le_f_hidden"),
-                                      c.get("shown") is False, "check",
-                                      tip=_("le_f_hidden_tip")))
-            form.append(Field(f"{part}.{NEW}", _("le_f_" + part + "_new"), "",
-                              tip=_("le_f_cond_tip")))
         page.form = tuple(form)
         page.submit = self._btn(_("save"), "lane", "save", name, primary=True)
         return page
+
+    # ---- one condition, and one part of it ---------------------------------------------
+    def _a_lane_cond(self, arg, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"page": "cond", "arg": arg})
+
+    def _a_lane_conddrop(self, arg, _v, confirmed, _ans):
+        from .places import Out
+        name, part, i = _cond_of(arg)
+        ed = self._editor()
+        conds = _conds(ed.tables.get(name) or {}, part)
+        if not isinstance(i, int) or i >= len(conds):
+            return Out(error=arg)
+        if not confirmed:
+            return Out(confirm=_("le_cond_drop_q", line=laneedit.cond_line(conds[i])))
+        del conds[i]
+        return self._cond_put(ed, name, part, conds)
+
+    def _cond_put(self, ed, name, part, conds, open_=None):
+        """The lane with these conditions of `part`, saved; open_: where to go after."""
+        from .places import Out
+        t = dict(ed.tables.get(name) or {})
+        if conds or part == "any":
+            t[part] = conds
+        else:
+            t.pop(part, None)
+        bad = laneedit.problems(t)
+        if bad:
+            return Out(error="; ".join(bad))
+        ed.put(name, t)
+        return self._lane_out(ed, open_=open_)
+
+    def _p_cond(self, arg, _tab, _cur):
+        """One condition: what it asks, key by key (each its own page to tick the values
+        on), what else it may ask, its quick filter — and the whole of it as a line."""
+        from .places import Field, Page, Row
+        name, part, i = _cond_of(arg)
+        ed = self._editor()
+        t = ed.tables.get(name)
+        if t is None or ed.kind(name) != "rule":
+            raise KeyError(name)
+        conds = _conds(t, part)
+        if isinstance(i, int) and i >= len(conds):
+            raise KeyError(arg)
+        c = conds[i] if isinstance(i, int) else {}
+        title = _("le_cond_title", n=i + 1, title=ed.title(name)) if isinstance(i, int) \
+            else _("le_cond_new_title", title=ed.title(name))
+        page = Page("cond", title, arg=arg, hint=_("le_cond_hint2"))
+        tools = [self._btn(_("le_cond_back"), "cond", "back", name)]
+        if isinstance(i, int):
+            tools.append(self._btn(_("le_cond_drop"), "lane", "conddrop", arg))
+        page.rows.append(Row("item", laneedit.cond_words(c), laneedit.cond_line(c),
+                             key="_tools", buttons=tuple(tools)))
+        asked = [k for k in c if k in laneedit.KEYS]
+        if asked:
+            page.rows.append(Row("heading", _("le_cond_parts")))
+        for k in asked:
+            words = laneedit.cond_words({k: c[k]}).partition(": ")[2]
+            page.rows.append(Row("item", laneedit.key_words(k), words, key="k:" + k,
+                                 buttons=(self._btn(_("le_edit"), "cond", "part",
+                                                    arg + SEP + k, primary=True),
+                                          self._btn(_("le_cond_drop"), "cond", "unask",
+                                                    arg + SEP + k))))
+        rest = [k for k in laneedit.KEYS if k not in c]
+        if rest:
+            page.rows.append(Row("heading", _("le_cond_more_parts")))
+        for k in rest:
+            page.rows.append(Row("item", laneedit.key_words(k), k, key="k:" + k,
+                                 buttons=(self._btn(_("le_cond_ask"), "cond", "part",
+                                                    arg + SEP + k),)))
+        form = [Field("line", _("le_cond_line"), laneedit.cond_line(c) if c else "",
+                      tip=_("le_cond_line_tip"))]
+        if part == "any":
+            form.append(Field("switch", _("le_f_switch"), str(c.get("switch") or ""),
+                              tip=_("le_f_switch_tip")))
+            form.append(Field("hidden", _("le_f_hidden"), c.get("shown") is False, "check",
+                              tip=_("le_f_hidden_tip")))
+        page.form = tuple(form)
+        page.submit = self._btn(_("save"), "cond", "save", arg, primary=True)
+        return page
+
+    def _a_cond_back(self, name, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"page": "lane", "arg": name})
+
+    def _a_cond_part(self, data, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"page": "condpart", "arg": data})
+
+    def _a_cond_unask(self, data, _v, _c, _ans):
+        arg, _s, key = data.rpartition(SEP)
+        return self._cond_change(arg, lambda c: c.pop(key, None))
+
+    def _a_cond_save(self, arg, values, _c, _ans):
+        from .places import Out
+        line = str((values or {}).get("line") or "").strip()
+        try:
+            new = laneedit.parse_line(line) if line else {}
+        except ValueError as e:
+            return Out(error=str(e))
+        switch = str((values or {}).get("switch") or "").strip()
+        hidden = bool((values or {}).get("hidden"))
+
+        def change(c):
+            c.clear()
+            c.update(new)
+            if switch:
+                c["switch"] = switch
+                if hidden:
+                    c["shown"] = False
+        return self._cond_change(arg, change, back=True)
+
+    def _cond_change(self, arg, change, back=False):
+        """One condition changed by `change(cond)` (a new one made first) and saved; then
+        the condition's page again — or the lane's (back)."""
+        from .places import Out
+        name, part, i = _cond_of(arg)
+        ed = self._editor()
+        t = ed.tables.get(name)
+        if t is None:
+            return Out(error=name)
+        conds = _conds(t, part)
+        if isinstance(i, int):
+            if i >= len(conds):
+                return Out(error=arg)
+            c = dict(conds[i])
+        else:
+            c = {}
+        try:
+            change(c)
+        except ValueError as e:
+            return Out(error=str(e))
+        if isinstance(i, int):
+            conds[i] = c
+        else:
+            conds.append(c)
+            i = len(conds) - 1
+        where = {"page": "lane", "arg": name} if back else \
+            {"page": "cond", "arg": _cond_arg(name, part, i)}
+        return self._cond_put(ed, name, part, conds, open_=where)
+
+    def _p_condpart(self, data, _tab, _cur):
+        """One key of a condition: its values to tick (or the words to type), what the
+        list hasn't typed beside them."""
+        from .places import Field, Page
+        arg, _s, key = data.rpartition(SEP)
+        name, part, i = _cond_of(arg)
+        if key not in laneedit.KEYS:
+            raise KeyError(key)
+        ed = self._editor()
+        t = ed.tables.get(name)
+        if t is None:
+            raise KeyError(name)
+        conds = _conds(t, part)
+        c = conds[i] if isinstance(i, int) and i < len(conds) else {}
+        now = laneedit.part_words(c, key)
+        choices = laneedit.KEYS[key]
+        page = Page("condpart", _("le_part_title", what=laneedit.key_words(key),
+                                  title=ed.title(name)), arg=data,
+                    hint=_("le_part_empty"))
+        tip = _("lt_" + key) if _("lt_" + key) != "lt_" + key else _("le_part_more_tip")
+        if key == "text":
+            form = [Field("typed", _("le_part_typed"), laneedit.cond_line(
+                {"text": c["text"]}).partition(": ")[2] if "text" in c else "", tip=tip)]
+        elif choices and key in laneedit.SINGLE:
+            form = [Field("one", _("le_part_one"), now[0] if now else "", "choice",
+                          (("", "—"),) + tuple((v, laneedit.value_words(key, v))
+                                               for v in choices))]
+        elif choices:
+            known = [v for v in now if v in choices]
+            other = [v for v in now if v not in choices]
+            form = [Field("ticked", _("le_part_words"), known, "checks",
+                          tuple((v, laneedit.value_words(key, v)) for v in choices)),
+                    Field("typed", _("le_part_more"), ", ".join(other), tip=tip)]
+        else:
+            form = [Field("typed", _("le_part_typed"), ", ".join(now), tip=tip)]
+        page.form = tuple(form)
+        page.submit = self._btn(_("save"), "condpart", "save", data, primary=True)
+        return page
+
+    def _a_condpart_save(self, data, values, _c, _ans):
+        arg, _s, key = data.rpartition(SEP)
+        values = values or {}
+        ticked = values.get("ticked") or ([values["one"]] if values.get("one") else [])
+
+        def change(c):
+            got = laneedit.part_value(key, [x for x in ticked if isinstance(x, str)],
+                                      values.get("typed") or "")
+            if got is None:
+                c.pop(key, None)
+            else:
+                c[key] = got
+        return self._cond_change(arg, change)
 
     def _a_lane_back(self, _name, _v, _c, _ans):
         from .places import Out
@@ -304,6 +502,27 @@ class LanePlaces:
             return Out(message=_("le_same"), refresh=True)
         ed.put(name, table)
         return self._lane_out(ed)
+
+
+SEP = "|"  # in a condition's place argument: lane|part|index (index "new": one to make)
+
+
+def _cond_arg(name, part, i):
+    return f"{name}{SEP}{part}{SEP}{i}"
+
+
+def _cond_of(arg):
+    """"lane|any|2" → ("lane", "any", 2); the index NEW stays a word."""
+    name, part, i = (str(arg or "").split(SEP) + ["", "", ""])[:3]
+    if part not in ("any", "none"):
+        raise KeyError(arg)
+    return name, part, int(i) if i.isdigit() else NEW
+
+
+def _conds(table, part):
+    """A lane's conditions of `part` as a new list of tables (a lone table: one)."""
+    got = table.get(part) or []
+    return [dict(c) for c in ([got] if isinstance(got, dict) else got) if isinstance(c, dict)]
 
 
 def _words(v):
@@ -345,34 +564,9 @@ def _table_of(name, old, values):
     src = [s for s in values.get("source") or () if isinstance(s, str)]
     if src:
         t["source"] = src[0] if len(src) == 1 else src
-    for part in ("any", "none"):
-        conds = []
-        olds = old.get(part) or []
-        olds = [olds] if isinstance(olds, dict) else list(olds)
-        for i in range(len(olds)):
-            line = values.get(f"{part}.{i}")
-            if line is None:  # not on the form: as it was
-                conds.append(olds[i])
-                continue
-            if not str(line).strip():
-                continue  # emptied: gone
-            c = laneedit.parse_line(line)
-            # what the line doesn't speak of (apart, priority…) stays as it was
-            for k in ("apart", "priority"):
-                if k in olds[i] and k not in c:
-                    c[k] = olds[i][k]
-            if part == "any":
-                switch = str(values.get(f"{part}.{i}.switch") or "").strip()
-                if switch:
-                    c["switch"] = switch
-                if values.get(f"{part}.{i}.hidden") and switch:
-                    c["shown"] = False
-            conds.append(c)
-        line = str(values.get(f"{part}.{NEW}") or "").strip()
-        if line:
-            conds.append(laneedit.parse_line(line))
-        if conds or part == "any":
-            t[part] = conds
+    for part in ("any", "none"):  # the conditions: their own pages (cond, condpart)
+        if part in old:
+            t[part] = old[part]
     return t
 
 

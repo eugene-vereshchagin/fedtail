@@ -147,6 +147,13 @@ fun LaneScreen(
                             IconButton(onClick = { model.findOpen = !model.findOpen }) {
                                 Icon(Icons.Filled.Search, stringResource(R.string.find))
                             }
+                            // the lane's rule: the windows' "Edit the lane…" (common/lanesplace.py);
+                            // a list's or a tag group's lane stands in the editor's list of lanes
+                            val editLane = stringResource(R.string.edit_lane)
+                            IconButton(onClick = { model.editLane(name) },
+                                modifier = Modifier.semantics { contentDescription = editLane }) {
+                                Text("⚙", fontSize = 20.sp)
+                            }
                             IconButton(onClick = { model.refresh() }) {
                                 ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                             }

@@ -69,6 +69,74 @@ def cond_line(cond):
     return "; ".join(parts) or EVERYTHING
 
 
+def _word(key, fallback):
+    got = _(key)
+    return fallback if got == key else got
+
+
+def key_words(key):
+    """A condition's key in words ("author" → "The author"); the key itself if none."""
+    return _word("lk_" + key, key)
+
+
+def value_words(key, value):
+    """One value of a key in words ("author", "followed" → "I follow"); a value the list
+    hasn't ("@bob@x.org", ">10") as it is."""
+    return _word(f"lv_{key}_{value}", str(value))
+
+
+def cond_words(cond):
+    """A condition in words, for a row: "The author: I follow, a bot · Kind: a reply"."""
+    parts = []
+    for k, v in (cond or {}).items():
+        if k in _OWN_FIELDS:
+            continue
+        if k == "any" and isinstance(v, (list, tuple)):
+            words = " | ".join(cond_words(t) for t in v if isinstance(t, dict))
+        elif k == "text":
+            words = cond_line({"text": v}).partition(": ")[2]
+        elif isinstance(v, (list, tuple)):
+            words = ", ".join(value_words(k, x) for x in v)
+        else:
+            words = value_words(k, "true" if v is True else "false" if v is False else v)
+        parts.append(f"{key_words(k)}: {words}")
+    return " · ".join(parts) or _("le_cond_every")
+
+
+def part_words(cond, key):
+    """What a condition asks of one key, as the values to tick: [str]."""
+    v = (cond or {}).get(key)
+    if v is None:
+        return []
+    if isinstance(v, bool):
+        return ["true" if v else "false"]
+    return [str(x) for x in v] if isinstance(v, (list, tuple)) else [str(v)]
+
+
+def part_value(key, ticked, typed):
+    """The ticked values and the typed words of one key → what the condition keeps under
+    it (None: nothing — the key leaves the condition). ValueError with what is wrong."""
+    if key == "text":
+        got = parse_line("text: " + typed) if str(typed or "").strip() else {}
+        return got.get("text") or None
+    words = [str(w) for w in ticked or () if str(w).strip()]
+    words += [w.strip() for w in str(typed or "").split(",") if w.strip()]
+    words = list(dict.fromkeys(words))
+    if not words:
+        return None
+    if key in _BOOLS:
+        return words[0] in ("true", "yes", "1", "да")
+    if key in _INTS:
+        try:
+            return int(words[0])
+        except ValueError:
+            raise ValueError(_("le_bad_part", part=f"{key}: {words[0]}")) from None
+    return words[0] if len(words) == 1 else words
+
+
+SINGLE = {"age_of", "text_case", "text_regex"}  # one value, chosen: not ticks
+
+
 def parse_line(line):
     """A typed line → a condition (a table). ValueError with what is wrong."""
     out = {}
@@ -321,4 +389,5 @@ class Editor:
         return _("le_saved") + (" · " + "; ".join(warnings) if warnings else "")
 
 
-__all__ = ["Editor", "KEYS", "cond_line", "parse_line", "problems"]
+__all__ = ["Editor", "KEYS", "cond_line", "cond_words", "key_words", "parse_line",
+           "part_value", "part_words", "problems", "value_words"]
