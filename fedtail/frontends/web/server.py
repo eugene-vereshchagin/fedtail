@@ -29,9 +29,10 @@ from ... import __version__, i18n, version
 from ...core import config
 from ...core.view import View
 from ...i18n import _
-from ...model import Account, Share, real
+from ...model import Account, Share, indent, real
 from ...model.text import reply_mentions, snippet
 from ..common import timed
+from ..common.cardtext import CONTEXT_CHARS
 from ..common.commands import Commands
 from ..richtext import clean
 
@@ -347,12 +348,13 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         out["item"] = spec.key
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
+        out["indent"] = indent(depth)  # how far in it is drawn: the model's, as the windows
     if p.reply_to and number is None:
         if parent == "missing":
             out["context"] = {"missing": True}
         elif parent is not None:
-            out["context"] = {"handle": parent.author.handle, "text": snippet(parent, 140),
-                              "id": parent.id}
+            out["context"] = {"handle": parent.author.handle,
+                              "text": snippet(parent, CONTEXT_CHARS), "id": parent.id}
     return out
 
 
@@ -1535,6 +1537,23 @@ class Web:
             raise KeyError(sid)
         return p
 
+    _client_errors = 0
+
+    def client_error(self, body):
+        """The page's own error (window.onerror, an unhandled promise) into fedtail's log:
+        a browser's console nobody looks at was the only place it went. Addresses lose
+        their query (the page's key may ride in one); at most 200 a run, each cut short."""
+        Web._client_errors += 1
+        if Web._client_errors > 200:
+            return {}
+
+        def clean(value, most):
+            return re.sub(r"\?[\w=&%.~+-]*", "", str(value or ""))[:most]
+        log.warning("web page %s: %s%s", clean(body.get("kind"), 20),
+                    clean(body.get("message"), 500),
+                    ("\n" + clean(body.get("where"), 2000)) if body.get("where") else "")
+        return {}
+
     def act(self, action, sid):
         core = self.core
         p = self._post_by_id(sid)
@@ -2279,6 +2298,9 @@ class Handler(BaseHTTPRequestHandler):
                                                       body.get("confirmed") is True),
             "/api/lane_set": lambda: web.lane_set(body),
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
+            "/api/client_error": lambda: web.client_error(body),
+            # what a reply starts with — who sees it, its warning (common/compose.start)
+            "/api/draft_start": lambda: web.draft_start(str(body.get("reply_to") or "")),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),
             "/api/refresh": web.refresh,

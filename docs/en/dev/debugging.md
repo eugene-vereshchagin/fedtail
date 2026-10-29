@@ -44,6 +44,9 @@ To read it in the app itself: the ≡ menu → "Debugging" → "Log…".
   of rows, the pools' queues, caches, the number of Qt widgets and lane rows, the picture
   cache. These lines show a leak: what grows over time;
 * Qt's own messages (they used to pour into the terminal);
+* the web page's own errors — a script's error, an unhandled promise — as `web page error:`
+  lines with their stack (addresses without their query, at most 20 a page load): a
+  browser's console was the only place they went;
 * if the window doesn't answer for longer than `debug.watchdog_seconds` seconds — the stacks of all
   threads (what exactly it hangs on) and then "responsive again after N s";
 * shorter freezes — from `debug.stall_ms` (250 ms): a line `GUI froze N ms: [label] stack`.

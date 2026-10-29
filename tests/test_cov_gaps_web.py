@@ -161,6 +161,35 @@ class RoutesTest(TmpDir):
         except urllib.error.HTTPError as e:
             return e.code, json.loads(e.read() or b"{}")
 
+    def test_the_pages_errors_reach_the_log(self):
+        """An error of the page's script is said in fedtail's log, not only in a browser's
+        console; an address loses its query, where the page's key may ride."""
+        with self.assertLogs("fedtail.frontends.web.server", "WARNING") as got:
+            code, _r = self.req("/api/client_error", {
+                "kind": "error", "message": "x is undefined at http://127.0.0.1/?k=SECRET",
+                "where": "renderPost@http://127.0.0.1/app.js?t=SECRET:12:5"})
+        self.assertEqual(code, 200)
+        said = "\n".join(got.output)
+        self.assertIn("web page error: x is undefined", said)
+        self.assertIn("renderPost@http://127.0.0.1/app.js:12:5", said)
+        self.assertNotIn("SECRET", said)
+
+    def test_a_reply_starts_as_the_core_says(self):
+        """The page's editor takes a reply's start from the core (common/compose.start),
+        as the windows and the phone: it narrowed and copied the warning by a rule of its
+        own, deaf to post.reply_never_wider and post.reply_warning (30.10)."""
+        st = fakes.status("050", fakes.BOB, minute=5, text="spoilers inside")
+        st.update(visibility="public", spoiler_text="the end of the film")
+        self.w.add(st, home=True)
+        self.core.poll_once()
+        code, got = self.req("/api/draft_start", {"reply_to": "050"})
+        self.assertEqual((code, got["visibility"], got["cw"]),
+                         (200, "followers", "the end of the film"))  # the defaults
+        self.core.cfg["post"].update(reply_never_wider=False, default_visibility="unlisted",
+                                     reply_warning="none")
+        code, got = self.req("/api/draft_start", {"reply_to": "050"})
+        self.assertEqual((got["visibility"], got["cw"]), ("unlisted", ""))
+
     def test_the_newest_routes(self):
         code, got = self.req("/api/account_more?id=B&show=all&max_id=&cursor=end")
         self.assertEqual((code, got["older"]), (200, None))

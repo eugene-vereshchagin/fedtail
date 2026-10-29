@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from ...core import config
 from ...i18n import _
-from ...model import Post, Share, real
+from ...model import Post, Share, indent, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from ..common.cardtext import newcomer_bit
+from ..common.cardtext import CONTEXT_CHARS, newcomer_bit
 from ..common.links import thread_url
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
@@ -89,7 +89,7 @@ class Card(Gtk.Box):
         self.unread = None
         self.depth = depth
         if depth:
-            self.set_margin_start(min(depth, 8) * 18)
+            self.set_margin_start(indent(depth) * 18)
         shape = ctx.theme.shape
         self.column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.column.set_hexpand(True)
@@ -351,7 +351,8 @@ class Card(Gtk.Box):
                 ctx.cfg["feed"].get("show_reply_context", True):
             col.append(_label(_("ctx_loading"), ("ft-ctx",), wrap=True))  # (as Qt)
         elif isinstance(parent, Post) and not ctx.in_thread:
-            text = _("ctx_reply", name=name_of(parent.author), text=snippet(parent, 160))
+            text = _("ctx_reply", name=name_of(parent.author),
+                     text=snippet(parent, CONTEXT_CHARS))
             ctx_lab = _label(link_markup(f"fedtail:thread/{p.id}", "↑ " + text), ("ft-ctx",),
                              markup=True, wrap=True)
             ctx_lab.connect("activate-link", self._link)

@@ -30,6 +30,22 @@ async function api(path, body) {
   return data;
 }
 
+// the page's own errors into fedtail's log (docs/en/dev/debugging.md): a browser's
+// console nobody looks at was the only place they went. At most 20 a load.
+let errorsSaid = 0;
+function reportError(kind, message, where) {
+  if (errorsSaid++ >= 20) return;
+  api("/api/client_error", { kind, message: String(message || ""), where: String(where || "") })
+    .catch(() => {});
+}
+window.addEventListener("error", (e) => {  // a script's error (a picture's doesn't bubble here)
+  reportError("error", e.message, (e.error && e.error.stack) || `${e.filename}:${e.lineno}:${e.colno}`);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const r = e.reason || {};
+  reportError("promise", r.message || r, r.stack);
+});
+
 function toast(text) {
   const t = $("#toast");
   t.textContent = text;
@@ -103,7 +119,7 @@ function bitEl(b, cls) {  // a piece of the card's words: plain, or a fedtail: l
 function renderPost(p, inThread) {
   const card = el("article", "post" + (p.unread ? " unread" : "") + (p.own ? " own" : ""));
   card.dataset.id = p.id;
-  if (inThread && p.depth) card.style.setProperty("--depth", String(Math.min(p.depth, 8)));
+  if (inThread && p.indent) card.style.setProperty("--depth", String(p.indent));
   const wd = p.words;  // the windows' words around the card (common/cardtext.py)
   if (wd && wd.boosted) {
     const s = el("div", "shared");
@@ -2488,13 +2504,21 @@ function compose(replyTo) {
     if (replyTo.html) line.append(el("div", "whole", plainOf(replyTo)));
     const draft = store("draft." + replyTo.sid);
     t.value = draft || replyTo.reply_prefix || "";
-    $("#vis").value = narrower(replyTo.visibility, state.me.visibility);
-    if (replyTo.warning) { $("#cw").value = replyTo.warning; showCw(true); }
+    // who sees it and its warning: the core's (post.reply_never_wider, reply_warning),
+    // as the windows and the phone start a reply — not a rule of the page's own
+    $("#vis").value = state.me.visibility;
+    $("#cw").value = "";
+    showCw(false);
+    api("/api/draft_start", { reply_to: replyTo.sid }).then((st) => {
+      if (state.replyTo !== replyTo) return;  // another editor opened meanwhile
+      if (st.visibility) $("#vis").value = st.visibility;
+      if (!$("#cw").value && st.cw) { $("#cw").value = st.cw; showCw(true); }
+    }).catch(() => {});
   } else {
     t.value = store("draft.new");
     $("#vis").value = state.me.visibility;
   }
-  if (!replyTo || !replyTo.warning) { $("#cw").value = ""; showCw(false); }
+  if (!replyTo) { $("#cw").value = ""; showCw(false); }
   $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
   $("#vis").disabled = false;  // an edit before locked these (composeFrom)
   $("#attach").title = w("attach");
@@ -2525,11 +2549,6 @@ function fillFrom(replyTo) {
   sel.value = accounts.some(([k]) => k === tag) ? tag : "";
   sel.dataset.first = sel.value;
   sel.title = w("post_from_tip");
-}
-
-const VIS_ORDER = ["public", "unlisted", "followers", "direct"];
-function narrower(a, b) {  // a reply goes no wider than what it answers
-  return VIS_ORDER[Math.max(VIS_ORDER.indexOf(a), VIS_ORDER.indexOf(b), 0)];
 }
 
 function showCw(on) {

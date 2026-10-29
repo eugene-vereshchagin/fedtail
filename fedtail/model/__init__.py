@@ -537,6 +537,15 @@ class Relationship:
     hidden_home: bool = False      # kept out of Home here, still followed (feed.home_hide)
 
 
+# how deep a reply is drawn indented, in every interface: past it the tree goes on flat
+INDENT_MAX = 8
+
+
+def indent(depth):
+    """How many steps in a post of this depth is drawn: depth, no deeper than INDENT_MAX."""
+    return min(max(int(depth or 0), 0), INDENT_MAX)
+
+
 @dataclass(frozen=True, slots=True)
 class ThreadItem:
     """A post in a thread, in reading order: how deep it hangs and its number there
@@ -544,6 +553,11 @@ class ThreadItem:
     post: Post
     depth: int
     number: int
+
+    @property
+    def indent(self):
+        """How many steps in it is drawn (INDENT_MAX at most)."""
+        return indent(self.depth)
 
 
 def real(entry):

@@ -2,6 +2,15 @@
 
 ## 0.22.0 — in progress
 
+- Web page: its own errors (a script's, an unhandled promise) go into fedtail's log as
+  `web page error:` lines with their stack — they stayed in a browser's console nobody
+  looks at. Addresses lose their query, at most 20 a load.
+- Qt: notifications name fedtail's desktop entry (`online.dmesg.fedtail`, a profile's own
+  for another profile): they said "fedtail", an entry that doesn't exist, so the desktop
+  showed them without the app's icon and outside its group in the notification settings.
+- Web page: a reply starts as the core says — who sees it (`post.reply_never_wider`) and
+  its warning (`post.reply_warning`), as in the windows and on the phone. The page
+  narrowed it and copied the warning by a rule of its own, whatever the config said.
 - My answer shows in the open thread at once — in the Qt and GTK windows and the
   terminal (the web page did already); so does a round's new answer in GTK and the
   terminal (Qt alone had a rule of its own for it). The core decides which opened

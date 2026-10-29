@@ -22,6 +22,9 @@ from . import actions
 from .lane import age_days, conversation_line
 from .links import thread_url
 
+# how much of the post answered stands over a reply ("↑ Bob: …"), in every interface
+CONTEXT_CHARS = 160
+
 
 def name_of(acc):
     return (acc.name or acc.username or acc.handle) if acc is not None else "?"
@@ -148,7 +151,7 @@ def card_words(spec, cfg, date, in_thread=None):
             w.context = Bit(_("ctx_loading"))
         elif isinstance(parent, Post):
             w.context = Bit("↑ " + _("ctx_reply", name=name_of(parent.author),
-                                     text=snippet(parent, 160)), f"fedtail:thread/{p.id}")
+                                     text=snippet(parent, CONTEXT_CHARS)), f"fedtail:thread/{p.id}")
     warned = list(p.filtered) if not cfg["ui"].get("arts_mode") else []
     if p.warning or warned:
         w.warning = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else [])

@@ -337,5 +337,15 @@ class LayeringTest(unittest.TestCase):
                           or "frontends" in x}, names)
 
 
+class IndentTest(unittest.TestCase):
+    def test_one_indent_for_every_interface(self):
+        """How far in a thread's post is drawn is the model's (INDENT_MAX): each interface
+        had its own 8, the web page's in its script."""
+        from fedtail.model import INDENT_MAX, ThreadItem, indent
+        self.assertEqual([indent(d) for d in (None, -1, 0, 3, INDENT_MAX, 40)],
+                         [0, 0, 0, 3, INDENT_MAX, INDENT_MAX])
+        self.assertEqual(ThreadItem(None, 40, 7).indent, INDENT_MAX)
+
+
 if __name__ == "__main__":
     unittest.main()

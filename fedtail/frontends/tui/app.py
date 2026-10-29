@@ -559,7 +559,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
         for i, n in enumerate(items_in):
-            pad = "  " * min(n.depth, 8)
+            pad = "  " * n.indent
             shown = show_post(core, n.post, short.get(n.post.id), n.post.id in unread,
                               n.number, width - len(pad), open_cw=self.cw_open)
             if n.post.id == self.status_id and i:  # where the reader came from

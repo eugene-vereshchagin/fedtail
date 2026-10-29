@@ -3495,6 +3495,25 @@ class QtSmokeTest(unittest.TestCase):
             if old is not None:
                 os.environ[player.HW_ENV] = old
 
+    def test_a_notification_names_the_desktop_entry(self):
+        """notify-send's desktop-entry hint is the entry's own name (desktop_id): "fedtail"
+        named no entry, so the desktop knew neither the icon nor the settings' group."""
+        from unittest import mock
+
+        from fedtail.desktop import desktop_id
+        from fedtail.frontends.qt.notify import Notifier
+        n = Notifier(self.win)
+        n.notify_send = "/usr/bin/notify-send"
+        seen = []
+
+        def run(argv, **_kw):
+            seen.append(argv)
+            return mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch("subprocess.run", run):
+            n._desktop(mock.Mock(title="t", body="b", thread=None))
+        hint = next(a for a in seen[0] if a.startswith("--hint=string:desktop-entry:"))
+        self.assertEqual(hint.rsplit(":", 1)[1], desktop_id(self.core.paths.profile))
+
     def test_filtered_notifications_dialog(self):
         self.world.policy = {"for_not_following": "accept", "for_not_followers": "accept",
                              "for_new_accounts": "filter", "for_private_mentions": "filter",

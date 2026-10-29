@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from ...core import config
 from ...i18n import _
-from ...model import Share
+from ...model import Share, indent
 from ...model.text import (
     collapse_tag_stuffing,
     html_to_text,
@@ -34,7 +34,12 @@ from ...model.text import (
     without_quote_fallback,
 )
 from ..common import actions
-from ..common.cardtext import newcomer_bit, only_counts_differ, thread_news_bit
+from ..common.cardtext import (
+    CONTEXT_CHARS,
+    newcomer_bit,
+    only_counts_differ,
+    thread_news_bit,
+)
 from ..common.lane import (  # noqa: F401  (Qt's names)
     VIDEO_EXT,
     CardSpec,
@@ -49,7 +54,6 @@ from .gone import drop
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
 RAIL_W = 20
-MAX_DEPTH_INDENT = 8
 THUMB_H = 170
 THUMB_MAX_W = 380
 # fedtail's own pictures for a post's buttons (frontends/qt/icons.py)
@@ -267,7 +271,7 @@ class PostRow(QWidget):
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        for _i in range(min(spec.depth, MAX_DEPTH_INDENT)):
+        for _i in range(indent(spec.depth)):
             rail_box = QWidget()
             rail_box.setFixedWidth(RAIL_W)
             rb = QHBoxLayout(rail_box)
@@ -920,7 +924,7 @@ class PostRow(QWidget):
             body = _("ctx_missing")
         else:
             body = _("ctx_reply", name="<b>" + display_name(parent.author) + "</b>",
-                     text=esc(snippet(parent, 140)))
+                     text=esc(snippet(parent, CONTEXT_CHARS)))
         return link("thread", p.id, f"↑ {body}", self.theme.css("muted"))
 
     # ---- actions ------------------------------------------------------------------

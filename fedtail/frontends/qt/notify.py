@@ -15,6 +15,7 @@ from importlib import resources
 from PySide6.QtCore import QObject, Signal
 
 from ... import sysenv
+from ...desktop import desktop_id
 from ...i18n import _
 from .. import notifytext
 
@@ -144,8 +145,12 @@ class Notifier(QObject):
             self._nowhere_said = True
 
     def _desktop(self, note):
+        # the desktop entry's own name (desktop_id: the app id, a profile's own for another
+        # profile) — "fedtail" named no entry, so the desktop knew neither its icon nor
+        # its group in the notification settings
+        entry = desktop_id(getattr(getattr(self.win.core, "paths", None), "profile", None))
         base = [self.notify_send, "--app-name=FedTail", f"--icon={icon_path()}",
-                "--hint=string:desktop-entry:fedtail", "--category=im.received"]
+                f"--hint=string:desktop-entry:{entry}", "--category=im.received"]
         try:
             # with --wait, notify-send prints the chosen action when "Open" is pressed
             wait = base + [f"--action=open={_('open_action')}", "--wait"]
