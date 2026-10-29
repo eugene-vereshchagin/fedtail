@@ -400,7 +400,8 @@ def holds_place(browser, base, key):
         page.evaluate("() => goLane('home')")
     page.wait_for_selector('.post[data-id="024"]', timeout=15000)
     page.wait_for_timeout(5000)
-    got = page.evaluate("""() => { const b = document.querySelector('#posts').getBoundingClientRect();
+    got = page.evaluate("""() => {
+      const b = document.querySelector('#posts').getBoundingClientRect();
       const c = document.querySelector('.post[data-id="024"]').getBoundingClientRect();
       return [c.top - b.top, b.bottom - c.bottom, state.startWhere]; }""")
     top, gap, where = got
