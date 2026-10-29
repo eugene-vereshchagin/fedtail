@@ -872,7 +872,7 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         from ... import issue
         body = issue.scrub(str(values.get("body", "")), self._mine())  # what was typed too
         return Out(open={"url": issue.issue_url(self.view.cfg, "", body)},
-                   message=_("issue_opened"))
+                   copy=body, message=_("issue_opened"))
 
     # ---- settings: the lines of config.toml (common/settings.py) ---------------------
     def _p_settings(self, query, tab, _cur):

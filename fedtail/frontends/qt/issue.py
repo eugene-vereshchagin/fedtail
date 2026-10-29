@@ -26,7 +26,7 @@ class IssueDialog(QDialog):
         self.mine = Places(win.ctx.view)._mine()
         self.setWindowTitle(_("issue_title"))
         lay = QVBoxLayout(self)
-        note = QLabel(_("issue_check"))
+        note = self.note = QLabel(_("issue_check"))
         note.setWordWrap(True)
         lay.addWidget(note)
         d = issue.draft(win.core.paths, win.cfg, known=self.mine)
@@ -51,8 +51,21 @@ class IssueDialog(QDialog):
                                issue.scrub(self.text.toPlainText(), self.mine))
 
     def go(self):
-        self.win.open_url(self.url())
-        self.win.statusBar().showMessage(_("issue_opened"), 8000)
+        """The whole text on the clipboard (the address holds only its start), the page
+        in the browser; if no browser came, the address copied instead and the window
+        stays, with the text in it."""
+        from PySide6.QtWidgets import QApplication
+
+        from ... import issue
+        from .opener import open_link
+        body = issue.scrub(self.text.toPlainText(), self.mine)
+        url = self.url()
+        QApplication.clipboard().setText(body)
+        if not open_link(url):
+            QApplication.clipboard().setText(url)
+            self.note.setText(_("issue_not_opened"))
+            return
+        self.win.statusBar().showMessage(_("issue_opened"), 12000)
         self.accept()
 
 

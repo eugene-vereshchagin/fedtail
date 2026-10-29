@@ -36,10 +36,11 @@ def child_env():
     return env
 
 
-def open_external(url):
+def open_external(url, always=False):
     """Open a link or a file with the desktop's choice. True if handed over; False
-    means: let Qt try (from the source, or when there's no opener)."""
-    if not FROZEN or not sys.platform.startswith("linux"):
+    means: let Qt try (from the source, or when there's no opener). always: from the
+    source too (Qt has tried and failed)."""
+    if not (FROZEN or always) or not sys.platform.startswith("linux"):
         return False
     for opener in ("xdg-open", "kde-open", "gio"):
         exe = shutil.which(opener)

@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- "Report a bug on GitHub" opens the page again: the address held up to 7500 characters of
+  the report, too long for KDE's opener, which then opened nothing. Now it holds the start,
+  the whole text goes on the clipboard (the page says to paste it where it was cut), and
+  if no browser comes the window says so and copies the address. A link Qt can't open is
+  tried with the desktop's opener (`xdg-open`) and said when that fails too.
 - Qt: a lane no longer smears on a refresh. A card made again kept its old body on screen
   till the event loop deleted it — two rows of buttons, an old picture over the next card;
   every widget that goes is now hidden at once (`qt/gone.py`). New counts of likes and

@@ -44,3 +44,24 @@ class SysenvTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OpenLinkTest(unittest.TestCase):
+    """Qt that couldn't open a link: the desktop's opener is tried, and a failure is
+    said, not taken for done (the bug report's "Open GitHub" opened nothing, 29.10)."""
+
+    def test_falls_back_and_says(self):
+        try:
+            from fedtail.frontends.qt import opener
+        except ImportError:
+            self.skipTest("PySide6 not installed")
+        asked = []
+
+        def ext(url, always=False):
+            asked.append(always)
+            return always and url.endswith("ok")
+        with mock.patch.object(opener.sysenv, "open_external", ext), \
+                mock.patch.object(opener.QDesktopServices, "openUrl", lambda _u: False):
+            self.assertTrue(opener.open_link("https://example.test/ok"))
+            self.assertFalse(opener.open_link("https://example.test/no"))
+        self.assertEqual(asked, [False, True, False, True])

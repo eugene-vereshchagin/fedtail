@@ -19,7 +19,11 @@ from urllib.parse import quote, urlsplit
 
 from .i18n import _
 
-MAX_URL = 7500        # what GitHub (and browsers) take in an address, with room to spare
+# the address of the new issue, at most: 7500 went to the browser as nothing at all on
+# KDE (29.10: the desktop's opener checks the page first, and the address was too long
+# for it), so the text goes on the clipboard whole and into the address only as far as
+# every opener takes it; past that the page says to paste it
+MAX_URL = 1800
 ERROR_LINES = 40      # the newest warnings and errors the draft carries
 KEEP_HOSTS = {"github.com", "docs.joinmastodon.org", "codeberg.org"}  # not anyone's
 

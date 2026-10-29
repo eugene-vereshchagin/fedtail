@@ -46,8 +46,12 @@ class IssueWindow(Gtk.Window):
         return issue.issue_url(self.win.cfg, "", issue.scrub(self.body(), self.mine))
 
     def go(self):
+        """The whole text on the clipboard (the address holds only its start), the page
+        in the browser."""
+        from ... import issue
+        self.win.get_clipboard().set(issue.scrub(self.body(), self.mine))
         self.win.open_url(self.url())
-        self.win.status(_("issue_opened"), seconds=8)
+        self.win.status(_("issue_opened"), seconds=12)
         self.close()
 
 

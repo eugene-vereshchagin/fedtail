@@ -327,6 +327,7 @@ class PlaceAndFlagTest(unittest.TestCase):
         body = parse_qs(urlsplit(url).query)["body"][0]
         self.assertNotIn("example.test", body)  # typed in by hand: scrubbed all the same
         self.assertEqual(out.message, i18n._("issue_opened"))
+        self.assertEqual(out.copy, body)  # the whole text on the clipboard as well
         self.assertIn("example.test", pl._mine())
 
 

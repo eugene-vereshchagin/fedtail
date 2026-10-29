@@ -24,9 +24,13 @@ def open_link(url):
         log.warning("link not opened: %s: is not a web address",
                     urlsplit(str(url)).scheme or "no scheme")
         return False
-    if not sysenv.open_external(url):
-        QDesktopServices.openUrl(QUrl(url))
-    return True
+    if sysenv.open_external(url):
+        return True
+    if QDesktopServices.openUrl(QUrl(url)):
+        return True
+    # Qt had no way (a platform without its services): the desktop's opener, by hand
+    log.warning("link not opened by Qt: trying the desktop's opener")
+    return sysenv.open_external(url, always=True)
 
 
 def open_path(path):

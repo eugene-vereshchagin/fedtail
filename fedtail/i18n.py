@@ -1478,8 +1478,12 @@ _STRINGS = {
         "issue_what_hint": "(что делал, что ждал увидеть и что увидел вместо этого)",
         "issue_steps": "Как повторить", "issue_system": "Версия и система",
         "issue_errors": "Последние ошибки журнала", "issue_no_errors": "(ошибок нет)",
-        "issue_cut": "(дальше обрезано: адрес не вместил бы всего)",
-        "issue_opened": "GitHub открыт в браузере",
+        "issue_cut": ("(дальше не влезло в адрес — весь текст скопирован: выдели этот и "
+            "вставь вместо него, Ctrl+V)"),
+        "issue_opened": ("GitHub открывается в браузере; весь текст отчёта скопирован — "
+            "если на странице его не хватает, вставь (Ctrl+V)"),
+        "issue_not_opened": ("Браузер не открылся. Адрес скопирован — вставь его в "
+            "браузер; текст отчёта остался здесь"),
         "bugreport_sent": "Отчёт отправлен: {where}",
         "bugreport_send_failed": "Отчёт сохранён, но не отправлен в {repo}: {err}",
         "bugreport_sending": "Отправляю отчёт в {repo}…",
@@ -3280,8 +3284,12 @@ _STRINGS = {
         "issue_what_hint": "(what you did, what you expected and what you saw instead)",
         "issue_steps": "How to repeat it", "issue_system": "Version and system",
         "issue_errors": "The latest errors of the log", "issue_no_errors": "(no errors)",
-        "issue_cut": "(cut here: the address wouldn't hold it all)",
-        "issue_opened": "GitHub is open in the browser",
+        "issue_cut": ("(the rest didn't fit into the address — the whole text is copied: "
+            "select this and paste it instead, Ctrl+V)"),
+        "issue_opened": ("GitHub is opening in the browser; the whole report is copied — "
+            "if the page lacks some of it, paste it (Ctrl+V)"),
+        "issue_not_opened": ("The browser didn't open. The address is copied: paste it "
+            "into a browser; the report's text stays here"),
         "bugreport_sent": "Report sent: {where}",
         "bugreport_send_failed": "The report is saved but didn't go to {repo}: {err}",
         "bugreport_sending": "Sending the report to {repo}…",
