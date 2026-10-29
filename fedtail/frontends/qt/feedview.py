@@ -23,7 +23,7 @@ import logging
 import time
 from dataclasses import replace
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import QFrame, QScrollArea, QVBoxLayout, QWidget
 
 from ... import diag
@@ -338,8 +338,16 @@ class FeedView(QScrollArea):
         h = self._measure(row, w)
         new = self.strip.measured(key, w, h, guess)
         row.setGeometry(x, self._ys.get(key, 0), w, h)
-        row.installEventFilter(self._watch)
         row.show()
+        # the layout Qt asks of a card just shown, done now — before the watcher is on:
+        # through it each card was measured twice more for nothing (9185 measures for
+        # 2962 cards, 3 ms each); the height is cached then, the second look costs little
+        QCoreApplication.sendPostedEvents(row, QEvent.Type.LayoutRequest)
+        h2 = self._measure(row, w)
+        if h2 != h:
+            new = self.strip.measured(key, w, h2, guess) or new
+            row.setGeometry(x, self._ys.get(key, 0), w, h2)
+        row.installEventFilter(self._watch)
         self.rows[key] = row
         if hasattr(row, "card"):
             if key == self.cursor_key:

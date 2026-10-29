@@ -181,6 +181,18 @@ So the order of the plan holds for the core, but the window's weight is in the c
   through lanes said 145 → 387 MB with the freed memory not yet given back (the stats
   tick 5 minutes later gave 81 MB back): `diag.trim_soon` trims 5 s after cards are let go
   (scrolled past, a lane unloaded), one thread, no gc pass.
+* **Steps 2–4 measured again, at 10 000 posts** (29.10): the core alone, a day of
+  polling: USS 55 MB at 2000 posts, 82 MB at 10 000 — but the bench's fake server lives
+  in the same process (its 13 000 statuses as dicts), and `--trace` had counted it as
+  "fedtail, the rest" (its file is `fedtail/tests/fakes.py`: fixed, the bench's groups
+  now look at `tests/` first). The core's own Python objects at 10 000 posts are about
+  8 MB. Steps 2–4 stay deferred: a window of a lane in the core would win single
+  megabytes; the phone's weight is its interpreter and `requests`, not the posts.
+* **A card measured once, not three times** (Qt, 29.10): right after a card was shown
+  Qt asked it to lay itself out again, and the watcher measured it anew — 9185 measures
+  for 2962 cards. The request is served when the card is built, before the watcher is
+  on; the second look then finds the height cached (the median measure 2.1 → 0.9 ms,
+  the measures from the event loop 7028 → 3878).
 * **A new lane's fill** (`store.link_items`, `core/custom.py`, 29.10). Where the core alone
   was heavy: a free lane (and Unsorted) takes its feeds' posts, stored already, and wrote
   them back through `put_items` — each one serialised anew, its stored text read in to

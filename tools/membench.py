@@ -68,8 +68,8 @@ PARTS = (
     ("fedtail/frontends/common", "interface, common layer"),
     ("fedtail/frontends/qt", "interface, Qt"),
     ("fedtail/frontends/gtk", "interface, GTK"),
+    ("tests/", "the bench's fake server"),  # before "fedtail/": the checkout is fedtail/
     ("fedtail/", "fedtail, the rest"),
-    ("tests/", "the bench's fake server"),
     ("json/", "json (parsing)"),
     ("sqlite3/", "sqlite3"),
     ("PySide6/", "PySide6 (Python side)"),
