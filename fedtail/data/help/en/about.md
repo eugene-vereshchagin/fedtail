@@ -13,13 +13,14 @@ The principles fedtail grows from, who wrote it and under which licence.
 3. **Lanes are apart.** People apart, bots apart, replies to me apart from other mentions.
 4. **Private by default.** A new post goes to followers only. A reply is never more public than
    the original.
-5. **Every behaviour is a config key.** There's no settings window and there won't be. The
-   defaults are as the author likes them; "like everyone else" is a flag away. New features
-   come switchable.
+5. **Every behaviour is a config key.** The settings window is a face of the same
+   `config.toml`: it shows its keys and writes back into it. The defaults are as the author
+   likes them; "like everyone else" is a flag away. New features come switchable.
 6. **Other servers get no token of yours.** Whatever fedtail takes straight from the author's
    server over ActivityPub goes anonymously: they see only your IP.
-7. **The core knows nothing of a GUI.** Interfaces are plugins: a Qt window, a terminal, a
-   browser; GTK next.
+7. **One core, many faces.** The Qt window, the GTK window, the terminal, the browser and the
+   phone show the same things and behave the same: the core decides, the interfaces only
+   draw.
 8. **One profile, one account.** A second account is a second profile (`--profile`); if you
    like, all accounts come together in one window (`accounts.merge`).
 9. **Grown-ups sort things out themselves.** Arts mode (after @arts, the founder of Point.im):

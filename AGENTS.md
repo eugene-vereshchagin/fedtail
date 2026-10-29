@@ -1,8 +1,11 @@
 # Notes for coding agents (and humans in a hurry)
 
-Read `docs/en/dev/architecture.md` first: it maps every module, the threads, the store
-schema, the lanes, the poll cycle, the events and the Qt frontend, with recipes
-for common changes. `docs/en/dev/design.md` is the product spec and the queue
+Read `docs/en/dev/principles.md` first — what fedtail is for (every feature of every client
+and more, each switchable, the author's way only a preset) and what it holds to: how it
+behaves for the reader, how it is built (the core decides, the interfaces only draw), how
+its code is written; every change is checked against it. Then
+`docs/en/dev/architecture.md`: it maps every module, the threads, the store schema, the
+lanes, the poll cycle, the events and the Qt frontend, with recipes for common changes. `docs/en/dev/design.md` is the product spec and the queue
 of planned work; `docs/en/dev/protocols.md` is the agreed plan to make Mastodon one
 protocol among others behind fedtail's own data model; `docs/en/dev/gtk.md` is the plan
 and the state of the GTK 4 frontend (`fedtail/frontends/gtk/`). `docs/en/dev/debugging.md` explains the logs a user can send; `docs/en/dev/testing.md` is the page

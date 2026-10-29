@@ -1,8 +1,9 @@
 # For developers
 
 fedtail is a Python program: a core that knows nothing of GUIs, a protocol layer with
-Mastodon as the first protocol, and four interfaces on top — a Qt window, a GTK window, the
-terminal (Textual) and a web page. Most of the code is written by an AI (Claude) under a
+Mastodon as the first protocol, and five interfaces on top — a Qt window, a GTK window, the
+terminal (Textual), a web page and the phone (Android, the same core inside the app). The core
+decides, the interfaces only draw — [principles.md](principles.md). Most of the code is written by an AI (Claude) under a
 human's review; contributions by people and their tools are judged the same way: by the diff,
 the tests and whether it fits.
 
@@ -11,7 +12,8 @@ the tests and whether it fits.
 | document | what's in it |
 |---|---|
 | [architecture.md](architecture.md) | the map: every module, the threads, the store schema, lanes, the poll cycle, events, the frontends, recipes for common changes |
-| [design.md](design.md) | the product spec, the principles and the queue of planned work |
+| [principles.md](principles.md) | the principles: how the program behaves, how it is built, how its code is written |
+| [design.md](design.md) | the product spec and the queue of planned work |
 | [protocols.md](protocols.md) | how Mastodon became one protocol among others behind fedtail's own data model |
 | [memory.md](memory.md) | making fedtail lighter: the plan, step by step, the bench and its numbers before and after each step |
 | [gtk.md](gtk.md) | the plan and the state of the GTK 4 frontend |
