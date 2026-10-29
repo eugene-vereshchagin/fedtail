@@ -591,9 +591,9 @@ why.en = "The windows save a setting at once, each in its card (“saved”, “
 keys = ["settings_saved_here", "settings_enter_saves"]
 
 [[wording]]
-in = ["gtk", "tui", "web"]
-why.ru = "Шапка профиля в Qt спрашивает «кто это» заново сама и говорит, что не пришло («спрашиваю ещё раз…», «Ещё раз»); GTK, терминал и веб говорят об ошибке своими словами (`load_failed`, ошибка места)."
-why.en = "Qt's profile head asks “who this is” again by itself and says what didn't come (“asking again…”, “Again”); GTK, the terminal and the web page say the error in their own words (`load_failed`, the place's error)."
+in = ["tui", "web"]
+why.ru = "Окна спрашивают «кто это» в профиле заново сами и говорят, что не пришло («спрашиваю ещё раз…», «Ещё раз») — общим `common/patient.py`; терминал и веб говорят об ошибке места своими словами."
+why.en = "The windows ask “who this is” for a profile again by themselves and say what didn't come (“asking again…”, “Again”) — one `common/patient.py`; the terminal and the web page say the place's error in their own words."
 keys = ["profile_slow", "profile_retrying", "profile_failed", "profile_bad_answer",
         "profile_retry"]
 
@@ -649,9 +649,9 @@ keys = ["cmd_help_title", "columns"]
 
 [[wording]]
 in = ["gtk", "tui", "web"]
-why.ru = "То же самое, сделанное иначе: ошибку отправки пишет под полем (Qt — окном), серверы в «Тишине» зовёт «Заблокированные серверы», дату объявления пишет по теме."
-why.en = "The same, done otherwise: GTK says a failed send under the field (Qt — a window), calls the servers in Silence “Blocked servers”, writes an announcement's date by the theme."
-keys = ["send_failed", "silence_domains", "months"]
+why.ru = "То же самое, сделанное иначе: ошибку отправки пишет под полем (Qt — окном), серверы в «Тишине» зовёт «Заблокированные серверы»."
+why.en = "The same, done otherwise: GTK says a failed send under the field (Qt — a window), calls the servers in Silence “Blocked servers”."
+keys = ["send_failed", "silence_domains"]
 
 [[wording]]
 in = ["gtk", "tui", "web"]

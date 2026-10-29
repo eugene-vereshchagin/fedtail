@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLay
 from ...i18n import _
 from ...model import Reaction
 from ..common.announce import react
-from .text import clean, when
+from .text import clean
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class AnnounceBar(QFrame):
             return
         a = self.items[0]
         more = f" · {_('announce_more', n=len(self.items) - 1)}" if len(self.items) > 1 else ""
-        stamp = when(a.published.isoformat() if a.published else "", _("months").split())
+        stamp = self.win.theme.date(a.published) if a.published else ""  # as a card's
         self.head.setText(f"📢 {_('announce_title')} {stamp}{more}")
         self.body.setText(clean(a.html, self.win.theme.css("link")))
         self._reactions(a)

@@ -1878,10 +1878,12 @@ class MainWindow(Gtk.ApplicationWindow):
         me = self.view.me
         own = me is not None and me.id == acc_id
 
+        status = Gtk.Label(xalign=0, wrap=True)  # "asking again…", "didn't come"
+        status.add_css_class("ft-muted")
+        box.append(status)
+
         def got_account(acc):
-            if acc is None:
-                title.set_text(_("load_failed", err="?"))
-                return
+            box.remove(status)
             title.set_text("@" + acc.handle)
             box.append(self._profile_head(acc, own))
             posts_head = Gtk.Label(label=_("profile_posts"), xalign=0)
@@ -1891,8 +1893,32 @@ class MainWindow(Gtk.ApplicationWindow):
             box.append(posts_head)
             from .profileposts import ProfilePosts
             page.posts_part = ProfilePosts(self, box, acc)  # pinned, pages, their server
-        self.call(self.view.account(acc_id), got_account,
-                  lambda err: title.set_text(_("load_failed", err=err)))
+        # asked again when it fails, answers oddly or doesn't come; "Again" after the
+        # last try (common/patient.py, the same as Qt's)
+        from ..common.patient import Patient
+        retry = Gtk.Button(label=_("profile_retry"), halign=Gtk.Align.START)
+        retry.set_visible(False)
+        box.append(retry)
+
+        def give_up(text):
+            status.set_text(text)
+            retry.set_visible(True)
+
+        def said(text):
+            status.set_text(text)
+            retry.set_visible(False)
+        patient = Patient(lambda: self.view.account(acc_id),
+                          lambda fut, ok, fail: self.call(fut, ok, fail),
+                          lambda sec, fn: GLib.timeout_add(int(sec * 1000),
+                                                           lambda: (fn(), False)[1]),
+                          ok=lambda acc: (box.remove(retry), got_account(acc)),
+                          say=said, give_up=give_up,
+                          good=lambda acc: acc is not None and bool(getattr(acc, "handle",
+                                                                            None)),
+                          what=f"profile {acc_id}")
+        retry.connect("clicked", lambda _b: (said(_("loading")), patient.again()))
+        page.patient = patient
+        patient.start()
 
     def _moved_banner(self, new):
         """The account moved: where to, with "open" and "follow there" — as in Qt."""
