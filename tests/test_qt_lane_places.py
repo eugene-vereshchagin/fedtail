@@ -286,3 +286,24 @@ class HoverTest(unittest.TestCase):
         theirs.enterEvent(QEnterEvent(p, p, p))
         self.assertNotEqual(theirs.actions_box.property("hover"), "true")
         view.ctx.cfg["ui"]["additional_highlight"] = True
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+class QuietFfmpegTest(unittest.TestCase):
+    def test_every_player_quiets_ffmpeg(self):
+        """FFmpeg says only its errors: a looping gif of an old pixel format printed a
+        "[swscaler] deprecated pixel format" line every frame (29.10). Qt resets the level
+        when its plugin loads, so each player made sets it again."""
+        from unittest import mock
+
+        from PySide6.QtCore import QObject
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt import player
+        QApplication.instance() or QApplication([])
+        said = []
+        with mock.patch.object(player, "_avutils", lambda: (said.append,)):
+            player.new_player(QObject())
+        self.assertEqual(said, [player.AV_LOG_ERROR])
+        with mock.patch.dict("os.environ", {"FEDTAIL_FFMPEG_LOG": "1"}):
+            self.assertFalse(player.quiet_ffmpeg())

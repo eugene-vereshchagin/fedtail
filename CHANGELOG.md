@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Qt: FFmpeg (behind the video player and the looping gifs) says only its errors: a gif of an
+  old pixel format flooded the terminal with "[swscaler] deprecated pixel format used",
+  a line every frame. Every player is made by one function that quiets it (Qt resets the
+  level as its plugin loads); `FEDTAIL_FFMPEG_LOG=1` lets FFmpeg say everything.
 - Qt: a closed tab lets its cards go the lanes' way (hidden, deleted); its card dict swapped
   for an empty one left them standing, owned by no one, until the tab was deleted — what
   the lanes' sweep of unowned cards kept finding in the tests.

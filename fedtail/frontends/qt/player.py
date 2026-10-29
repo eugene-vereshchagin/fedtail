@@ -87,6 +87,57 @@ def choose_decoding(how):
         log.info("video: software decoding (ui.video_decode)")
 
 
+AV_LOG_ERROR = 16  # libavutil's log levels: what FFmpeg says goes to stderr from here up
+
+
+@functools.cache
+def _avutils():
+    """The libavutil this process may use: Qt's own (the PySide wheel's), the system's."""
+    import ctypes
+    import ctypes.util
+    import glob
+    names = []
+    try:
+        import PySide6
+        names += sorted(glob.glob(os.path.join(os.path.dirname(PySide6.__file__),
+                                               "Qt", "lib", "libavutil.so*")))
+    except ImportError:
+        pass
+    found = ctypes.util.find_library("avutil")
+    if found:
+        names.append(found)
+    libs = []
+    for name in names:
+        try:
+            libs.append(ctypes.CDLL(name).av_log_set_level)
+        except (OSError, AttributeError) as e:
+            log.debug("libavutil %s: %s", name, e)
+    return tuple(libs)
+
+
+def new_player(parent):
+    """A QMediaPlayer, FFmpeg quieted once it is loaded (quiet_ffmpeg): every player of
+    fedtail is made here."""
+    from PySide6.QtMultimedia import QMediaPlayer
+    player = QMediaPlayer(parent)
+    quiet_ffmpeg()
+    return player
+
+
+def quiet_ffmpeg():
+    """FFmpeg (Qt Multimedia's backend) says only its errors. By default it prints its
+    warnings to stderr — for a looping gif with an old pixel format "[swscaler @ …]
+    deprecated pixel format used" at every frame, the terminal flooded (29.10). Set in
+    the libavutil this process loads (Qt's own, or the system's); FEDTAIL_FFMPEG_LOG=1
+    lets it say everything. Qt sets FFmpeg's level as its plugin loads, with the first
+    player: so again after each one is made (new_player). True if it took."""
+    if os.environ.get("FEDTAIL_FFMPEG_LOG"):  # asked for by hand: FFmpeg says it all
+        return False
+    for set_level in _avutils():
+        set_level(AV_LOG_ERROR)
+    return bool(_avutils())
+
+
 @functools.cache
 def available():
     """Can this Qt play media at all (the modules are there)?"""
@@ -162,7 +213,7 @@ class VideoOverlay(QWidget):
     """A video over the main window, with sound and the usual keys."""
 
     def __init__(self, window, ctx, m, loop=False, items=None):
-        from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+        from PySide6.QtMultimedia import QAudioOutput
         from PySide6.QtMultimediaWidgets import QVideoWidget
         super().__init__(window)
         self.win, self.ctx, self.m = window, ctx, m
@@ -219,7 +270,7 @@ class VideoOverlay(QWidget):
         lay.addWidget(keys)
         self.keys = keys
 
-        self.player = QMediaPlayer(self)
+        self.player = new_player(self)
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.player.setVideoOutput(self.video)
@@ -426,7 +477,7 @@ class InlineLoop(QObject):
 
     def play(self):
         if self.player is None:
-            self.player = self._QMediaPlayer(self)
+            self.player = new_player(self)
             self.sink = self._QVideoSink(self)
             self.player.setVideoSink(self.sink)
             self.player.setLoops(INFINITE)
@@ -529,7 +580,7 @@ class AudioBar(QWidget):
     def toggle(self):
         from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
         if self.player is None:
-            self.player = QMediaPlayer(self)
+            self.player = new_player(self)
             self.out = QAudioOutput(self)
             self.player.setAudioOutput(self.out)
             self.player.durationChanged.connect(lambda d: self.slider.setRange(0, int(d)))
