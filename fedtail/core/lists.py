@@ -336,7 +336,16 @@ class ListsMixin:
             try:
                 self.api.list_add(list_id, acc_id)
                 log.info("list %s: %s added after all", list_id, acc_id)
-            except Exception as e:  # noqa: BLE001 — not yet, or slow, or down: next time
+            except ApiError as e:
+                if r is not None and r.get("following") and e.status == 422:
+                    # followed, and still "can't": in the list already (GoToSocial: "is
+                    # already in list" — it was asked again every round, 29.10), or never
+                    log.info("list %s: %s followed and refused (%s): in it already, not "
+                             "waiting any more", list_id, acc_id, e.status)
+                    continue
+                log.debug("list %s pending %s: %s", list_id, acc_id, e)
+                left.append([list_id, acc_id, since])
+            except Exception as e:  # noqa: BLE001 — slow, or down: next time
                 log.debug("list %s pending %s: %s", list_id, acc_id, e)
                 left.append([list_id, acc_id, since])
         self.store.kv_set("list_pending", left)

@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: someone waiting to go into a list, followed by now and already in it, was asked
+  for again every round (a 422 "already in list" each time, two of them in a log of an
+  hour); followed and still refused — let go.
 - Fixed (the phone): after ⟳ the thin bar under the title stayed for 8 s when the round
   brought nothing new, the lane pushed down by it; it goes as the round ends now.
 - Fixed (Windows): a secret file written by two at once (the sync key: the round's and the

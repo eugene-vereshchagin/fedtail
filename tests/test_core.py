@@ -1638,6 +1638,20 @@ class CoreTest(TmpDir):
         self.assertEqual(tried, [])
         self.assertEqual(core.store.kv_get("list_pending"), [])
 
+    def test_list_pending_let_go_when_already_in(self):
+        # the logs (29.10): "is already in list" — a 422 for the same two every round
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("Уже там").result()
+        core.follow("B").result()
+        core.store.kv_set("list_pending", [[x["id"], "B", time.time()]])
+
+        def refused(*_a):
+            raise ApiError(422, "account B is already in list")
+        core.api.list_add = refused
+        core._refresh_lists()
+        self.assertEqual(core.store.kv_get("list_pending"), [])
+
     def test_a_slow_conversations_answer_doesnt_fail_the_poll(self):
         import requests
         core, w = self.make()
