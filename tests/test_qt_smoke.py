@@ -1617,6 +1617,23 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "2" in tw.header.info.text() and "5" in tw.header.info.text())
         self.assertIn(tw.info_text, tw.header.info.text())
 
+    def test_my_answer_shows_in_the_open_thread(self):
+        """The thread open takes my answer in at once: the post says "arrived" itself — a
+        round never counts my stored post new (30.10)."""
+        from unittest import mock
+
+        from fedtail.frontends.qt.feed import ThreadWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.open_thread("010")
+        self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                    for w in self.win.extra_tabs()))
+        tw = next(w for w in self.win.extra_tabs() if isinstance(w, ThreadWidget))
+        with mock.patch.object(self.core, "poll_now"):  # no round to bring it
+            mine = self.core.post("me too", "private", reply_to="010").result(timeout=5)
+            self.pump(until=lambda: mine["id"] in tw.statuses)
+        self.assertIn(mine["id"], tw.statuses)
+
     def test_language_checked_and_sent_in_the_background(self):
         from fedtail.frontends.qt.compose import Compose
         self.win.start()

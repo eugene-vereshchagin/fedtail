@@ -535,8 +535,10 @@ class PollMixin:
                 self.emit("lanes_updated", {lane.name: [] for lane in self.lanes
                                             if lane.source in browse_changed})
             if new_statuses and not first_run:
-                self.emit("arrived", [(real(st)["id"], real(st).get("in_reply_to_id"))
-                                      for st in new_statuses])
+                pairs = [(real(st)["id"], real(st).get("in_reply_to_id"))
+                         for st in new_statuses]
+                self.emit("arrived", pairs)
+                self._answers_in_open_threads(pairs)
             self._step("lanes")
             if not first_run:
                 self._notify(per_lane, new_requests, new_activity)

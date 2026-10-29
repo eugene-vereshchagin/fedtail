@@ -628,8 +628,8 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `error` | text | recoverable failure | status bar (and the log) |
 | `unsupported` | feature name | the server answered 404 to it | its menu items and buttons hide |
 | `auth_failed` | text | 401/403 | re-login dialog |
-| `arrived` | [(post id, reply-to id)] | new posts stored | thread tabs grow, faces |
-| `thread_grew` | root id | a followed thread got replies | its tab reloads |
+| `arrived` | [(post id, reply-to id)] | new posts stored | faces |
+| `thread_grew` | root id | an opened thread got replies: other servers', a round's, mine sent (the core decides which: `_answers_in_open_threads`) | its tab reloads |
 | `rate_limited` | {until, left, …} | the server's budget is low | one status line |
 | `first_poll_done` | None | the first round of polling is over | "getting the lanes…" leaves the status bar |
 | `capabilities_changed` | feature | the server answered "no such thing" | buttons hide at once |

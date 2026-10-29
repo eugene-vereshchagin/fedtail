@@ -59,11 +59,12 @@ class WebGapsTest(TmpDir):
                               request=False, more=0, what="liked", notice="",
                               unread=False)
         got = web.event_json(SimpleNamespace(extra={"row": row}, unread=False))
-        (name, url, html), plain = got["people"]
+        (_name, url), plain = got["people"]  # pairs, as the phone reads them
+        html, none = got["people_html"]
         self.assertEqual(url, "fedtail:account/" + bob.id)
         self.assertIn("/pic?u=https%3A%2F%2Fx%2Fblob.png", html)
         self.assertIn("&lt;b&gt;Bob", html)  # the name's own markup stays text
-        self.assertEqual(plain, ["Ann", "fedtail:account/A", ""])
+        self.assertEqual((plain, none), (["Ann", "fedtail:account/A"], ""))
 
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)

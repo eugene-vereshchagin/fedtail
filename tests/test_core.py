@@ -1010,6 +1010,32 @@ class CoreTest(TmpDir):
         arrived = [p for n, p in seen if n == "arrived"]
         self.assertEqual(arrived, [[("111", "110")]])
 
+    def test_the_core_says_which_open_thread_grew(self):
+        """An answer to any post of an opened thread — a round's, my own sent — grows
+        that thread (thread_grew with its root), decided here for every interface; my
+        answer, stored as it is sent, showed only on opening anew (30.10)."""
+        from unittest import mock
+        core, w = self.make()
+        w.add(status("110", BOB, minute=1), home=True)
+        w.add(status("111", BOB, "110", "B", minute=2), home=True)
+        core.connect().result()
+        core.poll_once()
+        core.thread("111").result()
+        grew = []
+        core.events.on("thread_grew", lambda name, payload: grew.append(payload))
+        w.add(status("112", BOB, "111", "B", minute=3), home=True)
+        core.poll_once()
+        self.assertEqual(grew, ["110"])
+        grew.clear()
+        with mock.patch.object(core, "poll_now"):  # no round to bring it
+            mine = core.post("me too", "private", reply_to="112").result()
+        self.assertEqual(grew, ["110"])  # an answer to the round's answer: the thread's too
+        grew.clear()
+        w.add(status("120", BOB, minute=4), home=True)  # in no thread opened
+        core.post("other", "private", reply_to="120").result()
+        self.assertEqual(grew, [])
+        self.assertTrue(mine["id"])
+
     def test_follow_requests_event_only_on_change(self):
         core, w = self.make()
         core.connect().result()

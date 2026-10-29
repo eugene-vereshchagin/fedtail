@@ -211,9 +211,9 @@ class ThreadsMixin:
         ancestors = ctx.get("ancestors", [])
         root = ancestors[0] if ancestors else focus
         roots = self.__dict__.setdefault("_thread_root_of", {})
-        roots[str(sid)] = roots[str(focus["id"])] = str(root["id"])  # thread_progress(any)
-        if len(roots) > 2000:
+        if len(roots) > 5000:
             roots.clear()
+        roots[str(sid)] = roots[str(focus["id"])] = str(root["id"])  # thread_progress(any)
         below = list(ctx.get("descendants", []))
         refresh = self._async_refresh_hint()
         if ancestors:
@@ -226,6 +226,9 @@ class ThreadsMixin:
                 seen.add(st["id"])
                 rest.append(st)
         everything = [root] + rest
+        # every post shown knows its thread: an answer to any of them grows it
+        # (_answers_in_open_threads), whichever interface has it open
+        roots.update((str(st["id"]), str(root["id"])) for st in everything)
         self.store.put_statuses(everything)
         if self.cfg["feed"]["honest_counters"]:
             self.bg.submit(self._honest_counts, everything)
@@ -290,6 +293,23 @@ class ThreadsMixin:
                 log.info("thread %s: %d new replies on recheck", root_id, len(fresh))
                 self.emit("thread_grew", root_id)
                 grew.append(root_id)
+        return grew
+
+    def _answers_in_open_threads(self, pairs):
+        """[(id, in_reply_to_id)] of posts just stored — a round's, my own sent — →
+        thread_grew for each opened thread one of them answers. Decided here once, for
+        every interface: each only reloads the thread it shows on thread_grew (my answer
+        showed only on opening anew; a round's news in Qt alone, by its own rule)."""
+        roots = self.__dict__.get("_thread_root_of") or {}
+        grew = []
+        for sid, parent in pairs:
+            root = roots.get(str(parent)) if parent else None
+            if root is not None:
+                roots[str(sid)] = root  # an answer to it is the thread's too
+                if root not in grew:
+                    grew.append(root)
+        for root in grew:
+            self.emit("thread_grew", root)
         return grew
 
     def _async_refresh_hint(self):

@@ -1737,19 +1737,12 @@ class MainWindow(QMainWindow):
                 if isinstance(w, LaneWidget):
                     w.refresh()
             self.update_badges()
-        elif name == "arrived":
-            # an open thread someone just answered in takes the answer in by itself
-            for w in self.extra_tabs():
-                if isinstance(w, ThreadWidget) and w.loaded and any(
-                        sid not in w.statuses and parent in w.statuses
-                        for sid, parent in payload):
-                    w.reload(quiet=True)
         elif name == "thread_progress":  # threads.thread_progress: "fetching 3 of 12"
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget) and (
                         w.root.id == payload if w.root is not None else not w.loaded):
                     w.show_progress(self.core.thread_progress(payload))
-        elif name == "thread_grew":  # replies fetched from other servers
+        elif name == "thread_grew":  # new replies: other servers', a round's, mine (core)
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget) and w.root is not None and \
                         w.root.id == payload:

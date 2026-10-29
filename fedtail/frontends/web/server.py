@@ -264,13 +264,14 @@ def event_json(spec, dismiss_one=True):
     Every action is a fedtail: link: /api/link does it, as for a card's ⋯."""
     from ..common.activity import ANSWER_WORDS, event_parts
     parts = event_parts(spec.extra["row"], web_date, dismiss_one)
-    people = []
-    for i, (name, url) in enumerate(parts.people):
+    # :blobcat: in a name — its picture, as on a card (account_json); beside the pairs,
+    # which the phone reads as they are
+    html = []
+    for i, (name, _url) in enumerate(parts.people):
         emojis = parts.emojis[i] if i < len(parts.emojis) else ()
-        # :blobcat: in a name — its picture, as on a card (account_json)
-        people.append([name, url, with_emojis(escape(name), emojis)
-                       if emojis and ":" in name else ""])
-    return {"kind": parts.kind, "people": people, "more": parts.more,
+        html.append(with_emojis(escape(name), emojis) if emojis and ":" in name else "")
+    return {"kind": parts.kind, "people": [list(x) for x in parts.people],
+            "people_html": html, "more": parts.more,
             "what": parts.what, "when": parts.when, "notice": parts.notice,
             "post": parts.post, "post_link": parts.post_link, "hide": parts.hide,
             "hide_tip": parts.hide_tip, "answers": [list(x) for x in parts.answers],

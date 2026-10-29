@@ -1067,9 +1067,10 @@ function renderEvent(ev) {
   const who = el("span", "ev-who");
   if (x.notice) who.append(el("b", "", "⚠ " + x.notice));  // the server's own: no one did it
   else {
-    x.people.forEach(([name, url, html], i) => {
+    x.people.forEach(([name, url], i) => {
       if (i) who.append(", ");
       const a = el("a", "ev-name");
+      const html = (x.people_html || [])[i];
       if (html) a.innerHTML = html;  // escaped by the server, the emoji through /pic
       else a.textContent = name;
       a.href = url;

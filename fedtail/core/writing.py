@@ -259,6 +259,10 @@ class WritingMixin:
                     # "you replied" under the post answered: the lanes it is in look again
                     # now (it changed no lane's list of posts, so nothing else tells them)
                     self.emit("parents")
+                    # and a thread open on it takes my answer in: stored already, the
+                    # next round doesn't count it new
+                    self._answers_in_open_threads(
+                        [(x["id"], x.get("in_reply_to_id")) for x in chain])
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()

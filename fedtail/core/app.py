@@ -6,8 +6,9 @@ worker threads (see events.py):
   ready            me (account dict)        connected and ready
   lanes_updated    {lane: [new item ids]}   something new arrived / older loaded
   parents          None                     reply contexts became available
-  arrived          [(id, in_reply_to_id)]   new posts from a poll (open threads grow)
-  thread_grew      root id                  replies fetched from other servers
+  arrived          [(id, in_reply_to_id)]   new posts from a poll
+  thread_grew      root id                  an opened thread got replies (other servers,
+                                            a round, mine sent): its tab reloads
   status_updated   status                   a status changed (fav, boost…)
   status_deleted   status id
   read_changed     [status ids]

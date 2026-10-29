@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- My answer shows in the open thread at once — in the Qt and GTK windows and the
+  terminal (the web page did already); so does a round's new answer in GTK and the
+  terminal (Qt alone had a rule of its own for it). The core decides which opened
+  thread an answer belongs to — any post shown in it knows its root — and says
+  `thread_grew`; the interfaces only reload the thread they show.
 - Web page: the card a lane opens on stays where it stood while pictures come in — in
   one lane and in every column. A picture whose size the server didn't say, emoji,
   link cards pushed it off the screen; it is held till the reader moves (wheel, touch,

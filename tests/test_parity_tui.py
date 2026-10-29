@@ -277,6 +277,23 @@ class EditorTest(Base):
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
 class ThreadHeadTest(Base):
+    async def test_my_answer_shows_in_the_open_thread(self):
+        """Sent from the editor or anywhere: the thread on screen takes my answer in at
+        once (the core's "arrived"), as the windows do — it showed only opened anew."""
+        from fedtail.frontends.tui.app import ThreadScreen
+        core, w = self.make()
+        w.add(status("010", BOB, minute=1, text="the root"), home=True)
+        w.add(status("011", BOB, "010", "B", minute=2, text="a reply"), home=True)
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            scr = ThreadScreen("011")
+            app.push_screen(scr)
+            await self.wait(pilot, lambda: len(scr.query_one("#posts").children) == 2)
+            app.core.post("me too", "private", reply_to="011")
+            await self.wait(pilot, lambda: len(scr.query_one("#posts").children) == 3,
+                            what="my answer in the thread")
+
     async def test_count_cw_follow_via_home(self):
         from textual.widgets import Static
 

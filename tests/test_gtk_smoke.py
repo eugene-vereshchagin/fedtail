@@ -1261,6 +1261,16 @@ class GtkSmokeTest(_GtkBase):
         pump(timeout=0.6)
         self.assertEqual(boxes_418(self.win), [], "the search: people")
 
+    def test_my_answer_shows_in_the_open_thread(self):
+        """As Qt: the thread open takes my answer in at once (the core's "arrived")."""
+        self.win.open_thread("013")
+        self.assertTrue(pump(lambda: getattr(self.win.threads.get("013"), "posts", None), 5))
+        before = {p.id for p in self.win.threads["013"].posts}
+        mine = self.core.post("me too", "private", reply_to="013").result(timeout=5)
+        self.assertTrue(pump(lambda: mine["id"] in {
+            p.id for p in getattr(self.win.threads.get("013"), "posts", None) or ()}, 5),
+            f"the thread still shows {before}")
+
     def test_a_profile_pages_back_then_from_their_server(self):
         """As Qt: the posts page by page; my server out of older ones — "▼ older —
         from their server" for someone from elsewhere."""
