@@ -756,6 +756,7 @@ class Web:
                 # and ↔ — the same remembered state as theirs
                 "max_width": int(c["ui"].get("max_width") or 0),
                 "full_width": bool(self.core.get_state("full_width")),
+                "highlight": bool(c["ui"].get("additional_highlight", True)),
                 "visibility": self.core.default_visibility(),
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),

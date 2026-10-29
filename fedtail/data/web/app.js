@@ -132,6 +132,18 @@ function renderPost(p, inThread) {
   who.onclick = (e) => { e.preventDefault(); openAccount(p.account.id); };
   names.append(who, el("span", "acct", "@" + p.account.handle));
   head.append(names);
+  if (p.own && state.me.highlight) {  // ui.additional_highlight: ✎ ✕, seen under the mouse
+    const tools = el("span", "own-tools");
+    for (const [glyph, word, what] of [["✎", w("edit"), "edit"], ["✕", w("delete"), "delete"]]) {
+      const b = el("button", "", glyph);
+      b.type = "button";
+      b.title = word;
+      b.setAttribute("aria-label", word);
+      b.onclick = (e) => { e.stopPropagation(); linkAct("fedtail:" + what + "/" + p.id, p); };
+      tools.append(b);
+    }
+    head.append(tools);
+  }
   const meta = el("div", "meta");
   if (inThread) meta.append(el("span", "num", p.number ? "/" + p.number : "#"));
   if (p.unread) {  // the windows' mark of the new, its word on hover
@@ -3087,6 +3099,7 @@ function spellLang() {
 async function start() {
   const me = await api("/api/me");
   state.me = me;
+  document.body.classList.toggle("lit", !!me.highlight);  // ui.additional_highlight
   state.words = me.words;
   if (me.login) return loginOnly(me);
   try { me.places = await api("/api/places"); } catch (e) { me.places = []; }

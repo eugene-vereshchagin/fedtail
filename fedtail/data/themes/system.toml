@@ -107,8 +107,6 @@ card_header = "rich"     # "rich": avatar, name, @address · time · icon
 short_id = "header"      # where #a3f goes: "header" (right of the name) or "footer" (under
                          # the post, left, with the number of replies: #a3f | 4)
 actions_align = "left"   # the buttons under a post: "left" or "right" (point.im)
-hover = false            # the post under the mouse lit: its buttons brighter and, on my
-                         # own posts, ✎ and ✕ at the top right (point.im)
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
 debug = false            # loud marks for testing: unread, the j/k cursor, the post found,
                          # "glimpsed, not yet counted read", keyboard focus, hover (debug.toml)

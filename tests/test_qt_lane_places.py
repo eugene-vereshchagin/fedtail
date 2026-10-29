@@ -257,7 +257,8 @@ class HoverTest(unittest.TestCase):
     pump = smoke.QtSmokeTest.pump
 
     def test_the_post_under_the_mouse_is_lit(self):
-        """shape.hover (point.im): the post under the mouse has its buttons lit and, on
+        """ui.additional_highlight (point.im): the post under the mouse has its buttons lit
+        and, on
         my own post, ✎ ✕ at the top right; off the mouse, gone; other posts have none."""
         from PySide6.QtCore import QEvent, QPointF
         from PySide6.QtGui import QEnterEvent
@@ -268,19 +269,20 @@ class HoverTest(unittest.TestCase):
         self.win.select_lane("home")
         view = self.win.lane_widgets["home"].view
         self.pump(until=lambda: "010" in view.rows and "011" in view.rows)
-        shape = view.ctx.theme.shape
-        old = shape.get("hover")
-        shape["hover"] = True
-        self.addCleanup(lambda: shape.__setitem__("hover", old))
-        view.rebuild_rows()
-        self.pump(until=lambda: "010" in view.rows and "011" in view.rows)
+        self.assertTrue(view.ctx.cfg["ui"]["additional_highlight"])  # on by default
         mine, theirs = view.rows["010"], view.rows["011"]
         p = QPointF(5, 5)
         theirs.enterEvent(QEnterEvent(p, p, p))
         self.assertIsNone(theirs.own_tools)
+        self.assertEqual(theirs.actions_box.property("hover"), "true")
+        theirs.leaveEvent(QEvent(QEvent.Type.Leave))
         mine.enterEvent(QEnterEvent(p, p, p))
         self.assertTrue(mine.own_tools.isVisible())
         self.assertEqual(mine.actions_box.property("hover"), "true")
         mine.leaveEvent(QEvent(QEvent.Type.Leave))
         self.assertFalse(mine.own_tools.isVisible())
         self.assertEqual(mine.actions_box.property("hover"), "false")
+        view.ctx.cfg["ui"]["additional_highlight"] = False  # off: nothing lit
+        theirs.enterEvent(QEnterEvent(p, p, p))
+        self.assertNotEqual(theirs.actions_box.property("hover"), "true")
+        view.ctx.cfg["ui"]["additional_highlight"] = True

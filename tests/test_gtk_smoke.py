@@ -1183,6 +1183,25 @@ class GtkSmokeTest(_GtkBase):
         self.assertRegex(account_color("@w"), r"^#[0-9a-f]{6}$")
         self.assertEqual(account_color("@w"), account_color("@W"))
 
+    def test_the_card_under_the_mouse_is_lit(self):
+        """ui.additional_highlight, as Qt's: every card lit under the mouse (.ft-lit), my
+        own one with ✎ ✕ at the top right, seen only then; off — none of it."""
+        from fedtail.frontends.gtk.card import Card
+        mine = Card(self.win.ctx, "m", self.view.by_id("010"))
+        theirs = Card(self.win.ctx, "t", self.view.by_id("011"))
+        self.assertTrue(mine.has_css_class("ft-lit") and theirs.has_css_class("ft-lit"))
+        self.assertIsNotNone(mine.own_tools)
+        self.assertFalse(mine.own_tools.get_visible())
+        self.assertIsNone(theirs.own_tools)
+        cfg = self.win.ctx.cfg["ui"]
+        cfg["additional_highlight"] = False
+        try:
+            off = Card(self.win.ctx, "o", self.view.by_id("010"))
+        finally:
+            cfg["additional_highlight"] = True
+        self.assertFalse(off.has_css_class("ft-lit"))
+        self.assertIsNone(off.own_tools)
+
     def test_messenger_themes_head_the_card_as_a_chat(self):
         """shape.card_header = "chat" (qip, mra, icq): "Name (time)" in one line, as Qt's —
         not the name, the @address and the time apart (the night of 23.10)."""

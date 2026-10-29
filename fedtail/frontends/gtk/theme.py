@@ -150,6 +150,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 menubutton.ft-action > button {{ background: transparent; border-color: transparent;
     box-shadow: none; min-height: 22px; padding: 0 6px; }}
 .ft-action:hover {{ background: {c['button']}; border-color: {c['button_border']}; }}
+.ft-card.ft-lit:hover .ft-action {{ color: {c['link']}; }}
 .ft-card label link, .ft-ctx label link, .ft-myreply label link {{
     text-decoration-line: none; }}
 .ft-card .ft-muted link, .ft-card .ft-mono link {{ color: {c['muted']}; }}

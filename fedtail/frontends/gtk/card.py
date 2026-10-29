@@ -117,9 +117,41 @@ class Card(Gtk.Box):
         self.append(body)
         self._build(parent, number, my_replies)
         self.set_unread(unread)
+        self._highlight(body)
         click = Gtk.GestureClick(button=3)  # a right click: the post's menu
         click.connect("pressed", lambda _g, _n, x, y: self._menu_at(x, y))
         self.add_controller(click)
+
+    def _highlight(self, body):
+        """ui.additional_highlight (point.im): the card under the mouse has its buttons
+        lit (the stylesheet's .ft-lit:hover) and, on my own post, ✎ and ✕ at the top
+        right — the menu's Edit and Delete (common/actions.py links); as Qt's."""
+        if not self.ctx.cfg["ui"].get("additional_highlight", True):
+            return
+        self.add_css_class("ft-lit")
+        me, author = self.ctx.me_id, self.post.author
+        if not me or author is None or author.id != me:
+            return
+        from ..common.links import make
+        tools = Gtk.Box(spacing=2, halign=Gtk.Align.END, valign=Gtk.Align.START)
+        tools.add_css_class("ft-own")
+        for action, glyph, words in (("edit", "✎", _("edit")), ("delete", "✕", _("delete"))):
+            b = Gtk.Button(label=glyph)
+            b.add_css_class("flat")
+            b.add_css_class("ft-action")
+            tip(b, words)
+            url = make(action, self.entry.id)
+            b.connect("clicked", lambda _b, u=url: self.ctx.on_link(u))
+            tools.append(b)
+        tools.set_visible(False)
+        body.add_overlay(tools)
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", lambda *_a: tools.set_visible(True))
+        motion.connect("leave", lambda *_a: tools.set_visible(False))
+        self.add_controller(motion)
+        self.own_tools = tools
+
+    own_tools = None
 
     def _booster_menu(self, anchor, acc):
         """Their profile, their @address, a list of mine — for whoever boosted."""

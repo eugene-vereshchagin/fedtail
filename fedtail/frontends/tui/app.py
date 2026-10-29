@@ -827,6 +827,7 @@ class FedtailApp(App, PostsMixin):
     #main { width: 1fr; }
     #title { height: 1; padding: 0 1; background: $primary-background; }
     #posts > ListItem { padding: 0 1 1 1; }
+    #posts > ListItem.lit:hover { background: $boost; }
     #cmd { dock: bottom; }
     .post { width: 1fr; }
     """
@@ -1157,7 +1158,10 @@ class FedtailApp(App, PostsMixin):
             def post(sp=sp, e=e):
                 shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
                                   parent=sp.parent, spec=sp)
-                return PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
+                item = PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
+                if core.cfg["ui"].get("additional_highlight", True):
+                    item.add_class("lit")  # under the mouse: tinted (the windows' highlight)
+                return item
             rows.append((sp.key, e, post))
         title = core.lane_title(name) or _("lane_" + name)
         n_unread = len(unread) + events_unread

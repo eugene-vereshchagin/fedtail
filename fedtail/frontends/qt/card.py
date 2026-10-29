@@ -639,14 +639,15 @@ class PostRow(QWidget):
             h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop if place == "header"
                         else Qt.AlignmentFlag.AlignVCenter)
 
-    own_tools = None  # ✎ ✕ on my own post, shown under the mouse (shape.hover)
+    own_tools = None  # ✎ ✕ on my own post, under the mouse (ui.additional_highlight)
 
     _tools_row = None
 
     def _own_tools(self):
-        """shape.hover (point.im): on my own post ✎ and ✕ at the top right, seen only while
-        the mouse is over it — the menu's Edit and Delete (common/actions.py links). Made
-        at the first hover: who I am may come after the card (drawn from the store)."""
+        """ui.additional_highlight (point.im): on my own post ✎ and ✕ at the top right,
+        seen only while the mouse is over it — the menu's Edit and Delete (common/actions.py
+        links). Made at the first hover: who I am may come after the card (drawn from the
+        store)."""
         p, row = self.spec.post, self._tools_row
         if self.own_tools is not None or row is None or not self.ctx.me_id or \
                 p.author is None or p.author.id != self.ctx.me_id:
@@ -691,9 +692,9 @@ class PostRow(QWidget):
         self._lit(False)
 
     def _lit(self, on):
-        """shape.hover: the post under the mouse — its buttons brighter (the stylesheet's
-        [hover="true"]), my own one's ✎ ✕ seen."""
-        if not self.theme.shape.get("hover"):
+        """ui.additional_highlight: the post under the mouse — its buttons brighter (the
+        stylesheet's [hover="true"]), my own one's ✎ ✕ seen."""
+        if not self.ctx.cfg["ui"].get("additional_highlight", True):
             return
         box = getattr(self, "actions_box", None)
         if box is not None:

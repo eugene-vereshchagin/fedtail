@@ -193,6 +193,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `card.expand_cw` | `true` | Text and pictures under a content warning (CW) open at once. false — folded, opened with the "show" button. |
 | `card.actions` | `"both"` | The buttons under a post: "both" — an icon and a label, "icons" — icons only (the labels pop up on hover), "text" — labels only. |
 | `card.bookmark_button` | `true` | The "Bookmark" button in the row under a post (otherwise — only in the ⋯ menu and with the m key). |
+| `card.additional_highlight` | `true` | The post under the mouse lit (as on point.im): its buttons brighter, and on your own post ✎ and ✕ at the top right — Edit and Delete of its ⋯ menu. In every theme and interface (the terminal: the post under the cursor). false — the posts stay as they are. |
 | `card.links_in_app` | `true` | Open @mentions, #hashtags and links to fediverse posts and profiles inside fedtail (a profile, a tag's lane, a thread), not in the browser. Not found — the browser. |
 | `card.show_moved` | `true` | An account moved to another server: its profile has a "moved to @new" banner with the buttons "open" and (if you follow it) "follow there". false — no banner. |
 | `card.honest_counters` | `false` | Honest counters: opening a thread, ask the author's server for the real numbers of likes, boosts and replies of public posts (your server knows only those that reached it). That's a request to another server — without your token, but with your IP. |

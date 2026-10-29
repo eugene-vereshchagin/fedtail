@@ -26,6 +26,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | No emoji at all | ◐ | the setting is there; the phone's own emoji are drawn by its font |
+| The post under the mouse lit | · | a phone has no mouse |
 
 ### Pictures and video
 

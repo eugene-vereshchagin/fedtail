@@ -98,6 +98,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 | Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Honest counters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The post under the mouse lit | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The numbers under the posts on screen kept fresh | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
@@ -248,4 +249,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **56** features of the 184 compared.
+Only in fedtail — **57** features of the 185 compared.

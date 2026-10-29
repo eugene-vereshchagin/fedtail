@@ -42,6 +42,7 @@ DEFAULTS = {
         "whats_this": False,
         "expand_cw": True,
         "bookmark_button": True,
+        "additional_highlight": True,
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
@@ -497,7 +498,8 @@ FILE_LAYOUT = (
     ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
-     + _keys("ui", "arts_mode expand_cw actions bookmark_button links_in_app")
+     + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
+             "links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
              "counters_via_accounts "
              "translate "

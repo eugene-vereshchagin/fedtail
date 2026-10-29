@@ -233,6 +233,24 @@ details.ru = "Твой сервер знает только те лайки и �
 details.en = "Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server."
 
 [[feature]]
+id = "highlight"
+status = "has"
+android = "na"
+android_note.ru = "у телефона нет мышки"
+android_note.en = "a phone has no mouse"
+since = "0.22.0"
+name.ru = "Пост под мышкой подсвечен"
+name.en = "The post under the mouse lit"
+config = "`card.additional_highlight` (true)"
+api.ru = "своё"
+api.en = "own"
+others.ru = "point.im"
+others.en = "point.im"
+clients = []
+details.ru = "Как на point.im: у поста под мышкой кнопки ярче, а на своём посте справа вверху ✎ и ✕ — «Редактировать» и «Удалить» из меню ⋯. Во всех темах; Qt, GTK и веб, в терминале — подкраска поста под мышкой. На телефоне мышки нет."
+details.en = "As on point.im: the post under the mouse has its buttons brighter, and my own one ✎ and ✕ at the top right — Edit and Delete of its ⋯ menu. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse."
+
+[[feature]]
 id = "fresh-counters"
 status = "has"
 android = "has"

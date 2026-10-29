@@ -704,6 +704,14 @@ class WebTest(TmpDir):
         _c, _h, body = self.req("/api/lane?name=home")
         self.assertEqual(json.loads(body)["start"], posts[0])
 
+    def test_the_highlight_is_said_to_the_page(self):
+        """ui.additional_highlight: the page lights the post under the mouse (body.lit)."""
+        _c, _h, body = self.req("/api/me")
+        self.assertIs(json.loads(body)["highlight"], True)
+        self.core.cfg["ui"]["additional_highlight"] = False
+        _c, _h, body = self.req("/api/me")
+        self.assertIs(json.loads(body)["highlight"], False)
+
     def test_registered_as_a_frontend(self):
         from fedtail import frontends
         self.assertTrue(hasattr(frontends.load("web"), "run"))

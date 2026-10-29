@@ -603,6 +603,11 @@ actions = "both"
 # The "Bookmark" button in the row under a post (otherwise — only in the ⋯ menu and with the m key).
 bookmark_button = true
 
+# The post under the mouse lit (as on point.im): its buttons brighter, and on your own post
+# ✎ and ✕ at the top right — Edit and Delete of its ⋯ menu. In every theme and interface
+# (the terminal: the post under the cursor). false — the posts stay as they are.
+additional_highlight = true
+
 # Open @mentions, #hashtags and links to fediverse posts and profiles inside
 # fedtail (a profile, a tag's lane, a thread), not in the browser. Not found — the browser.
 links_in_app = true
