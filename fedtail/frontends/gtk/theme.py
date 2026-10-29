@@ -165,6 +165,11 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-thumb {{ border-radius: {br}px; background: {c['ctx']}; }}
 .ft-cmdline {{ background: {c['panel']}; padding: 4px 0; }}
 .ft-cmdline entry {{ font-family: monospace; }}
+entry, spinbutton, dropdown > button {{ background: {c['field']}; color: {c['text']};
+    border: 1px solid {c['field_border']}; }}
+entry:focus-within {{ border-color: {c['accent']}; }}
+entry:disabled {{ background: {c['quiet']}; color: {c['muted']};
+    border: 1px dashed {c['card_border']}; }}
 .ft-card levelbar block.filled {{ background: {c['accent']}; }}
 .ft-write {{ font-weight: bold; min-height: 34px; }}
 .ft-statusbar {{ background: {c['panel']}; border-top: 1px solid {c['sidebar_border']};
@@ -172,7 +177,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-compose-panel {{ background: {c['window']}; border: 1px solid {c['focus_border']};
                     border-radius: {r}px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); }}
 .ft-compose-head {{ background: {c['header']}; border-radius: {br}px; padding: 2px 6px; }}
-.ft-compose-frame {{ border: 1px solid {c['card_border']}; border-radius: {br}px;
+.ft-compose-frame {{ border: 1px solid {c['field_border']}; border-radius: {br}px;
                     background: {c['card']}; }}
 .ft-compose-text, .ft-compose-text text {{ background: transparent; color: {c['text']}; }}
 .ft-column {{ border-right: 1px solid {c['sidebar_border']}; }}

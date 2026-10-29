@@ -184,9 +184,12 @@ FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
            "primary": "accent", "on_primary": "on_accent", "name": "text",
            "header_bar": "accent", "chat_me": "link", "chat_them": "hot",
            "view_end": "view", "tab_mark": "accent", "window_end": "window",
-           "button_end": "button", "header_end": "header"}
+           "button_end": "button", "header_end": "header", "field": "view"}
 # "auto" mixed from two colours of the same theme: (from, towards, how far)
-TINTS = {"header": ("view", "accent", 0.16)}
+TINTS = {"header": ("view", "accent", 0.16),
+         # a field's frame: plainly there in every theme (29.10: the sync's fields, framed
+         # as pale as a card, read as switched off)
+         "field_border": ("view", "text", 0.45)}
 
 
 def resolve(colors, desktop):

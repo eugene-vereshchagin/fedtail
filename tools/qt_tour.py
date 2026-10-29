@@ -539,6 +539,7 @@ def tour_menus(app, out, core, win):
                      # log; the collections where the server has them
                      ("place-slow", lambda: win.open_place("slow")),
                      ("place-log", lambda: win.open_place("log")),
+                     ("place-sync", lambda: win.open_place("sync")),  # a form of fields
                      *([("place-collections", lambda: win.open_place("collections"))]
                        if core.supports("collections") else []),
                      ("compose", lambda: win.compose()),

@@ -61,6 +61,9 @@ separator = "auto"       # "new below" line
 rail = "auto"            # thread depth lines
 button = "auto"
 button_border = "auto"
+field = "auto"           # a field to type in ("auto": = view)
+field_border = "auto"    # its frame ("auto": view a good way towards text — plainly
+                         # there: a frame as pale as a card's read as switched off)
 dot = "auto"             # unread dot
 primary = "auto"         # Send / Create and other main buttons ("auto": = accent)
 on_primary = "auto"      # their text ("auto": = on_accent)

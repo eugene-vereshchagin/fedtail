@@ -304,9 +304,11 @@ QRadioButton#check {{ color: {k('text')}; spacing: 6px; }}
 
 /* ---- inputs & dialogs ---- */
 QDialog {{ background: {k('panel')}; }}
-QLineEdit, QPlainTextEdit, QComboBox, QListWidget#mediaList {{ background: {k('card')};
-    color: {k('text')}; border: 1px solid {k('card_border')}; border-radius: {br}px; padding: 6px 8px; }}
+QLineEdit, QPlainTextEdit, QComboBox, QListWidget#mediaList {{ background: {k('field')};
+    color: {k('text')}; border: 1px solid {k('field_border')}; border-radius: {br}px; padding: 6px 8px; }}
 QLineEdit:focus, QPlainTextEdit:focus {{ border-color: {k('accent')}; }}
+QLineEdit:disabled, QPlainTextEdit:disabled, QComboBox:disabled {{ background: {k('quiet')};
+    color: {k('muted')}; border: 1px dashed {k('card_border')}; }}
 QPushButton#primary {{ background: {k('primary')}; color: {k('on_primary')}; border: 0;
     border-radius: {br}px; padding: 8px 18px; font-weight: 600; }}
 QPushButton#primary:disabled {{ background: {k('quiet')}; color: {k('muted')}; }}
