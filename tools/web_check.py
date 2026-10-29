@@ -287,6 +287,7 @@ def with_playwright(base, key, out):
                 page.keyboard.press("Escape")
                 page.mouse.click(5, 5)
             columns(page, out)
+            hold_card(page)
             page.close()
         browser.close()
 
@@ -339,6 +340,45 @@ def columns(page, out):
     page.wait_for_timeout(600)
     if page.locator("#cols").count():
         ERRORS.append("columns: ❯ again didn't go back to one lane")
+
+
+def hold_card(page):
+    """The card a lane opened on stays where it stood while pictures without a size come
+    in above it (app.js holdCard — a lane's and each column's), till the reader moves."""
+    got = page.evaluate("""async () => {
+      const box = document.createElement("div");
+      box.style.cssText = "position:fixed;left:0;top:0;width:300px;height:300px;overflow-y:auto";
+      const pic = document.createElement("img");  // no width/height: the server didn't say
+      const card = document.createElement("div");
+      card.style.height = "120px";
+      const tail = document.createElement("div");
+      tail.style.height = "600px";
+      box.append(document.createElement("div"), pic, card, tail);
+      box.firstChild.style.height = "400px";
+      document.body.append(box);
+      box.scrollTop = card.offsetTop + card.offsetHeight - box.clientHeight;
+      holdCard(box, card, true, 0);
+      const before = card.getBoundingClientRect().bottom;
+      const c = document.createElement("canvas");
+      c.width = 10; c.height = 200;
+      await new Promise((ok) => { pic.onload = ok; pic.src = c.toDataURL(); });
+      await new Promise((ok) => requestAnimationFrame(ok));
+      const held = card.getBoundingClientRect().bottom;
+      box.dispatchEvent(new WheelEvent("wheel"));  // the reader moved: let go
+      const was = box.scrollTop;
+      const more = document.createElement("img");
+      box.insertBefore(more, card);
+      await new Promise((ok) => { more.onload = ok; more.src = c.toDataURL(); });
+      await new Promise((ok) => requestAnimationFrame(ok));
+      const after = box.scrollTop;
+      box.remove();
+      return { before, held, was, after };
+    }""")
+    if abs(got["held"] - got["before"]) > 2:
+        ERRORS.append(f"hold: the card moved from {got['before']} to {got['held']} px "
+                      "as a picture came in")
+    if got["after"] != got["was"]:
+        ERRORS.append("hold: still held after the reader moved")
 
 
 def didnt_load(what, body):

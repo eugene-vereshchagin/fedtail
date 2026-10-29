@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Web page: the card a lane opens on stays where it stood while pictures come in — in
+  one lane and in every column. A picture whose size the server didn't say, emoji,
+  link cards pushed it off the screen; it is held till the reader moves (wheel, touch,
+  a click, a key) or six seconds pass. `tools/web_check.py` checks it in Chromium.
 - Web page: a server's emoji in a name show as pictures in Activity's rows too, as on a
   card — they stood as `:blob:`. Each event row carries its people's emoji
   (`EventParts.emojis`), for the windows to use as well.

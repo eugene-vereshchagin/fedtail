@@ -1369,9 +1369,11 @@ async function loadPane(p, keep) {
     const found = data.start ? data.posts.findIndex((x) => x.id === data.start) : -1;
     const at = found >= 0 ? found : (newestFirst ? 0 : data.posts.length - 1);
     const card = p.body.querySelector(`.post[data-id="${CSS.escape(data.posts[at].id)}"]`);
-    if (card && data.start_where === "bottom") {  // the card read last, at the bottom
+    const bottom = data.start_where === "bottom";  // the card read last, at the bottom
+    if (card && bottom) {
       p.body.scrollTop = card.offsetTop + card.offsetHeight - p.body.offsetTop - p.body.clientHeight + 8;
     } else if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
+    if (card) holdCard(p.body, card, bottom, 8);
   }
   if (state.me.mark_read === "on_open" && !keep) {
     const ids = data.posts.filter((x) => x.unread).map((x) => x.id).concat(unseenEvents(data));
@@ -1764,6 +1766,36 @@ async function findStep(d) {
   $("#find-count").textContent = w("find_count", { i: finder.at + 1, n });
 }
 
+// a column's card it opened on, held where it stands while pictures come in (the lane
+// alone has holdPlace above, its observer of every card): a server doesn't always say a
+// picture's size, and emoji, link cards and avatars grow too. Till the reader moves
+// (wheel, touch, a click, a key) or HOLD_MS pass; gap: its margin.
+const HOLD_MS = 6000;
+function holdCard(box, card, bottom, gap) {
+  if (box._hold) box._hold();  // one hold a box: each column its own
+  const put = () => {
+    if (!card.isConnected) return stop();
+    const b = box.getBoundingClientRect(), r = card.getBoundingClientRect();
+    const by = bottom ? r.bottom - b.bottom + gap : r.top - b.top - gap;
+    if (Math.abs(by) > 1) box.scrollTop += by;
+  };
+  const moves = ["wheel", "touchstart", "pointerdown"];
+  const timer = setTimeout(() => stop(), HOLD_MS);
+  function stop() {
+    clearTimeout(timer);
+    box.removeEventListener("load", put, true);  // a picture's load doesn't bubble
+    box.removeEventListener("error", put, true);
+    for (const k of moves) box.removeEventListener(k, stop);
+    document.removeEventListener("keydown", stop);
+    if (box._hold === stop) box._hold = null;
+  }
+  box.addEventListener("load", put, true);
+  box.addEventListener("error", put, true);  // a broken picture's box has its own size
+  for (const k of moves) box.addEventListener(k, stop, { passive: true });
+  document.addEventListener("keydown", stop);
+  box._hold = stop;
+}
+
 // ---- the cursor (j / k) ---------------------------------------------------------------
 function markCursor(i) {
   const cards = document.querySelectorAll("#posts .post");
@@ -1809,7 +1841,7 @@ function setCursor(i, quiet, how) {
   if (how !== "start") held.card = null;  // moved by hand: no place held any more
   if (how === "start") {
     const bottom = state.me.start_at === "newest" || state.startWhere === "bottom";
-    holdPlace(card, bottom ? "end" : "start");
+    holdPlace(card, bottom ? "end" : "start");  // a lane's own hold; columns: holdCard
   }
   else if (!quiet) card.scrollIntoView({ block: "nearest" });
 }
