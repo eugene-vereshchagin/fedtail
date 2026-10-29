@@ -1396,9 +1396,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         return True
 
     def unread_ids(self, entries):
-        ids = [st["id"] for _, st in entries]
-        read = self.store.read_set(ids)
-        return {i for i in ids if i not in read}
+        """The unread among (item, status) entries. A post read once is read everywhere:
+        a boost counts read when its post is (read as itself, in another lane, or as
+        someone else's boost) — each was read by its own id, and the same post stood
+        unread in the next lane or interface (29.10)."""
+        pairs = [(st["id"], (st.get("reblog") or {}).get("id")) for _, st in entries]
+        read = self.store.read_set({i for pair in pairs for i in pair if i})
+        return {i for i, post in pairs if i not in read and (not post or post not in read)}
 
     def unread_count(self, name):
         """Unread in a lane — cached while neither the lane nor any read mark changed:
@@ -1441,8 +1445,17 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         log.debug("lanes warmed in %.2f s", time.monotonic() - t)
 
     def mark_read(self, status_ids):
+        """These read — and, for a boost among them, its post too: read once, read
+        everywhere (unread_ids)."""
         status_ids = list(status_ids)
         if status_ids:
+            try:
+                have = self.store.get_statuses(set(status_ids))
+            except Exception:  # noqa: BLE001 — a store without statuses (a test's fake)
+                have = {}
+            posts = {(st.get("reblog") or {}).get("id") for st in have.values()
+                     if isinstance(st, dict) and isinstance(st.get("reblog"), dict)}
+            status_ids += sorted(i for i in posts - set(status_ids) if i)
             self.store.mark_read(status_ids)
             self.emit("read_changed", status_ids)
             if self.sync:

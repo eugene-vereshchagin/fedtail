@@ -2579,3 +2579,24 @@ class _PathView:
     def lane_title(self, name):
         return None
 
+
+
+class ReadOnceTest(TmpDir):
+    """A post read once is read everywhere: as a boost in one lane, as itself or as
+    someone else's boost in another — each was read by its own id, and the same post
+    stood unread in the next lane or interface (29.10)."""
+
+    def test_a_boost_and_its_post(self):
+        from . import test_cli
+        from .fakes import BOB, NEWS, status
+        core, w = test_cli.CliTest.make(self)
+        p = status("100", NEWS, minute=1, text="original", vis="public")
+        a = dict(status("200", BOB, minute=2, vis="public"), reblog=p)
+        b = dict(status("300", BOB, minute=3, vis="public"), reblog=p)
+        core.connect().result()
+        core.store.put_statuses([p, a, b])
+        entries = [(None, s) for s in (p, a, b)]
+        self.assertEqual(core.unread_ids(entries), {"100", "200", "300"})
+        core.mark_read(["200"])  # read as Bob's boost
+        self.assertEqual(core.unread_ids(entries), set())  # the post, and any boost of it
+        self.assertTrue(core.store.read_set(["100"]))

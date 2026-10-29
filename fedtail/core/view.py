@@ -363,7 +363,9 @@ class View:
 
     def unread(self, entries):
         """The ids of the unread among entries (a Share counts by its own id)."""
-        return self._core.unread_ids([(None, {"id": e.id}) for e in self._only(entries)])
+        return self._core.unread_ids([
+            (None, {"id": e.id, "reblog": {"id": e.post.id}} if isinstance(e, Share)
+             else {"id": e.id}) for e in self._only(entries)])
 
     @staticmethod
     def _only(entries):

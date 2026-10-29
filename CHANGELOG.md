@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- A post read once is read everywhere: reading a boost marks its post read too, and a boost
+  counts read when its post is — as itself in another lane, or as someone else's boost. Each
+  was read by its own id: the same post stood unread in the next lane, interface or device
+  (sync carries both ids now).
 - One profile open in several processes at once (the window in the tray, the terminal, the
   web page): what one marks read the others see as read. Each kept the read marks in
   memory, the table read once a run, and posts read in the window and the browser stayed
