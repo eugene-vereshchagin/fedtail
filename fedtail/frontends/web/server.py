@@ -1076,7 +1076,7 @@ class Web:
         # where reading starts (LaneModel.start: feed.start_at, "new below", the order) —
         # the card's id, or None for the newest end: the page and the phone stand there,
         # they don't count it again
-        at, _where = m.start(specs)
+        at, where = m.start(specs)
         if at == SEPARATOR:  # "new below": the first card under it
             line = next(i for i, x in enumerate(specs) if x.key == SEPARATOR)
             at = next((sp.key for sp in specs[line + 1:] if sp.entry is not None), None)
@@ -1113,6 +1113,7 @@ class Web:
         return {"name": name, "title": title, "posts": posts, "info": built.info,
                 "waiting": bool(core.lane_waiting(name)) and not posts,  # browse: asked
                 "divider": divider, "events": events, "start": start,
+                "start_where": where,
                 "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
                 "filters": [[f, *m.filter_words(f)] for f in m.filters]
                 if len(m.filters) > 1 else [],
@@ -1251,7 +1252,7 @@ class Web:
         return {"ok": True}
 
     def stood(self, lane, key, end=False):
-        """The card on top of the page's screen, the scroll standing (LaneModel.stood):
+        """The last card seen whole on the page's screen, the scroll standing (LaneModel.stood):
         where the lane opens next time, in every interface; end — at the lane's end."""
         if lane and (key or end):
             self.model(self._lane_name(str(lane))).stood(str(key or ""), end)

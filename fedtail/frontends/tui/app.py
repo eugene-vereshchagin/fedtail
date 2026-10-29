@@ -1185,10 +1185,17 @@ class FedtailApp(App, PostsMixin):
             at = keys.index(keep)
         else:
             start = m.start_key(built.specs)
+            where = m.start(built.specs)[1] if built.specs else "end"
             if start == SEPARATOR and keys.index(start) + 1 < len(keys):
                 start = keys[keys.index(start) + 1]  # the first new one, under the divider
             at = keys.index(start) if start in keys else \
                 keys.index(entries[self._start_index(entries, unread)][0]) if entries else 0
+            # on top: the first new post, the read one with new ones under it — the
+            # cursor alone puts its card at the screen's bottom
+            if where == "top":
+                await self._window_at(at, top=True)
+                self.update_lane_counts()
+                return
         await self._window_at(at)
         self.update_lane_counts()
 
@@ -1509,9 +1516,14 @@ class FedtailApp(App, PostsMixin):
             return
         view = lv.content_region
         vtop, vbot = view.y, view.y + view.height
-        top = next((it for it in lv.children if isinstance(it, (PostItem, EventItem))
-                    and it.region.height > 0 and it.region.y + it.region.height > vtop),
-                   None)
+        cards = [it for it in lv.children if isinstance(it, (PostItem, EventItem))
+                 and it.region.height > 0 and it.region.y < vbot
+                 and it.region.y + it.region.height > vtop]
+        # the last card seen whole — what was read last; one taller than the screen:
+        # the one on top (LaneModel.stood)
+        whole = [it for it in cards if it.region.y >= vtop
+                 and it.region.y + it.region.height <= vbot]
+        top = whole[-1] if whole else (cards[0] if cards else None)
         shown = [real(it.entry).id for it in lv.children if isinstance(it, PostItem)
                  and it.entry is not None and it.region.height > 0
                  and it.region.y < vbot and it.region.y + it.region.height > vtop]
@@ -1545,8 +1557,9 @@ class FedtailApp(App, PostsMixin):
     WINDOW_BACK, WINDOW_AHEAD, STEP, EDGE = 20, 40, 30, 5
     _rows, _lo, _hi = [], 0, 0
 
-    async def _window_at(self, at):
-        """The window around row `at` (of the whole lane), the cursor on it."""
+    async def _window_at(self, at, top=False):
+        """The window around row `at` (of the whole lane), the cursor on it — its card
+        at the screen's bottom, or on top."""
         lv = self._main("#posts", ListView)
         n = len(self._rows)
         self._lo = max(0, at - self.WINDOW_BACK)
@@ -1555,6 +1568,10 @@ class FedtailApp(App, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         lv.index = at - self._lo
+        if top and 0 <= at - self._lo < len(items):
+            card = items[at - self._lo]
+            self.call_after_refresh(lambda: card.is_attached and lv.scroll_to_widget(
+                card, animate=False, top=True))
         self.load_pictures(items)
 
     async def _grow(self, up):

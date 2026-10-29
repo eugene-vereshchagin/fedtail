@@ -56,8 +56,8 @@ class _Watch(QObject):
 
 class FeedView(QScrollArea):
     seen = Signal(list)  # status ids the reader has actually seen
-    stood = Signal(str, bool)  # the card on top of the screen, the scroll standing; at
-    # the lane's end (LaneModel.stood)
+    stood = Signal(str, bool)  # the last card seen whole, the scroll standing; at the
+    # lane's end (LaneModel.stood)
 
     MARGIN = 10   # around the column
     GAP = 8       # between cards
@@ -892,12 +892,13 @@ class FeedView(QScrollArea):
             return  # still on its way somewhere: what's on screen is not what's read
         # (an anchor only holds the post on top in place while pictures come in: the
         # reader sees exactly that, so it doesn't stop anything)
-        anchor = self._anchor()
-        if anchor is not None:  # where it opens next time (LaneModel.stood)
-            sbar = self.verticalScrollBar()
+        sbar = self.verticalScrollBar()
+        last = self.strip.last_whole(sbar.value(), self.viewport().height()) \
+            if self.model else None
+        if last is not None:  # where it opens next time (LaneModel.stood)
             # at the end, or nearly: the heights settling below move the end a little
             # while the reader sees the last post (21 px off it in a test, 29.10)
-            self.stood.emit(str(anchor[0]), sbar.maximum() - sbar.value() <= self.HOLE_PX)
+            self.stood.emit(str(last), sbar.maximum() - sbar.value() <= self.HOLE_PX)
         sb = self.verticalScrollBar()
         vtop, vh = sb.value(), self.viewport().height()
         vbot = vtop + vh

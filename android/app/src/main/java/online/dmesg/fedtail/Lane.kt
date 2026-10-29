@@ -223,7 +223,8 @@ fun LaneScreen(
             LaunchedEffect(model.opening) {
                 if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
                     aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
-                        divider = model.divider?.first, byCore = true, start = model.startKey)
+                        divider = model.divider?.first, byCore = true, start = model.startKey,
+                        bottom = model.startBottom)
                     model.aimed = model.opening
                 }
             }

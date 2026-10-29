@@ -54,13 +54,18 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- The place a lane opens at is the last card seen whole at the bottom of the screen —
+  what was read last — and it opens there, at the bottom (on top when new posts came
+  under it). It was the card on top: opened on top, the one above peeked in and was taken
+  next time, and the place crept up into old read posts with every opening, in every
+  interface.
 - A lane read to its end opens as ever — at "new below" or its end: the place kept was the
   card on top of the screen there, 5–10 posts back, and the lane opened on it.
 - Qt: a card on the lane that the lane doesn't own goes, said in the log; a card built
   twice keeps one; the same card twice in a lane takes one place (`LaneModel` shows each
   once) — two posts were drawn in one place, a post's height of nothing above them.
 - A lane opens where you stood in it last, in whatever interface: the window, GTK, the
-  terminal, the web page and the phone each say which card is on top of the screen once
+  terminal, the web page and the phone each say which card was read last once
   the scroll stands (`LaneModel.stood`, the state `stood.<lane>`), and every one opens the
   lane there (`reading.start_at = "first_unread"`; the first unread only when the place is
   gone). Each opened it at its first unread before: a post jumped over or folded away in

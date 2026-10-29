@@ -688,8 +688,8 @@ class WebTest(TmpDir):
     def test_the_curtain_and_where_a_lane_opens(self):
         """ui.start_lane = "none": no lane to start with — the page shows the curtain
         (its words the windows' and the terminal's) and Enter opens the lane of last
-        time; the card on top of the screen goes to /api/stood, where the lane opens
-        next time in every interface (LaneModel.stood)."""
+        time; the last card seen whole goes to /api/stood, where the lane opens next
+        time in every interface (LaneModel.stood), on top or at the bottom."""
         self.core.cfg["ui"]["start_lane"] = "none"
         _c, _h, body = self.req("/api/lanes")
         self.assertEqual([x["name"] for x in json.loads(body) if x["start"]], [])
@@ -703,6 +703,7 @@ class WebTest(TmpDir):
         self.assertEqual(self.core.get_state("stood.home"), posts[0])
         _c, _h, body = self.req("/api/lane?name=home")
         self.assertEqual(json.loads(body)["start"], posts[0])
+        self.assertIn(json.loads(body)["start_where"], ("top", "bottom"))
 
     def test_the_highlight_is_said_to_the_page(self):
         """ui.additional_highlight: the page lights the post under the mouse (body.lit)."""

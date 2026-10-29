@@ -56,6 +56,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -244,9 +245,13 @@ fun StoodWhileScrolling(state: LazyListState, shown: (List<String>) -> Unit = {}
                 delay(350)
                 val info = state.layoutInfo
                 shown(info.visibleItemsInfo.mapNotNull { it.key as? String })
-                info.visibleItemsInfo.firstOrNull {
-                    it.offset + it.size > info.viewportStartOffset && it.key is String
-                }?.let { stood(it.key as String, !state.canScrollForward) }
+                // the last card seen whole — what was read last (LaneModel.stood); one
+                // taller than the screen, none whole: the one on top
+                val cards = info.visibleItemsInfo.filter {
+                    it.offset + it.size > info.viewportStartOffset && it.key is String }
+                (cards.lastOrNull { it.offset >= info.viewportStartOffset &&
+                    it.offset + it.size <= info.viewportEndOffset } ?: cards.firstOrNull())
+                    ?.let { stood(it.key as String, !state.canScrollForward) }
             }
     }
 }
@@ -255,7 +260,8 @@ fun StoodWhileScrolling(state: LazyListState, shown: (List<String>) -> Unit = {}
  *  key, none — the newest end: feed.start_at and "new below", as on the desktop); "to new"
  *  goes to the first unread. Never jumps after. */
 suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0,
-                divider: String? = null, byCore: Boolean = false, start: String? = null) {
+                divider: String? = null, byCore: Boolean = false, start: String? = null,
+                bottom: Boolean = false) {
     if (posts.isEmpty()) return
     val firstUnread = posts.indexOfFirst { it.unread }
     val chosen = if (byCore) posts.indexOfFirst { it.key == start } else firstUnread
@@ -267,7 +273,16 @@ suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolea
     // before: items the list holds ahead of the posts ("earlier" at the top); "new below"
     // is an item too: one more ahead of every post from it on — and it is shown itself
     val line = divider?.let { d -> posts.indexOfFirst { it.key == d } } ?: -1
-    state.scrollToItem(before + at + if (line in 0..at) (if (line == at) 0 else 1) else 0)
+    val index = before + at + if (line in 0..at) (if (line == at) 0 else 1) else 0
+    state.scrollToItem(index)
+    // bottom: the card read last stands at the screen's bottom, as it was read
+    if (bottom && chosen >= 0) {
+        val info = state.layoutInfo
+        info.visibleItemsInfo.firstOrNull { it.index == index }?.let { card ->
+            val room = info.viewportEndOffset - info.viewportStartOffset - card.size - 8
+            if (room > 0) state.scrollBy(-room.toFloat())
+        }
+    }
 }
 
 @Composable

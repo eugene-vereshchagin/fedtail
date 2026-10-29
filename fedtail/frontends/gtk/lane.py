@@ -812,10 +812,10 @@ class LaneView(Gtk.Box):
         vtop = self._top()
         vbot = vtop + self.adj.get_page_size()
         at_end = self.adj.get_value() >= self.adj.get_upper() - self.adj.get_page_size() - 1
-        anchor = self.strip.anchor(max(0, vtop))
-        if anchor is not None:  # where the lane opens next time, anywhere; at the end
+        last = self.strip.last_whole(max(0, vtop), self.adj.get_page_size())
+        if last is not None:  # where the lane opens next time, anywhere; at the end
             # or nearly (the heights settling below move it a little)
-            self.lm.stood(anchor[0], self.adj.get_value() >= self.adj.get_upper()
+            self.lm.stood(last, self.adj.get_value() >= self.adj.get_upper()
                           - self.adj.get_page_size() - 40)
         keys, unplaced, glimpsed = [], False, set()
         shown = [self.rows[k].entry.id for k in self.order

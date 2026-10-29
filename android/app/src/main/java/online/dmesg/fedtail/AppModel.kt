@@ -266,6 +266,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var posts by mutableStateOf(listOf<PostItem>())
     var divider by mutableStateOf<Pair<String, String>?>(null) // (post key, "new below · N")
     var startKey by mutableStateOf<String?>(null) // the card a lane opened anew stands on
+    var startBottom by mutableStateOf(false) // …at the screen's bottom (the card read last)
     var opening by mutableStateOf(0) // grows each time a lane opens anew: the list re-aims
     var aimed = 0                     // the opening the list last aimed at
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title
@@ -620,6 +621,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // where reading starts, the core's (feed.start_at, "new below"): none — the newest end
         startKey = got.optString("start").takeIf { it.isNotBlank() }
             ?.let { s -> list.firstOrNull { it.id == s }?.key }
+        startBottom = got.optString("start_where") == "bottom"
         if (!keep) opening += 1
         pendingAim?.let { key -> if (list.any { it.key == key }) { aimKey = key; pendingAim = null } }
     }

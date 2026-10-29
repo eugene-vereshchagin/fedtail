@@ -1008,6 +1008,7 @@ async function selectLane(name, keep) {
     else box.scrollTop = newestFirst ? 0 : box.scrollHeight;
   } else {  // where reading starts: the core's (LaneModel.start), else the newest end
     const at = data.start ? data.posts.findIndex((p) => p.id === data.start) : -1;
+    state.startWhere = data.start_where;  // its card on top or at the bottom
     setCursor(at >= 0 ? at : (newestFirst ? 0 : data.posts.length - 1), false, "start");
   }
   if (state.me.mark_read === "on_open" && !keep) {  // the lane is read once it is open;
@@ -1357,7 +1358,9 @@ async function loadPane(p, keep) {
     const found = data.start ? data.posts.findIndex((x) => x.id === data.start) : -1;
     const at = found >= 0 ? found : (newestFirst ? 0 : data.posts.length - 1);
     const card = p.body.querySelector(`.post[data-id="${CSS.escape(data.posts[at].id)}"]`);
-    if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
+    if (card && data.start_where === "bottom") {  // the card read last, at the bottom
+      p.body.scrollTop = card.offsetTop + card.offsetHeight - p.body.offsetTop - p.body.clientHeight + 8;
+    } else if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
   }
   if (state.me.mark_read === "on_open" && !keep) {
     const ids = data.posts.filter((x) => x.unread).map((x) => x.id).concat(unseenEvents(data));
@@ -1530,17 +1533,24 @@ function stoodAt(box) {
     stoodAt.shown = said;
     api("/api/on_screen", { ids: shown }).catch(() => {});
   }
+  // the last card seen whole — what was read last (LaneModel.stood); one taller than
+  // the screen, none whole: the one on top
+  let whole = null, onTop = null;
   for (const c of box.querySelectorAll(".post, .event")) {
     const r = c.getBoundingClientRect();
     if (!r.height || r.bottom <= view.top + 2) continue;
-    // at the lane's end (read to the last post): no place kept, it opens as ever
-    const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;  // or nearly
-    const key = end ? "" : (c.dataset.key || c.dataset.id);
-    if (key !== stoodAt.last) {
-      stoodAt.last = key;
-      api("/api/stood", { lane: state.lane, key, end }).catch(() => {});
-    }
-    return;
+    if (r.top >= view.bottom) break;
+    if (!onTop) onTop = c;
+    if (r.top >= view.top - 2 && r.bottom <= view.bottom + 2) whole = c;
+  }
+  const c = whole || onTop;
+  if (!c) return;
+  // at the lane's end (read to the last post): no place kept, it opens as ever
+  const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;  // or nearly
+  const key = end ? "" : (c.dataset.key || c.dataset.id);
+  if (key !== stoodAt.last) {
+    stoodAt.last = key;
+    api("/api/stood", { lane: state.lane, key, end }).catch(() => {});
   }
 }
 
@@ -1752,7 +1762,10 @@ function setCursor(i, quiet, how) {
   if (!cards.length) return;
   i = Math.max(0, Math.min(i, cards.length - 1));
   const card = markCursor(i);
-  if (how === "start") card.scrollIntoView({ block: state.me.start_at === "newest" ? "end" : "start" });
+  if (how === "start") {
+    const bottom = state.me.start_at === "newest" || state.startWhere === "bottom";
+    card.scrollIntoView({ block: bottom ? "end" : "start" });
+  }
   else if (!quiet) card.scrollIntoView({ block: "nearest" });
 }
 

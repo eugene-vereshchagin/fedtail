@@ -186,9 +186,10 @@ class LaneStoodTest(unittest.TestCase):
     _pictures = LanePlacesTest._pictures
 
     def test_opens_where_the_reader_stood_and_says_where_it_stands(self):
-        """The lane opens on the card the reader stood at last, in whatever interface
-        (LaneModel.stood) — not at its first unread; read on, the card on top goes back
-        to the core."""
+        """The lane opens on the card the reader read last, in whatever interface
+        (LaneModel.stood) — not at its first unread: on top with new posts under it,
+        else at the bottom as it was read; read on, the last card seen whole goes back
+        to the core (not the one on top: the place crept up with every opening, 29.10)."""
         self._pictures(20, 100)
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
@@ -199,13 +200,27 @@ class LaneStoodTest(unittest.TestCase):
         self.pump(until=lambda: "110" in view.rows and not view._pending)
         self.pump(0.5)
         top = view.verticalScrollBar().value()
-        self.assertLessEqual(abs(view._ys["110"] - 6 - top), 2)
+        lm = self.win.lane_widgets["home"].lm
+        _key, where = lm.start(lm.build(positioned=True).specs)
+        if where == "top":
+            self.assertLessEqual(abs(view._ys["110"] - 6 - top), 2)
+        else:
+            bottom = top + view.viewport().height()
+            self.assertLessEqual(abs(view._ys["110"] + view.strip.height("110") - bottom), 12)
         view._touched_at = __import__("time").monotonic()  # read by hand, as a reader
         view._target = None
-        view.verticalScrollBar().setValue(view._ys["115"] + 2)
+        # 116 whole at the screen's bottom, the one over it cut by the top
+        view.verticalScrollBar().setValue(view._ys["116"] + view.strip.height("116")
+                                          - view.viewport().height() + 4)
         self.pump(0.1)
         view._emit_seen()
-        self.assertEqual(self.core.get_state("stood.home"), "115")
+        vtop, vh = view.verticalScrollBar().value(), view.viewport().height()
+        got = self.core.get_state("stood.home")
+        # the last card seen whole, not the one on top, cut: what was read last
+        self.assertGreaterEqual(view._ys[got], vtop - 2)
+        self.assertLessEqual(view._ys[got] + view.strip.height(got), vtop + vh + 2)
+        after = view.order[view.order.index(got) + 1]
+        self.assertGreater(view._ys[after] + view.strip.height(after), vtop + vh + 2)
         sb = view.verticalScrollBar()  # read to the end: no place kept, it opens as ever
         sb.setValue(sb.maximum())
         self.pump(0.1)

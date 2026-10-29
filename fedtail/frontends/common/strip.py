@@ -136,6 +136,23 @@ class Strip:
                 return key, self.ys[key] - top
         return None
 
+    def last_whole(self, top, view_h):
+        """The key of the last card seen whole on the screen [top, top+view_h) — what
+        the reader read last (LaneModel.stood); a card taller than the screen, none
+        whole: the one on top. None without places."""
+        bottom, got = top + view_h + 2, None
+        for key in self.keys[self.first_place(top):]:
+            if key in self.hidden or key not in self.ys:
+                continue
+            if self.ys[key] >= bottom:
+                break
+            if self.ys[key] >= top - 2 and self.ys[key] + self.height(key) <= bottom:
+                got = key
+        if got is None:
+            on_top = self.anchor(top)
+            return on_top[0] if on_top else None
+        return got
+
     def top_for(self, anchor):
         """The screen's top that puts anchor (key, offset) back where it was, or None."""
         if anchor is None or anchor[0] not in self.ys:

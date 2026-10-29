@@ -520,14 +520,12 @@ class LaneModel:
     STOOD = "stood."  # + a lane's name: the state key of where the reader stood in it
 
     def stood(self, key, at_end=False):
-        """The card on top of the screen now, the scroll standing: where the lane opens
-        next time — in every interface, this one or another started later. Each opened
-        it at its first unread post before (29.10), and one jumped over or folded away
-        in the window left the terminal and the web page days back; the window, open in
-        the tray for days, only held its place in memory. at_end: the screen stands at
-        the lane's end (read to the last post) — then no place is kept, and the lane
-        opens as ever, at "new below" or its end: the card on top of the screen there
-        is 5–10 posts back, and the lane opened on it (29.10)."""
+        """The last card seen whole at the bottom of the screen, the scroll standing —
+        what the reader read last: where the lane opens next time, in every interface,
+        this one or another started later (start). Not the card on top: put on top
+        again, the one above it peeked in and was taken next time — the place crept up
+        into old posts with every opening (29.10). at_end: the screen stands at the
+        lane's end — no place kept, the lane opens as ever, at "new below" or its end."""
         if at_end and not self.newest_first:  # (newest first: the newest end is the
             key = ""                          # top, and its card on top is the place)
         elif not key or key == SEPARATOR:
@@ -539,11 +537,12 @@ class LaneModel:
 
     def start(self, specs):
         """Where reading starts: (key, "top" | "bottom"), or (None, "end") for the
-        lane's newest end (feed.start_at). With first_unread: where the reader stood
-        last (stood), in whatever interface, while that card is in the lane; else the
-        first unread."""
+        lane's newest end (feed.start_at). With first_unread, oldest first: the card
+        read last (stood), in whatever interface, while it is in the lane — at the
+        bottom of the screen as it was, or on top when new posts came under it (they
+        show then); else the first unread."""
         unread = [s.key for s in specs if s.unread]
-        if self.cfg["feed"]["start_at"] == "first_unread":
+        if self.cfg["feed"]["start_at"] == "first_unread" and not self.newest_first:
             place = self.view.get_state(self.STOOD + self.name) \
                 if hasattr(self.view, "get_state") else None
             # by its key, or by the post's id (the web page says what its card shows)
@@ -552,7 +551,9 @@ class LaneModel:
                  s.entry.id == place), None) if place else None
             if got:
                 self._stood = place
-                return got, "top"
+                at = next(i for i, s in enumerate(specs) if s.key == got)
+                news = any(s.unread for s in specs[at + 1:])
+                return got, "top" if news else "bottom"
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:
             if self.newest_first:
                 return unread[-1], "bottom"

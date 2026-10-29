@@ -158,9 +158,9 @@ class LaneModelTest(unittest.TestCase):
         m.stood(lane.SEPARATOR)  # the divider is no place
         self.assertEqual(state, {"stood.home": "i2"})
         again = lane.LaneModel(v, "home")  # another interface, a later start
-        self.assertEqual(again.start(specs), ("i2", "top"))
-        state["stood.home"] = "3"  # a post's id
-        self.assertEqual(again.start(specs), ("i3", "top"))
+        self.assertEqual(again.start(specs), ("i2", "top"))  # new ones under it: on top
+        state["stood.home"] = "3"  # a post's id; nothing new under it: at the bottom,
+        self.assertEqual(again.start(specs), ("i3", "bottom"))  # as it was read
         m.stood("i3", at_end=True)  # read to the lane's end: no place, it opens as ever
         self.assertEqual(state["stood.home"], "")
         self.assertEqual(again.start(specs), ("i1", "top"))
@@ -269,6 +269,22 @@ class ReadUpToTest(unittest.TestCase):
         self.assertGreaterEqual(lane.age_days(old, CFG), 99)
         self.assertEqual(lane.age_days(post("2", created=None), CFG), 0)
         self.assertEqual(lane.age_days(old, {"feed": {"old_days": 0}}), 0)
+
+
+class LastWholeTest(unittest.TestCase):
+    def test_the_last_card_seen_whole(self):
+        """What the reader read last (LaneModel.stood): the last card seen whole, not the
+        one cut by the screen's top; a card taller than the screen: the one on top."""
+        from fedtail.frontends.common.strip import Strip
+        st = Strip(gap=0, margin=0)
+        st.set_keys(["a", "b", "c", "d"])
+        for k, h in zip("abcd", (100, 100, 100, 400), strict=True):
+            st.measured(k, 300, h)
+        st.lay_out(300)
+        top = st.ys["a"] + 50  # a cut, b and c whole, d below
+        self.assertEqual(st.last_whole(top, 260), "c")
+        self.assertEqual(st.last_whole(st.ys["d"] + 10, 200), "d")  # taller than it
+        self.assertIsNone(Strip().last_whole(0, 100))
 
 
 if __name__ == "__main__":
