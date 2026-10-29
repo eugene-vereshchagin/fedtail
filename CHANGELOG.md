@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- One profile open in several processes at once (the window in the tray, the terminal, the
+  web page): what one marks read the others see as read. Each kept the read marks in
+  memory, the table read once a run, and posts read in the window and the browser stayed
+  unread in the terminal; the store now notices another process's commit (SQLite's
+  `data_version`) and reads the marks again (`Store.others_wrote`).
 - The terminal shows real pictures (sixel in Konsole, WezTerm, foot; kitty's protocol) out
   of the box: fedtail carries textual-image (LGPL-3, not in Debian) in `fedtail/_vendor/`,
   the PyPI wheel as it is, its checksum checked (`_vendor/VENDORED.toml`); a copy

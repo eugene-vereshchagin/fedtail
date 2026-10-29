@@ -237,6 +237,7 @@ class Store:
         # and asking SQLite for thousands of ids each time froze the window (413 ms on a
         # real profile); None — read from the table at the next question
         self._read = None
+        self._data_version = None  # SQLite's count of others' commits, as last seen
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         # reads have a connection of their own: WAL lets them go on while a poll writes, so
@@ -1248,9 +1249,31 @@ class Store:
                                   (acc_id,)).fetchone()
         return json.loads(row[0]).get("account") if row else None
 
-    def read_set(self, status_ids):
-        """Which of these posts are read (from memory: the table once a run)."""
+    def others_wrote(self):
+        """Did another process write to this profile's database since the last look —
+        the window in the tray, the web page, the terminal on one profile at once
+        (SQLite's data_version: it counts the commits of other connections only, and
+        this process writes through this one)? What it read then is read here too: the
+        marks in memory are read again (29.10: read in the window and the browser,
+        unread in the terminal started beside them)."""
         with self.lock:
+            v = self.db.execute("PRAGMA data_version").fetchone()[0]
+            if v == self._data_version:
+                return False
+            first = self._data_version is None
+            self._data_version = v
+            if first:
+                return False
+            self._read = None
+            self.read_version += 1
+            self.status_version += 1
+            return True
+
+    def read_set(self, status_ids):
+        """Which of these posts are read (from memory: the table once a run, and again
+        when another process wrote: others_wrote)."""
+        with self.lock:
+            self.others_wrote()
             if self._read is None:
                 self._read = {r[0] for r in self.db.execute("SELECT status_id FROM read")}
             known = self._read

@@ -122,3 +122,27 @@ class StoreEdgesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TwoProcessesTest(unittest.TestCase):
+    """One profile open in two processes at once (the window in the tray, the terminal or
+    the web page beside it): what one marks read, the other sees as read — its marks in
+    memory were the table once a run, and posts read elsewhere stayed unread (29.10)."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(self._tmp.cleanup)
+        path = Path(self._tmp.name) / "state.db"
+        self.a, self.b = Store(path), Store(path)
+        self.addCleanup(self.a.close)
+        self.addCleanup(self.b.close)
+
+    def test_marks_made_elsewhere_are_seen(self):
+        self.assertEqual(self.a.read_set(["x", "y"]), set())  # the cache warm, empty
+        version = self.a.read_version
+        self.b.mark_read(["x"])
+        self.assertEqual(self.a.read_set(["x", "y"]), {"x"})
+        self.assertGreater(self.a.read_version, version)  # the counts are made anew
+        self.a.mark_read(["y"])  # its own mark: no reload needed, none done
+        self.assertFalse(self.a.others_wrote())
+        self.assertEqual(self.b.read_set(["x", "y"]), {"x", "y"})
