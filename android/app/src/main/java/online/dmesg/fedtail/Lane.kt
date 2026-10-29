@@ -222,15 +222,17 @@ fun LaneScreen(
             }
             LaunchedEffect(model.opening) {
                 if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
-                    aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
+                    val at = aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
                         divider = model.divider?.first, byCore = true, start = model.startKey,
                         bottom = model.startBottom)
                     model.aimed = model.opening
+                    model.holding = true  // where it stood: said once the place stands
+                    try { holdPlace(state, at, model.startBottom) } finally { model.holding = false }
                 }
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
             StoodWhileScrolling(state, shown = { model.onScreen(it) }) { key, end ->
-                if (model.aimKey == null) model.stood(key, end)
+                if (model.aimKey == null && !model.holding) model.stood(key, end)
             }
             // "earlier" where the older posts would come: on top, or at the end when newest first
             val earlier: @Composable () -> Unit = {

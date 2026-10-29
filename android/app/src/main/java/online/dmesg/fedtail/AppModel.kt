@@ -267,6 +267,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var divider by mutableStateOf<Pair<String, String>?>(null) // (post key, "new below · N")
     var startKey by mutableStateOf<String?>(null) // the card a lane opened anew stands on
     var startBottom by mutableStateOf(false) // …at the screen's bottom (the card read last)
+    var holding = false // the place a lane opened on still held (holdPlace): not said yet
     var opening by mutableStateOf(0) // grows each time a lane opens anew: the list re-aims
     var aimed = 0                     // the opening the list last aimed at
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title

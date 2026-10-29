@@ -60,6 +60,10 @@
   card lower than they stood, a post's height of nothing above them and under the last
   post (the hole check's log: drawn at 90327, its place 88346). The outer layout stops
   when an inner one has done the work.
+- GTK, the terminal, the phone: the card a lane opens on is held there too while the
+  pictures come in, as on the web page — GTK by the card's bottom (an offset from its
+  height then went stale when its own picture came), the terminal and the phone till the
+  reader moves (10 s at most); where it stood is said only once it stands.
 - Web: the card a lane opens on is held where it stands while the pictures above it come
   in — they pushed it down, and the page showed posts five back, older and read, at every
   opening and every switch of lanes; where it stood is said only once it stands (it

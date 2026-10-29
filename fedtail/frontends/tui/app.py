@@ -18,6 +18,7 @@ import os
 import subprocess
 import tempfile
 import threading
+import time
 import webbrowser
 
 from rich.text import Text
@@ -1253,9 +1254,9 @@ class FedtailApp(App, PostsMixin):
                     cache.clear()
                 cache[key] = drawn
                 if real_ones:
-                    self.in_ui(self._put_graphic, item, drawn, rows)
+                    self.in_ui(self._picture_in, self._put_graphic, item, drawn, rows)
                 else:
-                    self.in_ui(self._put_picture, item, drawn)
+                    self.in_ui(self._picture_in, self._put_picture, item, drawn)
             self.core.media_bytes(url).add_done_callback(done)
         log.debug("tui pictures: %d of %d rows have one (%s)", asked, len(items),
                   "real" if real_ones else "drawn in text")
@@ -1529,7 +1530,9 @@ class FedtailApp(App, PostsMixin):
                  and it.region.y < vbot and it.region.y + it.region.height > vtop]
         if shown:  # their numbers asked again in a while (core/counts.py)
             self.core.on_screen(shown)
-        if top is not None and getattr(top, "key", None):  # where it opens next, anywhere
+        if self.holding():  # the place still settling: said once it stands
+            self.set_timer(1.0, self._mark_on_screen)
+        elif top is not None and getattr(top, "key", None):  # where it opens next, anywhere
             self.lane_model(self.lane).stood(top.key, lv.scroll_y >= lv.max_scroll_y - 2)
         if self.core.cfg["read"]["mark_read"] != "on_scroll":
             return
@@ -1557,6 +1560,35 @@ class FedtailApp(App, PostsMixin):
     WINDOW_BACK, WINDOW_AHEAD, STEP, EDGE = 20, 40, 30, 5
     _rows, _lo, _hi = [], 0, 0
 
+    HOLD_S = 10  # the place a lane opened on, held this long while pictures come in
+
+    def _keep_place(self):
+        """The card the lane opened on back where it stood (its top on top, or seen at
+        the bottom) — until the reader moves the screen or the time is up."""
+        h = getattr(self, "_hold", None)
+        if not h:
+            return
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:
+            self._hold = None
+            return
+        card, top, until, was = h
+        if time.monotonic() > until or not card.is_attached or \
+                (was is not None and lv.scroll_y != was):  # moved by the reader
+            self._hold = None
+            return
+        lv.scroll_to_widget(card, animate=False, top=top)
+        self.call_after_refresh(lambda: self._hold is h and h.__setitem__(3, lv.scroll_y))
+
+    def holding(self):
+        h = getattr(self, "_hold", None)
+        return bool(h) and time.monotonic() <= h[2]
+
+    def _picture_in(self, put, *args):
+        put(*args)
+        self.call_after_refresh(self._keep_place)
+
     async def _window_at(self, at, top=False):
         """The window around row `at` (of the whole lane), the cursor on it — its card
         at the screen's bottom, or on top."""
@@ -1568,10 +1600,12 @@ class FedtailApp(App, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         lv.index = at - self._lo
-        if top and 0 <= at - self._lo < len(items):
-            card = items[at - self._lo]
-            self.call_after_refresh(lambda: card.is_attached and lv.scroll_to_widget(
-                card, animate=False, top=True))
+        self._hold = None
+        if 0 <= at - self._lo < len(items):
+            # the card held where it stands while the pictures above it come in: they
+            # pushed it down, and the lane showed older posts, read ones (29.10)
+            self._hold = [items[at - self._lo], top, time.monotonic() + self.HOLD_S, None]
+            self.call_after_refresh(self._keep_place)
         self.load_pictures(items)
 
     async def _grow(self, up):

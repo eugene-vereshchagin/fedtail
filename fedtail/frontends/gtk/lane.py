@@ -500,11 +500,10 @@ class LaneView(Gtk.Box):
         y = self.strip.ys.get(key)
         if y is None:
             return
-        if where == "bottom":
-            off = self.adj.get_page_size() - self.strip.height(key) - 40
-        else:
-            off = 40
-        self._hold_at((key, off))
+        # bottom: kept by the card's bottom, not by an offset from its height now — its
+        # picture coming in made it taller, and the screen showed the posts above it
+        # (the web page did that, 29.10)
+        self._hold_at((key, "bottom" if where == "bottom" else 40))
 
     def _go_end(self, newest_first):
         self._target = ("end", newest_first, time.monotonic() + HOLD_S)
@@ -538,6 +537,11 @@ class LaneView(Gtk.Box):
             return None
         if t[0] == "end":
             return 0 if t[1] else max(0, self.strip.total - self.adj.get_page_size())
+        if t[1] == "bottom":  # the card's bottom at the screen's bottom (_go)
+            y = self.strip.ys.get(t[0])
+            if y is None:
+                return None
+            return max(0, y + self.strip.height(t[0]) + 40 - self.adj.get_page_size())
         return self.strip.top_for((t[0], t[1]))
 
     # ---- which cards exist -------------------------------------------------------------
@@ -812,9 +816,14 @@ class LaneView(Gtk.Box):
         vtop = self._top()
         vbot = vtop + self.adj.get_page_size()
         at_end = self.adj.get_value() >= self.adj.get_upper() - self.adj.get_page_size() - 1
+        settling = self._target is not None and time.monotonic() < self._target[2]
         last = self.strip.last_whole(max(0, vtop), self.adj.get_page_size())
-        if last is not None:  # where the lane opens next time, anywhere; at the end
-            # or nearly (the heights settling below move it a little)
+        # where the lane opens next time, anywhere — not while the place settles (it
+        # crept up with the pictures above, 29.10); at the end or nearly (the heights
+        # settling below move it a little)
+        if settling:
+            self._schedule_seen()  # said once it stands
+        elif last is not None:
             self.lm.stood(last, self.adj.get_value() >= self.adj.get_upper()
                           - self.adj.get_page_size() - 40)
         keys, unplaced, glimpsed = [], False, set()

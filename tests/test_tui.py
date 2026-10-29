@@ -386,4 +386,16 @@ class TuiCurtainTest(test_cov_tui_host.Base):
             lv = app.query_one("#posts", ListView)
             await self.wait(pilot, lambda: getattr(lv.highlighted_child, "key", None)
                             == "003", what="the place stood at")
+            # pictures come in above it: it stays on screen where it stood (they pushed
+            # it down and away, the lane showing older posts, 29.10)
+            from rich.text import Text
+
+            from fedtail.frontends.tui.app import PostItem
+            card = lv.highlighted_child
+            for it in [c for c in lv.children if isinstance(c, PostItem)][:2]:
+                app._picture_in(PostItem.set_picture, it, Text(("▀" * 10 + "\n") * 30))
+            await pilot.pause(0.5)
+            view = lv.content_region
+            self.assertGreaterEqual(card.region.y, view.y)
+            self.assertLessEqual(card.region.y + card.region.height, view.y + view.height)
             await pilot.press("q")

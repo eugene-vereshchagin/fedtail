@@ -88,6 +88,12 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import androidx.compose.foundation.interaction.DragInteraction
 
 /** What a card can ask for; the lane and the thread give the same (AppModel.cardActions). */
 class CardActions(
@@ -261,8 +267,8 @@ fun StoodWhileScrolling(state: LazyListState, shown: (List<String>) -> Unit = {}
  *  goes to the first unread. Never jumps after. */
 suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0,
                 divider: String? = null, byCore: Boolean = false, start: String? = null,
-                bottom: Boolean = false) {
-    if (posts.isEmpty()) return
+                bottom: Boolean = false): Int {
+    if (posts.isEmpty()) return -1
     val firstUnread = posts.indexOfFirst { it.unread }
     val chosen = if (byCore) posts.indexOfFirst { it.key == start } else firstUnread
     val at = when {
@@ -283,7 +289,38 @@ suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolea
             if (room > 0) state.scrollBy(-room.toFloat())
         }
     }
+    return if (chosen >= 0) index else -1
 }
+
+/** The card a lane opened on (index) held where it stands — its top on top, or its bottom
+ *  at the screen's bottom — while the pictures around it come in: the first card on
+ *  screen growing pushed it down, and the lane showed older posts, read ones (the web page
+ *  did that, 29.10). Till the reader drags the list, or HOLD_MS. */
+suspend fun holdPlace(state: LazyListState, index: Int, bottom: Boolean) {
+    if (index < 0) return
+    var moved = false
+    coroutineScope {
+        val watch = launch {
+            state.interactionSource.interactions.collect { if (it is DragInteraction.Start) moved = true }
+        }
+        withTimeoutOrNull(HOLD_MS) {
+            snapshotFlow {
+                val info = state.layoutInfo
+                info.visibleItemsInfo.firstOrNull { it.index == index }?.let {
+                    Triple(it.offset, it.size, info.viewportEndOffset)
+                }
+            }.takeWhile { !moved }.collect { pos ->  // a drag by the reader: let go
+                if (pos == null) { state.scrollToItem(index); return@collect }
+                val (offset, size, end) = pos
+                val want = if (bottom) end - 8 - size else 0
+                if (abs(offset - want) > 2) state.scrollBy((offset - want).toFloat())
+            }
+        }
+        watch.cancel()
+    }
+}
+
+const val HOLD_MS = 10_000L
 
 @Composable
 fun PostList(
