@@ -761,7 +761,35 @@ class FeedView(QScrollArea):
         return [s.entry.id for s in self.model if s.unread and s.entry is not None]
 
     # ---- what the reader saw --------------------------------------------------------
+    def _check_holes(self):
+        """The screen mostly empty with nothing waiting to be built: a hole in the
+        lane (29.10, not seen in the bench) — said in the log with what stands where,
+        once a minute at most, so a report shows it."""
+        if not self.windowed or self._pending or not self.model or self._paused:
+            return
+        sb = self.verticalScrollBar()
+        top, vh = sb.value(), self.viewport().height()
+        if vh < 100 or self._total <= vh:
+            return
+        shown = 0
+        for k in self.order:
+            r = self.rows[k]
+            y = self._ys.get(k, 0)
+            shown += max(0, min(top + vh, y + r.height()) - max(top, y))
+        if shown >= vh * 0.5:
+            return
+        now = time.monotonic()
+        if now - getattr(self, "_hole_said", 0) < 60:
+            return
+        self._hole_said = now
+        want = self._wanted()
+        log.warning("hole in a lane: %d of %d px on screen covered at %d (total %d, "
+                    "width %d); wanted %s; built %s; places %s", shown, vh, top,
+                    self._total, self._width, want[:12], self.order[:12],
+                    [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
+
     def _emit_seen(self):
+        self._check_holes()
         if not self.isVisible() or self.window().isMinimized():
             return
         # a window in the background isn't being read — unless the reader scrolls it

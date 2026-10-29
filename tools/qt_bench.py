@@ -162,7 +162,9 @@ def run(layout, theme, posts, profile, maximized=False):
         cfg = real.config(snap, ui)
     else:
         FakeApi.world = world(posts)
-        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}, "ui": ui})
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}, "ui": ui,
+                                  **({"reading": {"order": os.environ["FEDTAIL_BENCH_ORDER"]}}
+                                     if os.environ.get("FEDTAIL_BENCH_ORDER") else {})})
     p = paths.resolve("bench", config=str(Path(tmp) / "c.toml"), data=str(Path(tmp) / "d"))
     auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
     prof = None
