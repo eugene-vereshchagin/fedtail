@@ -409,7 +409,7 @@ class Cache:
     def _prefetch_one(self, url):
         if picture_path(self.cache_dir, url).exists():
             return
-        if fetch_picture(self.cache_dir, url, self._open) is not None:
+        if fetch_picture(self.cache_dir, url, self._open, self._readable) is not None:
             self._count_write()
 
     # ---- videos on disk: fetched ahead ("all"), and every one played ------------------
@@ -747,7 +747,7 @@ def picture_path(cache_dir, url):
     return Path(cache_dir) / hashlib.sha1(url.encode()).hexdigest()
 
 
-def fetch_picture(cache_dir, url, opener):
+def fetch_picture(cache_dir, url, opener, readable=None):
     """url's picture into the disk cache (the windows' and the web page's one cache) if
     it isn't there: only an image, whole and of a picture format (imagesniff), never an
     error page. opener(url, timeout): a streamed answer through core.remote (no token,
@@ -769,7 +769,7 @@ def fetch_picture(cache_dir, url, opener):
         return None
     if not data:
         return None
-    fmt, why = imagesniff.readable(data)
+    fmt, why = (readable or imagesniff.readable)(data)
     if fmt is None:  # cut short, or not a picture: never into the cache
         log.debug("prefetch %s: %d B, %s — not kept", url, len(data), why)
         return None

@@ -134,12 +134,19 @@ def _https(url):
     return url if isinstance(url, str) and url.startswith("https://") else ""
 
 
+# the page's pictures through /pic (the browser on a page of ours); the phone (which takes
+# these same answers, android/…/bridge.py) loads the addresses itself: False there
+PIC_THROUGH = True
+
+
 def _pic(url):
     """A picture's address for the page: through this server (/pic, the windows' disk
     cache and their checked fetch) — the browser asked other servers itself, and some
     give their pictures to no other site (avatars stayed grey, 29.10); it no longer
     tells them who looks either."""
     url = _https(url)
+    if not PIC_THROUGH:
+        return url
     return "/pic?u=" + quote(url, safe="") if url else ""
 
 

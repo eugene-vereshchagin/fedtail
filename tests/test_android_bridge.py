@@ -32,6 +32,8 @@ class _Base(TmpDir):
         self.addCleanup(env.stop)
         from fedtail import i18n
         self.addCleanup(i18n.setup, i18n.current_language())
+        from fedtail.frontends.web import server as web_server
+        self.addCleanup(setattr, web_server, "PIC_THROUGH", True)  # the page's again
         self.bridge = load_bridge()
         self.addCleanup(lambda: self.bridge._s["core"] and self.bridge._s["core"].shutdown())
         from fedtail import diag

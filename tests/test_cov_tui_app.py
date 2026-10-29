@@ -737,7 +737,15 @@ class LoginTest(Base):
 @unittest.skipUnless(HAVE_TEXTUAL and Image is not None, "Textual or Pillow is missing")
 class PicturesTest(Base):
     async def test_pictures_in_the_lane_and_full_screen(self):
+        from unittest import mock
+
         from textual.widgets import ListView
+
+        from fedtail.frontends.tui import pictures
+        # our own half blocks here, whatever this machine has (chafa: test_tui_pictures)
+        no_chafa = mock.patch.object(pictures, "_chafa", lambda: None)
+        no_chafa.start()
+        self.addCleanup(no_chafa.stop)
 
         from fedtail.frontends.tui import app as app_mod
         from fedtail.frontends.tui.app import PictureScreen, PostItem

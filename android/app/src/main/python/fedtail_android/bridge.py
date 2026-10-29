@@ -98,7 +98,9 @@ def _make(demo):
     from fedtail import i18n
     from fedtail.core import auth, config, paths
     from fedtail.core.app import Core
+    from fedtail.frontends.web import server as web_server
     from fedtail.frontends.web.server import Web
+    web_server.PIC_THROUGH = False  # the phone loads pictures by their own addresses
     old = _s["core"]
     if old is not None:
         old.shutdown()

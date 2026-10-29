@@ -2137,7 +2137,13 @@ class FedtailApp(App, PostsMixin):
     def _find_step(self, step=1):
         f = self._found
         f["at"] = (f["at"] + step) % len(f["hits"])
-        self.call_next(self._show_row, f["hits"][f["at"]])
+        at = f["hits"][f["at"]]
+        if self._lo <= at < self._hi:  # built: at once (the focus goes on from there)
+            lv = self._main("#posts", ListView)
+            lv.index = at - self._lo
+            lv.focus()
+        else:
+            self.call_next(self._show_row, at)
         self.notify(_("find_count", i=f["at"] + 1, n=len(f["hits"])))
 
     # ---- actions -------------------------------------------------------------------
