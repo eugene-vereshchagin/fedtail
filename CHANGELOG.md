@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Fixed (Qt): a gap above the last post of a lane (or one card over another) for 15–30 s,
+  till the lane's next refresh: a card whose height changed without saying so (a picture
+  in, a warning opened) kept its old place, and a lane opened among tall pictures could
+  stop laying its places out before they agreed. The cards on screen are measured again
+  once the screen stands still, and the last round of places is never left undone.
 - Fixed (Qt, GTK): a one-line field of a window's place (≡ → Sync's address and invite
   code, a filter's words, a list's name…) had its words only as grey text inside it, so
   an empty one looked switched off; its words are above it now, as every other field's

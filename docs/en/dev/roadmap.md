@@ -43,9 +43,6 @@ built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
 
 ## Loose ends
 
-- The Qt bench's "try a theme" stood 40–230 s in `sendPostedEvents(DeferredDelete)` with
-  7 cards alive (offscreen, the cloud's 2 cores; GTK's took 1 s): to measure on a real
-  desktop before looking further.
 - The GTK lane has no budget test of its own yet (`tests/test_budgets.py` is Qt's and the
   core's); `tools/gtk_bench.py` is the measure meanwhile.
 - A card is ~7 ms to build in Qt (dozens of widgets): cheaper only by building it of

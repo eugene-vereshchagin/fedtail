@@ -278,6 +278,12 @@ class FeedView(QScrollArea):
             # heights not as guessed: the places anew (and the cards near the screen again)
             self._lay_out(depth=depth + 1)
             return
+        if new:
+            # still not as guessed after four rounds (tall pictures, a lane opened far
+            # from where the heights were known): the places anew at the next turn, not
+            # at the lane's next refresh — till then the cards stood at the old places,
+            # a gap above the last post for 15–30 s (29.10)
+            QTimer.singleShot(0, self, self._lay_out)
         if self._pending:
             self._more.start()
         self._seen_timer.start()
@@ -796,7 +802,32 @@ class FeedView(QScrollArea):
                     self._total, self._width, want[:12], self.order[:12],
                     [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
 
+    def _check_places(self):
+        """The cards on screen measured again once the screen stands still: a card whose
+        height changed without telling the watcher (a picture in, a warning opened) kept
+        the place it had — a gap, or one card over another — until the lane's next
+        refresh, 15–30 s later (29.10). They are few, and their heights are cached: under
+        a millisecond each."""
+        if not self.rows or self._paused or not self._width:
+            return
+        sb = self.verticalScrollBar()
+        top, vh = sb.value(), self.viewport().height()
+        changed = False
+        for k in self.order:
+            y = self._ys.get(k, 0)
+            if y > top + vh:
+                break
+            row = self.rows[k]
+            if y + row.height() < top:
+                continue
+            if self.strip.measured(k, self._width, self._measure(row, self._width)):
+                changed = True
+        if changed:
+            log.debug("lane: places mended on screen")
+            self._lay_out()
+
     def _emit_seen(self):
+        self._check_places()
         self._check_holes()
         if not self.isVisible() or self.window().isMinimized():
             return
