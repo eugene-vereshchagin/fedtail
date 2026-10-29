@@ -176,6 +176,36 @@ class LaneHoleTest(unittest.TestCase):
         self.assertIn("empty", said.output[0])
         self.assertIn(key, view.rows)  # built again where it stands
 
+    def test_a_layout_inside_a_layout_leaves_no_card_at_old_places(self):
+        """The body's new size moves the scroll, the scroll builds cards, and they lay
+        the lane out again inside the first layout: the first must not put the cards
+        back at its old places after (all drawn lower by a card, 29.10)."""
+        self._pictures(30, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        self.pump(0.3)
+        first = view.order[0]
+        real = view.body.setFixedSize
+        inner = []
+
+        def resized(*a):
+            real(*a)
+            if not inner:  # once: a card above grew meanwhile, the lane laid out again
+                inner.append(1)
+                view._h[first] = (view._width, view._h[first][1] + 300)
+                view._lay_out()
+        view.body.setFixedSize = resized
+        try:
+            view._lay_out()
+        finally:
+            view.body.setFixedSize = real
+        for k in view.order:
+            self.assertEqual(view.rows[k].y(), view._ys[k], k)
+
     def test_a_card_drawn_elsewhere_or_hidden_is_a_hole(self):
         """The check looks at what Qt draws, not at the places as they should be: the
         last card hidden, or left where it stood, is a blank (under the last post after

@@ -54,6 +54,17 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- Qt: a layout inside a layout left the cards at the old places. The body's new size
+  moved the scroll, the scroll built cards and laid the lane out again inside the first
+  call — which then put every card back at its own, older places: all of them drawn a
+  card lower than they stood, a post's height of nothing above them and under the last
+  post (the hole check's log: drawn at 90327, its place 88346). The outer layout stops
+  when an inner one has done the work.
+- Web: the card a lane opens on is held where it stands while the pictures above it come
+  in — they pushed it down, and the page showed posts five back, older and read, at every
+  opening and every switch of lanes; where it stood is said only once it stands (it
+  crept up into the read ones too). Held till the reader moves; `tools/web_check.py`
+  checks it with slow pictures.
 - The ≡ menu, shorter, in every interface: debugging is in one submenu — "A full snapshot
   into an archive" (the threads' stacks, the stats, the census of objects and widgets, the
   memory snapshot when tracing is on, then the logs, the config and the system: one archive,

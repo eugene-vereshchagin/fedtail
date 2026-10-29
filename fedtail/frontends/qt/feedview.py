@@ -198,7 +198,16 @@ class FeedView(QScrollArea):
         else:
             self._foot.hide()
         guess = self._guess()
+        self._layouts = getattr(self, "_layouts", 0) + 1
+        mine = self._layouts
         self.body.setFixedSize(self.viewport().width(), self._total)
+        if self._layouts != mine:
+            # the body's new size moved the scroll, the scroll built cards, and they laid
+            # the lane out again inside this call — with places of their own: this one's
+            # are old. Going on put every card back at the old places, the reading place
+            # and the hole check with the new ones — a card's height of nothing above the
+            # cards, all of them drawn lower (the log of 29.10: drawn 90327, its place 88346)
+            return
         for key, row in self.rows.items():
             row.setGeometry(x, ys[key], w, self._height(key, guess))
         if anchor is not None and anchor[0] in ys:

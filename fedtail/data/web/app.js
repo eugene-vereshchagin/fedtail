@@ -1530,6 +1530,11 @@ function watchRead(box) {
 // same) — each opened it at its first unread before, and that was days back (29.10)
 function stoodAt(box) {
   if (document.hidden || !state.lane) return;
+  if (holding()) {  // the place still settling: said once it stands
+    clearTimeout(stoodAt.later);
+    stoodAt.later = setTimeout(() => stoodAt(box), 600);
+    return;
+  }
   const view = box.getBoundingClientRect();
   // the posts on screen: their numbers asked again in a while (core/counts.py)
   const shown = [];
@@ -1766,14 +1771,43 @@ function markCursor(i) {
   return cards[i];
 }
 
+// the card a lane opened on held where it stands while the cards around it grow — the
+// pictures above it coming in pushed it down, and the lane showed posts five back,
+// older and read, every time (29.10). Till the reader moves (wheel, touch, a key, the
+// bar) or 30 s; where it stood is said (stoodAt) only after that.
+const held = { card: null, block: "start", until: 0, obs: null };
+function holdPlace(card, block) {
+  const box = $("#posts");
+  held.card = card;
+  held.block = block;
+  held.until = Date.now() + 30000;  // the pictures of a slow server: seconds
+  card.scrollIntoView({ block });
+  if (!held.obs && window.ResizeObserver) {
+    held.obs = new ResizeObserver(() => {
+      if (!held.card) return;
+      if (Date.now() > held.until || !held.card.isConnected) { held.card = null; return; }
+      held.card.scrollIntoView({ block: held.block });
+    });
+    held.obs.observe(box);
+    const letGo = () => { held.card = null; };
+    for (const ev of ["wheel", "touchstart", "mousedown"]) {
+      box.addEventListener(ev, letGo, { passive: true });
+    }
+    document.addEventListener("keydown", letGo, { capture: true, passive: true });
+  }
+  for (const c of box.children) held.obs && held.obs.observe(c);
+}
+function holding() { return held.card !== null && Date.now() <= held.until; }
+
 function setCursor(i, quiet, how) {
   const cards = document.querySelectorAll("#posts .post");
   if (!cards.length) return;
   i = Math.max(0, Math.min(i, cards.length - 1));
   const card = markCursor(i);
+  if (how !== "start") held.card = null;  // moved by hand: no place held any more
   if (how === "start") {
     const bottom = state.me.start_at === "newest" || state.startWhere === "bottom";
-    card.scrollIntoView({ block: bottom ? "end" : "start" });
+    holdPlace(card, bottom ? "end" : "start");
   }
   else if (!quiet) card.scrollIntoView({ block: "nearest" });
 }

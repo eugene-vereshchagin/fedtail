@@ -161,6 +161,7 @@ def with_playwright(base, key, out):
             page.screenshot(path=str(out / f"{label}-01-home.png"))
             if label == "desktop":
                 read_by_scrolling(page, base, key)
+                holds_place(browser, base, key)
             if label == "phone":
                 page.click("#menu")
                 page.wait_for_timeout(400)
@@ -374,6 +375,40 @@ def read_by_scrolling(page, base, key):
     elif left:
         ERRORS.append(f"reading: Home read through by the wheel, still unread: {sorted(left)}")
     NOTES.append(f"reading: unread after scrolling Home through: {sorted(left) or 'none'}")
+
+
+def holds_place(browser, base, key):
+    """A lane opens on the card read last and keeps it there while the pictures above
+    it come in, slowly: they pushed it down, and the page showed posts five back, older
+    and read (29.10)."""
+    import urllib.request
+    if REAL:
+        return
+    body = json.dumps({"lane": "home", "key": "024"}).encode()
+    urllib.request.urlopen(urllib.request.Request(
+        base + "/api/stood", body, {"Cookie": f"fedtail_web={key}", "X-Fedtail": "1",
+                                    "Content-Type": "application/json"}), timeout=20)
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+
+    def slow(route):
+        time.sleep(0.15)  # a slow server's pictures: in after the lane is drawn
+        route.fulfill(status=200, content_type="image/png", body=_png(route.request.url))
+    page.route(lambda url: not url.startswith(base) or "/pic?" in url, slow)
+    page.goto(base + "/?k=" + key)
+    page.wait_for_timeout(1500)
+    if not page.query_selector("#posts .post"):  # the curtain: Home by hand
+        page.evaluate("() => goLane('home')")
+    page.wait_for_selector('.post[data-id="024"]', timeout=15000)
+    page.wait_for_timeout(5000)
+    got = page.evaluate("""() => { const b = document.querySelector('#posts').getBoundingClientRect();
+      const c = document.querySelector('.post[data-id="024"]').getBoundingClientRect();
+      return [c.top - b.top, b.bottom - c.bottom, state.startWhere]; }""")
+    top, gap, where = got
+    off = abs(gap) if where == "bottom" else abs(top)
+    (ERRORS if off > 24 else NOTES).append(
+        f"place: the card read last stands {off:.0f} px off the screen's {where} "
+        "after slow pictures came in" + (" — pushed away" if off > 24 else ""))
+    page.close()
 
 
 def main_menu(page, out):
