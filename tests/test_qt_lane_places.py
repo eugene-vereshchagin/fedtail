@@ -247,3 +247,40 @@ class LaneStrayTest(unittest.TestCase):
         view.set_specs(list(view.model) + [view.model[-1]])
         self.assertEqual(view._total, before)
         self.assertEqual(len(view.strip.keys), len(set(view.strip.keys)))
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+class HoverTest(unittest.TestCase):
+    setUpClass = smoke.QtSmokeTest.__dict__["setUpClass"]
+    setUp = smoke.QtSmokeTest.setUp
+    tearDown = smoke.QtSmokeTest.tearDown
+    pump = smoke.QtSmokeTest.pump
+
+    def test_the_post_under_the_mouse_is_lit(self):
+        """shape.hover (point.im): the post under the mouse has its buttons lit and, on
+        my own post, ✎ ✕ at the top right; off the mouse, gone; other posts have none."""
+        from PySide6.QtCore import QEvent, QPointF
+        from PySide6.QtGui import QEnterEvent
+
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: "010" in view.rows and "011" in view.rows)
+        shape = view.ctx.theme.shape
+        old = shape.get("hover")
+        shape["hover"] = True
+        self.addCleanup(lambda: shape.__setitem__("hover", old))
+        view.rebuild_rows()
+        self.pump(until=lambda: "010" in view.rows and "011" in view.rows)
+        mine, theirs = view.rows["010"], view.rows["011"]
+        p = QPointF(5, 5)
+        theirs.enterEvent(QEnterEvent(p, p, p))
+        self.assertIsNone(theirs.own_tools)
+        mine.enterEvent(QEnterEvent(p, p, p))
+        self.assertTrue(mine.own_tools.isVisible())
+        self.assertEqual(mine.actions_box.property("hover"), "true")
+        mine.leaveEvent(QEvent(QEvent.Type.Leave))
+        self.assertFalse(mine.own_tools.isVisible())
+        self.assertEqual(mine.actions_box.property("hover"), "false")

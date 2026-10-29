@@ -71,6 +71,7 @@ sidebar_avatar = true
 card_header = "stacked"
 short_id = "footer"
 actions_align = "right"
+hover = true             # the post under the mouse: buttons brighter, ✎ ✕ on my own
 unread_mark = "dot"
 posts_only = "segmented"
 

@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Themes: `[shape] hover` — the post under the mouse lit, its buttons brighter, and on my own
+  post ✎ and ✕ at the top right (the menu's Edit and Delete), as point.im has it; on in the
+  `point` theme (Qt).
 - A click on a tag in a post opens that author's posts with the tag, as on Point where each
   blog has its own tags (`card.tag_click = "author"`; `"everywhere"` — the tag's lane as
   before): "#tag everywhere" and the author's profile on top; a right click on a tag offers

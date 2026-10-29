@@ -462,6 +462,7 @@ class PostRow(QWidget):
         self._route_text_menus()  # every time: a rebuilt card has new labels
 
     def _build_body(self):
+        self.own_tools = self._tools_row = None  # the header is made anew
         if self.body is not None:
             drop(self.body, self.lay)
         self.body = QWidget()
@@ -638,6 +639,76 @@ class PostRow(QWidget):
             h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop if place == "header"
                         else Qt.AlignmentFlag.AlignVCenter)
 
+    own_tools = None  # ✎ ✕ on my own post, shown under the mouse (shape.hover)
+
+    _tools_row = None
+
+    def _own_tools(self):
+        """shape.hover (point.im): on my own post ✎ and ✕ at the top right, seen only while
+        the mouse is over it — the menu's Edit and Delete (common/actions.py links). Made
+        at the first hover: who I am may come after the card (drawn from the store)."""
+        p, row = self.spec.post, self._tools_row
+        if self.own_tools is not None or row is None or not self.ctx.me_id or \
+                p.author is None or p.author.id != self.ctx.me_id:
+            return
+
+        from ..common.links import make
+        box = QWidget()
+        box.setObjectName("ownTools")
+        lay = QHBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(2)
+        from . import icons as pictures
+        sid = self.spec.entry.id
+        for action, glyph, words in (("edit", "✎", _("edit")), ("delete", "✕", _("delete"))):
+            b = QToolButton()
+            b.setAutoRaise(True)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setToolTip(words)
+            b.setAccessibleName(words)
+            ic = pictures.icon(action, self.theme)
+            if ic.isNull():
+                b.setText(glyph)
+            else:
+                b.setIcon(ic)
+            url = make(action, sid)
+            b.clicked.connect(lambda _c=False, u=url: self.ctx.on_link(u))
+            lay.addWidget(b)
+        keep = box.sizePolicy()
+        keep.setRetainSizeWhenHidden(True)  # shown and hidden, nothing beside it moves
+        box.setSizePolicy(keep)
+        box.setVisible(False)
+        self.own_tools = box
+        row.addWidget(box, 0, Qt.AlignmentFlag.AlignTop)
+        row.invalidate()
+
+    def enterEvent(self, e):  # noqa: N802 — Qt's name
+        super().enterEvent(e)
+        self._lit(True)
+
+    def leaveEvent(self, e):  # noqa: N802 — Qt's name
+        super().leaveEvent(e)
+        self._lit(False)
+
+    def _lit(self, on):
+        """shape.hover: the post under the mouse — its buttons brighter (the stylesheet's
+        [hover="true"]), my own one's ✎ ✕ seen."""
+        if not self.theme.shape.get("hover"):
+            return
+        box = getattr(self, "actions_box", None)
+        if box is not None:
+            try:
+                _set_prop(box, "hover", "true" if on else "false")
+            except RuntimeError:
+                return
+            for b in box.findChildren(QToolButton):  # their colour is the box's: anew
+                b.style().unpolish(b)
+                b.style().polish(b)
+        if on:
+            self._own_tools()
+        if self.own_tools is not None:
+            self.own_tools.setVisible(on)
+
     def _unread_mark(self):
         if self.theme.shape["unread_mark"] == "star":
             m = QLabel("*")
@@ -710,6 +781,7 @@ class PostRow(QWidget):
         top.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
         self._pinned_mark(top)
         top.addStretch(1)
+        self._tools_row = top  # ✎ ✕ go here on my own post, at the first hover
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
             came.setObjectName("cameFrom")
