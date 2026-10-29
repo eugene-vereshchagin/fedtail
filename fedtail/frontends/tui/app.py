@@ -1950,7 +1950,7 @@ class FedtailApp(App, PostsMixin):
         """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""
         from ..common.places import Places
         places = [(t + " …", ("place", n)) for n, t in Places(self.core).menu()
-                  if n not in ("help", "news", "about", "issue", "federation")]
+                  if n not in ("help", "news", "about", "issue", "federation", "log")]
         return ([("✎ " + _("write"), ("do", "editor")),
                  (_("my_profile"), ("do", "my_profile")),
                  (_("refresh"), ("do", "refresh")),
@@ -1959,13 +1959,7 @@ class FedtailApp(App, PostsMixin):
                             (_("help_title") + " …", ("place", "help")),
                             (_("help_news") + " …", ("place", "news")),
                             (_("about") + " …", ("place", "about")),
-                            (_("issue_menu"), ("place", "issue")), "-",
-                            (_("debug_menu") + " …", ("do", "debug")),
-                            (_("debug_federation"), ("place", "federation")),
-                            (_("debug_report"), ("do", "bug_report")),
-                            (_("debug_logs"), ("do", "logs")),
-                            (_("debug_sound"), ("do", "test_sound")),
-                            (_("debug_stacks"), ("do", "stacks")), "-",
+                            (_("debug_menu") + " …", ("do", "debug")), "-",
                             (_("quit"), ("do", "quit"))])
 
     def action_main_menu(self):
@@ -1993,19 +1987,13 @@ class FedtailApp(App, PostsMixin):
             self.action_all_read()
         elif what == "bug_report":
             try:
-                diag.log_stats()
-                out = diag.bug_report(self.core.paths, cfg=self.core.cfg)
+                out = diag.full_snapshot(self.core.paths, self.core.cfg)
                 self.notify(_("debug_report_done", path=str(out)), timeout=20)
                 self.send_report(out)
             except OSError as e:
                 self.show_error(e)
-        elif what == "logs":
-            self.notify(str(diag.logs_dir(self.core.paths, self.core.cfg)), timeout=20)
         elif what == "test_sound" and self.sounds is not None:
             self.notify(self.sounds.test())
-        elif what == "stacks":
-            diag.dump_stacks("menu")
-            self.notify(_("debug_stacks_done"))
         elif what == "debug":
             self.debug_menu()
         elif what == "quit":
@@ -2021,23 +2009,27 @@ class FedtailApp(App, PostsMixin):
                            "", termcaps.detect().name, 0)
 
     def debug_menu(self):
-        from ... import leaks
         from .screens import MenuScreen
-        tracing = leaks.tracing()
-        items = [(self.corner_words(), ("corner", None), _("debug_corner_tip")), "-",
+        # debugging, all of it in one place, as the windows': the full snapshot does what
+        # eight items did (stacks, census, trim, tracing, memory, folders: diag.full_snapshot)
+        items = [(_("debug_report"), ("bug_report", None)),
+                 (_("debug_log_title") + " …", ("place", "log")),
+                 (_("debug_federation") + " …", ("place", "federation")),
                  (_("debug_notify"), ("notify", None)),
-                 (_("debug_census"), ("census", None)),
-                 (_("debug_trim"), ("trim", None)),
-                 (("☑ " if tracing else "☐ ") + _("debug_tracing"), ("tracing", None),
-                  _("debug_tracing_tip")),
-                 (_("debug_snapshot"), ("snapshot", None)), "-",
-                 (_("open_config"), ("config", None)),
-                 (_("open_data"), ("data", None)),
+                 (_("debug_sound"), ("test_sound", None)), "-",
+                 (_("issue_menu") + " …", ("place", "issue")), "-",
+                 (self.corner_words(), ("corner", None), _("debug_corner_tip")),
                  (("☑ " if self.merged() else "☐ ") + _("accounts_merge"), ("merge", None),
                   _("accounts_merge_tip"))]
 
         def chosen(v):
-            if v is not None:
+            if v is None:
+                return
+            if v[0] == "place":
+                self.open_thing({"page": v[1]})
+            elif v[0] in ("bug_report", "test_sound"):
+                self.call_next(self.menu_do, v[0])
+            else:
                 self.call_next(self.debug_do, v[0])
         self.push_screen(MenuScreen(_("debug_menu"), items), chosen)
 
@@ -2046,31 +2038,8 @@ class FedtailApp(App, PostsMixin):
         return bool(self.core.cfg["ui"].get("merge") or primary.get_state("merge"))
 
     async def debug_do(self, what):
-        from ... import diag, leaks
         if what == "notify":
             self.notify(self.notifier.test())
-        elif what == "census":
-            got = diag.check_now(int(self.core.cfg["debug"].get("rss_warn_mb", 1500)),
-                                 objects=True)
-            self.notify(_("debug_census_done", rss=got["rss_mb"], objects=got["py_objects"]))
-        elif what == "trim":
-            freed = diag.trim_memory()
-            self.notify(_("debug_trim_none") if freed is None else
-                        _("debug_trim_done", mb=freed))
-        elif what == "tracing":
-            (leaks.stop_tracing if leaks.tracing() else leaks.start_tracing)()
-            self.notify(("☑ " if leaks.tracing() else "☐ ") + _("debug_tracing"))
-        elif what == "snapshot":
-            try:
-                out = leaks.snapshot(diag.logs_dir(self.core.paths, self.core.cfg))
-            except (OSError, RuntimeError) as e:
-                self.show_error(e)
-                return
-            self.notify(_("debug_snapshot_done", path=str(out)), timeout=15)
-        elif what == "config":
-            self.open_file(self.core.paths.config_file)
-        elif what == "data":
-            self.copy_text(str(self.core.paths.data_dir))
         elif what == "merge":
             primary = getattr(self.core, "primary", self.core)
             primary.set_state("merge", [] if self.merged() else ["all"])

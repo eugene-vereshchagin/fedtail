@@ -54,6 +54,14 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- The ≡ menu, shorter, in every interface: debugging is in one submenu — "A full snapshot
+  into an archive" (the threads' stacks, the stats, the census of objects and widgets, the
+  memory snapshot when tracing is on, then the logs, the config and the system: one archive,
+  `diag.full_snapshot`), the log, the federation status, testing a notification and the
+  sound, "Report a bug on GitHub…". Gone from the menu: the stacks, the census, giving
+  memory back, memory tracing (`debug.tracemalloc`) and its snapshot — the full snapshot
+  does them — and opening the config, themes, data and logs folders (the config: from
+  Settings).
 - Qt: the hole check looks at what is drawn, not at the places as they should be — a card
   hidden or left where it stood is a blank; said in the log with each card's real place,
   and mended (shown again, put back). Cards waiting to be built with nothing building

@@ -493,7 +493,7 @@ class SidebarAndFindTest(Base):
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
 class DebugAndSaveTest(Base):
     async def test_debug_menu(self):
-        from fedtail import diag, leaks
+        from fedtail import diag
         from fedtail.frontends.tui.screens import MenuScreen
         core, w = self.make()
         app = self.app_of(core)
@@ -507,36 +507,18 @@ class DebugAndSaveTest(Base):
             app.screen.dismiss(("do", "debug"))
             await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen) and
                             app.screen.m_title == _("debug_menu"), what="≡ Debugging")
-            self.assertIn("Textual", app.screen.labels()[0])
+            # the full snapshot first, everything of debugging in one place (29.10)
+            self.assertEqual(app.screen.items[0][1], ("bug_report", None))
+            self.assertIn(("place", "log"), [it[1] for it in app.screen.items if it != "-"])
+            self.assertTrue(any("Textual" in x for x in app.screen.labels()))
             app.screen.dismiss(("corner", None))
             await self.wait(pilot, lambda: copied and "Textual" in copied[-1])
 
             await app.debug_do("notify")
             self.assertTrue(self.notes[-1])
-            with mock.patch.object(diag, "check_now",
-                                   return_value={"rss_mb": 12, "py_objects": 34}):
-                await app.debug_do("census")
-            self.assertIn("34", self.notes[-1])
-            for freed, key in ((None, "debug_trim_none"), (5, "debug_trim_done")):
-                with mock.patch.object(diag, "trim_memory", return_value=freed):
-                    await app.debug_do("trim")
-                self.assertEqual(self.notes[-1], _(key, mb=freed))
-            was = leaks.tracing()
-            await app.debug_do("tracing")
-            self.assertNotEqual(leaks.tracing(), was)
-            await app.debug_do("tracing")
-            self.assertEqual(leaks.tracing(), was)
-            with mock.patch.object(leaks, "snapshot", return_value="/x/snap.txt"):
-                await app.debug_do("snapshot")
-            self.assertIn("/x/snap.txt", self.notes[-1])
-            errors = []
-            app.show_error = errors.append
-            with mock.patch.object(leaks, "snapshot", side_effect=OSError("disk")):
-                await app.debug_do("snapshot")
-            self.assertTrue(errors)
-            with mock.patch.dict(os.environ, {"VISUAL": "", "EDITOR": "vi"}):
-                await app.debug_do("config")  # headless: no editor, the path copied
-            self.assertEqual(copied[-1], str(core.paths.config_file))
+            with mock.patch.object(diag, "full_snapshot", return_value=self.tmp / "r.tar.gz"):
+                await app.menu_do("bug_report")
+            self.assertIn("r.tar.gz", self.notes[-1])
             with mock.patch.dict(os.environ, {"VISUAL": "", "EDITOR": ""}):
                 app.open_file("/tmp/x.toml")
             self.assertEqual(copied[-1], "/tmp/x.toml")
@@ -545,8 +527,6 @@ class DebugAndSaveTest(Base):
             with mock.patch.dict(os.environ, {"VISUAL": "nano -w", "EDITOR": ""}):
                 app.open_file("/tmp/y.toml")  # the editor, the terminal handed over
             self.assertEqual(ran, [["nano", "-w", "/tmp/y.toml"]])
-            await app.debug_do("data")
-            self.assertEqual(copied[-1], str(core.paths.data_dir))
             self.assertFalse(app.merged())
             await app.debug_do("merge")
             self.assertTrue(app.merged())

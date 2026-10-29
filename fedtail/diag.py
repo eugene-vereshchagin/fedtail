@@ -1035,6 +1035,31 @@ REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm", "sync.ke
                "sync_auth.json", "sync_invite.json", "sync_webdav.json"}
 
 
+def full_snapshot(paths, cfg=None, census=None, dest_dir=None):
+    """Debug ▸ "a full snapshot into an archive": everything one could ask for, in one
+    step — the threads' stacks, the stats, the census of objects (and of the toolkit's
+    widgets: census()), the memory snapshot when tracing is on — all into the log, then
+    the report (bug_report) with the logs, the config and the system. One item instead
+    of the menu's eight (stacks, census, trim, tracing, snapshot, folders…, 29.10).
+    Returns the archive."""
+    from . import leaks
+    d = (cfg or {}).get("debug", {}) if isinstance(cfg, dict) else {}
+    dump_stacks("full snapshot")
+    try:
+        check_now(int(d.get("rss_warn_mb", 1500)), objects=True)
+        if census is not None:
+            census()
+    except Exception:  # noqa: BLE001 — the census is a help; the archive comes anyway
+        log.exception("full snapshot: census")
+    if leaks.tracing():
+        try:
+            leaks.snapshot(logs_dir(paths, cfg))
+        except (OSError, RuntimeError) as e:
+            log.warning("full snapshot: memory: %s", e)
+    log_stats(int(d.get("rss_warn_mb", 1500)))
+    return bug_report(paths, dest_dir, cfg)
+
+
 def bug_report(paths, dest_dir=None, cfg=None, hours=48):
     """A .tar.gz with the logs of the last `hours`, crash and stack files, the config
     and a system summary. Never the token or the database. Returns the archive path."""

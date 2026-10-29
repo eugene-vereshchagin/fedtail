@@ -171,12 +171,12 @@ class AppKeysTest(Base):
                     mock.patch("fedtail.diag.log_stats"):
                 await app.menu_do("bug_report")
             self.assertIn("disk full", str(errors[-1]))
-            await app.menu_do("logs")
             app.sounds = mock.Mock(test=lambda: "beep")
             await app.menu_do("test_sound")
             self.assertIn("beep", self.notes)
-            with mock.patch("fedtail.diag.dump_stacks") as stacks:
-                await app.menu_do("stacks")
+            with mock.patch("fedtail.diag.dump_stacks") as stacks, \
+                    mock.patch("fedtail.diag.bug_report", return_value="/tmp/r.tgz"):
+                await app.menu_do("bug_report")  # the full snapshot: the stacks in it
             stacks.assert_called_once()
             await app.menu_do("all_read")
             app.action_search()

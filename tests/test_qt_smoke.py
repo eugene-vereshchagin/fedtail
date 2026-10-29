@@ -2242,7 +2242,10 @@ class QtSmokeTest(unittest.TestCase):
         """≡ → "Report a bug on GitHub…": the draft to read, scrubbed of the server;
         "Open GitHub" opens the new-issue page and nothing else leaves."""
         from fedtail.frontends.qt.issue import IssueDialog
-        self.assertIn(i18n._("issue_menu"), [a.text() for a in self.win._app_menu().actions()])
+        dbg = next(a.menu() for a in self.win._app_menu().actions()
+                   if a.text() == i18n._("debug_menu"))  # with the rest of debugging
+        self.assertIn(i18n._("issue_menu"), [a.text() for a in dbg.actions()])
+        self.assertEqual(dbg.actions()[0].text(), i18n._("debug_report"))
         dlg = IssueDialog(self.win)
         self.assertIn(i18n._("issue_system"), dlg.text.toPlainText())
         dlg.text.setPlainText("сломалось на https://example.test/@mira/1")

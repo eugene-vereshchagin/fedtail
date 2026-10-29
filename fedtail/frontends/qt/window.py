@@ -1066,37 +1066,20 @@ class MainWindow(QMainWindow):
         m.addAction(_("settings"), self.open_settings)
         m.addAction(_("sync_title") + "…", lambda: self.open_place("sync"))
         m.addAction(_("le_title") + "…", lambda: self.open_place("lanes"))
-        m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
-        m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))
         m.addMenu(self._try_theme_menu(m))
-        m.addAction(_("open_data"), lambda: open_path(self.core.paths.data_dir))
         m.addSeparator()
+        # debugging, all of it in one place: the full snapshot does what eight items did
+        # (stacks, census, trim, tracing, memory, the folders…: diag.full_snapshot)
         dbg = m.addMenu(_("debug_menu"))
-        dbg.addAction(_("debug_federation"), self.federation_status)
-        dbg.addAction(_("debug_logs"), lambda: open_path(diag.logs_dir(self.core.paths)))
-        dbg.addAction(_("debug_log_title") + "…", lambda: self.open_place("log"))
         dbg.addAction(_("debug_report"), self.bug_report)
+        dbg.addAction(_("debug_log_title") + "…", lambda: self.open_place("log"))
+        dbg.addAction(_("debug_federation"), self.federation_status)
         dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
             _("debug_notify_sent", backend=self.notifier.test()), 8000))
         dbg.addAction(_("debug_sound"), lambda: self.statusBar().showMessage(
             self.sounds.test(), 8000))
-        dbg.addAction(_("debug_stacks"), lambda: (diag.dump_stacks("asked from the menu"),
-                                                  diag.log_stats(),
-                                                  self.statusBar().showMessage(
-                                                      _("debug_stacks_done"), 5000)))
-        # hunting a leak: what grows, where the memory is, give the free part back
         dbg.addSeparator()
-        dbg.addAction(_("debug_census"), self.debug_census)
-        dbg.addAction(_("debug_trim"), self.debug_trim)
-        from ... import leaks
-        tracing = dbg.addAction(_("debug_tracing"))
-        tracing.setCheckable(True)
-        tracing.setChecked(leaks.tracing())
-        tracing.setToolTip(_("debug_tracing_tip"))
-        tracing.toggled.connect(lambda on: leaks.start_tracing() if on else leaks.stop_tracing())
-        snap = dbg.addAction(_("debug_snapshot"), self.debug_snapshot)
-        snap.setEnabled(leaks.tracing())
-        dbg.setToolTipsVisible(True)
+        dbg.addAction(_("issue_menu"), self.report_issue)
         m.addSeparator()
         m.addAction(_("help_title"), self.open_help)
         whats = m.addAction(_("whats_this"))
@@ -1105,7 +1088,6 @@ class MainWindow(QMainWindow):
         whats.setToolTip(_("whats_this_tip"))
         whats.toggled.connect(self.hints.set_on)
         m.setToolTipsVisible(True)
-        m.addAction(_("issue_menu"), self.report_issue)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -2540,16 +2522,6 @@ class MainWindow(QMainWindow):
                                                                    8000),
                          fail=lambda e: self.error(_("save_failed", err=e)))
 
-    def debug_census(self):
-        """Stats, trend and the census of Python objects and Qt widgets, now."""
-        with diag.busy("diag: census from the menu"):
-            s = diag.check_now(int(self.cfg["debug"].get("rss_warn_mb", 1500)), objects=True)
-            census = getattr(self, "widget_census", None)
-            if census:
-                census()
-        self.statusBar().showMessage(_("debug_census_done", rss=s["rss_mb"],
-                                       objects=s["py_objects"]), 8000)
-
     def federation_status(self):
         """Debug → Federation status: how my server is doing and what keeps failing,
         here and on other servers (core.health; fedstatus draws it). One window, brought
@@ -2578,25 +2550,10 @@ class MainWindow(QMainWindow):
         log.info("federation status: opened")
         dlg.show()
 
-    def debug_trim(self):
-        freed = diag.trim_memory()
-        log.info("memory: %s MB given back (from the menu)", freed)
-        self.statusBar().showMessage(_("debug_trim_none") if freed is None else
-                                     _("debug_trim_done", mb=freed), 6000)
-
-    def debug_snapshot(self):
-        from ... import leaks
-        try:
-            out = leaks.snapshot(diag.logs_dir(self.core.paths))
-        except (OSError, RuntimeError) as e:
-            self.error(e)
-            return
-        self.statusBar().showMessage(_("debug_snapshot_done", path=str(out)), 15000)
-
     def bug_report(self):
         try:
-            diag.log_stats()
-            out = diag.bug_report(self.core.paths, cfg=self.cfg)
+            out = diag.full_snapshot(self.core.paths, self.cfg,
+                                     census=getattr(self, "widget_census", None))
         except OSError as e:
             self.error(e)
             return

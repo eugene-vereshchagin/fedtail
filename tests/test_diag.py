@@ -88,6 +88,20 @@ class DiagTest(unittest.TestCase):
         self.assertIn("config.toml", names)
         self.assertNotIn(b"SECRET", everything)  # the token never goes in
 
+    def test_the_full_snapshot(self):
+        """Debug ▸ "a full snapshot into an archive": the stacks, the stats and the census
+        go into the log first (census(): the toolkit's widgets), then the report."""
+        folder = diag.setup(self.paths, self.cfg)
+        counted = []
+        out = diag.full_snapshot(self.paths, self.cfg, census=lambda: counted.append(1),
+                                 dest_dir=self.paths.data_dir)
+        self.assertEqual(counted, [1])
+        for h in logging.getLogger().handlers:
+            h.flush()
+        self.assertIn("full snapshot", (folder / "latest.log").read_text("utf-8"))
+        with tarfile.open(out) as tar:
+            self.assertIn("system.txt", tar.getnames())
+
     def test_debug_mode_switch(self):
         import fedtail
         self.assertTrue(diag.enabled({"debug": {"mode": "on"}}))

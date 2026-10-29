@@ -962,13 +962,6 @@ class MainWindow(Gtk.ApplicationWindow):
         except GLib.Error as e:
             self.status(_("error", err=e.message))
 
-    def themes_dir(self):
-        return _themes_dir()
-
-    def open_logs(self):
-        from ... import diag
-        self.open_path(diag.logs_dir(self.view.paths))
-
     def silence(self, tab="filters"):
         """Filters, muted, blocked, servers (common/places.py "silence")."""
         return self.open_place("silence", tab=tab)
@@ -1066,37 +1059,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def test_notification(self):
         self.status(_("debug_notify_sent", backend=self.notifier.test()))
 
-    def debug_stacks(self):
-        from ... import diag
-        diag.dump_stacks("asked from the menu")
-        diag.log_stats()
-        self.status(_("debug_stacks_done"))
-
-    def debug_census(self):
-        from ... import diag
-        s = diag.check_now(int(self.cfg["debug"].get("rss_warn_mb", 1500)), objects=True)
-        self.status(_("debug_census_done", rss=s["rss_mb"], objects=s["py_objects"]))
-
-    def debug_trim(self):
-        from ... import diag
-        freed = diag.trim_memory()
-        log.info("memory: %s MB given back (from the menu)", freed)
-        self.status(_("debug_trim_none") if freed is None else _("debug_trim_done", mb=freed))
-
-    def debug_snapshot(self):
-        from ... import diag, leaks
-        try:
-            out = leaks.snapshot(diag.logs_dir(self.view.paths))
-        except (OSError, RuntimeError) as e:
-            self.error(e)
-            return
-        self.status(_("debug_snapshot_done", path=str(out)), seconds=15)
-
     def bug_report(self):
         from ... import diag
         try:
-            diag.log_stats()
-            out = diag.bug_report(self.view.paths, cfg=self.cfg)
+            out = diag.full_snapshot(self.view.paths, self.cfg)
         except OSError as e:
             self.error(e)
             return
@@ -2424,13 +2390,6 @@ def _scroll_to(page, box, widget):
     y = y_in(widget, box)
     if y is not None:
         page.get_vadjustment().set_value(max(0, y - 40))
-
-
-def _themes_dir():
-    from .. import themefile
-    d = themefile.user_dir()
-    d.mkdir(parents=True, exist_ok=True)
-    return d
 
 
 class Columns(Gtk.ScrolledWindow):

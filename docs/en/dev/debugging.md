@@ -10,8 +10,8 @@ In releases (and the one-file builds made from them) the mode is off: the profil
 
 ## Where it lives
 
-In the profile's data folder, `logs/` — `~/.local/share/fedtail/<profile>/logs/` (the ≡ menu →
-"Debugging" → "Open the logs folder"; another place — `debug.log_dir`). The logs of the previous version
+In the profile's data folder, `logs/` — `~/.local/share/fedtail/<profile>/logs/` (another
+place — `debug.log_dir`). The logs of the previous version
 are deleted by the new one at its first start (the folder holds a `version` file — whose they are):
 
 ```
@@ -28,7 +28,7 @@ Besides requests and polls, the log records actions too: which lane is open, whi
 clicks on a post's actions (like, reply, thread — by id, no texts), what was sent
 (the length and where, not the text), how many rows were drawn and how long it took, long window events.
 
-To open it quickly: the ≡ menu → "Debugging" → "Open the logs folder".
+To read it in the app itself: the ≡ menu → "Debugging" → "Log…".
 
 ## What's in the log
 
@@ -77,11 +77,13 @@ crash.log, stacks.log, config.toml and a summary of the system. The token's file
 
 **It hangs / is slow.** Without closing the client:
 
-* the ≡ menu → "Debugging" → "Write the threads' stacks and stats", or
+* the ≡ menu → "Debugging" → "A full snapshot into an archive" — the threads' stacks, the
+  stats, the census of objects and widgets, the memory snapshot (with tracing on), and then
+  all of it with the logs, the config and the system summary — in one archive, opened for you. Or
 * in a terminal: `kill -USR1 $(pgrep -f "python3 -m fedtail")` — the stacks go to
-  `stacks.log` even if the window doesn't answer at all;
+  `stacks.log` even if the window doesn't answer at all; then `--bug-report`.
 
-then `--bug-report` (or the menu → "Make a report for analysis") and send it.
+Send the archive.
 
 **No notifications.** The ≡ menu → "Debugging" → "Test a notification". If none came —
 the log will have `notifications:` lines (which way was chosen and why) and `notify-send exit …`
@@ -104,13 +106,11 @@ starts again.
 Leave the window overnight (or for a day) and find out in the morning what grew, and what exactly.
 
 1. A development version (from git) — the debugging mode is on by itself. A release — `debug.mode = "on"`.
-2. For a serious hunt — `debug.tracemalloc = true` in the config (or ≡ → "Debugging" →
-   "Memory tracing" after the start). Slower and up to twice the memory: only
+2. For a serious hunt — `debug.tracemalloc = true` in the config. Slower and up to twice the memory: only
    for the time of the hunt. Everything else works without it too.
 3. Start it, open your usual lanes, a couple of threads and profiles, close them — as in the daytime.
-   A minute later ≡ → "Debugging" → "Memory snapshot" (if tracing is on) — the starting point.
-4. Leave it. In the morning: "Memory snapshot" once more, "What grows: stats and object census
-   now", then `--bug-report` (or just the logs folder) — and send it.
+   A minute later ≡ → "Debugging" → "A full snapshot into an archive" — the starting point.
+4. Leave it. In the morning — the snapshot once more, and send both archives.
 
 What to read in the log (`grep` by the start of the line):
 

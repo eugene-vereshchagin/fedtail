@@ -66,18 +66,10 @@ class MainMenu:
         a("logout", win.log_out)
         a("settings", win.open_settings)
         a("lanes", lambda: win.open_place("lanes"))
-        a("config", lambda: win.open_path(win.view.paths.config_file))
-        a("themes", lambda: win.open_path(win.themes_dir()))
-        a("data", lambda: win.open_path(win.view.paths.data_dir))
         a("federation", win.federation_status)
-        a("logs", win.open_logs)
         a("report", win.bug_report)
         a("test_notify", win.test_notification)
         a("test_sound", lambda: win.status(win.sounds.test()))
-        a("stacks", win.debug_stacks)
-        a("census", win.debug_census)
-        a("trim", win.debug_trim)
-        a("snapshot", win.debug_snapshot)
         a("help", win.open_help)
         a("about", win.about)
         a("issue", win.report_issue)
@@ -88,9 +80,6 @@ class MainMenu:
         self._arg("theme", win.try_theme)
         self._toggle("merged", lambda: bool(getattr(win.core, "others", None)),
                      win.set_merged)
-        from ... import leaks
-        self._toggle("tracing", leaks.tracing,
-                     lambda on: leaks.start_tracing() if on else leaks.stop_tracing())
         self._toggle("whats_this", lambda: win.hints_on, win.set_hints)
 
     def _act(self, name, fn):
@@ -175,29 +164,22 @@ class MainMenu:
         _item(files, _("settings"), "settings")
         _item(files, _("sync_title") + "…", "sync")
         _item(files, _("le_title") + "…", "lanes")
-        _item(files, _("open_config"), "config")
-        _item(files, _("open_themes"), "themes")
         sub = Gio.MenuItem.new_submenu(_("try_theme"), self._themes())
         sub.set_attribute_value("tooltip", GLib.Variant("s", _("try_theme_tip")))
         files.append_item(sub)
-        _item(files, _("open_data"), "data")
         top.append_section(None, files)
 
+        # debugging, all of it in one place: the full snapshot does what eight items
+        # did (stacks, census, trim, tracing, memory, the folders…: diag.full_snapshot)
         dbg = Gio.Menu()
         one = Gio.Menu()
-        for action, key in (("federation", "debug_federation"), ("logs", "debug_logs"),
-                            ("log", "debug_log_title"),
-                            ("report", "debug_report"), ("test_notify", "debug_notify"),
-                            ("test_sound", "debug_sound"), ("stacks", "debug_stacks")):
-            _item(one, _(key), action)
+        for action, key in (("report", "debug_report"), ("log", "debug_log_title"),
+                            ("federation", "debug_federation"),
+                            ("test_notify", "debug_notify"), ("test_sound", "debug_sound")):
+            _item(one, _(key) + ("…" if action == "log" else ""), action)
         dbg.append_section(None, one)
         two = Gio.Menu()
-        for action, key in (("census", "debug_census"), ("trim", "debug_trim"),
-                            ("tracing", "debug_tracing"), ("snapshot", "debug_snapshot")):
-            _item(two, _(key), action,
-                  hint=_("debug_tracing_tip") if action == "tracing" else None)
-        from ... import leaks
-        self.enable("snapshot", leaks.tracing())
+        _item(two, _("issue_menu"), "issue")
         dbg.append_section(None, two)
         debug = Gio.Menu()
         debug.append_submenu(_("debug_menu"), dbg)
@@ -206,7 +188,6 @@ class MainMenu:
         helps = Gio.Menu()
         _item(helps, _("help_title"), "help")
         _item(helps, _("whats_this"), "whats_this", hint=_("whats_this_tip"))
-        _item(helps, _("issue_menu"), "issue")
         _item(helps, _("about"), "about")
         top.append_section(None, helps)
         last = Gio.Menu()

@@ -488,26 +488,13 @@ area = "app"
 android = "partly"
 android_note.ru = "цвета, шрифты и картинки тем окон, «примерить» — в меню; папки тем нет"
 android_note.en = "the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder"
-name.ru = "Темы: попробовать, папка тем"
-name.en = "Themes: try one, the themes folder"
+name.ru = "Темы: попробовать"
+name.en = "Themes: try one"
 tui = "partly"
 web = "partly"
 note.ru = "У терминала свои темы (`tui.theme`). Веб берёт из тем окон цвета и шрифт и пробует их из меню ≡, но папку тем не открывает: страница — гость в браузере."
 note.en = "The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser."
-keys = ["try_theme", "theme_in_config", "theme_tried", "open_themes"]
-
-[[capability]]
-id = "files"
-area = "app"
-android = "partly"
-android_note.ru = "конфиг правится в приложении; папки данных нет"
-android_note.en = "the config is edited in the app; no data folder"
-name.ru = "Открыть конфиг и папку данных"
-name.en = "Open the config and the data folder"
-web = "na"
-note.ru = "Терминал открывает конфиг в $EDITOR и копирует пути (≡ → «Отладка»); у веба нет доступа к файлам машины."
-note.en = "The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files."
-keys = ["open_config", "open_data"]
+keys = ["try_theme", "theme_in_config", "theme_tried"]
 
 [[capability]]
 id = "help-browse"
@@ -542,29 +529,14 @@ keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"
 id = "debug-basic"
 area = "app"
 android = "has"
-name.ru = "Отладка: журнал, отчёт, звук, стеки"
-name.en = "Debugging: the log, a report, the sound, the stacks"
+name.ru = "Отладка: полный слепок в архив, журнал, звук"
+name.en = "Debugging: a full snapshot into an archive, the log, the sound"
 web = "na"
 note.ru = "Веб-страница — гость в браузере: отчёт собирают в окне, терминале или `fedtail --bug-report`."
 note.en = "The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`."
-keys = ["debug_logs", "debug_report", "debug_report_done", "debug_sound",
-        "debug_sound_played", "debug_sound_silent", "debug_stacks", "debug_stacks_done",
+keys = ["debug_report", "debug_report_done", "debug_sound", "debug_sound_played",
+        "debug_sound_silent", "debug_corner_tip", "debug_theme",
         "bugreport_send_failed", "bugreport_sending", "bugreport_sent"]
-
-[[capability]]
-id = "debug-memory"
-area = "app"
-android = "na"
-android_note.ru = "инструмент для компьютера"
-android_note.en = "a desktop tool"
-name.ru = "Отладка памяти: перепись, снимок, трассировка, отдать память"
-name.en = "Memory debugging: census, snapshot, tracing, giving memory back"
-web = "na"
-note.ru = "Охота на утечки — в окнах и терминале; веб-страница — гость в браузере."
-note.en = "Leak hunting is the windows' and the terminal's; the web page is a guest in a browser."
-keys = ["debug_census", "debug_census_done", "debug_corner_tip", "debug_menu",
-        "debug_snapshot", "debug_snapshot_done", "debug_theme", "debug_tracing",
-        "debug_trim", "debug_trim_done", "debug_trim_none"]
 
 [[capability]]
 id = "tooltips"
@@ -584,7 +556,7 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
         "tip_to_me", "tip_important", "tip_network", "tip_stranger_mentions",
         "tip_commented",
         "to_end_tip", "unread_tip", "full_width_tip", "short_id_tip", "reactions_tip",
-        "cw_add_tip", "compose_bigger_tip", "accounts_merge_tip", "debug_tracing_tip",
+        "cw_add_tip", "compose_bigger_tip", "accounts_merge_tip",
         "footer_profile_tip", "make_main_tip", "tender_arts_tip", "try_theme_tip",
         "close_tip", "a11y_avatar"]
 
@@ -644,7 +616,7 @@ keys = ["alt_title", "cancel", "compose_edit", "compose_invite", "compose_new",
         "media_click", "media_files", "media_gifv", "media_image", "media_tip",
         "media_unknown", "media_video", "menu", "poll_add", "quit", "resolve_browser",
         "resolving", "save_failed", "schedule", "send_failed_text", "sensitive_mark",
-        "debug_federation", "issue_menu", "all_read"]
+        "debug_federation", "issue_menu", "debug_menu", "all_read"]
 
 [[wording]]
 in = ["tui"]

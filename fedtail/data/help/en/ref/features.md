@@ -725,7 +725,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A bug report straight into your private repository | has | 0.19.0 | `debug.report_repo`, `tools/selfcheck.py --send` | — | — |
 | Report a bug on GitHub — checked first | has | 0.19.0 | `debug.issue_repo` | — | Fedilab, Tusky (a mail to the developer) |
 | Federation status: how my server is doing and what fails | has | 0.16.0 | ≡ → “Debugging” → “Federation status” | own (from what this run saw) | — |
-| Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” | own (gc, tracemalloc) | — |
+| Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” → “A full snapshot into an archive” | own (gc, tracemalloc) | — |
 | The database doesn't grow for ever: cleanup and a size budget | has | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
 | Screen readers | partly | 0.9.0 | `media.alt_text`, `appearance.accessibility` | — | Mastodon web, Tusky, Ivory |
 | Interface language | has | 0.1.0 | `appearance.language` | — | everyone |
@@ -877,10 +877,8 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
-| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder |
-| Open the config and the data folder | ✓ | ✓ | ✓ | · | ◐ | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. Android: the config is edited in the app; no data folder |
-| Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | · | ✓ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
-| Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | · | · | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. Android: a desktop tool |
+| Themes: try one | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder |
+| Debugging: a full snapshot into an archive, the log, the sound | ✓ | ✓ | ✓ | · | ✓ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (editor size, tracing). Android: nothing to hover with |
 
 ---

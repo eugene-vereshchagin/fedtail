@@ -273,8 +273,7 @@ class GtkSmokeTest(_GtkBase):
                         walk(sub)
         walk(model)
         for key, tipkey in (("whats_this", "whats_this_tip"), ("try_theme", "try_theme_tip"),
-                            ("accounts_merge", "accounts_merge_tip"),
-                            ("debug_tracing", "debug_tracing_tip")):
+                            ("accounts_merge", "accounts_merge_tip")):
             self.assertEqual(hints.get(i18n._(key)), i18n._(tipkey), key)
         self.assertEqual(self.win.profile_label._ft_tip, i18n._("footer_profile_tip"))
         lane = self._lane("home")
@@ -313,7 +312,7 @@ class GtkSmokeTest(_GtkBase):
                         walk(sub)
         walk(model)
         for key in ("tender_menu", "accounts", "try_theme", "debug_menu", "help_title",
-                    "about", "open_config", "silence_muted"):
+                    "about", "debug_report", "issue_menu", "silence_muted"):
             self.assertTrue(any(i18n._(key) in x for x in labels), key)
         errors = []
         self.win.error = lambda e: errors.append(str(e))
