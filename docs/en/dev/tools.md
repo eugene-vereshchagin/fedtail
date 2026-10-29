@@ -9,6 +9,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | tool | what it does | how to run |
 |---|---|---|
 | `selfcheck.py` | everything below that can run on this machine, in one go: tests, walks through every interface with screenshots, window sizes, speed, parity; then the same on your own account (a read-only copy); a report and a zip to send | `python3 tools/selfcheck.py --night` (1–3 h), `--quick` (5 min) |
+| `affected.py` | the tests a change can break, not all of them: picked by the modules, functions and events the diff touches and by its area, plus the layering, parity and docs checks; GUI ones under xvfb | `python3 tools/affected.py`, `--since @{u}`, `--list` |
 | `devenv.py` | Playwright and Chromium for the web walk and the gallery, in a venv of their own (Debian's Python stays as it is) | `python3 tools/devenv.py`, once |
 | `real.py` | `--real` for the tours and benches: your own account instead of the fake server — a copy of the profile, only GET goes out | `--real[=PROFILE]` on other tools |
 | `windows_check.py` | docs/en/dev/windows.md done on this Windows: every command of the page that can run without a person, in a profile of its own | `py -3.13 tools/windows_check.py OUT --tests` |

@@ -83,6 +83,16 @@ Look by report.md: Qt's themes (`qt-tour/*-single.png`), the same themes in GTK
 (`gtk-shots/`), menus (`qt-tour/menu-*.png`), sizes (`size-*`), the web on a phone.
 Found something ugly — name the file, I'll sort out the rest.
 
+## Agents that look for holes
+
+Two agents for Claude Code live in `.claude/agents/`, in the repository, so any session (or a
+person with Claude Code) has them: `principles-reviewer` holds a change against
+[principles.md](principles.md) and AGENTS.md — logic in an interface, a fix for one interface
+only, a contract changed under the phone; `test-gap-finder` says which tests a change or an
+area lacks, in which interface, the blind spots of the ones not used every day first. They
+read and advise; they don't edit. Between them and the full run, `tools/affected.py` runs
+the tests a change can break.
+
 ## What isn't there yet (next steps)
 
 - a GTK tour like Qt's: menus, dialogs, sizes (now — shots and a bench);
