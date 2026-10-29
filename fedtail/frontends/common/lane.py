@@ -284,6 +284,11 @@ class LaneModel:
         self.kept = None
         self.separator = None
 
+    def read_on_open(self):
+        """read.mark_read = "on_open": the lane read whole the moment it comes on screen —
+        not a browsed one (nothing is unread there)."""
+        return self.cfg["read"]["mark_read"] == "on_open" and not self.lazy
+
     def conversations_offered(self):
         return self.rank in (1, 2, 3) and not self.threads_view  # replies, mentions, threads
 
@@ -532,6 +537,22 @@ class LaneModel:
         if self.cfg["read"]["mark_read"] != "on_scroll":
             return []
         return [m for i in ids for m in self.conv_members.get(i, [i])]
+
+
+def marks_seen(cfg):
+    """read.mark_read: are posts seen on screen marked read (all but "manual")?"""
+    return cfg["read"]["mark_read"] != "manual"
+
+
+def seen_read(cfg, ids):
+    """The ids seen on screen to mark read: all of them, or none when reading is by
+    hand (read.mark_read = "manual") — every interface decides it here."""
+    return list(ids) if marks_seen(cfg) else []
+
+
+def thread_read_on_open(cfg, unread):
+    """A thread opened: its unread posts read at once, unless reading is by hand."""
+    return sorted(unread) if marks_seen(cfg) else []
 
 
 def read_up_to(entries, sid):

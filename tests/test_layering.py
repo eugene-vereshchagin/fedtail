@@ -8,6 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent / "fedtail"
 
 MOVED = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "frontends").rglob("*.py"))
+# the phone's Python is a frontend too (it slipped by: its overview read raw posts)
+PHONE = sorted((ROOT.parent / "android/app/src/main/python").rglob("*.py"))
 
 # what only a Mastodon status or account has; the model says it differently
 RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'
@@ -20,10 +22,13 @@ RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'
 
 class LayeringTest(unittest.TestCase):
     def test_moved_frontends_read_no_protocol_fields(self):
-        for rel in MOVED:
-            text = (ROOT / rel).read_text(encoding="utf-8")
-            hits = [f"{rel}:{n}: {line.strip()}" for n, line in enumerate(text.splitlines(), 1)
-                    if RAW.search(line)]
+        """A line marked "# ours:" reads fedtail's own data (auth.json), not a server's."""
+        self.assertTrue(PHONE)
+        for path in [ROOT / rel for rel in MOVED] + PHONE:
+            text = path.read_text(encoding="utf-8")
+            hits = [f"{path.name}:{n}: {line.strip()}"
+                    for n, line in enumerate(text.splitlines(), 1)
+                    if RAW.search(line) and "# ours:" not in line]
             self.assertEqual(hits, [], "\n".join(hits))
 
     def test_shared_frontend_code_imports_no_toolkit(self):

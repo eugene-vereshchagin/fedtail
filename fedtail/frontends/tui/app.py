@@ -587,8 +587,10 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         keys = [it.key for it in items]
         lv.index = keys.index(keep) if keep in keys else focus
         self.app.load_pictures(items)
-        if core.cfg["read"]["mark_read"] != "manual":
-            core.mark_read(posts)
+        from ..common.lane import seen_read
+        ids = seen_read(core.cfg, posts)  # the thread on screen whole: seen (common/lane.py)
+        if ids:
+            core.mark_read(ids)
 
     def show_progress(self, words, done=False):
         """threads.thread_progress: how fetching replies goes, after the title line;
@@ -1610,12 +1612,13 @@ class FedtailApp(App, PostsMixin):
 
     def read_up_to(self, sid):
         """This post and everything older in the lane: read (⋯ → read up to here)."""
+        from ..common.lane import read_up_to
         if not self.lane:
             return
-        ids = [e.id for _i, e in self.core.entries(self.lane)]
-        if sid in ids:
-            self.core.mark_read(ids[:ids.index(sid) + 1])
-            self.refresh_lane()
+        # the one rule: by time, a boost where it was boosted (it went by place and by
+        # the item's id, so a boost's post never matched)
+        self.core.mark_read(read_up_to([e for _i, e in self.core.entries(self.lane)], sid))
+        self.refresh_lane()
 
     def post_reply(self, st, _where=None):
         alias = self.core.short_ids([st]).get(real(st).id)

@@ -232,13 +232,16 @@ fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -
     }
 }
 
-/** A lane opened anew stands on its first unread post, like the desktop; never jumps after. */
+/** A lane opened anew stands where the core says reading starts (byCore, start: the card's
+ *  key, none — the newest end: feed.start_at and "new below", as on the desktop); "to new"
+ *  goes to the first unread. Never jumps after. */
 suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0,
-                divider: String? = null) {
+                divider: String? = null, byCore: Boolean = false, start: String? = null) {
     if (posts.isEmpty()) return
     val firstUnread = posts.indexOfFirst { it.unread }
+    val chosen = if (byCore) posts.indexOfFirst { it.key == start } else firstUnread
     val at = when {
-        firstUnread >= 0 -> firstUnread
+        chosen >= 0 -> chosen
         newestFirst -> 0
         else -> posts.size - 1
     }

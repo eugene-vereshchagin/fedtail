@@ -2,6 +2,27 @@
 
 ## 0.22.0 — in progress
 
+- More of the lanes by their rules: a lane waits out of the sidebar till it has something
+  by its rule's `hide_empty` (the fedtail set's "Important people"), not its name; the
+  columns with nothing chosen are the set's first lane, its replies and mentions and a lane
+  of events; `fedtail tail` follows `notify.lanes` as the notifications do (`except`,
+  lists by title) and `fedtail lanes` counts as the sidebar does; GTK's tray number heeds
+  `ui.icon_count` as Qt's does. The Qt window takes events as the model (it read the
+  server's JSON). Leftovers gone: the old profile handlers of the Qt window, unused names.
+
+- Fixed: two keys could be made at once when sync was set up — the first device's key from
+  ≡ → Sync and the one a round makes by itself for an empty journal — and the one kept
+  wasn't always the one in use (seen as "No such file … sync.tmp" now and then). Every
+  change of the key waits for the round; a secret file is written through a temporary
+  file of its own.
+- The same rules in every interface, decided once: "Read up to here" counts by time over
+  what's shown, a boost where it was boosted (the web page and the phone counted by place,
+  the terminal never matched a boost); where a lane opens follows `feed.start_at` on the
+  phone too (it went to the first unread whatever the option said); a thread read as it
+  opens (or not, with `read.mark_read = "manual"`) and what is seen marked read are one
+  decision for Qt, GTK, the terminal, the web page and the phone. The phone's overview
+  sorts lanes by their rules (it had a list of names).
+
 - Lanes behave by their rules, not their names — a set of lanes of one's own (or another
   preset) gets everything the built-in names had:
   - the lane opened first (`ui.start_lane`) is decided once for every interface: the

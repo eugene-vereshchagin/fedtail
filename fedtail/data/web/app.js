@@ -559,7 +559,9 @@ function chooseDlg(c) {
 // what is left for the page — a question first, a place to open, the editor, a copy
 async function linkAct(url, p, confirmed, chosen) {
   let r;
-  try { r = await api("/api/link", { url, confirmed: !!confirmed, chosen: chosen || null }); }
+  // the cards shown: "read up to here" is counted on the server, by the one rule
+  const shown = state.posts.map((x) => x.id);
+  try { r = await api("/api/link", { url, confirmed: !!confirmed, chosen: chosen || null, shown }); }
   catch (e) { toast(e.message); return; }
   if (r.confirm) {
     if (window.confirm(r.confirm)) await linkAct(url, p, true, chosen);
@@ -574,7 +576,7 @@ async function linkAct(url, p, confirmed, chosen) {
   if (r.alias) { const c = $("#cmd"); c.value = "#" + r.alias + " "; c.focus(); }
   if (r.open) openThing(r.open);
   if (r.compose) composeFrom(r.compose, p);
-  if (r.read_up_to) readUpTo(r.read_up_to);
+  if (r.read) paintRead(r.read);
   if (r.message) toast(r.message);
   if (r.refresh) await refresh();
 }
@@ -620,19 +622,15 @@ function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invi
   counter();
 }
 
-function readUpTo(sid) {  // this post and everything older in the lane: read
-  const at = state.posts.findIndex((x) => x.sid === sid || x.id === sid);
-  if (at < 0) return;
-  const older = state.me.order === "oldest_first" ? state.posts.slice(0, at + 1)
-                                                  : state.posts.slice(at);
-  for (const x of older) {
-    if (!x.unread) continue;
+function paintRead(ids) {  // marked read on the server ("read up to here"): shown so
+  const done = new Set(ids);
+  for (const x of state.posts) {
+    if (!x.unread || !(done.has(x.id) || done.has(x.sid))) continue;
+    x.unread = false;
     const card = document.querySelector(`.post[data-id="${CSS.escape(x.id)}"]`);
-    if (card) read(card);
-    else { x.unread = false; state.readQueue.add(x.id); }
+    if (card) unmark(card);
   }
   countUnread();
-  flushRead();
 }
 
 async function threadAct(action, p) {
@@ -992,13 +990,9 @@ async function selectLane(name, keep) {
     const first = box.querySelector(".event.unread");
     if (first && state.me.start_at !== "newest") first.scrollIntoView({ block: "start" });
     else box.scrollTop = newestFirst ? 0 : box.scrollHeight;
-  } else {
-    const firstUnread = data.posts.findIndex((p) => p.unread);
-    const lastUnread = data.posts.map((p) => p.unread).lastIndexOf(true);
-    const newest = newestFirst ? 0 : data.posts.length - 1;
-    const oldestUnread = newestFirst ? lastUnread : firstUnread;
-    const start = state.me.start_at === "newest" || oldestUnread < 0 ? newest : oldestUnread;
-    setCursor(start, false, "start");
+  } else {  // where reading starts: the core's (LaneModel.start), else the newest end
+    const at = data.start ? data.posts.findIndex((p) => p.id === data.start) : -1;
+    setCursor(at >= 0 ? at : (newestFirst ? 0 : data.posts.length - 1), false, "start");
   }
   if (state.me.mark_read === "on_open" && !keep) {  // the lane is read once it is open;
     const ids = data.posts.filter((p) => p.unread).map((p) => p.id)   // the marks stay
@@ -1320,11 +1314,9 @@ async function loadPane(p, keep) {
   const again = anchor && p.body.querySelector(`[data-id="${CSS.escape(anchor)}"]`);
   if (again) {
     p.body.scrollTop += again.getBoundingClientRect().top - oldTop;
-  } else if (data.posts.length) {  // where the lane starts: the oldest new, else the newest
-    const unread = data.posts.map((x) => x.unread);
-    const oldest = newestFirst ? unread.lastIndexOf(true) : unread.indexOf(true);
-    const newest = newestFirst ? 0 : data.posts.length - 1;
-    const at = state.me.start_at === "newest" || oldest < 0 ? newest : oldest;
+  } else if (data.posts.length) {  // where the lane starts: the core's, else the newest end
+    const found = data.start ? data.posts.findIndex((x) => x.id === data.start) : -1;
+    const at = found >= 0 ? found : (newestFirst ? 0 : data.posts.length - 1);
     const card = p.body.querySelector(`.post[data-id="${CSS.escape(data.posts[at].id)}"]`);
     if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
   }
@@ -1667,9 +1659,9 @@ async function openThread(id, at) {
     }
     if (t.posts.length) $("#side-title").textContent = w("web_thread") + " · @" + t.posts[0].account.handle;
     if (focus) focus.scrollIntoView({ block: "center" });
-    if (state.me.mark_read !== "manual") {
-      const ids = t.posts.filter((p) => p.unread).map((p) => p.id);
-      if (ids.length) api("/api/read", { ids }).catch(() => {});
+    const ids = t.read_on_open || [];  // the core's: read as it opens, unless by hand
+    if (ids.length) {
+      api("/api/read", { ids }).catch(() => {});
       for (const card of document.querySelectorAll("#posts .post.unread"))
         if (ids.includes(card.dataset.id)) read(card);
     }

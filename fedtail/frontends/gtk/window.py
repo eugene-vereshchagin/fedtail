@@ -1325,7 +1325,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if on:
             titles = {x.title: "list:" + x.id for x in self.view.lists}
             names = cols.start_names(self.cfg, self.view.get_state("columns"),
-                                     list(self.lane_rows), titles)
+                                     list(self.lane_rows), titles, view=self.view)
             self.columns = Columns(self)
             for name in names:
                 self.columns.add(name, self._lane_view(name))
@@ -1588,7 +1588,9 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.curtain_shown():
             self._curtain_text(numbers)
         if getattr(self, "tray", None) is not None:  # how much is new, on the tray too
-            self.tray.set_count(self.get_title() or "fedtail", sum(numbers.values()))
+            # the lanes ui.icon_count picks (common/sidebar.py, as Qt's): not every lane
+            self.tray.set_count(self.get_title() or "fedtail",
+                                sidebar.icon_total(self.view, self.cfg, numbers))
         folded = sidebar.folded(self.view)
         for group, head in self.sections.items():
             head.show_fold(group in folded, sum(numbers.get(n, 0) for n in head.names))
@@ -1783,10 +1785,11 @@ class MainWindow(Gtk.ApplicationWindow):
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
-            # read as it opens — unless read.mark_read = "manual" (as Qt's thread: the
-            # behaviour check of 23.10 found GTK marking a thread read regardless)
-            if unread and self.cfg["read"]["mark_read"] != "manual":
-                self.view.mark_read(sorted(unread))
+            # read as it opens — unless read.mark_read = "manual" (common/lane.py)
+            from ..common.lane import thread_read_on_open
+            ids = thread_read_on_open(self.cfg, unread)
+            if ids:
+                self.view.mark_read(ids)
             if focus is not None:
                 GLib.idle_add(lambda: (_scroll_to(page, box, focus), GLib.SOURCE_REMOVE)[1])
         def failed(err):

@@ -448,6 +448,34 @@ class WebTest(TmpDir):
         self.assertEqual(self.req("/api/delete", {"id": "001"})[0], 200)
         self.assertNotIn("001", self.w.statuses)
 
+    def test_the_lane_says_where_reading_starts(self):
+        """The lane's own start (LaneModel.start: feed.start_at, "new below"): the page
+        and the phone stand there instead of counting it again."""
+        web = self.srv.web
+        self.core.cfg["feed"]["start_at"] = "first_unread"
+        got = web.lane("home")
+        unread = [p["id"] for p in got["posts"] if p["unread"]]
+        self.assertTrue(unread)
+        self.assertEqual(got["start"], unread[0])
+        self.core.cfg["feed"]["start_at"] = "newest"
+        self.assertIsNone(web.lane("home")["start"])  # the newest end
+
+    def test_read_up_to_here_is_the_cores_count(self):
+        """⋯ → "Read up to here": counted on the server over the cards the page shows,
+        by time (common/lane.read_up_to) — the page had its own count by place; what was
+        marked comes back for the page to paint."""
+        self.w.add(status("003", BOB, minute=3, text="third", vis="public"), home=True)
+        self.w.add(status("004", BOB, minute=4, text="fourth", vis="public"), home=True)
+        self.core.poll_once()
+        shown = ["004", "002", "003", "001"]  # in whatever order the page has them
+        got = json.loads(self.req("/api/link", {"url": "fedtail:readupto/003",
+                                                "shown": shown})[2])
+        self.assertEqual(sorted(got["read"]), ["001", "002", "003"])
+        self.assertEqual(self.core.store.read_set(["001", "002", "003", "004"]),
+                         {"001", "002", "003"})
+        got = json.loads(self.req("/api/link", {"url": "fedtail:readupto/004"})[2])
+        self.assertEqual(got["read"], ["004"])  # nothing shown said: that post alone
+
     def test_post_menu_is_the_windows_menu(self):
         """The ⋯ menu: the very items of the Qt and GTK windows (common/actions), and
         its fedtail: links done the way they do them, the page told what's left."""

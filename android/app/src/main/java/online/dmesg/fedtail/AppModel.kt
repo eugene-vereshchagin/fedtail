@@ -32,7 +32,7 @@ sealed interface Screen {
     data object Main : Screen
 }
 
-/** What stands over the lanes: a thread, the editor, pictures, the config, sync. Back closes it. */
+/** What stands over the lanes: a thread, the editor, pictures, the config. Back closes it. */
 sealed interface Place {
     data class Thread(val focus: String) : Place
     /** init: what the core put in the editor (an edit of my post, a quote, a text). */
@@ -265,6 +265,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var title by mutableStateOf("")
     var posts by mutableStateOf(listOf<PostItem>())
     var divider by mutableStateOf<Pair<String, String>?>(null) // (post key, "new below · N")
+    var startKey by mutableStateOf<String?>(null) // the card a lane opened anew stands on
     var opening by mutableStateOf(0) // grows each time a lane opens anew: the list re-aims
     var aimed = 0                     // the opening the list last aimed at
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title
@@ -616,6 +617,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         divider = div?.let { d ->
             list.firstOrNull { it.id == d.optString("before") }?.key?.let { it to d.optString("text") }
         }
+        // where reading starts, the core's (feed.start_at, "new below"): none — the newest end
+        startKey = got.optString("start").takeIf { it.isNotBlank() }
+            ?.let { s -> list.firstOrNull { it.id == s }?.key }
         if (!keep) opening += 1
         pendingAim?.let { key -> if (list.any { it.key == key }) { aimKey = key; pendingAim = null } }
     }
@@ -1031,6 +1035,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             Core.failed(got)?.let { message = it; back(); return@launch }
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
+            // read as it opens, unless by hand — the core's decision (common/lane.py)
+            got.optJSONArray("read_on_open")?.let { arr ->
+                val now = (0 until arr.length()).map { arr.getString(it) }.toSet()
+                markRead(threadPosts.filter { it.id in now || it.sid in now }.map { it.key },
+                         inThread = true)
+            }
             threadAimAt = got.optString("focus").takeIf { it.isNotBlank() && it != postId }
             threadOpening += 1
         }
@@ -1167,6 +1177,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (Core.failed(got) == null) {
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
+            // read as it opens, unless by hand — the core's decision (common/lane.py)
+            got.optJSONArray("read_on_open")?.let { arr ->
+                val now = (0 until arr.length()).map { arr.getString(it) }.toSet()
+                markRead(threadPosts.filter { it.id in now || it.sid in now }.map { it.key },
+                         inThread = true)
+            }
         }
     }
 
@@ -1541,7 +1557,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A fedtail: link of the ⋯ menu (edit, delete, mute, report…), done the windows' way. */
     fun runLink(url: String, confirmed: Boolean = false, chosen: JSONObject? = null) {
         viewModelScope.launch {
-            val got = Core.link(url, confirmed, chosen)
+            // the cards on screen: "read up to here" is counted by the core, by time
+            val shown = (if (place is Place.Thread) threadPosts else posts).map { it.id }
+            val got = Core.link(url, confirmed, chosen, shown)
             handle(got) { c, ch, _ -> runLink(url, c || confirmed, ch ?: chosen) }
         }
     }
@@ -1578,7 +1596,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
         str(got, "copy").takeIf { it.isNotBlank() }?.let { copy(it) }
         str(got, "alias").takeIf { it.isNotBlank() }?.let { putAlias(it) }
-        str(got, "read_up_to").takeIf { it.isNotBlank() }?.let { readUpTo(it) }
+        got.optJSONArray("read")?.let { arr -> paintRead((0 until arr.length()).map { arr.getString(it) }) }
         str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
         got.optJSONObject("compose")?.let { composeFrom(it) }
         got.optJSONObject("open")?.let { openThing(it) }
@@ -1613,11 +1631,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** "Read up to here": this post and everything older in the lane. */
-    private fun readUpTo(sid: String) {
-        val inOrder = if (newestFirst) posts.reversed() else posts
-        val i = inOrder.indexOfFirst { it.sid == sid || it.id == sid }
-        if (i < 0) return
-        markRead(inOrder.take(i + 1).map { it.key })
+    /** Marked read by the core ("read up to here"): the cards say so, nothing sent again. */
+    private fun paintRead(ids: List<String>) {
+        val done = ids.toSet()
+        val seen = { p: PostItem -> if (p.id in done || p.sid in done) p.copy(unread = false) else p }
+        posts = posts.map(seen)
+        threadPosts = threadPosts.map(seen)
     }
 
     /** A poll answered: the card as it is now, wherever it shows. */

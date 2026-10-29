@@ -446,9 +446,6 @@ class LaneWidget(QWidget):
         log.info("lane %s unloaded: %d cards let go", self.name, n)
         return True
 
-    def conversations_on(self):
-        return self.view_seg is not None and self.view_seg.current == "conversations"
-
     def refresh_now(self):
         self.core.refresh_by_hand()
 
@@ -548,7 +545,7 @@ class LaneWidget(QWidget):
             QTimer.singleShot(0, self._catch_up)
         if not self.positioned:
             QTimer.singleShot(0, self._initial_position)
-        if self.cfg["read"]["mark_read"] == "on_open":
+        if self.lm.read_on_open():  # read.mark_read (common/lane.py decides)
             QTimer.singleShot(0, self.mark_all_read)
 
     def _start_key(self, specs):
@@ -767,7 +764,9 @@ class ThreadWidget(QWidget):
             self._plate(True)
 
     def _seen(self, ids):
-        if self.core.cfg["read"]["mark_read"] != "manual":
+        from ..common.lane import seen_read
+        ids = seen_read(self.core.cfg, ids)
+        if ids:
             self.core.mark_read(ids)
 
     def reload(self, quiet=False):
@@ -1411,9 +1410,7 @@ class AccountWidget(_PagedTab):
             lay.addWidget(label)
 
     def _button_done(self, rel):
-        """A profile button done (common/profile.py): the relation as it is now. (Named
-        _changed once, as the method below: that one won, and Follow, Unfollow and the
-        rest failed with "takes 1 positional argument but 2 were given", 27.10.)"""
+        """A profile button done (common/profile.py): the relation as it is now."""
         if isinstance(rel, Relationship):
             self._relation(rel)
         else:
@@ -1450,73 +1447,6 @@ class AccountWidget(_PagedTab):
                     _("followed_now", acct="@" + new.handle), 6000),
                 fail=self.win.error), name="primary"))
         return box
-
-    def _changed(self, **now):
-        """What the server answers to a change (the relationship as it is now), or, if it
-        says nothing, the relationship with that change made."""
-        return lambda r: self._relation(r if isinstance(r, Relationship)
-                                        else replace(self.relation, **now))
-
-    def _toggle_boosts(self):
-        on = not self.relation.showing_shares
-        self.win.bridge.call(self.core.follow_options(self.acc_id, reblogs=on),
-                             ok=self._changed(showing_shares=on), fail=self.win.error)
-
-    def _pick_languages(self):
-        """Only their posts in these languages come to Home ("" — all of them)."""
-        from PySide6.QtWidgets import QInputDialog
-        now = ", ".join(self.relation.languages or ())
-        text, ok = QInputDialog.getText(self, _("langs_person_title", acct=self.acc.handle),
-                                        _("langs_person_ask"), text=now)
-        if not ok:
-            return
-        langs = [x.strip().lower() for x in text.replace(";", ",").replace(" ", ",").split(",")
-                 if x.strip()]
-        self.win.bridge.call(self.core.follow_options(self.acc_id, languages=langs),
-                             ok=self._changed(languages=tuple(langs) or None),
-                             fail=self.win.error)
-
-    def _toggle_bell(self):
-        on = not self.relation.notifying
-        self.win.bridge.call(self.core.notify_posts(self.acc_id, on),
-                             ok=self._changed(notifying=on), fail=self.win.error)
-
-    def _toggle_mute(self):
-        on = not self.relation.muting
-        self.win.bridge.call(self.core.mute(self.acc_id, on), ok=self._changed(muting=on))
-
-    def _toggle_block(self):
-        on = not self.relation.blocking
-        if on:
-            from PySide6.QtWidgets import QMessageBox
-            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc.handle)) \
-                    != QMessageBox.StandardButton.Yes:
-                return
-        self.win.bridge.call(self.core.block(self.acc_id, on), ok=self._changed(blocking=on))
-
-    def _toggle_follow(self):
-        on = not (self.relation.following or self.relation.requested)
-        self.win.bridge.call(self.core.follow(self.acc_id, on), ok=self._relation)
-
-    def _remove_follower(self):
-        from PySide6.QtWidgets import QMessageBox
-        if QMessageBox.question(self, _("remove_follower"),
-                                _("remove_follower_q", acct=self.acc.handle)) \
-                != QMessageBox.StandardButton.Yes:
-            return
-        acct = self.acc.handle
-        changed = self._changed(followed_by=False)
-
-        def done(r):
-            changed(r)
-            self.win.statusBar().showMessage(_("follower_removed", acct=acct), 6000)
-        self.win.bridge.call(self.core.remove_follower(self.acc_id), ok=done,
-                             fail=self.win.error)
-
-    def _toggle_endorse(self):
-        on = not self.relation.endorsed
-        self.win.bridge.call(self.core.endorse(self.acc_id, on),
-                             ok=self._changed(endorsed=on), fail=self.win.error)
 
 
 class TagGroupWidget(_PagedTab):

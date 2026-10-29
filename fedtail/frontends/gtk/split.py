@@ -973,8 +973,10 @@ class TalkPage(Gtk.ScrolledWindow):
             self.box.append(Card(self.win.ctx, e.id, e, unread=e.id in unread))
         if not mine:
             self.box.append(Gtk.Label(label=_("talk_empty")))
-        if unread and self.win.cfg["read"]["mark_read"] != "manual":
-            view.mark_read(sorted(unread))
+        from ..common.lane import thread_read_on_open
+        ids = thread_read_on_open(self.win.cfg, unread)
+        if ids:
+            view.mark_read(ids)
         GLib.idle_add(lambda: (self.get_vadjustment().set_value(
             self.get_vadjustment().get_upper()), False)[1])
 

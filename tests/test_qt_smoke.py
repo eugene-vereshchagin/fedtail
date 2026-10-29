@@ -573,7 +573,10 @@ class QtSmokeTest(unittest.TestCase):
         prof = self.win.tabs.currentWidget()
         self.assertIsInstance(prof, AccountWidget)
         self.pump(until=lambda: prof.acc is not None and prof._info_layout.count())
-        prof._toggle_follow()
+        from PySide6.QtWidgets import QPushButton as _Btn
+        follow = next(b for b in prof.info.findChildren(_Btn)  # the button itself
+                      if b.text() == i18n._("follow"))
+        follow.click()
         self.pump(until=lambda: prof.relation.following)
         self.win.on_link("fedtail:account/B")  # same tab: no new one
         self.assertIs(self.win.tabs.currentWidget(), prof)

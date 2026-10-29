@@ -115,7 +115,7 @@ fedtail/
     atoms.py         что различимо в посте/событии; правила свободных лент (feeds.md)
     custom.py        ленты из правил: наборов и [[lanes.custom]]; виды или потоки custom:<имя>
     presets.py       наборы лент (fedtail/data/presets.toml)
-    lanes.py         Lane = источник + фильтр; встроенные ленты; ленты списков
+    lanes.py         Lane = источник (или поток) + фильтр; разделы; ленты списков
     model.py         помощники над словарями статусов и аккаунтов (real(), snippet(), …)
     paths.py         где лежат файлы профиля (XDG)
     saving.py        куда и как сохранять картинки
@@ -171,7 +171,7 @@ fedtail/
       bridge.py      фьючерсы и события ядра → GUI-поток (сигналы Qt)
       window.py      MainWindow: боковая панель, вкладки, меню, разбор событий, действия
       feedview.py    FeedView: прокручиваемый список карточек, строятся только те, что у экрана
-      feed.py        LaneWidget, ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
+      feed.py        LaneWidget, ThreadWidget, AccountWidget, TagWidget, PeopleWidget
       card.py        PostRow (один пост), CardSpec, SeparatorRow, сетка медиа
       compose.py     окно написания (черновики, медиа, drag&drop, CW, подсказка)
       help.py        HelpPanel: справка панелью поверх лент, как окно написания
@@ -345,36 +345,42 @@ docs/                ru/dev/, en/dev/ — документы для разраб
 * `subs` — *локальный* источник (его заполняет `core/subs.py`, а не сервер);
   `lanes.LOCAL_SOURCES` держит его вне `sources_needed`.
 
-## 8. Ленты (`core/lanes.py`)
+## 8. Ленты (`core/lanes.py`, `core/custom.py`)
 
-Лента — то, что показывает боковая панель: `Lane(name, source, keep, by_status_time)`.
-`keep(status, ctx)` фильтрует элементы источника; `ctx` — это `LaneContext(me_id,
-extra_bots, mentions_all, subs_replies_to_me, hidden)`.
+Каждую ленту делает правило (docs/ru/dev/feeds.md): в `fedtail/data/presets.toml` — наборы
+(`lanes.preset`), `[[lanes.custom]]` добавляет ленты или встаёт на место ленты набора.
+`custom.load` делает из каждого правила `Lane(name, source, keep, …)`: над одним источником
+это вид на него (`keep` спрашивает правило), над несколькими — свой поток, который
+наполняет разбор (`custom.route`, `custom.backfill`, `store.link_items` — посты уже лежат в
+базе). `keep(status, ctx)` ещё и убирает то, что велят `lists.hide_in`, лента тегов «не в
+Ленте» и `lanes.languages`; `ctx` — это `LaneContext`.
 
-| лента | источник | что оставляет |
-|---|---|---|
-| `home` («Лента») | home | не ботов, не тех, кто в исключающем списке |
-| `replies` («Ответы мне») | mentions | ответы на мои посты и комментарии |
-| `mentions` | mentions | прочие упоминания (`lanes.mentions_all` → все) |
-| `subs` («Подписки») | subs (локальный) | новые комментарии в тредах-подписках, кроме ответов мне |
-| `bookmarks` | bookmarks | что ещё в закладках; *ленивая*; листается по заголовку Link (`sources._Cursor`); `core.bookmark()` сразу добавляет и убирает |
-| `activity` («Активность») | — (своя таблица) | лайки, бусты, подписки (`ActivityWidget`) |
-| `bots` | home | ботов, не тех, кто в исключающем списке |
-| `my_posts` | mine | всё |
-| `local` | local | всё; *ленивая* |
-| `federated` («Федерация») | federated | всё; *ленивая* |
-| `my_likes` («Мои лайки») | favourites | что ещё лайкнуто; *ленивая* |
-| `requests` | — | заявки на подписку (`RequestsWidget`) |
-| `list:<id>` | list:<id> | всё (по одной на каждый список сервера, после встроенных) |
+**Что такое лента, спрашивают у её правила, а не у имени** — свой набор ведёт себя как
+встроенные:
+
+| вопрос | где |
+|---|---|
+| насколько личная: 0 — личка, 1 — ответы, 2 — упоминания, 3 — треды-подписки, 4 — прочее | `Core.lane_rank` |
+| ленты личных сообщений, тредов-подписок | `Core.private_lanes`, `Core.thread_lanes` |
+| ленты, которые наполняет источник (что перерисовать после его изменения) | `Core.lanes_fed_by`, `Core.redraw` |
+| её звук | `Core.lane_sound` (`core/sounds.py`) |
+| её раздел боковой панели | `group` правила (`lanes.grouped`) |
+| лента, открываемая первой | `ui.start_lane`, иначе `start = true` набора (`common/sidebar.start_lane`) |
+| «только посты», «беседами», проверка моих ответов, «через #тег» | `common/lane.LaneModel` (ранг, источники) |
+| её раздел в обзоре на телефоне | `common/sidebar.hub_kind` |
+
+Источники зовутся как на сервере: `home`, `local`, `federated`, `mentions`, `subs`
+(локальный: `core/subs.py`), `bookmarks`, `favourites`, `mine`, `watched`, `list:<id>` и
+те, что с приставкой, которые называет правило (`account:`, `remote:`, `rss:`… —
+`sources.py`).
 
 * **Ленивые (листаемые) ленты** — `local`, `federated`: забираются только пока на экране
   (`core.set_active_lane`, окно зовёт его при каждом переключении), только свежая
   страница (`sources.refresh_top`; дыра там допустима), без отметок непрочитанного и
   счётчиков.
-* **Разделы боковой панели** — `lanes.GROUPS` / `lanes.grouped()`: «Стандартные», от самой
-  широкой вниз (federated, home, local, bots), «Личные» (my_posts, mentions, replies,
-  subs, bookmarks, activity, requests), «Списки» внизу; порядок из конфига держится внутри
-  раздела
+* **Разделы боковой панели** — `lanes.grouped()`: каждая лента в `group` своего правила
+  (standard, personal), списки и ленты тегов — в своих разделах; порядок из конфига
+  держится внутри раздела
   (`window.sidebar_groups = false` → один плоский список). Строит её
   `MainWindow._rebuild_sidebar()` (заново на `lists_changed`); Alt+1…9 идут по `lane_order`,
   а не по строкам.
@@ -458,8 +464,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Списки** — списки сервера, см. §8. Создание, правка и участники идут прямо в API,
   потом `_refresh_lists()` → событие `lists_changed` → боковая панель перестраивается.
 * **Активность** — `notifications?types[]=…` (`activity.types`) хранятся в `activity`;
-  непрочитанное — новее `kv activity_seen`; `ActivityWidget` группирует соседние записи
-  одного вида про один пост.
+  непрочитанное — новее `kv activity_seen`. Лента событий («Активность», любое правило с
+  `event`) показывает их строками среди постов или вместо них (`common/activity.py`).
 * **Поиск** — `core/search.py`: строка для поиска без учёта регистра и ё (текст, CW,
   alt-тексты, имя и @адрес автора, бустнувший, `#id`); каждое слово запроса должно
   встретиться. `FindBar` ищет по строкам на экране; `core.deep_find()` проходит всё
@@ -490,8 +496,9 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Вид «Беседами»** — `threads.conversations(entries, get_status, unread)` группирует
   записи ленты по самому верхнему известному посту их треда; `LaneWidget` строит по
   карточке на группу (`extra["conversation"]`), и увиденная карточка помечает
-  прочитанными всех своих участников. Есть только над «Ответами мне», «Упоминаниями» и
-  «Подписками» (`feed.CONVERSATION_LANES`); держится на время запуска через
+  прочитанными всех своих участников. Есть над лентами ответов, упоминаний и
+  тредов-подписок — по их правилам (`LaneModel.conversations_offered`, `Core.lane_rank`
+  1–3); держится на время запуска через
   `core.choice()` (или в `kv` с `reading.remember_choices`), как «Всё | Посты | Новое».
 * **Правка** — `core.source()` (`/statuses/:id/source`, набранный текст) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, id медиа передаются снова,

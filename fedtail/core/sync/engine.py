@@ -179,7 +179,9 @@ class Sync:
         self.device = self._device()
         self._wake = threading.Event()
         self._stop = threading.Event()
-        self._lock = threading.Lock()
+        # a round, and every change of the key: a round mustn't make a key of its own
+        # while the window takes or makes one (two keys, one kept, the other sealing)
+        self._lock = threading.RLock()
         self._thread = None
         self._said = set()  # problems shown to the user this run (each once)
         self._trouble = ""
@@ -858,9 +860,21 @@ def shown_key(core):
     return crypto.key_text(key) if key else None
 
 
+def _key_lock(core):
+    """The lock a round holds (Sync._lock): changing the key waits for the round."""
+    import contextlib
+    sync = getattr(core, "sync", None)
+    return sync._lock if sync is not None else contextlib.nullcontext()
+
+
 def _take(core, key):
     """This device's key from now on: the journal read from its start with it; the key
     it had before (if any) let go of — its old blobs pass silently."""
+    with _key_lock(core):
+        return _take_locked(core, key)
+
+
+def _take_locked(core, key):
     old = crypto.load_key(key_path(core.paths))
     if old is not None and old != key:
         left = list(core.store.kv_get("sync.left_keys") or [])
@@ -892,6 +906,11 @@ def first_key(core):
     sync = core.sync
     if sync is None:
         raise RuntimeError("sync is off")
+    with sync._lock:  # the round can't make its own meanwhile
+        return _first_key_locked(core, sync)
+
+
+def _first_key_locked(core, sync):
     if crypto.load_key(key_path(core.paths)) is not None:
         return crypto.key_id(crypto.load_key(key_path(core.paths))).hex()
     if not crypto.available():

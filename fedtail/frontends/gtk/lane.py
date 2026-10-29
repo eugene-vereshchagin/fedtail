@@ -735,7 +735,7 @@ class LaneView(Gtk.Box):
     # ---- position and reading --------------------------------------------------------
     def shown(self):
         """The lane came on screen: catch up if it changed meanwhile, place it."""
-        if self.ctx.cfg["read"]["mark_read"] == "on_open" and not self.lazy:
+        if self.lm.read_on_open():  # read.mark_read (common/lane.py decides)
             GLib.idle_add(lambda: self.mark_all_read() and False)
         if self.dirty:
             self.refresh()

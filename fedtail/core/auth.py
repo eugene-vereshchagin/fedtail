@@ -1,5 +1,6 @@
 """Credentials live in a plain JSON file with 0600 permissions. No keyrings."""
 
+import contextlib
 import json
 import os
 
@@ -18,13 +19,22 @@ def load(path):
 
 
 def save(path, data):
+    """A secret file (the token, the sync key, an invite, a password): the owner's only
+    (0600, made so — never a file left over with its own mode), written whole or not at
+    all, through a temporary file of its own (two writers at once can't remove each
+    other's: the sync key's "sync.tmp" was shared, 29.10)."""
+    import tempfile
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.unlink(missing_ok=True)  # O_CREAT keeps the mode of a file left over: start anew
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    try:
+        os.chmod(tmp, 0o600)  # mkstemp's own already; said for the platforms that differ
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 def forget(path):

@@ -74,7 +74,7 @@ PASS = {
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
     "open_at",
     # lanes by what their rules do, never by their names: plain lists of lane names
-    "private_lanes", "thread_lanes", "lanes_fed_by", "lane_rank",
+    "private_lanes", "thread_lanes", "lanes_fed_by", "lane_rank", "lane_chosen",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",

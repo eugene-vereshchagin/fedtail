@@ -663,10 +663,6 @@ class Compose(QDialog):
         return self.completion.token()
 
     # (kept for the name the tests know it by)
-    def _tag_at_cursor(self):
-        sigil, word = self._token_at_cursor()
-        return word if sigil == "#" else None
-
     def _suggest_tags(self):
         self.completion.suggest()
 

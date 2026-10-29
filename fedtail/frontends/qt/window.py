@@ -894,8 +894,8 @@ class MainWindow(QMainWindow):
         self.columns_btn.blockSignals(True)
         self.columns_btn.setChecked(self.columns is not None)
         self.columns_btn.blockSignals(False)
-        if self.core.me:
-            self._show_me(self.core.me)
+        if self.ctx.view.me is not None:
+            self._show_me(self.ctx.view.me)
         if current in self.lane_items:
             self.lanes.blockSignals(True)
             for i in range(self.lanes.count()):
@@ -1143,20 +1143,19 @@ class MainWindow(QMainWindow):
         if self.core.me:
             ProfileDialog(self).exec()
 
-    def _connected(self, me):
-        self._show_me(me)
+    def _connected(self, _me):
+        self._show_me(self.ctx.view.me)  # the model's Account, not the server's answer
         for w in self.theme.warnings:
             self.error(w)
         # until the first round of polling is in, the bar says so (a slow connection
         # would otherwise show empty lanes and nothing else)
-        self._hello = _("connected", acct=self.ctx.view.acc(me).handle,
+        self._hello = _("connected", acct=self.ctx.view.me.handle,
                         server=self.core.auth["server"])
         self._waiting_text = f"{self._hello} · {_('first_poll')}"
         self.statusBar().showMessage(self._waiting_text)
-        self._after_connect(me)
+        self._after_connect()
 
     def _show_me(self, me):
-        me = me if isinstance(me, Account) else self.ctx.view.acc(me)
         self.ctx.me_id = me.id
         self._profile_text()
         t = self.theme
@@ -1169,11 +1168,11 @@ class MainWindow(QMainWindow):
             self.images.face(me.avatar_static or me.avatar, 44,
                              lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
 
-    def _after_connect(self, me):
+    def _after_connect(self):
         if self.core.new_options:
             QTimer.singleShot(8500, self, lambda: self.statusBar().showMessage(
                 _("new_options", n=len(self.core.new_options)), 30_000))
-        tip = f"{self.base_title} — @{self.ctx.view.acc(me).handle}"
+        tip = f"{self.base_title} — @{self.ctx.view.me.handle}"
         self.setWindowTitle(tip)
         if self.tray:
             self.tray.setToolTip(tip)
@@ -1585,7 +1584,7 @@ class MainWindow(QMainWindow):
         if on:
             titles = {x.title: "list:" + x.id for x in self.ctx.view.lists}
             names = start_names(self.cfg, self.core.get_state("columns"), self.lane_order,
-                                titles)
+                                titles, view=self.core)
             self.columns = ColumnsArea(self)
             for name in names:
                 self.columns.add(name, self._lane_widget(name))
@@ -1733,7 +1732,9 @@ class MainWindow(QMainWindow):
         t = time.monotonic()
         try:
             with diag.busy(f"event {name}"):
-                self._on_event(name, payload)
+                # the model's payloads, never the server's JSON (core/view.py: as GTK's
+                # bridge gives them): a Post, an Account, [Account]; the rest as it is
+                self._on_event(name, self.ctx.view.event_payload(name, payload))
         finally:
             ms = (time.monotonic() - t) * 1000
             if ms > 300:
@@ -1784,8 +1785,7 @@ class MainWindow(QMainWindow):
                     apply(payload)
             self.update_badges()
         elif name == "status_updated":
-            changed = self.ctx.view.entry(payload) if isinstance(payload, dict) and \
-                payload.get("id") else None
+            changed = payload  # a Post (View.event_payload), or None: every card
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:  # Activity has none
                     w.view.refresh_status(changed)

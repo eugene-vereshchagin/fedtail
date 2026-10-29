@@ -125,7 +125,8 @@ class Custom:
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
                               group="standard" if self.rule.group == "standard"
                               else "personal", events=True, open_at=self.rule.open_at,
-                              start=self.rule.start)
+                              start=self.rule.start,
+                          hide_empty=self.rule.hide_empty)
         if self.routed:
             keep = lanes._all  # its stream holds what the rule took
         else:
@@ -142,7 +143,8 @@ class Custom:
                           filter_context=self.rule.filter_context,
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, open_at=self.rule.open_at,
-                          events=bool(self.event_conds), start=self.rule.start)
+                          events=bool(self.event_conds), start=self.rule.start,
+                          hide_empty=self.rule.hide_empty)
 
     def takes(self, status, world, source):
         world = world or atoms.World()

@@ -636,6 +636,23 @@ class NewDefaultsTest(FreeBase):
         self.assertTrue(any(n == "lists_changed" for n, _p in self.events))
         self.assertEqual(self.ids(core, "important"), ["020"])
 
+    def test_a_lane_of_ones_own_waits_to_have_something(self):
+        """hide_empty = true: any lane waits out of the sidebar till its stream has
+        something — not only the one called "important" — and its source is fetched
+        meanwhile, or it would never fill."""
+        own = {"name": "news", "hide_empty": True, "source": "watched", "any": [{}]}
+        core, w = self.make_new(custom=[own])
+        core.connect().result()
+        core.poll_once()
+        self.assertNotIn("news", core.lane_by_name)
+        self.assertIn("watched", core._waiting_sources())
+        st = w.add(status("021", BOB, minute=6))
+        w.activity.append({"id": "n21", "type": "status", "created_at": st["created_at"],
+                           "account": BOB, "status": st})
+        core.poll_once()
+        self.assertIn("news", core.lane_by_name)
+        self.assertEqual(self.ids(core, "news"), ["021"])
+
     def test_tag_lane_not_in_home(self):
         core, w = self.make_new()
         tagged = status("030", BOB, minute=1)

@@ -172,9 +172,11 @@ class WebHostTest(TmpDir):
         self.assertEqual(h.out["open"]["page"], "history")
         h.put_alias("ab")
         h.copy_handle("@me@x")
+        h.view = mock.Mock(stored=lambda _i: None)  # nothing shown: that post alone
         h.read_up_to("9")
-        self.assertEqual((h.out["alias"], h.out["copy"], h.out["read_up_to"]),
-                         ("ab", "@me@x", "9"))
+        self.assertEqual((h.out["alias"], h.out["copy"], h.out["read"]),
+                         ("ab", "@me@x", ["9"]))
+        h.view.mark_read.assert_called_once_with(["9"])
 
     def test_resolve_link(self):
         acc = Account(Ref("mastodon", "", "A"), "a", "a")

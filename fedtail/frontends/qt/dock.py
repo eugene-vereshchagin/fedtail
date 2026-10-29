@@ -989,7 +989,9 @@ class TalkWidget(QWidget):
             QTimer.singleShot(0, self, lambda: self.view.scroll_to_end(True))
 
     def _seen(self, ids):
-        if self.win.cfg["read"]["mark_read"] != "manual":
+        from ..common.lane import seen_read
+        ids = seen_read(self.win.cfg, ids)
+        if ids:
             self.win.ctx.view.mark_read(ids)
 
     def apply_read(self, ids):

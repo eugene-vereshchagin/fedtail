@@ -2,6 +2,7 @@
 JSON (a captive portal), an answer too big to read, rounds failing again and again."""
 
 import io
+import tempfile
 import time
 import unittest
 from unittest import mock
@@ -308,3 +309,37 @@ class PollStateTest(unittest.TestCase):
         self.addCleanup(out.shutdown)
         self.assertFalse(out.logged_in)
         self.assertFalse(out.poll_state()["busy"])
+
+
+class SecretFileTest(unittest.TestCase):
+    def test_two_writers_at_once(self):
+        """A secret file written by two threads at once (the sync key: a round's own and
+        the window's, 29.10): neither fails, the file is one of them whole, the owner's
+        only, and no temporary file is left."""
+        import json
+        import os
+        import stat
+        import threading
+        from pathlib import Path
+
+        from fedtail.core import auth
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "sync.key"
+            errors = []
+
+            def write(n):
+                try:
+                    for i in range(40):
+                        auth.save(f, {"key": f"{n}-{i}"})
+                except Exception as e:  # noqa: BLE001 — what the test is about
+                    errors.append(e)
+            threads = [threading.Thread(target=write, args=(n,)) for n in range(4)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            self.assertEqual(errors, [])
+            self.assertTrue(json.loads(f.read_text("utf-8"))["key"].endswith("-39"))
+            self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ["sync.key"])
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)

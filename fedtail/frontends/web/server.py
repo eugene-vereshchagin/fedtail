@@ -348,8 +348,9 @@ class _WebHost:
     """The window common/links.py talks to, for the web: it waits for each future
     here (the request waits with it) and writes down what the page should do."""
 
-    def __init__(self, view, confirmed):
+    def __init__(self, view, confirmed, shown=()):
         self.view, self.confirmed, self.out = view, confirmed, {}
+        self.shown = list(shown or ())  # the ids of the cards the page (or phone) shows
 
     def call(self, fut, ok=None, fail=None):
         try:
@@ -434,7 +435,14 @@ class _WebHost:
         self.out["copy"] = "@" + handle.lstrip("@")
 
     def read_up_to(self, sid):
-        self.out["read_up_to"] = sid
+        """⋯ → "Read up to here": the one rule (common/lane.read_up_to — by time, a boost
+        where it was boosted), over the cards the page shows; marked here, the ids said
+        back so the page only paints them read (it had its own count by place)."""
+        from ..common.lane import read_up_to
+        entries = [self.view.stored(i) for i in dict.fromkeys(map(str, self.shown))]
+        ids = read_up_to([e for e in entries if e is not None], str(sid))
+        self.view.mark_read(ids)
+        self.out["read"] = ids
 
     def compose(self, reply_to=None, invite=False, edit=None, quote=None, text=None):
         c = {"text": text} if text else {}
@@ -984,7 +992,7 @@ class Web:
         titles = {x.title: "list:" + str(x.id) for x in self.core.lists or ()}
         ui = self.core.cfg["ui"]
         return {"names": columns.start_names(self.core.cfg, self.core.get_state("columns"),
-                                             known, titles),
+                                             known, titles, view=self.core),
                 "layout": ui.get("layout", "single"),
                 "open_columns": bool(ui.get("open_columns")),
                 "width": max(280, int(ui.get("column_width") or 460))}
@@ -1039,6 +1047,15 @@ class Web:
         m = self.model(name)
         built = m.build(bool(keep))
         specs = [sp for sp in built.specs]
+        # where reading starts (LaneModel.start: feed.start_at, "new below", the order) —
+        # the card's id, or None for the newest end: the page and the phone stand there,
+        # they don't count it again
+        at, _where = m.start(specs)
+        if at == SEPARATOR:  # "new below": the first card under it
+            line = next(i for i, x in enumerate(specs) if x.key == SEPARATOR)
+            at = next((sp.key for sp in specs[line + 1:] if sp.entry is not None), None)
+        start = next((sp.entry.id for sp in specs if sp.key == at and sp.entry is not None),
+                     None)
         if m.newest_first:  # the page turns newest-first lanes round itself
             specs.reverse()
         posts, divider, pending = [], None, None
@@ -1069,7 +1086,7 @@ class Web:
         lane = core.lane_by_name[name]
         return {"name": name, "title": title, "posts": posts, "info": built.info,
                 "waiting": bool(core.lane_waiting(name)) and not posts,  # browse: asked
-                "divider": divider, "events": events,
+                "divider": divider, "events": events, "start": start,
                 "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
                 "filters": [[f, *m.filter_words(f)] for f in m.filters]
                 if len(m.filters) > 1 else [],
@@ -1215,9 +1232,12 @@ class Web:
         for p in out:  # the post the thread was opened from: "you came from here"
             if p["sid"] == sid or p["id"] == sid:
                 p["came_from"] = _("came_from")
+        from ..common.lane import thread_read_on_open
         return {"focus": core.thread_focus(sid, items, at if at in ("post", "first_unread")
                                            else "post"),
-                "posts": out, "head": self.thread_head(posts, short)}
+                "posts": out, "head": self.thread_head(posts, short),
+                # read as it opens, unless by hand: decided once (common/lane.py)
+                "read_on_open": thread_read_on_open(core.cfg, unread)}
 
     def thread_head(self, posts, short):
         """The head the windows put over a thread (qt/feed.py ThreadWidget,
@@ -1505,13 +1525,13 @@ class Web:
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
                 "own": bool(me and real(p).author.id == me.id), "items": items}
 
-    def link(self, url, confirmed=False, chosen=None):
+    def link(self, url, confirmed=False, chosen=None, shown=()):
         """A fedtail: link from the ⋯ menu, done the way every window does it
         (common/links.py); what the page must do then comes back: a message, a
         question first ("sure?" — asked again with confirmed), a place to open, the
         editor to fill, text to copy."""
         from ..common.links import Links
-        host = _WebHost(self.core, confirmed)
+        host = _WebHost(self.core, confirmed, shown)
         host.chosen = chosen
         Links(self.core, host).open(str(url or ""))
         if host.out.get("error"):
@@ -2202,7 +2222,9 @@ class Handler(BaseHTTPRequestHandler):
             "/api/push_on": lambda: web.push_on(body),
             "/api/push_off": lambda: web.push_off(),
             "/api/link": lambda: web.link(str(body.get("url", "")),
-                                          bool(body.get("confirmed")), _chosen(body)),
+                                          bool(body.get("confirmed")), _chosen(body),
+                                          [str(x) for x in body.get("shown") or ()
+                                           if isinstance(x, (str, int))][:2000]),
             "/api/profile_act": lambda: web.profile_act(
                 str(body.get("id", "")), str(body.get("key", "")),
                 body.get("answer") if isinstance(body.get("answer"), str) else None,

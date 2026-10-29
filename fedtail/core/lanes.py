@@ -27,6 +27,8 @@ class Lane:
     group: str = ""
     # the set's lane to open first when ui.start_lane names none there (its rule's `start`)
     start: bool = False
+    # shown only once something is in it (its rule's `hide_empty`; Unsorted always so)
+    hide_empty: bool = False
     # a lane of rules' way of reading (core/custom.py): the order — "arrival", "post_time",
     # or by "replies" / "likes" / "boosts" / "density" (the best where reading starts);
     # window — only posts of the last so many seconds (0: all; mode = "catch_up": 12 h);

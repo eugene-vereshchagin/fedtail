@@ -269,13 +269,11 @@ class Web(Driver):
 
     def link(self, action, sid):
         url = f"fedtail:{action}/{sid}"
-        got = self.req("/api/link", {"url": url})
+        # as the page: the cards it shows go along ("read up to here" counts over them)
+        shown = [p["id"] for p in self.req("/api/lane?name=home")["posts"]]
+        got = self.req("/api/link", {"url": url, "shown": shown})
         if "confirm" in got:  # the page asks "sure?" and sends it again
-            got = self.req("/api/link", {"url": url, "confirmed": True})
-        if "read_up_to" in got:  # the page marks what it shows up to there
-            ids = [p["id"] for p in self.req("/api/lane?name=home")["posts"]]
-            if sid in ids:
-                self.req("/api/read", {"ids": ids[:ids.index(sid) + 1]})
+            got = self.req("/api/link", {"url": url, "confirmed": True, "shown": shown})
 
     def thread(self, sid):
         return [(p["id"], p.get("depth", 0)) for p in self.req(f"/api/thread?id={sid}")["posts"]]

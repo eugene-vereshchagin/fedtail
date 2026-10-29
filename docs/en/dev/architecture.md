@@ -114,7 +114,7 @@ fedtail/
     atoms.py         what can be told apart about a post/event; free lanes' rules (feeds.md)
     custom.py        lanes of rules: the sets' and [[lanes.custom]]; views, or streams custom:<name>
     presets.py       the sets of lanes (fedtail/data/presets.toml)
-    lanes.py         Lane = source + filter; built-in lanes; list lanes
+    lanes.py         Lane = a source (or a stream) + a filter; sections; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
     paths.py         where a profile's files live (XDG)
     saving.py        where/how to save pictures
@@ -170,7 +170,7 @@ fedtail/
       bridge.py      core futures and events → GUI thread (Qt signals)
       window.py      MainWindow: sidebar, tabs, menu, event dispatch, actions
       feedview.py    FeedView: the scrolling list of cards, only those near the screen built
-      feed.py        LaneWidget, ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
+      feed.py        LaneWidget, ThreadWidget, AccountWidget, TagWidget, PeopleWidget
       card.py        PostRow (one post), CardSpec, SeparatorRow, media grid
       compose.py     the compose dialog (drafts, media, drag&drop, CW, hint)
       help.py        HelpPanel: the help as a panel over the lanes, like compose's
@@ -341,35 +341,40 @@ has `fetch(limit, max_id, min_id)` and `entry(raw) → (item_id, status, created
 * `subs` is a *local* source (filled by `core/subs.py`, not fetched);
   `lanes.LOCAL_SOURCES` keeps it out of `sources_needed`.
 
-## 8. Lanes (`core/lanes.py`)
+## 8. Lanes (`core/lanes.py`, `core/custom.py`)
 
-A lane is what the sidebar shows: `Lane(name, source, keep, by_status_time)`.
-`keep(status, ctx)` filters the source's items; `ctx` is a `LaneContext(me_id,
-extra_bots, mentions_all, subs_replies_to_me, hidden)`.
+Every lane is made by a rule (docs/en/dev/feeds.md): `fedtail/data/presets.toml` holds the
+sets (`lanes.preset`), `[[lanes.custom]]` adds lanes or takes a set's lane's place.
+`custom.load` makes each rule a `Lane(name, source, keep, …)`: over one source it is a view
+of it (`keep` asks the rule), over several a stream of its own that routing fills
+(`custom.route`, `custom.backfill`, `store.link_items` — the posts are stored already).
+`keep(status, ctx)` also takes out what `lists.hide_in`, a lane of tags "not in Home" and
+`lanes.languages` say; `ctx` is a `LaneContext`.
 
-| lane | source | keeps |
-|---|---|---|
-| `home` ("Home") | home | not bots, not in an exclusive list |
-| `replies` ("Replies to me") | mentions | replies to my posts/comments |
-| `mentions` | mentions | other mentions (`lanes.mentions_all` → all) |
-| `subs` ("Subscriptions") | subs (local) | new comments in followed threads, minus replies to me |
-| `bookmarks` | bookmarks | still bookmarked; *lazy*; paged by the Link header (`sources._Cursor`); `core.bookmark()` adds/removes at once |
-| `activity` ("Activity") | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
-| `bots` | home | bots, not in an exclusive list |
-| `my_posts` | mine | everything |
-| `local` | local | everything; *lazy* |
-| `federated` ("Federated") | federated | everything; *lazy* |
-| `my_likes` ("My likes") | favourites | still liked; *lazy* |
-| `requests` | — | follow requests (`RequestsWidget`) |
-| `list:<id>` | list:<id> | everything (one per server list, appended after the built-ins) |
+**What a lane is, is asked of its rule, never its name** — a set of one's own behaves as
+the built-in ones:
+
+| question | where |
+|---|---|
+| how personal: 0 private, 1 replies, 2 mentions, 3 followed threads, 4 the rest | `Core.lane_rank` |
+| the lanes of private messages, of followed threads | `Core.private_lanes`, `Core.thread_lanes` |
+| the lanes a source fills (what looks again after a change in it) | `Core.lanes_fed_by`, `Core.redraw` |
+| its sound | `Core.lane_sound` (`core/sounds.py`) |
+| its sidebar section | the rule's `group` (`lanes.grouped`) |
+| the lane opened first | `ui.start_lane`, else the set's `start = true` (`common/sidebar.start_lane`) |
+| "posts only", "as conversations", my replies checked, "via #tag" | `common/lane.LaneModel` (the rank, the sources) |
+| its section in the phone's overview | `common/sidebar.hub_kind` |
+
+The sources keep the server's names: `home`, `local`, `federated`, `mentions`, `subs`
+(local: `core/subs.py`), `bookmarks`, `favourites`, `mine`, `watched`, `list:<id>`, and
+the prefixed ones a rule names (`account:`, `remote:`, `rss:`… — `sources.py`).
 
 * **Lazy (browse) lanes** — `local`, `federated`: fetched only while on screen
   (`core.set_active_lane`, called by the window on every lane switch), newest page
   only (`sources.refresh_top`; a hole is fine there), no unread marks or badges.
-* **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Timelines, from the
-  widest down (federated, home, local, bots), Personal (my_posts, mentions, replies,
-  subs, bookmarks, activity, requests), Lists at the bottom; the configured order holds inside
-  a section
+* **Sidebar sections** — `lanes.grouped()`: each lane in its rule's `group`
+  (standard, personal), the lists and the lanes of tags in sections of their own; the
+  configured order holds inside a section
   (`window.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
   builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.
 
@@ -451,8 +456,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Lists** — server lists, see §8. CRUD and membership go straight to the API,
   then `_refresh_lists()` → event `lists_changed` → sidebar rebuild.
 * **Activity** — `notifications?types[]=…` (`activity.types`) stored in
-  `activity`; unread = newer than `kv activity_seen`; `ActivityWidget` groups
-  neighbouring entries of one kind about one post.
+  `activity`; unread = newer than `kv activity_seen`. A lane of events (Activity, any
+  rule with `event`) shows them as rows among or instead of posts (`common/activity.py`).
 * **Search** — `core/search.py`: a case/ё-insensitive haystack (text, CW, alt
   texts, author name and @handle, booster, `#id`); every query word must occur.
   `FindBar` searches the rows on screen; `core.deep_find()` walks everything
@@ -483,8 +488,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Conversations view** — `threads.conversations(entries, get_status, unread)`
   groups lane entries by the highest known post of their thread; `LaneWidget`
   builds one card per group (`extra["conversation"]`), and a seen card marks all
-  its members read. Offered over Replies to me, Mentions and Subscriptions only
-  (`feed.CONVERSATION_LANES`); kept for the run by `core.choice()` (or in `kv` with
+  its members read. Offered over the lanes of replies, mentions and followed threads —
+  by their rules (`LaneModel.conversations_offered`, `Core.lane_rank` 1–3); kept for the run by `core.choice()` (or in `kv` with
   `reading.remember_choices`), like All | Posts | New.
 * **Editing** — `core.source()` (`/statuses/:id/source`, the typed text) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, media ids passed again so

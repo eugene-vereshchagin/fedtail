@@ -180,7 +180,7 @@ def info():
         out["version"] = version.full()
         core = _s["core"]
         if core is not None:
-            out["store"] = core.store.diag_counts()
+            out["store"] = core.store_counts()
             out["language"] = core.cfg["ui"]["language"]
         base = paths.data_base()
         out["profiles"] = sorted(p.name for p in base.iterdir() if p.is_dir()) \
@@ -203,7 +203,8 @@ def state():
         a = core.auth or {}
         net = core.cfg.get("net") or {}
         return {"logged_in": bool(core.logged_in), "demo": _s["demo"],
-                "server": a.get("server", ""), "acct": a.get("acct", ""),
+                "server": a.get("server", ""),
+                "acct": a.get("acct", ""),  # ours: auth.json, not a server's answer
                 # net.proxy_at_login: the login screen's proxy field, and what it holds
                 "proxy_at_login": bool(net.get("proxy_at_login")),
                 "proxy": str(net.get("proxy") or "")}
@@ -240,8 +241,8 @@ def login_begin(server, proxy=None):
 
 def login_finish(code):
     def go():
-        me = _core().finish_login((code or "").strip()).result(60)
-        return {"acct": me.get("acct", "")}
+        me = _s["web"].core.acc(_core().finish_login((code or "").strip()).result(60))
+        return {"acct": me.handle if me is not None else ""}  # ours: the phone's word for it
     return _answer(go)
 
 
@@ -391,13 +392,16 @@ def post_menu(post_id):
     return _answer(lambda: _s["web"].post_menu(post_id))
 
 
-def link(url, confirmed=False, chosen_json=None):
+def link(url, confirmed=False, chosen_json=None, shown_json=None):
     """A fedtail: link of the ⋯ menu (edit, delete, mute, report, translate…), done the
-    windows' way: → {message, confirm, choose, open, compose, copy, alias, read_up_to,
-    refresh}; asked again with confirmed / chosen ({key, ticked}) when it asked."""
+    windows' way: → {message, confirm, choose, open, compose, copy, alias, read,
+    refresh}; asked again with confirmed / chosen ({key, ticked}) when it asked. shown:
+    the ids of the cards on screen — "read up to here" counts over them (here, by the one
+    rule) and says which it marked ("read")."""
     def go():
         chosen = json.loads(chosen_json) if chosen_json else None
-        got = _s["web"].link(url, bool(confirmed), chosen)
+        shown = json.loads(shown_json) if shown_json else ()
+        got = _s["web"].link(url, bool(confirmed), chosen, shown)
         compose = got.get("compose")
         if compose and compose.get("text"):
             compose["text"] = str(compose["text"])
@@ -576,9 +580,8 @@ def add_language(code):
 
 
 # the overview's sections, in the order "read in a row" walks them: what is addressed to
-# you first, then what you follow, then the lists; lanes without counts are only browsed
-YOU = ("direct", "to_me", "replies", "mentions")
-BROWSED = ("my_posts",)  # counted, but your own posts are nothing to catch up on
+# you first, then what you follow, then the lists; lanes without counts are only browsed —
+# each lane's by its rule (common/sidebar.hub_kind), never its name
 PEEK = 90
 
 
@@ -587,8 +590,9 @@ def hub():
     "lanes": [{name, title, unread, peek}]}], "order": [lanes with news, in reading order],
     "unread", "with_news"}. peek: who and what of the lane's first unread post."""
     def go():
-        from fedtail.core.lanes import is_list
+        from fedtail.frontends.common import sidebar
         core = _core()
+        view = _s["web"].core
         sections = {k: [] for k in ("you", "reading", "lists", "browse")}
         group = ""
         for pos, x in enumerate(_s["web"].lanes()):
@@ -596,16 +600,7 @@ def hub():
             group = x.get("group") or group  # the set's section: given on its first lane
             lane = core.lane_by_name.get(name)
             lazy = lane is None or lane.lazy or lane.source is None
-            if getattr(lane, "events", False) and lane.source is None:
-                kind = "you"  # a lane of events only (Activity, Requests): what happened to me
-            elif lazy or name in BROWSED:
-                kind = "browse"
-            elif name in YOU:
-                kind = "you"
-            elif is_list(name):
-                kind = "lists"
-            else:
-                kind = "reading"
+            kind = sidebar.hub_kind(view, name)
             unread = 0 if kind == "browse" else int(x["unread"] or 0)
             sections[kind].append({"name": name, "title": x["title"], "unread": unread,
                                    # where the set puts it (lanes.preset, the sidebar's
@@ -616,7 +611,8 @@ def hub():
                                    # a lane holds its newest feed.render_limit posts: as many
                                    # unread means there may be more past them ("300+")
                                    "capped": unread >= core.cfg["feed"]["render_limit"],
-                                   "peek": _peek(core, name) if unread and not lazy else ""})
+                                   "peek": sidebar.peek(view, name, PEEK)
+                                   if unread and not lazy else ""})
         # within a section the lanes stand as the set has them (lanes.preset)
         walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
         every = [x for v in sections.values() for x in v]
@@ -644,29 +640,6 @@ def pin(names_json):
         _core().set_pinned_tiles(list(json.loads(names_json or "[]")))
         return {"ok": True}
     return _answer(go)
-
-
-def _peek(core, name):
-    """"Who: the first words" of the lane's first unread post (oldest first)."""
-    from fedtail.core.model import real
-    from fedtail.model.text import html_to_text
-    try:
-        entries = core.lane_entries(name)
-        unread = core.unread_ids(entries)
-    except Exception:  # noqa: BLE001 — a lane not made yet: no peek, the count still shows
-        return ""
-    for _item, st in entries:
-        if st.get("id") not in unread:
-            continue
-        p = real(st)
-        acc = p.get("account") or {}
-        who = acc.get("display_name") or acc.get("username") or ""
-        words = " ".join(html_to_text(p.get("content") or "").split())
-        if not words and p.get("media_attachments"):
-            words = "🖼"
-        words = words if len(words) <= PEEK else words[:PEEK - 1] + "…"
-        return f"{who}: {words}" if who else words
-    return ""
 
 
 def older(name, ahead=False):

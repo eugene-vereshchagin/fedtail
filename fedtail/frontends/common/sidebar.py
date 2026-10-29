@@ -19,6 +19,44 @@ def groups(view, cfg):
     return [(g, names) for g, names in out if g != "lists" or cfg["lists"]["enabled"]]
 
 
+def hub_kind(view, name):
+    """The section of the phone's overview a lane stands in, by what its rule takes —
+    never its name: "you" (addressed to me: private, replies, mentions — Core.lane_rank —
+    and a lane of events only), "browse" (browsed, or one's own posts: nothing to catch up
+    on), "lists", else "reading"."""
+    lane = view.lane_by_name.get(name)
+    if lane is None:
+        return "browse"
+    if getattr(lane, "events", False) and not lane.source:
+        return "you"
+    sources = {lane.source, *(getattr(lane, "feeds", ()) or ())} - {None}
+    if lane.lazy or not lane.source or sources == {"mine"}:
+        return "browse"
+    if lanes_mod.is_list(name):
+        return "lists"
+    rank = view.lane_rank(name) if hasattr(view, "lane_rank") else 4
+    return "you" if rank in (0, 1, 2) else "reading"
+
+
+def peek(view, name, n=90):
+    """"Who: the first words" of a lane's first unread post (oldest first), "" — none."""
+    from ...model import real
+    from ...model.text import snippet
+    try:
+        entries = view.entries(name)
+        unread = view.unread(entries)
+    except Exception:  # noqa: BLE001 — a lane not made yet: no peek, the count still shows
+        return ""
+    for _item, e in entries:
+        if e.id not in unread:
+            continue
+        p = real(e)
+        who = p.author.name or p.author.username or ""
+        words = snippet(p, n)
+        return f"{who}: {words}" if who else words
+    return ""
+
+
 def group_title(group):
     """A section's heading, None for the plain list's lanes."""
     if not group:

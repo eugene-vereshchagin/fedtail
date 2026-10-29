@@ -234,8 +234,7 @@ class Core(SocialMixin):
         self._following = None    # account ids I follow, for the free lanes' atoms
         self._world_version = 0   # bumped when what the rules know around posts changes
         self._following_at = 0.0
-        self._important_waiting = False  # "Important people" on, but nothing in it yet
-        self._waiting = set()            # lanes on but hidden while empty (SHOWN_WHEN_FULL)
+        self._waiting = {}  # lanes on but hidden while empty (_shown_lanes): name → Lane
         self._server_filters = []        # the server's filters (v2), for filter_context
         self._unsorted_on = False        # lanes.unsorted: Unsorted collects
         self.lanes = self._shown_lanes(lanes.enabled(cfg))
@@ -942,8 +941,8 @@ class Core(SocialMixin):
                           if n in self.lane_by_name]
             open_sources = {self.lane_by_name[n].source for n in open_names} | \
                 {f for n in open_names for f in self.lane_by_name[n].feeds}
-            needed = lanes.sources_needed(self.lanes) + \
-                (["watched"] if self._important_waiting else [])
+            needed = list(dict.fromkeys(lanes.sources_needed(self.lanes) +
+                                        self._waiting_sources()))
             for name in needed:
                 if name not in self.sources and self.api is not None:
                     # a stream named by a lane's rule (account:, link:, quotes:, remote:)
@@ -1245,23 +1244,27 @@ class Core(SocialMixin):
         if got:
             self._fresh = got
 
-    # lanes shown only while something is in them: their stream decides (still filled while
-    # hidden — once there is, they show, lists_changed redraws the sidebar)
-    SHOWN_WHEN_FULL = {"important": "watched", lanes.UNSORTED: lanes.UNSORTED}
-
+    # lanes shown only while something is in them — Unsorted, and any lane whose rule says
+    # `hide_empty = true` ("Important people" in the fedtail set): their stream decides
+    # (still filled while hidden — once there is, they show, lists_changed redraws)
     def _shown_lanes(self, built):
-        """The lanes as built, without "Important people" and "Unsorted" while nothing
-        is in them."""
-        self._waiting = {x.name for x in built if x.name in self.SHOWN_WHEN_FULL
-                         and self.store.count_items(self.SHOWN_WHEN_FULL[x.name]) == 0}
-        self._important_waiting = "important" in self._waiting
+        """The lanes as built, without those that wait for something to show."""
+        self._waiting = {x.name: x for x in built
+                         if (x.name == lanes.UNSORTED or getattr(x, "hide_empty", False))
+                         and x.source and self.store.count_items(x.source) == 0}
         self._unsorted_on = any(x.name == lanes.UNSORTED for x in built)
         return [x for x in built if x.name not in self._waiting]
+
+    def _waiting_sources(self):
+        """What the lanes waiting to have something are filled from: fetched as the
+        shown ones' are, or they'd never fill."""
+        return [s for x in self._waiting.values() for s in (x.source, *(x.feeds or ()))
+                if s and s != lanes.UNSORTED]
 
     def _show_important(self):
         """A lane waiting to have something has it now: the lanes anew. (One emptied
         stays till the next start: a lane must not vanish under the reader.)"""
-        if any(self.store.count_items(self.SHOWN_WHEN_FULL[n]) for n in self._waiting):
+        if any(self.store.count_items(x.source) for x in self._waiting.values()):
             self._apply_lists(list(self.lists), self.list_members)
 
     # ---- free lanes (core/custom.py) ---------------------------------------------------
@@ -5035,6 +5038,10 @@ class Core(SocialMixin):
                 **snap,
             }
         return self.bg.submit(job)
+
+    def store_counts(self):
+        """The database's counts, for an "about this install" screen (the phone's first)."""
+        return self.store.diag_counts()
 
     def diag_stats(self):
         """For the periodic stats line: what could grow or get stuck."""

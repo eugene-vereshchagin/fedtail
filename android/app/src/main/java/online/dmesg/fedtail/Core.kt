@@ -68,8 +68,9 @@ object Core {
 
     // a card's ⋯ as the windows have it; each item done their way (common/links.py)
     suspend fun postMenu(id: String) = obj("post_menu", id)
-    suspend fun link(url: String, confirmed: Boolean, chosen: JSONObject?) =
-        obj("link", url, confirmed, chosen?.toString())
+    suspend fun link(url: String, confirmed: Boolean, chosen: JSONObject?,
+                     shown: List<String> = emptyList()) =
+        obj("link", url, confirmed, chosen?.toString(), JSONArray(shown).toString())
 
     // a profile and its buttons (common/profile.py)
     suspend fun account(id: String, show: String?) = obj("account", id, show)

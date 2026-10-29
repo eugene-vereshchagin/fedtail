@@ -111,9 +111,10 @@ def _lane_name(core, name):
 
 
 def cmd_lanes(core, out, _args):
-    for name, lane in core.lane_by_name.items():
+    from .common import sidebar
+    for name in core.lane_by_name:
         title = core.lane_title(name) or _("lane_" + name)
-        n = 0 if lane.lazy or lane.source is None else core.unread_count(name)
+        n = sidebar.count(core, name)  # the windows' number: a lane of events counts too
         count = out.c("new", str(n)) if n else out.c("dim", "0")
         out.line(f"{name:<24} {title:<28} {count}")
 
@@ -142,13 +143,21 @@ def cmd_read(core, out, args):
 
 
 def cmd_tail(core, out, args, stop=None):
-    default = core.cfg["cli"]["tail_lanes"] or core.cfg["notify"]["lanes"]
-    if "all" in default:  # notify.lanes = ["all"]: every lane but notify.except
-        never = set(core.cfg["notify"].get("except") or ())
-        default = [n for n in core.lane_by_name if n not in never]
-    wanted = [_lane_name(core, n) for n in args.lanes] or \
-        [_lane_name(core, n) for n in default if n in core.lane_by_name
-         or n.startswith("list:")] or ["home"]
+    from .common import sidebar
+    # cli.tail_lanes, else the lanes notify.lanes picks (with "all", "lists", a list by
+    # its title, notify.except — Core.lane_chosen, as the notifications themselves);
+    # none — the lane opened first (ui.start_lane), not one by its name
+    names = list(core.lane_by_name)
+    tail = core.cfg["cli"]["tail_lanes"]
+    if tail:
+        default = [n for n in names if core.lane_chosen(n, tail)]
+    else:
+        notify = core.cfg["notify"]
+        default = [n for n in names if core.lane_chosen(n, notify["lanes"],
+                                                         notify.get("except") or ())]
+    first = sidebar.start_lane(core, names, closable=False)
+    wanted = [_lane_name(core, n) for n in args.lanes] or default or \
+        ([first] if first else [])
     got = queue.Queue()
     core.on("lanes_updated", lambda _n, per_lane: got.put(per_lane))
     if args.n:

@@ -206,7 +206,24 @@ class ColumnsTest(unittest.TestCase):
         self.assertEqual(columns.start_names(cfg, ["list:Friends", "home", "home"], known,
                                              {"Friends": "list:7"}), ["list:7", "home"])
         self.assertEqual(columns.start_names(cfg, None, known), ["local"])
-        self.assertEqual(columns.start_names({"ui": {}}, [], known), ["home", "replies"])
+        # nothing said: by the rules — the lane opened first, replies and mentions, a
+        # lane of events; no view to ask: the first lane
+        import types
+        lanes = {"feed": types.SimpleNamespace(name="feed", start=True, source="home",
+                                               events=False),
+                 "answers": types.SimpleNamespace(name="answers", start=False,
+                                                  source="mentions", events=False),
+                 "bell": types.SimpleNamespace(name="bell", start=False, source=None,
+                                               events=True),
+                 "local": types.SimpleNamespace(name="local", start=False, source="local",
+                                                events=False)}
+        view = types.SimpleNamespace(
+            cfg={"ui": {"start_lane": "none"}}, lanes=list(lanes.values()),
+            lane_by_name=lanes, get_state=lambda _k: None,
+            lane_rank=lambda n: 1 if n == "answers" else 4)
+        self.assertEqual(columns.start_names({"ui": {}}, [], list(lanes), view=view),
+                         ["feed", "answers", "bell"])
+        self.assertEqual(columns.start_names({"ui": {}}, [], known), ["home"])
         self.assertEqual(columns.start_names({"ui": {}}, [], ["bots"]), ["bots"])
 
 

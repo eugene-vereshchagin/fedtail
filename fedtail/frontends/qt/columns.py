@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
-from ..common.columns import DEFAULT, start_names  # noqa: F401  (Qt's names)
+from ..common.columns import start_names  # noqa: F401  (Qt's name)
 
 log = logging.getLogger("fedtail.qt")
 
