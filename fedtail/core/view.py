@@ -486,7 +486,8 @@ class View:
         (fedtail:account/…, fedtail:tag/…, fedtail:resolve/…)."""
         p = real(post)
         return links.in_app(p.text, mentions={u: m.id for m in p.mentions
-                                              for u in (m.url, m.uri) if u}, tags=p.tags)
+                                              for u in (m.url, m.uri) if u}, tags=p.tags,
+                             author=p.author.id if p.author else None)
 
     # ---- people --------------------------------------------------------------------
     def account(self, acc_id):

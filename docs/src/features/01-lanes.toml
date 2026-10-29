@@ -183,8 +183,23 @@ api = "`timelines/tag/:name`, `tags/:name/follow`, `followed_tags`"
 others.ru = "у всех"
 others.en = "everyone"
 clients = ["all"]
-details.ru = "Клик по #тегу открывает его ленту внутри (при `card.links_in_app`). Подписаться на тег — кнопкой в заголовке его ленты; подписанные теги сервер подмешивает в «Ленту», а fedtail предлагает их первыми при наборе `#`."
-details.en = "A click on a #tag opens its lane inside (with `card.links_in_app`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`."
+details.ru = "Ленту тега открывает «#тег везде» (и клик по тегу при `card.tag_click = \"everywhere\"`). Подписаться на тег — кнопкой в заголовке его ленты; подписанные теги сервер подмешивает в «Ленту», а fedtail предлагает их первыми при наборе `#`."
+details.en = "\"#tag everywhere\" opens a tag's lane (and a click on a tag with `card.tag_click = \"everywhere\"`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`."
+
+[[feature]]
+id = "tag-by-author"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Тег у автора, как на Point"
+name.en = "A tag as its author writes it, as on Point"
+config = "`card.tag_click` (`author`)"
+api = "`accounts/:id/statuses?tagged=`"
+others.ru = "Point (теги у каждого блога свои)"
+others.en = "Point (each blog has its own tags)"
+clients = []
+details.ru = "Клик по #тегу в посте открывает посты этого автора с этим тегом; сверху — «#тег везде» (лента тега на твоём сервере) и профиль автора. Правый клик по тегу: у автора, везде, заглушить. `tag_click = \"everywhere\"` — клик сразу открывает ленту тега. Во всех интерфейсах и на телефоне."
+details.en = "A click on a #tag in a post opens that author's posts with the tag; on top — \"#tag everywhere\" (the tag's lane on your server) and the author's profile. A right click on a tag: by the author, everywhere, mute it. `tag_click = \"everywhere\"` — a click opens the tag's lane at once. Every interface and the phone."
 
 [[feature]]
 id = "my-likes"

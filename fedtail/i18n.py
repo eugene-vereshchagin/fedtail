@@ -1468,6 +1468,12 @@ _STRINGS = {
         "about_commit": "Коммит", "about_account": "Аккаунт", "about_accounts": "Аккаунты",
         "about_server": "Сервер", "about_theme": "Тема", "about_data": "Данные",
         "about_copy": "Скопировать информацию", "about_copied": "Скопировано",
+        "tag_by_author_line": ("Посты этого автора с тегом — как теги на Point: у каждого "
+                               "блога свои."),
+        "tag_everywhere": "#тег везде",
+        "tag_everywhere_tip": "Все посты с этим тегом, какие знает твой сервер",
+        "tag_by_author": "#{tag} у этого автора", "tag_everywhere_n": "#{tag} везде",
+        "tag_mute_n": "Заглушить #{tag}",
         "issue_menu": "Сообщить об ошибке на GitHub…",
         "issue_title": "Сообщить об ошибке",
         "issue_check": "Это уйдёт в открытый трекер, его видят все. Прочитай: адреса, ники и "
@@ -3273,6 +3279,12 @@ _STRINGS = {
         "about_commit": "Commit", "about_account": "Account", "about_accounts": "Accounts",
         "about_server": "Server", "about_theme": "Theme", "about_data": "Data",
         "about_copy": "Copy the information", "about_copied": "Copied",
+        "tag_by_author_line": ("This author's posts with the tag — as tags on Point: each "
+                               "blog its own."),
+        "tag_everywhere": "#tag everywhere",
+        "tag_everywhere_tip": "Every post with this tag your server knows",
+        "tag_by_author": "#{tag} by this author", "tag_everywhere_n": "#{tag} everywhere",
+        "tag_mute_n": "Mute #{tag}",
         "issue_menu": "Report a bug on GitHub…",
         "issue_title": "Report a bug",
         "issue_check": "This goes to a public tracker everyone can read. Read it through: "

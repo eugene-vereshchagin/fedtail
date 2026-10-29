@@ -182,6 +182,24 @@ class TextBlock(Gtk.Widget):
         self.queue_draw()
 
     def _right(self, gesture, _n, x, y):
+        from ..common.links import tag_menu
+        tags = tag_menu(self.link_at(x, y) or "") if self.on_link is not None else []
+        if tags:  # a tag: by its author, everywhere, muted (as Qt's menu)
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            pop = Gtk.Popover()
+            pop.set_parent(self)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            for words, url in tags:
+                b = Gtk.Button(label=words)
+                b.add_css_class("flat")
+                b.connect("clicked", lambda _b, u=url: (pop.popdown(), self.on_link(u)))
+                box.append(b)
+            pop.set_child(box)
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            pop.set_pointing_to(rect)
+            pop.popup()
+            return
         text = self.selected()
         if text and self.on_select is not None:
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)  # not the post's menu

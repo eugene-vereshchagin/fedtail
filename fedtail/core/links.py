@@ -56,7 +56,16 @@ def _tag_of(href):
     return unquote(m.group(1)) if m else None
 
 
-def in_app(html, status=None, mentions=None, tags=None):
+BY = " by:"  # a hashtag's link names its post's author: "<tag> by:<account id>"
+
+
+def tag_link(tag, author=None):
+    """The fedtail: link of a hashtag — with the post's author, so a click can open the
+    tag as that author writes it (feed.tag_click) or everywhere."""
+    return "fedtail:tag/" + quote(tag + (BY + author if author else ""), safe="")
+
+
+def in_app(html, status=None, mentions=None, tags=None, author=None):
     """Rewrite hrefs of mentions, hashtags and fediverse-looking links. mentions:
     {profile url: account id} instead of a status's own (a model Post's); tags: the
     post's hashtags (names) instead of its own.
@@ -76,6 +85,8 @@ def in_app(html, status=None, mentions=None, tags=None):
                     mentions[m[key].rstrip("/")] = m["id"]
     if tags is None:
         tags = [t.get("name") for t in st.get("tags") or () if isinstance(t, dict)]
+    if author is None:
+        author = (st.get("account") or {}).get("id") if isinstance(st, dict) else None
     known = {str(t).lower() for t in tags if t}
 
     def fix(match):
@@ -89,10 +100,10 @@ def in_app(html, status=None, mentions=None, tags=None):
             target = f"fedtail:account/{mentions[href.rstrip('/')]}"
         elif tag and ("hashtag" in attrs or "mention" in attrs or 'rel="tag"' in attrs
                       or tag.lower() in known or (said and said.lower() == tag.lower())):
-            target = f"fedtail:tag/{quote(tag, safe='')}"
+            target = tag_link(tag, author)
         elif said and (said.lower() in known or 'rel="tag"' in attrs
                        or "hashtag" in attrs):
-            target = f"fedtail:tag/{quote(said, safe='')}"  # its address says nothing
+            target = tag_link(said, author)  # its address says nothing
         elif href.startswith(("http://", "https://")) and ("mention" in attrs or
                                                             looks_fediverse(href)):
             target = f"fedtail:resolve/{quote(href, safe='')}"

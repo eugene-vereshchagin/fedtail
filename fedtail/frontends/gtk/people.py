@@ -336,8 +336,12 @@ def _paged(win, box, fetch):
 
 
 def open_tag(win, tag):
-    """A tag's posts in a tab, newest first, Follow on top, "older" below."""
-    tag = tag.lstrip("#")
+    """A tag's posts in a tab, newest first, Follow on top, "older" below; "<tag>
+    by:<account id>" — as one author writes it (feed.tag_click), "#tag everywhere" on
+    top (as Qt's)."""
+    tag, _s, by = tag.lstrip("#").partition(" by:")
+    if by:
+        return _author_tag(win, tag, by)
     key = "tag:" + tag.lower()
     page = win.extra_tabs.get(key)
     if page is not None:
@@ -354,6 +358,36 @@ def open_tag(win, tag):
             box.prepend(TagRow(win, t, header=True))
     win.call(win.view.tag_info(tag), info, lambda _e: None)
     _paged(win, box, lambda max_id: win.view.tag_timeline(tag, max_id))
+    return page
+
+
+def _author_tag(win, tag, by):
+    key = f"tag:{tag.lower()} by:{by}"
+    page = win.extra_tabs.get(key)
+    if page is not None:
+        win.tabs.set_current_page(win.tabs.page_num(page))
+        return page
+    page, box, title = win._new_tab("#" + tag, lambda: win.close_extra(key))
+    win.extra_tabs[key] = page
+    row = Gtk.Box(spacing=8)
+    row.add_css_class("ft-card")
+    note = Gtk.Label(label=_("tag_by_author_line"), xalign=0, hexpand=True, wrap=True)
+    note.add_css_class("ft-muted")
+    row.append(note)
+    everywhere = Gtk.Button(label=_("tag_everywhere"))
+    tip(everywhere, _("tag_everywhere_tip"))
+    everywhere.connect("clicked", lambda _b: open_tag(win, tag))
+    row.append(everywhere)
+    profile = Gtk.Button(label=_("tui_profile"))
+    profile.connect("clicked", lambda _b: win.open_account(by))
+    row.append(profile)
+    box.prepend(row)
+
+    def named(acc):
+        if acc is not None:
+            title.set_text(f"#{tag} · @{acc.handle}")
+    win.call(win.view.account(by), named, lambda _e: None)
+    _paged(win, box, lambda max_id: win.view.account_posts(by, max_id, show="tag:" + tag))
     return page
 
 

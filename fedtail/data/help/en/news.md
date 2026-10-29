@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **0.22.0 (in progress):**
 
+- A tag as its author writes it, as on Point
 - A draft's pictures travel with it
 - Sync: WebDAV spoken directly, the journal packed
 - The numbers under the posts on screen kept fresh

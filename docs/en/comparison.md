@@ -18,6 +18,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Into a list — the author or the booster; only people you follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Into a list right after a follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Hashtag lane, following tags | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A tag as its author writes it, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | My likes | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   | ✓ | ✓ |   |   |
 | Bookmarks | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Trends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
@@ -247,4 +248,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **55** features of the 183 compared.
+Only in fedtail — **56** features of the 184 compared.

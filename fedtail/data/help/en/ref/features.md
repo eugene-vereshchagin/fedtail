@@ -82,6 +82,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Into a list — the author or the booster; only people you follow | has | 0.13.0 | — | `lists/:id/accounts` | only in fedtail |
 | Into a list right after a follow | has | 0.11.0 | `lists.refresh_minutes` | `lists/:id/accounts` | only in fedtail |
 | Hashtag lane, following tags | has | 0.2.0 | — | `timelines/tag/:name`, `tags/:name/follow`, `followed_tags` | everyone |
+| A tag as its author writes it, as on Point | has | 0.22.0 | `card.tag_click` (`author`) | `accounts/:id/statuses?tagged=` | Point (each blog has its own tags) |
 | My likes | has | 0.8.0 | `"my_likes"` in `lanes.enabled` | `/api/v1/favourites` | Mastodon web, Tusky, Ivory, Megalodon, tut |
 | Bookmarks | has | 0.3.0 | `"bookmarks"` in `lanes.enabled`, `card.bookmark_button` | `/api/v1/bookmarks` | everyone |
 | Trends | has | 0.11.0 | — | `/api/v1/trends` (tags, links, statuses) | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes |
@@ -143,7 +144,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Into a list right after a follow.** The server won't take into a list someone you don't follow yet (the request waits with a locked account). fedtail remembers which list you wanted them in and adds them itself as soon as the follow is confirmed.
 
-**Hashtag lane, following tags.** A click on a #tag opens its lane inside (with `card.links_in_app`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`.
+**Hashtag lane, following tags.** "#tag everywhere" opens a tag's lane (and a click on a tag with `card.tag_click = "everywhere"`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`.
+
+**A tag as its author writes it, as on Point.** A click on a #tag in a post opens that author's posts with the tag; on top — "#tag everywhere" (the tag's lane on your server) and the author's profile. A right click on a tag: by the author, everywhere, mute it. `tag_click = "everywhere"` — a click opens the tag's lane at once. Every interface and the phone.
 
 **My likes.** The posts you liked. The lane is off by default.
 

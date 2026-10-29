@@ -319,6 +319,12 @@ class PostRow(QWidget):
         if self.ensure_menu() is None:
             return
         menu = QMenu(lab)
+        from ..common.links import tag_menu
+        tags = tag_menu(getattr(lab, "_hovered", "") or "")
+        for words, url in tags:  # a right click on a tag: by its author, everywhere, mute
+            menu.addAction(words, lambda u=url: self.ctx.on_link(u))
+        if tags:
+            menu.addSeparator()
         if lab.hasSelectedText():
             sel = lab.selectedText()
             if self._can_quote():
@@ -351,6 +357,8 @@ class PostRow(QWidget):
     def _route_text_menus(self):
         for lab in self.body.findChildren(QLabel):
             if lab.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu:
+                # the link under the mouse, for the menu (a tag's: common/links.tag_menu)
+                lab.linkHovered.connect(lambda u, w=lab: setattr(w, "_hovered", u))
                 lab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 lab.customContextMenuRequested.connect(
                     lambda pos, w=lab: self._text_menu(w, pos))
@@ -1382,7 +1390,7 @@ def _hover_text(url):
     if url.startswith("fedtail:resolve/"):
         return unquote(url[len("fedtail:resolve/"):])
     if url.startswith("fedtail:tag/"):
-        return "#" + unquote(url[len("fedtail:tag/"):])
+        return "#" + unquote(url[len("fedtail:tag/"):]).partition(" by:")[0]
     return ""
 
 

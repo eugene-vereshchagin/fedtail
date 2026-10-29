@@ -799,8 +799,13 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             page.rows.append(self._tag_row(t))
         return page
 
+    BY = " by:"  # a tag's place of one author: "<tag> by:<account id>"
+
     def _p_tag(self, name, _tab, cursor):
+        name, _s, by = name.partition(self.BY)
         name = name.lstrip("#")
+        if by:
+            return self._author_tag(name, by, cursor)
         v = self.view
         page = Page("tag", "#" + name, arg=name)
         try:
@@ -820,11 +825,36 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         page.empty = "—"
         return page
 
+    def _author_tag(self, name, acc_id, cursor):
+        """A tag as one author writes it — their posts with #name, as Point's tags are
+        each blog's own (feed.tag_click = "author": a click on a tag in a post); on top,
+        the tag everywhere and the author's profile."""
+        v = self.view
+        who = ""
+        try:
+            acc = _wait(v.account(acc_id))
+            who = " · @" + acc.handle if acc is not None else ""
+        except Exception as e:  # noqa: BLE001 — the posts still show
+            log.info("author tag: %s", e.__class__.__name__)
+        arg = f"{name}{self.BY}{acc_id}"
+        page = Page("tag", "#" + name + who, arg=arg)
+        page.rows.append(Row("tag", "#" + name + who, _("tag_by_author_line"), key=arg,
+                             buttons=(self._btn(_("tag_everywhere"), "tag", "open", name,
+                                                tip=_("tag_everywhere_tip")),
+                                      self._btn(_("tui_profile"), "person", "open", acc_id),
+                                      self._mute_tag_button(name))))
+        posts = _wait(v.account_posts(acc_id, cursor or None, show="tag:" + name)) or []
+        page.rows += [Row("post", data=p, key=p.id) for p in posts]
+        if posts and len(posts) >= v.cfg["feed"]["page_size"]:
+            page.more = self._btn(_("more"), "tag", "more", f"{arg} {real(posts[-1]).id}")
+        page.empty = "—"
+        return page
+
     def _a_tag_open(self, name, _v, _c, _ans):
         return Out(open={"page": "tag", "arg": name})
 
     def _a_tag_more(self, data, _v, _c, _ans):
-        name, _s, cursor = data.partition(" ")
+        name, _s, cursor = data.rpartition(" ")  # the last word: "<tag>[ by:<id>] <id>"
         return Out(open={"page": "tag", "arg": name, "cursor": cursor})
 
     def _feature_button(self, name):

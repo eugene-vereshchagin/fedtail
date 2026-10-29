@@ -621,6 +621,11 @@ honest_counters = false
 # numbers of that moment; with honest_counters, of the authors' servers too. 0 — never.
 counts_minutes = 5
 
+# A click on a tag in a post: "author" — that author's posts with the tag (as on Point,
+# where each blog has its own tags; "#tag everywhere" on top of them); "everywhere" — every
+# post with the tag your server knows. A right click on a tag offers both.
+tag_click = "author"
+
 # If the author's server won't give the numbers without a login: ask them as another account of yours
 # (a fedtail profile) — on the author's server, if you have one there, or on a server that already
 # has the post. Each account's token goes only to its own server.

@@ -96,6 +96,7 @@ DEFAULTS = {
         "first_run_mark_read": True,
         "honest_counters": False,
         "counts_minutes": 5,
+        "tag_click": "author",
         "counters_via_accounts": True,
         "remember_choices": False,
         "complete_threads": True,
@@ -334,6 +335,7 @@ DEFAULTS = {
 CHOICES = {
     ("feed", "thread_from"): {"local", "mixed", "remote"},
     ("feed", "open_at"): {"post", "first_unread"},
+    ("feed", "tag_click"): {"author", "everywhere"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
     ("phone", "stream"): {"always", "wifi", "off"},
@@ -496,7 +498,8 @@ FILE_LAYOUT = (
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button links_in_app")
-     + _keys("feed", "show_moved honest_counters counts_minutes counters_via_accounts "
+     + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
+             "counters_via_accounts "
              "translate "
                      "translate_all translate_auto translate_backend translate_url "
                      "translate_key")),

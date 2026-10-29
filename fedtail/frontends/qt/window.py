@@ -2062,11 +2062,15 @@ class MainWindow(QMainWindow):
         return w
 
     def open_tag(self, tag):
+        """A tag's tab: "<tag>" everywhere, "<tag> by:<account id>" as one author writes
+        it (common/links.py: feed.tag_click)."""
+        tag, _s, by = tag.partition(" by:")
+        by = by or None
         for w in self.extra_tabs():
-            if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
+            if isinstance(w, TagWidget) and w.tag.lower() == tag.lower() and w.by == by:
                 self._front(w)
                 return
-        self._add_tab(TagWidget(self, tag), "#" + tag)
+        self._add_tab(TagWidget(self, tag, by), "#" + tag)
 
     def resolve_link(self, url):
         """A fediverse address: find it through my server and open it here."""

@@ -1464,12 +1464,19 @@ class TagGroupWidget(_PagedTab):
 
 
 class TagWidget(_PagedTab):
-    """Posts with a hashtag, as your server knows them."""
+    """Posts with a hashtag, as your server knows them — or, with `by`, as one author
+    writes it (a click on a tag in their post, feed.tag_click = "author": Point's tags
+    are each blog's own), "#tag everywhere" on top."""
 
-    def __init__(self, win, tag):
+    def __init__(self, win, tag, by=None):
         super().__init__(win, "#" + tag)
-        self.tag = tag
-        self.header.info.setText(_("tag_info"))
+        self.tag, self.by = tag, by
+        self.header.info.setText(_("tag_by_author_line") if by else _("tag_info"))
+        if by:
+            self.header.add(_button(_("tag_everywhere"), lambda: win.open_tag(tag),
+                                    tip=_("tag_everywhere_tip")))
+            self.header.add(_button(_("tui_profile"), lambda: win.open_account(by)))
+            win.bridge.call(self.core.account(by), ok=self._author, fail=lambda _e: None)
         self.follow_btn = self.header.add(_button(_("tag_follow"), self._toggle_follow))
         self.follow_btn.setToolTip(_("tag_follow_tip"))
         self.following = False
@@ -1525,7 +1532,15 @@ class TagWidget(_PagedTab):
         self.win.bridge.call(self.core.follow_tag(self.tag, not self.following), ok=self._info,
                              fail=self.win.error)
 
+    def _author(self, acc):
+        if acc is not None:
+            self.title = f"#{self.tag} · @{acc.handle}"
+            self.header.title.setText(self.title)
+            self.win.retitle(self)
+
     def fetch(self, max_id):
+        if self.by:
+            return self.core.account_posts(self.by, max_id, show="tag:" + self.tag)
         return self.core.tag_timeline(self.tag, max_id)
 
 

@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- A click on a tag in a post opens that author's posts with the tag, as on Point where each
+  blog has its own tags (`card.tag_click = "author"`; `"everywhere"` — the tag's lane as
+  before): "#tag everywhere" and the author's profile on top; a right click on a tag offers
+  both and muting it (Qt, GTK). The link names the post's author (`fedtail:tag/<tag>
+  by:<id>`); the place is common (`places._author_tag`), so the terminal, the web page and
+  the phone have it too.
 - The numbers under the posts on screen are kept fresh (`card.counts_minutes`, 5): every
   interface and the phone say which posts they show, and the round asks my server again
   for them in one request (`GET /api/v1/statuses?id[]=`, one by one where it can't); with

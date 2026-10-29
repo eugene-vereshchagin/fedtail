@@ -1670,13 +1670,19 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     PROFILE_SHOWS = {"all": {}, "posts": {"exclude_replies": True},
                      "media": {"only_media": True}}
 
+    def profile_filter(self, show):
+        """What the server filters someone's posts by: show of PROFILE_SHOWS, or
+        "tag:<name>" — only those with the tag (a tag as one author writes it)."""
+        if str(show).startswith("tag:"):
+            return {"tagged": show[4:].lstrip("#")}
+        return self.PROFILE_SHOWS.get(show, {})
+
     def account_statuses(self, acc_id, max_id=None, show="all"):
         """Someone's posts, a page; show: "all" (posts and replies), "posts" (without
         their replies to others — the server filters), "media" (only with pictures)."""
         def job():
             page = self.api.account_statuses(acc_id, limit=self.cfg["feed"]["page_size"],
-                                             max_id=max_id,
-                                             **self.PROFILE_SHOWS.get(show, {}))
+                                             max_id=max_id, **self.profile_filter(show))
             self.store.put_statuses(page)
             return page
         return self.submit(job)

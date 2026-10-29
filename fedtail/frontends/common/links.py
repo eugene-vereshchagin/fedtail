@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from ...i18n import _
 from ...model.text import snippet
@@ -66,6 +66,23 @@ def thread_url(pid, at="post"):
     return make(THREAD_AT.get(at, "thread"), pid)
 
 
+def tag_menu(url):
+    """A right click on a post's tag (fedtail:tag/…): [(words, link)] — the tag as the
+    post's author writes it (when the link names them), the tag everywhere, muted in
+    one click. [] for any other link."""
+    link = parse(url)
+    if link is None or link.action != "tag":
+        return []
+    name, _s, by = unquote(link.arg).partition(" by:")
+    out = []
+    if by:
+        out.append((_("tag_by_author", tag=name), make("tagby", quote(f"{name} by:{by}",
+                                                                   safe=""))))
+    out.append((_("tag_everywhere_n", tag=name), make("tagall", quote(name, safe=""))))
+    out.append((_("tag_mute_n", tag=name), make("mutetag", quote(name, safe=""))))
+    return out
+
+
 class Links:
     def __init__(self, view, host):
         self.view, self.host = view, host
@@ -83,7 +100,15 @@ class Links:
             self._ask(h, "copy_handle", unquote(arg))
         elif action == "alias":  # a post's #abc: into the command line
             self._ask(h, "put_alias", arg)
-        elif action == "tag":
+        elif action == "tag":  # a post's tag: as its author writes it, or everywhere
+            name, _s, by = unquote(arg).partition(" by:")
+            if by and self.view.cfg["feed"].get("tag_click", "author") == "author":
+                self._ask(h, "open_tag", f"{name} by:{by}")
+            else:
+                self._ask(h, "open_tag", name)
+        elif action == "tagall":  # the tag's menu: everywhere, whatever tag_click says
+            self._ask(h, "open_tag", unquote(arg).partition(" by:")[0])
+        elif action == "tagby":  # …and as the post's author writes it
             self._ask(h, "open_tag", unquote(arg))
         elif action in ("mutetag", "unmutetag"):  # a hashtag, in one click (Fedilab's way)
             tag, on = unquote(arg).lstrip("#"), action == "mutetag"
