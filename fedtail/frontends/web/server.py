@@ -151,6 +151,11 @@ def _pic(url):
     return "/pic?u=" + quote(url, safe="") if url else ""
 
 
+def _picture_later():
+    from ..common.images import Cache
+    return Cache.LATER_TRIES
+
+
 def _iso(t):
     return t.isoformat().replace("+00:00", "Z") if t else ""
 
@@ -767,6 +772,8 @@ class Web:
                 "full_width": bool(self.core.get_state("full_width")),
                 "highlight": bool(c["ui"].get("additional_highlight", True)),
                 "visibility": self.core.default_visibility(),
+                # when a picture that didn't come is asked again: the windows' times
+                "picture_later": list(_picture_later()),
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),
                 "homepage": version.HOMEPAGE, "help_url": self.help_url(),

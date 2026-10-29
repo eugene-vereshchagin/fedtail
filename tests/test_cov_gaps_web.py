@@ -66,6 +66,12 @@ class WebGapsTest(TmpDir):
         self.assertIn("&lt;b&gt;Bob", html)  # the name's own markup stays text
         self.assertEqual((plain, none), (["Ann", "fedtail:account/A"], ""))
 
+    def test_the_pages_picture_times_are_the_windows(self):
+        """When a picture that didn't come is asked again: the windows' times, given to
+        the page — it kept a copy of its own (30.10)."""
+        from fedtail.frontends.common.images import Cache
+        self.assertEqual(self.web.me()["picture_later"], list(Cache.LATER_TRIES))
+
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)
         me = self.web.me()  # logged in, not connected yet: connected now

@@ -262,7 +262,8 @@ function renderMedia(p) {
   return box;
 }
 
-const LATER = [60, 300, 1800];  // s: a picture that didn't come is asked again by itself
+// s: a picture that didn't come is asked again by itself — the windows' times (me's)
+const later = () => (state.me && state.me.picture_later) || [];
 
 function renderOne(m, all) {
   const cell = el("figure", "cell");
@@ -276,8 +277,9 @@ function renderOne(m, all) {
     cell.replaceChildren(box);
     if (caption) cell.append(caption);
     const n = (cell._tries = (cell._tries || 0) + 1);
-    if (again && n <= LATER.length + 3)
-      setTimeout(() => { if (cell.isConnected) again(); }, LATER[Math.min(n - 1, LATER.length - 1)] * 1000);
+    const times = later();
+    if (again && times.length && n <= times.length + 3)
+      setTimeout(() => { if (cell.isConnected) again(); }, times[Math.min(n - 1, times.length - 1)] * 1000);
   };
   if (m.kind === "image" && (m.preview || m.url)) {
     const put = () => {
