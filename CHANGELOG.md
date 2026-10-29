@@ -4,6 +4,8 @@
 
 - Fixed (the phone): after ⟳ the thin bar under the title stayed for 8 s when the round
   brought nothing new, the lane pushed down by it; it goes as the round ends now.
+- Fixed (Windows): a secret file written by two at once (the sync key: the round's and the
+  window's) could fail with "Access is denied"; the second writer waits its turn.
 - Fixed: a picture from another server can't be turned into a request to this computer or
   one at home by its name answering differently the second time (DNS rebinding): every
   outside fetch (pictures, link previews, other servers' pages) connects to the address
