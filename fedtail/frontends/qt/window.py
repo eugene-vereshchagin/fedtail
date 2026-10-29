@@ -2953,6 +2953,11 @@ def _let_go(tab):
             view.verticalScrollBar().valueChanged.disconnect()
         except (RuntimeError, TypeError):  # nothing connected, or gone already
             pass
+        if hasattr(view, "let_go_rows"):
+            # its cards let go the lane's way — hidden, deleted — and none built again: a
+            # dict swapped for an empty one left them standing, owned by no one, while the
+            # tab waited for its deletion (the stray cards the lanes' sweep found, 29.10)
+            view.let_go_rows()
         for name in ("rows", "order"):
             if isinstance(getattr(view, name, None), (dict, list)):
                 setattr(view, name, type(getattr(view, name))())

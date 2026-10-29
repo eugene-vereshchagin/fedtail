@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Qt: a closed tab lets its cards go the lanes' way (hidden, deleted); its card dict swapped
+  for an empty one left them standing, owned by no one, until the tab was deleted — what
+  the lanes' sweep of unowned cards kept finding in the tests.
 - The post under the mouse lit, as on point.im (`card.additional_highlight`, on): its buttons
   brighter, and on my own post ✎ and ✕ at the top right (the menu's Edit and Delete). Every
   theme; Qt, GTK and the web page, the terminal tints the post under the mouse.
