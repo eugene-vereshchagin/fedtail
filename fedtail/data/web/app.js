@@ -1510,10 +1510,12 @@ function stoodAt(box) {
   for (const c of box.querySelectorAll(".post, .event")) {
     const r = c.getBoundingClientRect();
     if (!r.height || r.bottom <= view.top + 2) continue;
-    const key = c.dataset.key || c.dataset.id;
-    if (key && key !== stoodAt.last) {
+    // at the lane's end (read to the last post): no place kept, it opens as ever
+    const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;  // or nearly
+    const key = end ? "" : (c.dataset.key || c.dataset.id);
+    if (key !== stoodAt.last) {
       stoodAt.last = key;
-      api("/api/stood", { lane: state.lane, key }).catch(() => {});
+      api("/api/stood", { lane: state.lane, key, end }).catch(() => {});
     }
     return;
   }

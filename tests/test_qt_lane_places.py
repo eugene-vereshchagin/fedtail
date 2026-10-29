@@ -206,3 +206,44 @@ class LaneStoodTest(unittest.TestCase):
         self.pump(0.1)
         view._emit_seen()
         self.assertEqual(self.core.get_state("stood.home"), "115")
+        sb = view.verticalScrollBar()  # read to the end: no place kept, it opens as ever
+        sb.setValue(sb.maximum())
+        self.pump(0.1)
+        view._target = None
+        view._emit_seen()
+        self.assertEqual(self.core.get_state("stood.home"), "")
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+class LaneStrayTest(unittest.TestCase):
+    setUpClass = smoke.QtSmokeTest.__dict__["setUpClass"]
+    setUp = smoke.QtSmokeTest.setUp
+    tearDown = smoke.QtSmokeTest.tearDown
+    pump = smoke.QtSmokeTest.pump
+    _pictures = LanePlacesTest._pictures
+
+    def test_no_card_stands_unowned_and_no_key_twice(self):
+        """A card on the lane that the lane doesn't own goes, said in the log (two posts
+        drawn in one place, 29.10); the same card twice in the specs takes one place."""
+        from fedtail.frontends.qt.card import row_class
+        self._pictures(12, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        key = view.order[0]
+        spec = view.model[view._index[key]]
+        stray = row_class(spec)(spec, view.ctx)
+        stray.setParent(view.body)
+        stray.show()
+        with self.assertLogs("fedtail.frontends.qt.feedview", "WARNING") as said:
+            self.assertEqual(view._strays(), 1)
+        self.assertIn("no one owns", said.output[0])
+        self.assertTrue(stray.isHidden())
+        self.assertEqual(view._strays(), 0)  # the lane's own cards stay
+        before = view._total
+        view.set_specs(list(view.model) + [view.model[-1]])
+        self.assertEqual(view._total, before)
+        self.assertEqual(len(view.strip.keys), len(set(view.strip.keys)))

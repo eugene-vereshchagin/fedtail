@@ -161,12 +161,24 @@ class LaneModelTest(unittest.TestCase):
         self.assertEqual(again.start(specs), ("i2", "top"))
         state["stood.home"] = "3"  # a post's id
         self.assertEqual(again.start(specs), ("i3", "top"))
+        m.stood("i3", at_end=True)  # read to the lane's end: no place, it opens as ever
+        self.assertEqual(state["stood.home"], "")
+        self.assertEqual(again.start(specs), ("i1", "top"))
         state["stood.home"] = "gone"  # no longer in the lane: the first unread again
         self.assertEqual(again.start(specs), ("i1", "top"))
         newest = dict(CFG, feed=dict(CFG["feed"], start_at="newest"))
         v.cfg = newest
         state["stood.home"] = "i2"
         self.assertEqual(lane.LaneModel(v, "home").start(specs), (None, "end"))
+
+    def test_a_card_twice_is_shown_once(self):
+        """The same item twice in what the view gives (a post come by two ways): one card
+        — a key twice left a blank place and threw the windows' places off (29.10)."""
+        lane._TWICE_SAID.discard("home")
+        v = View([("i1", post("1")), ("i2", post("2")), ("i1", post("1"))], name="home")
+        with self.assertLogs("fedtail.frontends.common.lane", "WARNING"):
+            specs = lane.LaneModel(v, "home").build(positioned=True).specs
+        self.assertEqual([s.key for s in specs], ["i1", "i2"])
 
     def test_conversations(self):
         top, r1, r2 = post("1"), post("2", reply_to="1"), post("3", reply_to="2")

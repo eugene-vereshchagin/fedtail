@@ -235,7 +235,7 @@ fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -
 /** The card on top of the screen once the scroll stands: where the lane opens next time
  *  (LaneModel.stood — the desktop's windows, the terminal and the web page say it too). */
 @Composable
-fun StoodWhileScrolling(state: LazyListState, stood: (String) -> Unit) {
+fun StoodWhileScrolling(state: LazyListState, stood: (String, Boolean) -> Unit) {
     LaunchedEffect(state) {
         snapshotFlow { state.isScrollInProgress to state.firstVisibleItemIndex }
             .collect { (scrolling, _) ->
@@ -244,7 +244,7 @@ fun StoodWhileScrolling(state: LazyListState, stood: (String) -> Unit) {
                 val info = state.layoutInfo
                 info.visibleItemsInfo.firstOrNull {
                     it.offset + it.size > info.viewportStartOffset && it.key is String
-                }?.let { stood(it.key as String) }
+                }?.let { stood(it.key as String, !state.canScrollForward) }
             }
     }
 }

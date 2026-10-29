@@ -34,6 +34,7 @@ from ..common.lane import seen
 from ..common.strip import Strip
 from .card import _set_prop as _mark
 from .card import row_class
+from .gone import drop
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,8 @@ class _Watch(QObject):
 
 class FeedView(QScrollArea):
     seen = Signal(list)  # status ids the reader has actually seen
-    stood = Signal(str)  # the card on top of the screen, read there (the scroll standing)
+    stood = Signal(str, bool)  # the card on top of the screen, the scroll standing; at
+    # the lane's end (LaneModel.stood)
 
     MARGIN = 10   # around the column
     GAP = 8       # between cards
@@ -355,6 +357,13 @@ class FeedView(QScrollArea):
             new = self.strip.measured(key, w, h2, guess) or new
             row.setGeometry(x, self._ys.get(key, 0), w, h2)
         row.installEventFilter(self._watch)
+        old = self.rows.get(key)
+        if old is not None and old is not row:  # built meanwhile by a call from inside
+            # this one: the first would stay on screen, owned by no one, never moved again
+            # — two posts drawn in one place (29.10)
+            log.warning("lane: card %s built twice; the first one goes", key)
+            old.removeEventFilter(self._watch)
+            drop(old)
         self.rows[key] = row
         if hasattr(row, "card"):
             if key == self.cursor_key:
@@ -620,7 +629,10 @@ class FeedView(QScrollArea):
         is; around (a key): when it starts over, the screen goes near it (the caller
         places it exactly)."""
         anchor = self._reading_anchor() if keep_position else None
-        self.model = list(specs)
+        once = {}
+        for sp in specs:  # a key twice: two places, the first blank (LaneModel shows
+            once.setdefault(sp.key, sp)  # each once; a thread's cards come here too)
+        self.model = list(once.values())
         self._index = {s.key: i for i, s in enumerate(self.model)}
         self.strip.set_keys(s.key for s in self.model)
         for key in [k for k in self.rows if k not in self._index]:
@@ -849,7 +861,22 @@ class FeedView(QScrollArea):
             log.debug("lane: places mended on screen")
             self._lay_out()
 
+    def _strays(self):
+        """Cards on the lane's body that the lane doesn't own (self.rows): nothing moves
+        or lets them go, so they stand where they were — over the cards that came there
+        since (two posts in one place, 29.10). Gone, and said in the log with how."""
+        own = set(map(id, self.rows.values())) | {id(self._head), id(self._foot)}
+        gone = [c for c in self.body.children() if isinstance(c, QWidget)
+                and id(c) not in own and not c.isHidden()]
+        for c in gone:
+            key = getattr(getattr(c, "spec", None), "key", None)
+            log.warning("lane: a card no one owns (%s %s) was on screen at %d; gone",
+                        type(c).__name__, key, c.y())
+            drop(c)
+        return len(gone)
+
     def _emit_seen(self):
+        self._strays()
         self._check_places()
         self._check_holes()
         if not self.isVisible() or self.window().isMinimized():
@@ -866,8 +893,11 @@ class FeedView(QScrollArea):
         # (an anchor only holds the post on top in place while pictures come in: the
         # reader sees exactly that, so it doesn't stop anything)
         anchor = self._anchor()
-        if anchor is not None:
-            self.stood.emit(str(anchor[0]))  # where it opens next time (LaneModel.stood)
+        if anchor is not None:  # where it opens next time (LaneModel.stood)
+            sbar = self.verticalScrollBar()
+            # at the end, or nearly: the heights settling below move the end a little
+            # while the reader sees the last post (21 px off it in a test, 29.10)
+            self.stood.emit(str(anchor[0]), sbar.maximum() - sbar.value() <= self.HOLE_PX)
         sb = self.verticalScrollBar()
         vtop, vh = sb.value(), self.viewport().height()
         vbot = vtop + vh

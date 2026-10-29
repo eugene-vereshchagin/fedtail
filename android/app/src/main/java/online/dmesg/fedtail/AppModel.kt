@@ -810,11 +810,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The card on top of the screen, the scroll standing: where the lane opens next
      *  time, on the phone or anywhere else (LaneModel.stood). */
-    fun stood(key: String) {
+    fun stood(key: String, end: Boolean) {
         val lane = current ?: return
-        if (key == stoodKey || posts.none { it.key == key }) return
-        stoodKey = key
-        viewModelScope.launch { Core.stood(lane, key) }
+        val k = if (end) "" else key // at the lane's end: no place kept, it opens as ever
+        if (k == stoodKey || (!end && posts.none { it.key == key })) return
+        stoodKey = k
+        viewModelScope.launch { Core.stood(lane, k, end) }
     }
 
     fun markRead(keys: Collection<String>, inThread: Boolean = false) {

@@ -306,10 +306,11 @@ def lane(name, keep=False):
     return _answer(go)
 
 
-def stood(lane, key):
+def stood(lane, key, end=False):
     """The card on top of the phone's screen, the scroll standing (LaneModel.stood):
-    where the lane opens next time, here and in every other interface → {ok}."""
-    return _answer(lambda: _s["web"].stood(lane, key))
+    where the lane opens next time, here and in every other interface; end — at the
+    lane's end → {ok}."""
+    return _answer(lambda: _s["web"].stood(lane, key, bool(end)))
 
 
 def lane_set(body_json):

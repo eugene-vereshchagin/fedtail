@@ -29,7 +29,7 @@ class Strip:
 
     # ---- the keys -------------------------------------------------------------------
     def set_keys(self, keys):
-        self.keys = list(keys)
+        self.keys = list(dict.fromkeys(keys))  # each once: a key twice had two places
         self.index = {k: i for i, k in enumerate(self.keys)}
         self.hidden &= set(self.index)
         for k in [k for k in self.h if k not in self.index]:

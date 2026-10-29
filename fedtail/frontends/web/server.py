@@ -1244,11 +1244,11 @@ class Web:
         return {"title": title, "info": info, "hint": hint,
                 "last": sidebar.start_lane(self.core, names, closable=False)}
 
-    def stood(self, lane, key):
+    def stood(self, lane, key, end=False):
         """The card on top of the page's screen, the scroll standing (LaneModel.stood):
-        where the lane opens next time, in every interface."""
-        if lane and key:
-            self.model(self._lane_name(str(lane))).stood(str(key))
+        where the lane opens next time, in every interface; end — at the lane's end."""
+        if lane and (key or end):
+            self.model(self._lane_name(str(lane))).stood(str(key or ""), end)
         return {"ok": True}
 
     def full_width(self, on):
@@ -2279,7 +2279,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/save": lambda: web.save_media(body.get("url")),
             "/api/older": lambda: web.older(body.get("name"), bool(body.get("ahead"))),
             "/api/full_width": lambda: web.full_width(body.get("on")),
-            "/api/stood": lambda: web.stood(body.get("lane"), body.get("key")),
+            "/api/stood": lambda: web.stood(body.get("lane"), body.get("key"),
+                                            bool(body.get("end"))),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
             "/api/command": lambda: web.command(str(body.get("line", "")),

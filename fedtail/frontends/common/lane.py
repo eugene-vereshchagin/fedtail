@@ -7,12 +7,15 @@ for "seen on screen = read". qt/feed.py LaneWidget and gtk/lane.py LaneView draw
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field, replace
 
 from ...core.atoms import MEDIA_KINDS, VIDEO_EXT  # one list for the core and the cards
 from ...i18n import _
 from ...model import Share, real
 from ...model.text import snippet
+
+log = logging.getLogger(__name__)
 
 SEPARATOR = "__sep__"
 
@@ -408,6 +411,7 @@ class LaneModel:
                     if tag:
                         s.extra["via_tag"] = tag
         specs = self._with_events(specs)
+        specs = _once_each(specs, self.name)
         at = view.open_at(self.name) if hasattr(view, "open_at") else "post"
         for s in specs:
             s.open_at = at
@@ -515,13 +519,20 @@ class LaneModel:
     # ---- where reading starts, what was read -------------------------------------------
     STOOD = "stood."  # + a lane's name: the state key of where the reader stood in it
 
-    def stood(self, key):
+    def stood(self, key, at_end=False):
         """The card on top of the screen now, the scroll standing: where the lane opens
         next time — in every interface, this one or another started later. Each opened
         it at its first unread post before (29.10), and one jumped over or folded away
         in the window left the terminal and the web page days back; the window, open in
-        the tray for days, only held its place in memory."""
-        if not key or key == SEPARATOR or key == getattr(self, "_stood", None):
+        the tray for days, only held its place in memory. at_end: the screen stands at
+        the lane's end (read to the last post) — then no place is kept, and the lane
+        opens as ever, at "new below" or its end: the card on top of the screen there
+        is 5–10 posts back, and the lane opened on it (29.10)."""
+        if at_end and not self.newest_first:  # (newest first: the newest end is the
+            key = ""                          # top, and its card on top is the place)
+        elif not key or key == SEPARATOR:
+            return
+        if key == getattr(self, "_stood", None):
             return
         self._stood = key
         self.view.set_state(self.STOOD + self.name, key)
@@ -573,6 +584,28 @@ class LaneModel:
         if self.cfg["read"]["mark_read"] != "on_scroll":
             return []
         return [m for i in ids for m in self.conv_members.get(i, [i])]
+
+
+_TWICE_SAID = set()  # lanes whose doubled cards are in the log already
+
+
+def _once_each(specs, name):
+    """Every card of a lane once, by its key, the first one kept. A key twice gave the
+    windows two places for one card: the first left blank — a post's height of nothing
+    — and the bisection over the places off from there on, one card drawn over another
+    (29.10). Said in the log once a lane."""
+    seen, out, twice = set(), [], []
+    for s in specs:
+        if s.key in seen:
+            twice.append(s.key)
+            continue
+        seen.add(s.key)
+        out.append(s)
+    if twice and name not in _TWICE_SAID:
+        _TWICE_SAID.add(name)
+        log.warning("lane %s: %d cards twice (%s): shown once", name, len(twice),
+                    ", ".join(map(str, twice[:5])))
+    return out
 
 
 def marks_seen(cfg):
