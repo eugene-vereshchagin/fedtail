@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: a #tag in a post from some servers (Pleroma, Akkoma, Misskey, Friendica, any
+  that marks its tags its own way) opened that server's web page, which asked to log in;
+  a tag is known now by the post's own list of tags, `rel="tag"`, its class, or its words
+  being "#name" on a tag page's address — and opens the tag's lane in fedtail.
 - Smoother, the Qt window: a lane opened or a jump far builds at once only the cards on
   screen, the ones a screen above and below a few at a time between the window's other
   work (built all at once they froze it for 300–430 ms; in the bench the stalls over

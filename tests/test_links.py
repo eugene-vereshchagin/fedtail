@@ -27,6 +27,28 @@ class LinksTest(unittest.TestCase):
                       out)
         self.assertIn('href="https://example.com/article"', out)  # an ordinary site stays
 
+    def test_every_servers_hashtags_stay_inside(self):
+        """Each server marks a tag its own way; one not recognised went to the other
+        server's web page, which asked to log in (29.10)."""
+        cases = [
+            ('<a href="https://p.example/tag/linux" rel="tag">#linux</a>', None),  # Pleroma
+            ('<a href="https://k.example/tags/linux">#linux</a>', None),            # Misskey
+            ('<a href="https://f.example/search?tag=linux">#linux</a>', None),      # Friendica
+            ('<a href="https://x.example/whatever/1">#linux</a>', ["linux"]),       # by the list
+            ('<a href="https://x.example/tags/linux" class="u-url">#Linux</a>', None),
+        ]
+        for html, tags in cases:
+            out = in_app(html, {}, tags=tags)
+            self.assertIn("fedtail:tag/", out, html)
+            self.assertIn('title="', out)  # the address kept to see
+        # a site's own tag page with other words is the site's
+        out = in_app('<a href="https://blog.example/tag/linux">my notes</a>', {})
+        self.assertNotIn("fedtail:", out)
+        # the post's own tags (a raw status)
+        st = dict(status("2", BOB), tags=[{"name": "игры", "url": "https://x.example/t/1"}])
+        out = in_app('<a href="https://x.example/t/1">#игры</a>', st)
+        self.assertIn("fedtail:tag/%D0%B8%D0%B3%D1%80%D1%8B", out)
+
     def test_unknown_mention_is_resolved(self):
         out = in_app('<a href="https://x.example/@zed" class="u-url mention">@zed</a>', {})
         self.assertIn("fedtail:resolve/", out)
