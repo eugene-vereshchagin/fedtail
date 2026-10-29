@@ -332,6 +332,12 @@ _STRINGS = {
         "deps_textual": "терминальный интерфейс",
         "deps_pil": "картинки в терминале",
         "deps_mpv": "видео из терминала",
+        "deps_chafa": "картинки в терминале в настоящем размере (sixel, kitty)",
+        "tui_play_mark": "видео — v",
+        "tui_view_mark": "картинки — v",
+        "tui_viewer_missing": "Картинки здесь — крупными блоками: для настоящего размера и "
+                              "цвета поставь chafa (sudo apt install chafa) — Konsole, kitty, "
+                              "WezTerm, foot их покажут",
         "deps_crypto": "синхронизация между устройствами",
         "deps_langdetect": "язык постов по словам (фильтры, проверка языка)",
         "deps_enchant": "проверка орфографии (и словари)",
@@ -2144,6 +2150,12 @@ _STRINGS = {
         "deps_textual": "the terminal interface",
         "deps_pil": "pictures in the terminal",
         "deps_mpv": "video from the terminal",
+        "deps_chafa": "pictures in the terminal at their real size (sixel, kitty)",
+        "tui_play_mark": "video — v",
+        "tui_view_mark": "pictures — v",
+        "tui_viewer_missing": "Pictures here are coarse blocks: for their real size and "
+                              "colours install chafa (sudo apt install chafa) — Konsole, "
+                              "kitty, WezTerm, foot show them",
         "deps_crypto": "sync between devices",
         "deps_langdetect": "a post's language by its words (filters, the language check)",
         "deps_enchant": "spell checking (and dictionaries)",

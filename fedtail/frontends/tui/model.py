@@ -116,6 +116,11 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     foot = []
     if p.media:
         foot.append(_("cli_media", n=len(p.media)))
+        # what is in it, and how to see it: a video didn't look like one (29.10)
+        if any(m.kind in ("video", "gifv", "audio") for m in p.media):
+            foot.append("▶ " + _("tui_play_mark"))
+        elif any(m.kind == "image" for m in p.media):
+            foot.append("🖼 " + _("tui_view_mark"))
     if p.poll:
         foot.append("📊 " + _("tui_poll") + ": " + poll_line(p.poll))
     for n, mark in ((p.counts.replies, "↩"), (p.counts.shares, "♻"),

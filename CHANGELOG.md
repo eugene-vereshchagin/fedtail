@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The terminal: a lane builds the rows near where reading stands, more as the cursor
+  comes near an end — a lane of thousands of posts built every row at once; find and
+  J look through the whole lane. What scrolled over the screen is read, as in the
+  windows, not only the post under the cursor (posts read with the wheel stayed unread,
+  and the next start offered a score of them). A post says what it holds ("video — v",
+  "pictures — v"), and with no chafa / timg / kitty the pictures are coarse blocks: the
+  terminal says once to install chafa; `--check` lists it.
 - The web page shows every picture through fedtail itself (`/pic`: the windows' disk
   cache, fetched the checked way when missing): some servers give their pictures to no
   other site, and the browser asked them itself — avatars stayed grey; the browser no

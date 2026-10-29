@@ -152,6 +152,9 @@ NEEDS = (
     Need("Pillow", "tui", "deps_pil", lambda: _module("PIL"), "python3-pil", "Pillow>=9.1",
          "want"),
     Need("mpv", "tui", "deps_mpv", _tool("mpv"), "mpv", "", "want"),
+    # a picture in its real size and colours (sixel, kitty, or colour text), the app
+    # suspended — without it only the app's own blocks, a few dozen "pixels" (29.10)
+    Need("chafa", "tui", "deps_chafa", _tool("chafa"), "chafa", "", "want"),
     # whatever the interface
     Need("cryptography", "extra", "deps_crypto", lambda: _module("cryptography"),
          "python3-cryptography", "cryptography>=3.4", "want"),

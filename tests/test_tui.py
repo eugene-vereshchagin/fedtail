@@ -56,7 +56,9 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             from fedtail.frontends.common.lane import SEPARATOR
             self.assertTrue(all(isinstance(i, PostItem) or getattr(i, "key", None) == SEPARATOR
                                 for i in posts.children))
-            # j / k move, and reading on the way marks read (read.mark_read = on_scroll)
+            # j / k move, and reading on the way marks read (read.mark_read = on_scroll);
+            # the lane settled first ("new below" may come a moment later: 1 of 4 runs)
+            await pilot.pause(0.5)
             posts.focus()
             posts.index = 0
             await pilot.press("j")  # the next post — over "new below", if it stands between
@@ -292,3 +294,54 @@ class MarkupTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("n")
             await pilot.pause(0.05)
             self.assertTrue(app.is_running)
+
+
+@unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
+class TuiLongLaneTest(TmpDir, unittest.IsolatedAsyncioTestCase):
+    """A lane of hundreds of posts: only a window of rows is built around where reading
+    starts (all of them were, "from the start of time", 29.10); what scrolled over the
+    screen is read, as in the windows — not only the post under the cursor."""
+    make = test_cli.CliTest.make
+
+    def setUp(self):
+        TmpDir.setUp(self)
+        i18n.setup("en")
+
+    async def test_a_window_and_read_by_the_screen(self):
+        import asyncio
+
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp
+        from fedtail.protocols.mastodon import adapter
+        core, w = self.make(read={"mark_read": "on_scroll"},
+                            feed={"order": "oldest_first", "first_run_mark_read": False})
+        app = FedtailApp(core)
+        big = [(f"{i:04d}", adapter.post(status(f"{i:04d}", BOB, minute=i % 59,
+                                                vis="public", text=f"post number {i}"),
+                                         "t")) for i in range(300)]
+        app.core.entries = lambda lane: big if lane == "home" else []
+        async with app.run_test(size=(120, 40)) as pilot:
+            loop = asyncio.get_running_loop()
+            end = loop.time() + 15
+            while loop.time() < end and not app.lane:
+                await pilot.pause(0.05)
+            await app.select_lane("home")
+            await pilot.pause(0.3)
+            posts = app.query_one("#posts", ListView)
+            n = len(app._rows)
+            self.assertGreater(n, 250)
+            self.assertLess(len(posts.children), 80)  # a window, not the lane
+            # the wheel: what passes over the screen is read, the cursor where it was
+            ids = [(None, {"id": f"{i:04d}"}) for i in range(300)]
+            unread = len(core.unread_ids(ids))
+            posts.scroll_to(y=posts.max_scroll_y // 2, animate=False)
+            await pilot.pause(0.8)
+            after = len(core.unread_ids(ids))
+            self.assertLess(after, unread)
+            # the window grows as the cursor comes to its end
+            posts.focus()
+            before = len(posts.children)
+            posts.index = len(posts.children) - 1
+            await pilot.pause(0.3)
+            self.assertGreaterEqual(len(posts.children), before)

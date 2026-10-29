@@ -941,6 +941,11 @@ class FedtailApp(App, PostsMixin):
         self._ui_loop = asyncio.get_running_loop()
         self.title = NAME
         self.query_one("#lanes").styles.width = self.lanes_width
+        # what scrolled through the screen is read, as in the windows (common/lane.py
+        # seen()) — not only the post under the cursor: posts read by the wheel stayed
+        # unread, and the next start offered a score of them (29.10)
+        self.watch(self.query_one("#posts", ListView), "scroll_y",
+                   lambda _old, _new: self._seen_soon(), init=False)
         if self._theme_wanted:
             try:
                 self.theme = self._theme_wanted
@@ -1095,27 +1100,32 @@ class FedtailApp(App, PostsMixin):
         built = m.build(not first)
         keep = getattr(lv.highlighted_child, "key", None)
         width = max(30, lv.size.width - 4 if lv.size.width else 76)
-        items, entries, unread = [], [], set()
+        rows, entries, unread = [], [], set()  # every row of the lane, built when near
         events_unread = 0
         for sp in built.specs:
             if sp.key == SEPARATOR:  # "new below", fixed where reading stood
-                div = ListItem(Static(Text("── " + sp.extra.get("separator", "") + " ──",
-                                           style=STYLE["divider"])))
-                div.key = SEPARATOR
-                div.disabled = True  # j / k step over it, as over the windows' divider
-                items.append(div)
+                def divider(sp=sp):
+                    div = ListItem(Static(Text("── " + sp.extra.get("separator", "") + " ──",
+                                               style=STYLE["divider"])))
+                    div.key = SEPARATOR
+                    div.disabled = True  # j / k step over it, as over the windows' divider
+                    return div
+                rows.append((SEPARATOR, None, divider))
                 continue
             if sp.extra.get("event"):  # a like, a follow, a request… in any lane
-                items.append(self.event_item(sp))
+                rows.append((sp.key, None, lambda sp=sp: self.event_item(sp)))
                 events_unread += sp.unread
                 continue
             e = sp.entry
             entries.append((sp.key, e))
             if sp.unread:
                 unread.add(e.id)
-            shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
-                              parent=sp.parent, spec=sp)
-            items.append(PostItem(e, render(shown), key=sp.key, open_at=sp.open_at))
+
+            def post(sp=sp, e=e):
+                shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
+                                  parent=sp.parent, spec=sp)
+                return PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
+            rows.append((sp.key, e, post))
         title = core.lane_title(name) or _("lane_" + name)
         n_unread = len(unread) + events_unread
         line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=n_unread)}"
@@ -1125,24 +1135,25 @@ class FedtailApp(App, PostsMixin):
         elif m.current_filter() != "all" or m.conversations():
             line += Text("  · " + self.lane_choice_words(m), style="dim")
         self._main("#title", Static).update(line)
-        await lv.clear()
-        await lv.extend(items)
-        if not items:
+        self._rows = rows
+        if not rows:
+            self._lo = self._hi = 0
+            await lv.clear()
             if m.events_only():  # nothing happened yet: said so
                 await lv.append(ListItem(Static(Text(_("activity_none"), style="dim"))))
             self.update_lane_counts()
             return
-        keys = [it.key for it in items]
+        keys = [k for k, _e, _m in rows]
         if keep in keys and not first:
-            lv.index = keys.index(keep)
+            at = keys.index(keep)
         else:
             start = m.start_key(built.specs)
             if start == SEPARATOR and keys.index(start) + 1 < len(keys):
                 start = keys[keys.index(start) + 1]  # the first new one, under the divider
-            lv.index = keys.index(start) if start in keys else self._start_index(entries,
-                                                                                  unread)
+            at = keys.index(start) if start in keys else \
+                keys.index(entries[self._start_index(entries, unread)][0]) if entries else 0
+        await self._window_at(at)
         self.update_lane_counts()
-        self.load_pictures(items)
 
     # ---- pictures in the lane (tui.pictures = "inline") ------------------------------
     def load_pictures(self, items):
@@ -1234,6 +1245,10 @@ class FedtailApp(App, PostsMixin):
             return False
         tool = termcaps.viewer(self.caps())
         if tool is None:
+            # the app's own blocks only: said once, with what would show them properly
+            if not getattr(self, "_viewer_said", False):
+                self._viewer_said = True
+                self.notify(_("tui_viewer_missing"), timeout=12)
             return False
         futs = [self.core.media_bytes(m.url or m.preview) for m in media[:8]]
         size = self.size
@@ -1384,6 +1399,105 @@ class FedtailApp(App, PostsMixin):
                           lambda: self.later(self.core.clear_activity(),
                                              ok=lambda _r: self.refresh_lane()))
 
+    # ---- what was on screen ------------------------------------------------------------
+    _seen_timer = None
+    _glimpsed = set()
+
+    def _seen_soon(self):
+        if self._seen_timer is not None:
+            self._seen_timer.stop()
+        self._seen_timer = self.set_timer(0.4, self._mark_on_screen)
+
+    def _mark_on_screen(self):
+        """The posts the screen shows (or went past after showing) are read — the same
+        rule as the windows' (common/lane.py seen, LaneModel.read)."""
+        from ..common.lane import seen
+        self._seen_timer = None
+        if not self.screen_stack:  # the app closing
+            return
+        if not self.lane or self.screen is not self.screen_stack[0] or \
+                self.core.cfg["read"]["mark_read"] != "on_scroll":
+            return
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:
+            return
+        view = lv.content_region
+        vtop, vbot = view.y, view.y + view.height
+        at_end = lv.scroll_y >= lv.max_scroll_y
+        ids, glimpsed = [], set()
+        for it in lv.children:
+            if not isinstance(it, PostItem):
+                continue
+            r = it.region
+            if r.height <= 0:
+                continue
+            got = seen(r.y, r.y + r.height, vtop, vbot, at_end, it.key in self._glimpsed)
+            if got == "read":
+                ids.append(it.entry.id)
+            elif got == "glimpsed":
+                glimpsed.add(it.key)
+        self._glimpsed = glimpsed
+        if not ids:
+            return
+        read = self.lane_model(self.lane).read(ids)
+        if read:
+            unread = self.core.unread([it.entry for it in lv.children
+                                       if isinstance(it, PostItem) and it.entry.id in read])
+            if unread:
+                self.core.mark_read(sorted(unread))
+                self.update_lane_counts()
+
+    # ---- a lane's window: only the rows near the reading place are built ---------------
+    # A lane of thousands of posts built every row at once ("from the start of time",
+    # 29.10); now WINDOW rows around where reading stands, STEP more as the cursor comes
+    # near an end — the whole lane is still there for find, J and the counts.
+    WINDOW_BACK, WINDOW_AHEAD, STEP, EDGE = 20, 40, 30, 5
+    _rows, _lo, _hi = [], 0, 0
+
+    async def _window_at(self, at):
+        """The window around row `at` (of the whole lane), the cursor on it."""
+        lv = self._main("#posts", ListView)
+        n = len(self._rows)
+        self._lo = max(0, at - self.WINDOW_BACK)
+        self._hi = min(n, at + self.WINDOW_AHEAD)
+        items = [make() for _k, _e, make in self._rows[self._lo:self._hi]]
+        await lv.clear()
+        await lv.extend(items)
+        lv.index = at - self._lo
+        self.load_pictures(items)
+
+    async def _grow(self, up):
+        """STEP more rows at the window's top (up) or bottom; the cursor stays on its
+        row. → whether any came."""
+        lv = self._main("#posts", ListView)
+        if up and self._lo > 0:
+            lo = max(0, self._lo - self.STEP)
+            items = [make() for _k, _e, make in self._rows[lo:self._lo]]
+            index = lv.index or 0
+            await lv.insert(0, items)
+            self._lo = lo
+            lv.index = index + len(items)
+        elif not up and self._hi < len(self._rows):
+            hi = min(len(self._rows), self._hi + self.STEP)
+            items = [make() for _k, _e, make in self._rows[self._hi:hi]]
+            await lv.extend(items)
+            self._hi = hi
+        else:
+            return False
+        self.load_pictures(items)
+        return True
+
+    async def _show_row(self, at):
+        """Row `at` of the whole lane under the cursor: in the window, or the window
+        moved there."""
+        lv = self._main("#posts", ListView)
+        if self._lo <= at < self._hi:
+            lv.index = at - self._lo
+        else:
+            await self._window_at(at)
+        lv.focus()
+
     def _start_index(self, entries, unread):
         """feed.start_at: the first unread (oldest first) or the newest."""
         newest = 0 if self.core.cfg["feed"]["order"] == "newest_first" else len(entries) - 1
@@ -1495,8 +1609,13 @@ class FedtailApp(App, PostsMixin):
         if self.lane and self.screen is self.screen_stack[0] and lv.index is not None:
             # reading.older_ahead: a few posts from the "older" end — the core fetches a
             # page itself (core.older_ahead: one at a time, none after an empty page)
+            if lv.index < self.EDGE and self._lo > 0:
+                self.call_next(self._grow, True)
+            elif len(lv.children) - 1 - lv.index < self.EDGE and self._hi < len(self._rows):
+                self.call_next(self._grow, False)
             oldest_first = self.core.cfg["feed"]["order"] == "oldest_first"
-            left = lv.index if oldest_first else len(lv.children) - 1 - lv.index
+            at = self._lo + lv.index  # in the whole lane
+            left = at if oldest_first else len(self._rows) - 1 - at
             if left < 5:
                 self.call_next(self._older_ahead)
         if self.core.cfg["read"]["mark_read"] == "on_scroll":
@@ -1905,11 +2024,10 @@ class FedtailApp(App, PostsMixin):
     def find(self, query):
         from ...model.text import haystack, matches
         from ..common.find import count_text
-        lv = self._main("#posts", ListView)
-        items = [it for it in lv.children if isinstance(it, PostItem)]
-        short = self.core.short_ids([it.entry for it in items])
-        hits = [i for i, it in enumerate(lv.children) if isinstance(it, PostItem) and
-                matches(query, haystack(it.entry, short.get(real(it.entry).id)))]
+        # the whole lane, not only the rows built (the window goes to the hit)
+        short = self.core.short_ids([e for _k, e, _m in self._rows if e is not None])
+        hits = [i for i, (_k, e, _m) in enumerate(self._rows) if e is not None and
+                matches(query, haystack(e, short.get(real(e).id)))]
         self._found = {"lane": self.lane, "hits": hits, "at": -1, "query": query}
         if not hits:  # the query kept: D looks further back, E everywhere
             self.notify(count_text(query, -1, 0)[0] + f" · D — {_('find_deeper')}, "
@@ -1979,20 +2097,15 @@ class FedtailApp(App, PostsMixin):
     async def _go_hit(self, h):
         self.core.reveal_in_lane(h["lane"], h["index"])
         await self.select_lane(h["lane"])
-        lv = self._main("#posts", ListView)
-        for i, it in enumerate(lv.children):
-            e = getattr(it, "entry", None)
+        for i, (_k, e, _m) in enumerate(self._rows):
             if e is not None and h["status_id"] in (e.id, real(e).id):
-                lv.index = i
+                await self._show_row(i)
                 break
-        lv.focus()
 
     def _find_step(self, step=1):
         f = self._found
         f["at"] = (f["at"] + step) % len(f["hits"])
-        lv = self._main("#posts", ListView)
-        lv.index = f["hits"][f["at"]]
-        lv.focus()
+        self.call_next(self._show_row, f["hits"][f["at"]])
         self.notify(_("find_count", i=f["at"] + 1, n=len(f["hits"])))
 
     # ---- actions -------------------------------------------------------------------
@@ -2023,6 +2136,10 @@ class FedtailApp(App, PostsMixin):
             return
         lv = self.query_one("#posts", ListView)
         oldest_first = self.core.cfg["feed"]["order"] == "oldest_first"
+        if lv.children and lv.index == len(lv.children) - 1 and \
+                self.screen is self.screen_stack[0] and self._hi < len(self._rows):
+            self.call_next(self._grow, False)  # the window first, then the server
+            return
         if not oldest_first and lv.children and lv.index == len(lv.children) - 1 and \
                 self.screen is self.screen_stack[0]:
             self.call_next(self.action_older)  # newest first: older ones are below
@@ -2034,6 +2151,10 @@ class FedtailApp(App, PostsMixin):
             self._main("#lanes", ListView).action_cursor_up()
             return
         lv = self.query_one("#posts", ListView)
+        if lv.children and lv.index == 0 and self.screen is self.screen_stack[0] and \
+                self._lo > 0:
+            self.call_next(self._grow, True)  # the window first, then the server
+            return
         if self.core.cfg["feed"]["order"] == "oldest_first" and lv.children and \
                 lv.index == 0 and self.screen is self.screen_stack[0]:
             self.call_next(self.action_older)  # oldest first: older ones are above
@@ -2088,18 +2209,21 @@ class FedtailApp(App, PostsMixin):
             self.notify(_("find_close"), timeout=2)
 
     def action_to_new(self):
-        """J: to the first unread of the lane (to_new_tip)."""
+        """J: to the first unread of the lane (to_new_tip) — of the whole lane, the
+        window going there."""
         lv = self._main("#posts", ListView)
-        entries = [it.entry for it in lv.children if isinstance(it, PostItem)]
+        built = {self._lo + i: it for i, it in enumerate(lv.children)}
+        entries = [e for _k, e, _m in self._rows if e is not None]
         unread = self.core.unread(entries) if entries else set()
-        order = list(enumerate(lv.children))
+        order = list(range(len(self._rows)))
         if self.core.cfg["feed"]["order"] == "newest_first":
             order.reverse()  # the first new one is the oldest unread: the lowest
-        for i, it in order:
-            if isinstance(it, PostItem) and it.entry.id in unread or \
+        for i in order:
+            _k, e, _m = self._rows[i]
+            it = built.get(i)
+            if e is not None and e.id in unread or \
                     isinstance(it, EventItem) and it.unread:
-                lv.index = i
-                lv.focus()
+                self.call_next(self._show_row, i)
                 return
         self.notify(_("to_new_tip") + ": —")
 

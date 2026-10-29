@@ -105,7 +105,7 @@ python3 -m fedtail                               # 4. запуск
 sudo apt install python3-requests python3-pyside6.qtwidgets python3-pyside6.qtsvg \
     python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets python3-pyside6.qtdbus \
     qt6-image-formats-plugins python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 python3-textual \
-    python3-pil mpv python3-cryptography python3-langdetect libenchant-2-2 hunspell-ru \
+    python3-pil mpv chafa python3-cryptography python3-langdetect libenchant-2-2 hunspell-ru \
     hunspell-en-us python3-socks fonts-noto-color-emoji libnotify-bin xdg-utils git
 ```
 
