@@ -1,46 +1,57 @@
-# fedtail: the plan for 0.21
+# fedtail: the plan for 0.22
 
-What we do in 0.21 (decided on 26 Oct 2026, with 0.20.0 ready to come out): **sync between
-devices brought to the end** and **free lanes** — lanes one assembles oneself. The user's
-side is in the feature list with the status "planned" (`docs/src/features/*.toml` →
-`docs/*/parts/roadmap.md` and the site); here — the whole plan, with the development part.
+What we do in 0.22 (decided on 28 Oct 2026, the day 0.21.0 came out): **anything into any
+lane by its rules** — from activity and follow requests to posts, the sets of lanes only
+presets; **the lane editor on the phone**; **sync's last pieces** (the key by a QR code, a
+draft's pictures, the sync server guarded against a loop of drafts); **the sync server in
+a repository of its own**, released with fedtail under one number; **"Report a bug"** in
+every interface; **lighter and quicker** (`memory.md`); and after all of it, the interfaces
+checked again against each other. The user's side is in the feature list (`docs/src/features/*.toml`
+→ `docs/*/parts/roadmap.md` and the site); here — the whole plan, with the development part.
 
-## What 0.20 brought
+## What 0.21 brought
 
-Android as a full fediverse client (every place, the ⋯ menu, profiles, the editor, push);
-the terminal and the web with everything the windows have, the web's columns too; slow mode, "notify at most
-every…", "of them new"; reactions of one's own; collections, another server's timeline, a
-link's timeline; an apt repository and a Windows installer (waiting for their keys); the
-robustness answers (`robustness.md`) and the self-check with real accounts on Linux,
-Windows and Android. Everything — in CHANGELOG.md.
+Sync between devices to the end (a fedtail-sync server, a folder, WebDAV; read marks,
+threads, lanes, drafts, activity, tiles) and free lanes — every lane made of rules, the
+built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
 
 ## Doing
 
 | # | what | how we'll know it's done |
 |---|---|---|
-| 1 | **Sync, checked live**: Linux, Windows and Android on one account through a fedtail-sync server and through a folder; read marks, threads, lanes, drafts, activity, tiles travel; a new device doesn't mark the others' unread read | a self-check step on two profiles with one sync folder (`tools/selfcheck.py`); the same by hand on three devices |
-| 2 | **Sync: what's "not yet" now** (`docs/en/sync.md`): the key carried by a QR code from the window and the phone's camera; a draft's pictures travelling with it; WebDAV spoken directly; old journals packed into a snapshot | each — a feature "has" with its `since`, the "Not yet" list empty or with the reason why not |
-| 3 | **Sync in every interface**: the state, "sync now", the key, the errors in words — Qt, GTK, the terminal, the web, Android the same | `tools/parity.py` without sync lines; the behaviour scenario has a sync step |
-| 4 | **Free lanes, the core** (`feeds.md` §9, steps 1–5): atoms, rules with strict checks and `explain`, the built-in lanes as presets (the same output as today), lanes over several sources, "Unsorted", "Why is it here?", `--explain-lane` | a test over a recorded store: the presets give today's lanes item for item; every key and every error of a rule tested |
-| 5 | **Free lanes, outside** (§9, steps 6–7): `[[lanes.custom]]` in the config and both examples, the features and the help; the sidebar, columns, tiles, notifications by the most personal lane in every interface | a lane from the config shows the same in Qt, GTK, the terminal, the web and Android; parity — 0 differences |
+| 1 | **Anything into any lane**: events (likes, follows, requests) and posts in one lane by its rules; every question about a lane asked of its rule, never its name (the first lane, sounds, private messages, the roster, sections, columns) | done: `tests/test_lanes_*`, the lanes' questions in `Core` (`lane_rank`, `private_lanes`, `thread_lanes`, `lanes_fed_by`) |
+| 2 | **The lane editor on the phone** | done: the common places `lanes` / `lane` (`common/places.py`) on Android |
+| 3 | **Sync's last pieces**: the key by a QR code; a draft's pictures beside the journal; the server's limits for them (`max_media_kb`, `media_quota_mb`, `media_per_minute`) | done: `docs/en/sync.md` "Not yet" empty |
+| 4 | **fedtail-sync in its own repository** with fedtail's version | done: CI checks `fedtail_sync.__version__` |
+| 5 | **"Report a bug"** in every interface (the log gathered, the issue opened filled in, Submit pressed by the user) | done |
+| 6 | **Lighter and quicker** (`memory.md`) | steps 0, 1, 5 (Qt and GTK on one `common/strip.py`), 8 done; 6 and 7 in part; 2–4 measured and left (the core's own objects are ~8 MB at 10 000 posts) |
+| 7 | **The review's fixes**: logic out of the windows (silence, filters, trends, "read it whole" — common places; asking again for a profile — `common/patient.py`), `core/app.py` in parts, the core through `core/proto.py` only, outside fetches pinned to the checked address | done |
+| 8 | **The interfaces checked again** | done (29.10): `tools/behaviour.py` — the same in Qt, GTK, the terminal and the web page, every step; `tools/parity.py` — Qt and GTK apart in 5 words, each explained in `parity.toml`, as every difference of the terminal and the web page (`tests/test_parity.py`) |
+
+## Before the release (the author)
+
+- A night in the tray on the newest build, `smem` before and after reading through lanes.
+- The secrets: `APT_GPG_KEY` and GitHub Pages for the `apt` branch, `WINDOWS_CERT_PFX`.
+- The tray icon that stayed after quitting from the roster in KDE (split layout).
+- Sync on three devices through a fedtail-sync server with an invite code (protocol 2).
 
 ## Waiting for a decision
 
-- `feeds.md` §10: nested groups in `any`; events and posts in one lane; `in_my_thread`
-  without following; the lane editor on the phone.
-- The sync server: one public instance of the project's own, or only "run your own".
+- `feeds.md` §10: nested groups in `any`; `in_my_thread` without following.
 - The author's calls of `robustness.md`: the token's store, encrypting the database,
   checking for a new version, NTLM proxies, the system's theme on the go, a hung first copy.
 
 ## Loose ends
 
-- The secrets: `APT_GPG_KEY` and GitHub Pages for the `apt` branch, `WINDOWS_CERT_PFX`.
-- The tray icon that stays after quitting from the roster in KDE (split layout) — check
-  on 0.20.0.
-- Freezes on a lane's first click with many cards (`card.py` `_hint_width`): measure on
-  a real account.
+- The Qt bench's "try a theme" stood 40–230 s in `sendPostedEvents(DeferredDelete)` with
+  7 cards alive (offscreen, the cloud's 2 cores; GTK's took 1 s): to measure on a real
+  desktop before looking further.
+- The GTK lane has no budget test of its own yet (`tests/test_budgets.py` is Qt's and the
+  core's); `tools/gtk_bench.py` is the measure meanwhile.
+- A card is ~7 ms to build in Qt (dozens of widgets): cheaper only by building it of
+  fewer — a work of its own.
 
-## Not in 0.21
+## Not in 0.22
 
 Toga; the token from an external command; Mastodon's annual report and the other "won't
-do" of the feature list.
+do" of the feature list; `memory.md` steps 2–4 (measured: single megabytes to win) and 9.
