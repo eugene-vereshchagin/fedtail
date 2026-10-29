@@ -129,6 +129,14 @@ async def walk(out):
 
     async with app.run_test(size=(140, 45)) as pilot:
         core.poll_once()
+        # ui.start_lane = "none": the curtain first, as the windows open; Enter: a lane
+        from fedtail.frontends.tui.app import CURTAIN
+        if await wait(pilot, lambda: app.lane is not None or any(
+                getattr(i, "key", None) == CURTAIN for i in app.query_one("#posts").children),
+                "the start: a lane or the curtain") and app.lane is None:
+            shot("00-curtain")
+            app.query_one("#posts").focus()
+            await pilot.press("enter")
         await wait(pilot, lambda: app.lane is not None, "a lane opened")
         await pilot.pause(1.0)
         shot("01-start")

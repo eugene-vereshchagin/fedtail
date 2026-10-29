@@ -150,6 +150,14 @@ def with_playwright(base, key, out):
             page.goto(base + "/?k=" + key)
             page.wait_for_selector(".post, article, #posts > *", timeout=10000)
             page.wait_for_timeout(800)
+            # ui.start_lane = "none": the curtain first, as the windows open; then Home
+            if page.locator("#posts .curtain").count():
+                page.screenshot(path=str(out / f"{label}-00-curtain.png"))
+                page.evaluate("() => goLane('home')")
+                page.wait_for_selector("#posts .post", timeout=10000)
+                page.wait_for_timeout(800)
+            else:
+                NOTES.append(f"{label}: no curtain at start (ui.start_lane)")
             page.screenshot(path=str(out / f"{label}-01-home.png"))
             if label == "desktop":
                 read_by_scrolling(page, base, key)
