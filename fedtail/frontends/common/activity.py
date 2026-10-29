@@ -139,7 +139,9 @@ def rows(entries, seen, date, oldest_first=True):
                        people[:MAX_NAMES], max(0, total - min(len(people), MAX_NAMES)), when,
                        notice,
                        first.post, es, max(a.sort for a in es),
-                       any(a.sort > seen for a in es), first.kind == "request"))
+                       # a follow request waiting: new till answered, whenever it came
+                       any(a.sort > seen or str(a.ref.id).startswith("follow_request:")
+                           for a in es), first.kind == "request"))
     if oldest_first:
         out.reverse()
     return out

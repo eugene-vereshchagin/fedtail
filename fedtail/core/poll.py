@@ -455,6 +455,7 @@ class PollMixin:
             if self._wants_event("follow_request"):
                 try:
                     self.follow_requests = self.api.follow_requests() or []
+                    self.note_requests(self.follow_requests)
                     ids = {a["id"] for a in self.follow_requests}
                     if self._known_requests is not None:
                         new_requests = [a for a in self.follow_requests

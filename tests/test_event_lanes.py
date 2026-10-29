@@ -127,6 +127,22 @@ class EventLanesTest(unittest.TestCase):
         notes = [pl for n, pl in core._events_by_lane([BOB]).items()]
         self.assertTrue(notes)
 
+    def test_a_request_stands_when_it_came(self):
+        """A follow request among the other events by when it came — when first seen,
+        kept — not the account's creation date (it stood on top of a lane read oldest
+        first, 29.10)."""
+        core, w = self.make()
+        w.requests.append(dict(BOB, created_at="2024-10-09T00:00:00.000Z"))
+        core.poll_once()
+        first = core.store.kv_get(core.REQUESTS_SEEN)[BOB["id"]]
+        self.assertGreater(first, "2026")
+        got = core._request_events(core.follow_requests)[0]
+        self.assertEqual(got["created_at"], first)
+        core.note_requests(core.follow_requests)  # and it stays
+        self.assertEqual(core.store.kv_get(core.REQUESTS_SEEN)[BOB["id"]], first)
+        core.note_requests([])  # answered: forgotten
+        self.assertEqual(core.store.kv_get(core.REQUESTS_SEEN), {})
+
     def test_requests_apart_when_their_lane_is_shown(self):
         core, w = self.make(lanes=["home", "activity", "requests"])
         w.requests.append(BOB)

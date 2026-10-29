@@ -449,7 +449,8 @@ class LaneModel:
         every lane: Core.mark_activity_seen). Not while a kind of media is shown (an
         event is none); with "unread only" — the unseen ones. Among posts, none come
         before the oldest post shown (the lane's window); a lane of events only shows
-        them all; those without a time (a follow request waiting) stand as the newest."""
+        them all, a follow request waiting before them; those without a time stand as the
+        newest."""
         if self.media.active():
             return specs
         events = getattr(self.view, "lane_events", None)
@@ -485,7 +486,10 @@ class LaneModel:
         out, i = [], 0
         for when, spec in made:
             if not only and oldest is not None and when < oldest:
-                continue
+                # a request waiting stays, older than the posts shown: before them all
+                if not any(a.kind == "request" for a in spec.extra["event"]):
+                    continue
+                when = oldest
             while i < len(specs) and timed[i] is not None and timed[i] <= when:
                 out.append(specs[i])
                 i += 1

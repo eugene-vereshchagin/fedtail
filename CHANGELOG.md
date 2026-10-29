@@ -54,6 +54,11 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- A follow request waiting stands among the events by when it came (when fedtail first
+  saw it: the API gives no time of it) — it took the account's creation date ("asks to
+  follow you · 9 Oct 2024") and stood on top of a lane read oldest first, its "followed
+  you" at the bottom. Waiting, it stays new till answered, and a lane of posts keeps it
+  though it is older than the posts shown.
 - The window froze for 21 s, the disk busy: the commit that crossed SQLite's 1000 WAL
   pages checkpointed the database itself, fsync and all, and it was the window's (a
   lane's place saved). The WAL is checkpointed by the store's own thread now

@@ -3,7 +3,7 @@ the lanes whose rules take them, counted and seen."""
 
 import logging
 
-from .store import sort_key
+from .store import now_iso, sort_key
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -66,12 +66,33 @@ class ActivityMixin:
             got = self._request_events(self.follow_requests or ()) + list(got)
         return got
 
-    @staticmethod
-    def _request_events(accounts):
+    REQUESTS_SEEN = "requests.seen"  # account id → when its request came (or was seen)
+
+    def _request_events(self, accounts):
+        """The follow requests waiting, as events — in time among the others, when each
+        came — when fedtail first saw it (note_requests; the API gives no time of it).
+        Not the account's creation date ("asks to follow you · 9 Oct 2024") nor "newest
+        of all": a request stood on top of a lane read oldest first, its "followed you"
+        at the bottom (29.10)."""
         from .social import FOLLOW_REQUEST
-        return [{"id": FOLLOW_REQUEST + a["id"], "type": "follow_request", "account": a,
-                 "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
-                for a in accounts]
+        seen = self.store.kv_get(self.REQUESTS_SEEN) or {}
+        out = []
+        for a in accounts:
+            at = seen.get(a["id"]) or now_iso()
+            rid = FOLLOW_REQUEST + a["id"]
+            out.append({"id": rid, "type": "follow_request", "account": a,
+                        "created_at": at, "sort": sort_key(at, rid)})
+        return out
+
+    def note_requests(self, accounts):
+        """When each waiting request came, kept (the poll, on every list of them)."""
+        seen = self.store.kv_get(self.REQUESTS_SEEN) or {}
+        ids = {a["id"] for a in accounts}
+        kept = {i: t for i, t in seen.items() if i in ids}
+        for i in ids - set(kept):
+            kept[i] = now_iso()
+        if kept != seen:
+            self.store.kv_set(self.REQUESTS_SEEN, kept)
 
     def _events_by_lane(self, new_requests=(), new_activity=()):
         """{lane: [notification]}: which shown lanes take which of the new events."""
@@ -137,10 +158,12 @@ class ActivityMixin:
         """A lane's events not seen yet: newer than the seen mark (common to every
         lane — an event seen in one is seen everywhere); follow requests count while
         they wait."""
+        from .social import FOLLOW_REQUEST
         from .store import MINE_EVENT
         seen = self.activity_seen_mark()
         return sum(1 for n in self.lane_events(name, 1000, which="all")
-                   if str(n.get("sort") or "") > seen  # what I did myself isn't news
+                   if (str(n.get("sort") or "") > seen  # what I did myself isn't news
+                       or str(n.get("id") or "").startswith(FOLLOW_REQUEST))  # waiting
                    and not str(n.get("id") or "").startswith(MINE_EVENT))
 
     def mark_activity_seen(self, upto=None):
