@@ -7,8 +7,10 @@ terminal what it can do — before Textual takes the screen, so `prepare()` runs
 start of the terminal interface — and gives a Textual widget to mount
 (`graphic(data, rows)`).
 
-Otherwise half blocks: each character is two pixels, the upper one its colour, the
-lower one its background ("▀"). Works in any terminal with true colour.
+Otherwise characters: chafa's (`text()`, when chafa is installed — it picks among many
+glyph shapes, far finer than ours), or our half blocks: each character is two pixels,
+the upper one its colour, the lower one its background ("▀"). Works in any terminal
+with true colour.
 
 Needs Pillow (python3-pil); without it `available()` is False and the interface says
 so instead of drawing. No Textual imported here: tested on its own.
@@ -16,7 +18,11 @@ so instead of drawing. No Textual imported here: tested on its own.
 
 import io
 import logging
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 from rich.text import Text
 
@@ -137,4 +143,49 @@ def blocks(data, cols, rows):
             top, bottom = px[x, y], px[x, y + 1]
             out.append("▀", style=f"#{top[0]:02x}{top[1]:02x}{top[2]:02x} on "
                                   f"#{bottom[0]:02x}{bottom[1]:02x}{bottom[2]:02x}")
+    return out
+
+
+CHAFA_TIMEOUT = 8  # s: a picture chafa can't draw by then is drawn by us
+
+
+def _chafa():
+    return shutil.which("chafa")
+
+
+def text(data, cols, rows):
+    """The picture as rich Text `cols` × `rows` at most: by chafa when it is there (its
+    symbols, true colour — chafa installed changed nothing before: only the v viewer
+    used it, 29.10), else our half blocks. None when it can't be read."""
+    path = _chafa()
+    if path and data:
+        drawn = _by_chafa(path, data, cols, rows)
+        if drawn is not None:
+            return drawn
+    return blocks(data, cols, rows)
+
+
+def _by_chafa(path, data, cols, rows):
+    if opened(data, (8, 8)) is None:  # not a picture we would draw: nor chafa
+        return None
+    fd, tmp = tempfile.mkstemp(prefix="fedtail-", suffix=".img")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        got = subprocess.run([path, "-f", "symbols", "-c", "full", "--animate", "off",
+                              "--polite", "on", "--size", f"{max(2, cols)}x{max(1, rows)}",
+                              tmp], capture_output=True, timeout=CHAFA_TIMEOUT, check=False)
+    except (OSError, subprocess.SubprocessError) as e:
+        log.debug("chafa: %s", e)
+        return None
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    if got.returncode != 0 or not got.stdout:
+        log.debug("chafa: exit %s %s", got.returncode, got.stderr[:200])
+        return None
+    out = Text.from_ansi(got.stdout.decode("utf-8", "replace").rstrip("\n"),
+                         no_wrap=True, overflow="crop")
     return out

@@ -41,3 +41,36 @@ class HalfBlocksTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE, "rich or Pillow is not installed")
+class ChafaTest(unittest.TestCase):
+    """chafa, when installed, draws the app's own pictures too (it was only the v
+    viewer's: installing it changed nothing in the lane, 29.10); our blocks without it."""
+
+    def png(self):
+        buf = io.BytesIO()
+        Image.new("RGB", (120, 60), (20, 200, 40)).save(buf, "PNG")
+        return buf.getvalue()
+
+    def test_blocks_without_chafa(self):
+        from unittest import mock
+
+        from fedtail.frontends.tui import pictures
+        with mock.patch.object(pictures, "_chafa", lambda: None):
+            got = pictures.text(self.png(), 20, 6)
+        self.assertEqual(got.plain, pictures.blocks(self.png(), 20, 6).plain)
+        self.assertIsNone(pictures.text(b"not a picture", 20, 6))
+
+    def test_chafa_when_there(self):
+        import shutil
+
+        from fedtail.frontends.tui import pictures
+        if not shutil.which("chafa"):
+            self.skipTest("no chafa here")
+        got = pictures.text(self.png(), 20, 6)
+        lines = got.plain.split("\n")
+        self.assertLessEqual(len(lines), 6)
+        self.assertLessEqual(max(len(x) for x in lines), 20)
+        self.assertTrue(got.spans)  # coloured
+        self.assertIsNone(pictures.text(b"not a picture", 20, 6))

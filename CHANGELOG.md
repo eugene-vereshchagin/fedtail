@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- The terminal: with chafa installed the pictures in the lane and in the app's picture
+  view are chafa's (true colour, its many glyph shapes) — installing it changed nothing
+  there before, only the v viewer used it; our half blocks without it.
 - The web page counts a post read by the windows' rule (`common/lane.py` seen()): one
   taller than the screen once its end has been in view, and what the screen went past in
   a scroll — "90% of it in view" kept tall posts unread for good, and posts scrolled

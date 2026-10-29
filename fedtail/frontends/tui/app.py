@@ -258,7 +258,7 @@ class PictureScreen(Screen):
             if real_ones:
                 app.in_ui(self._put_graphic, at, data, cols, rows)
                 return
-            drawn = pictures.blocks(data, cols, rows)
+            drawn = pictures.text(data, cols, rows)
             app.in_ui(self._put, at, drawn if drawn is not None else
                       _("tui_picture_failed", err="?"))
         app.core.media_bytes(url).add_done_callback(done)
@@ -1186,8 +1186,8 @@ class FedtailApp(App, PostsMixin):
 
             def done(f, item=item, key=key, url=url):
                 try:
-                    drawn = f.result() if real_ones else pictures.blocks(f.result(), cols,
-                                                                         rows)
+                    drawn = f.result() if real_ones else pictures.text(f.result(), cols,
+                                                                       rows)
                 except Exception as e:  # noqa: BLE001 — no picture, the text stays
                     # the first one said aloud: "no pictures in the terminal" was
                     # silent before (a refused address, a proxy, a timeout)
