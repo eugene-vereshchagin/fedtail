@@ -2,6 +2,15 @@
 
 ## 0.22.0 — in progress
 
+- Much smoother, the GTK window: a lane is one strip of places with only the cards near
+  the screen built (as Qt's, the same code: `common/strip.py`), a few at a time between
+  frames — no more laying out every card at each scroll step nor waiting at the edge of
+  what was built (in the bench, turns over 100 ms while scrolling 421 → 1).
+- A card that fails to build says so in its place ("This post couldn't be drawn"), the
+  log has why — the cards after it are built as ever (Qt and GTK; one broken card left
+  holes in the lane).
+- GTK asks again for who a profile is when the answer fails or doesn't come, and offers
+  "Again" (it said "failed" once and stayed so) — one `common/patient.py` with Qt.
 - Fixed: a #tag in a post from some servers (Pleroma, Akkoma, Misskey, Friendica, any
   that marks its tags its own way) opened that server's web page, which asked to log in;
   a tag is known now by the post's own list of tags, `rel="tag"`, its class, or its words

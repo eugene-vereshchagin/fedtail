@@ -42,6 +42,7 @@ SLICE_MS = 12       # the cards beyond the screen are built this long at a time
 GAP = 8             # between cards
 FIRST_GUESS = 160   # a card's height before any was measured here
 HOLD_S = 1.5        # the reading place held this long after the places last changed
+_LOGGED = set()     # keys whose broken card is in the log already (once each)
 
 
 class Body(Gtk.Widget):
@@ -597,6 +598,25 @@ class LaneView(Gtk.Box):
         self._schedule_seen()  # new cards may be on screen already
 
     def _make(self, k):
+        try:
+            self._make_card(k)
+        except Exception as e:  # noqa: BLE001 — one card broken: said in its place, the
+            # rest built as ever (as Qt's FeedView._broken)
+            if k in self.boxes:
+                self._remove(k)
+            if k not in _LOGGED:
+                _LOGGED.add(k)
+                log.exception("card %s couldn't be built", k)
+            label = Gtk.Label(label=_("card_broken", err=type(e).__name__), wrap=True,
+                              xalign=0)
+            label.add_css_class("ft-muted")
+            label.entry, label.unread, label.key = None, False, k
+            label.set_unread = lambda _on: None
+            label.set_my_replies = lambda _r: None
+            label.update = lambda _e: None
+            self._place(k, label, label)
+
+    def _make_card(self, k):
         sp = self.specs[k]
         if sp.extra.get("event"):  # a like, a follow, a request… in any lane
             card = EventRow(self.ctx, sp)
@@ -621,6 +641,10 @@ class LaneView(Gtk.Box):
             box.append(card)
         else:
             box = card
+        self._place(k, card, box)
+
+    def _place(self, k, card, box):
+        """card (in box) into the body, at k's place among those that exist."""
         box.set_parent(self.list)
         mw = box.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
         if mw > self.list.min_width:

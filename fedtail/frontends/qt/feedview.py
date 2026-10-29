@@ -27,6 +27,7 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import QFrame, QScrollArea, QVBoxLayout, QWidget
 
 from ... import diag
+from ...i18n import _
 from ...model import Share
 from ...model import real as real_entry
 from ..common.lane import seen
@@ -318,7 +319,12 @@ class FeedView(QScrollArea):
     def _build(self, key, x, w, guess):
         """One card made and put in its place. → whether its height is not as guessed."""
         spec = self.model[self._index[key]]
-        row = row_class(spec)(spec, self.ctx)
+        try:
+            row = row_class(spec)(spec, self.ctx)
+        except Exception as e:  # noqa: BLE001 — one card broken: said in its place, the
+            # rest built as ever (it stopped the loop: the cards after it on screen never
+            # came — holes in the lane)
+            row = self._broken(key, spec, e)
         kept = self._kept.pop(key, None)
         if kept:
             changed = False
@@ -326,7 +332,7 @@ class FeedView(QScrollArea):
                 if getattr(row, a, None) != v:
                     setattr(row, a, v)
                     changed = True
-            if changed:
+            if changed and hasattr(row, "_build"):
                 row._build()
         row.setParent(self.body)
         h = self._measure(row, w)
@@ -341,6 +347,23 @@ class FeedView(QScrollArea):
             if key == self.found_key:
                 _mark(row.card, "found", "true")
         return new
+
+    _logged = set()  # keys whose broken card is in the log already (once each)
+
+    def _broken(self, key, spec, err):
+        """A card that couldn't be built: one line in its place saying so; its story in
+        the log, once."""
+        from PySide6.QtWidgets import QLabel
+        if key not in FeedView._logged:
+            FeedView._logged.add(key)
+            log.exception("card %s couldn't be built", key)
+        row = QLabel(_("card_broken", err=type(err).__name__))
+        row.setObjectName("muted")
+        row.setWordWrap(True)
+        row.spec, row.status_id = spec, None
+        row.update_spec = lambda s, row=row: setattr(row, "spec", s)
+        row.set_unread = lambda _on: None
+        return row
 
     def _let_go(self, key):
         row = self.rows.pop(key)

@@ -592,6 +592,12 @@ keys = ["settings_saved_here", "settings_enter_saves"]
 
 [[wording]]
 in = ["tui", "web"]
+why.ru = "Окна строят карточку из виджетов, и сломавшаяся говорит о себе на своём месте («Эта запись не нарисовалась»), не оставляя дыры; терминал и веб рисуют пост строкой текста или HTML — там такой поломки нет, ошибка ленты говорится ошибкой места."
+why.en = "The windows build a card of widgets, and one that breaks says so in its place (“This post couldn't be drawn”), leaving no hole; the terminal and the web page draw a post as a line of text or HTML — no such breakage there, a lane's error is said as the place's."
+keys = ["card_broken"]
+
+[[wording]]
+in = ["tui", "web"]
 why.ru = "Окна спрашивают «кто это» в профиле заново сами и говорят, что не пришло («спрашиваю ещё раз…», «Ещё раз») — общим `common/patient.py`; терминал и веб говорят об ошибке места своими словами."
 why.en = "The windows ask “who this is” for a profile again by themselves and say what didn't come (“asking again…”, “Again”) — one `common/patient.py`; the terminal and the web page say the place's error in their own words."
 keys = ["profile_slow", "profile_retrying", "profile_failed", "profile_bad_answer",

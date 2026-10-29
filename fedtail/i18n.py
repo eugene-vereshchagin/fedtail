@@ -626,6 +626,7 @@ _STRINGS = {
         "profile_failed": "не пришло, кто это: {err}",
         "profile_bad_answer": "сервер ответил не учётной записью",
         "profile_retry": "Ещё раз",
+        "card_broken": "⚠ Эта запись не нарисовалась ({err}) — в журнале подробности",
         "tags_in_home": "И в Ленте",
         "tags_not_in_home": "Не в Ленте",
         "tags_in_home_tip": "Посты с этими тегами и в Ленте тоже (снято — только в ленте "
@@ -2430,6 +2431,7 @@ _STRINGS = {
         "profile_failed": "who this is didn't come: {err}",
         "profile_bad_answer": "the server's answer wasn't an account",
         "profile_retry": "Again",
+        "card_broken": "⚠ This post couldn't be drawn ({err}) — the log has the details",
         "tags_in_home": "In Home too",
         "tags_not_in_home": "Not in Home",
         "tags_in_home_tip": "Posts with these tags in Home too (off — only in the tag lane, "

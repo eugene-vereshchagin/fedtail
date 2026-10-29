@@ -1946,6 +1946,38 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(dlg.page.rows, [])
         dlg.close()
 
+    def test_a_broken_card_leaves_no_hole(self):
+        """A card that fails to build is said in its place; the cards after it are
+        built as ever (one exception stopped the loop: holes in the lane, 29.10)."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt import feedview
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        real = feedview.row_class
+
+        def picky(spec):
+            cls = real(spec)
+            if getattr(spec, "key", "") == "011":
+                def boom(*_a, **_k):
+                    raise ValueError("odd post")
+                return boom
+            return cls
+        feedview.row_class = picky
+        try:
+            self.win.select_lane("home")
+            lane = self.win.lane_widgets["home"]
+            lane.refresh()
+            view = lane.view
+            self.pump(until=lambda: "011" in view.rows and not view._pending)
+            self.assertIsInstance(view.rows["011"], QLabel)
+            self.assertIn(i18n._("card_broken", err="ValueError"), view.rows["011"].text())
+            others = [k for k in view.keys() if k != "011"]
+            self.assertTrue(others and all(k in view.rows for k in others[:3]))
+        finally:
+            feedview.row_class = real
+
     def test_columns_side_by_side(self):
         """❯: the lanes in columns, the same widgets moved over; a lane clicked on the
         left comes as one more column; ✕ takes it away; back to one lane where I was."""
