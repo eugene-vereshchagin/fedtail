@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- Fixed (the phone): after ⟳ the thin bar under the title stayed for 8 s when the round
+  brought nothing new, the lane pushed down by it; it goes as the round ends now.
 - Fixed: a picture from another server can't be turned into a request to this computer or
   one at home by its name answering differently the second time (DNS rebinding): every
   outside fetch (pictures, link previews, other servers' pages) connects to the address

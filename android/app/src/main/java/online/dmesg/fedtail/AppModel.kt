@@ -777,7 +777,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (pulled) pulling = true else refreshing = true
         viewModelScope.launch {
             Core.refresh()
-            delay(if (pulled) 1500 else 8000) // the round's news come through watch()
+            // the bar is the round's: it goes when the round is over, news or none (it
+            // waited for news, and a round bringing nothing kept it 8 s, the lane pushed
+            // down by it); the news themselves come through watch()
+            val began = System.currentTimeMillis()
+            var seenBusy = false
+            while (System.currentTimeMillis() - began < 8000) {
+                delay(250)
+                val st = Core.status()
+                val on = Core.failed(st) == null && st.optBoolean("busy")
+                seenBusy = seenBusy || on
+                val waited = System.currentTimeMillis() - began
+                if (!on && (seenBusy || waited >= if (pulled) 1500 else 1000)) break
+            }
             pulling = false
             refreshing = false
         }
