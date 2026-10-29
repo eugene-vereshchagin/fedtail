@@ -2509,11 +2509,13 @@ function compose(replyTo) {
     // who sees it and its warning: the core's (post.reply_never_wider, reply_warning),
     // as the windows and the phone start a reply — not a rule of the page's own
     $("#vis").value = state.me.visibility;
+    const first = $("#vis").value;
     $("#cw").value = "";
     showCw(false);
     api("/api/draft_start", { reply_to: replyTo.sid }).then((st) => {
       if (state.replyTo !== replyTo) return;  // another editor opened meanwhile
-      if (st.visibility) $("#vis").value = st.visibility;
+      // the reader's own pick while it was asked stays theirs
+      if (st.visibility && $("#vis").value === first) $("#vis").value = st.visibility;
       if (!$("#cw").value && st.cw) { $("#cw").value = st.cw; showCw(true); }
     }).catch(() => {});
   } else {
