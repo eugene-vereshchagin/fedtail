@@ -32,6 +32,7 @@ class Stubborn(io.StringIO):
 class CliCornersTest(TmpDir):
     make = test_cli.CliTest.make
     run_cli = test_cli.CliTest.run_cli
+    _again = test_cli.CliTest._again
 
     def test_colour_on_a_terminal_and_no_color(self):
         self.assertTrue(cli.Out({"color": "auto"}, Tty()).color)
@@ -76,7 +77,8 @@ class CliCornersTest(TmpDir):
         w.local.append(status("009", NEWS, minute=9, text="local news"))
         got = self.run_cli(core, "show", "local", "--mark-read")
         self.assertIn("local news", got)
-        view = View(core)
+        again, _w = self._again(core)  # the command closed its core, as from the shell
+        view = View(again)
         self.assertEqual(view.unread(view.entries("local")), set())
 
     def test_tail_over_every_lane_marks_read(self):

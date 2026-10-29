@@ -21,8 +21,9 @@ class LinksTest(unittest.TestCase):
                 '<a href="https://example.com/article">site</a></p>')
         out = in_app(html, self.st)
         self.assertIn('href="fedtail:account/K"', out)
-        self.assertIn('href="fedtail:tag/%D0%B8%D0%B3%D1%80%D1%8B"', out)
-        self.assertEqual(unquote("%D0%B8%D0%B3%D1%80%D1%8B"), "игры")
+        # the tag carries its post's author: a click may open it as they write it
+        self.assertIn('href="fedtail:tag/%D0%B8%D0%B3%D1%80%D1%8B%20by%3AB"', out)
+        self.assertEqual(unquote("%D0%B8%D0%B3%D1%80%D1%8B%20by%3AB"), "игры by:B")
         self.assertIn('href="fedtail:resolve/https%3A%2F%2Fother.example%2F%40ann%2F1234567"',
                       out)
         self.assertIn('href="https://example.com/article"', out)  # an ordinary site stays

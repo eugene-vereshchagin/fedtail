@@ -104,7 +104,7 @@ class MainMenu:
         setattr(self, "_now_" + name, (act, now))
 
     def _sync(self):
-        for name in ("merged", "tracing", "whats_this"):
+        for name in ("merged", "whats_this"):
             act, now = getattr(self, "_now_" + name)
             act.set_state(GLib.Variant("b", bool(now())))
 

@@ -1046,7 +1046,10 @@ class MainWindow(QMainWindow):
         m.addAction(_("slow_title") + "…", lambda: self.open_place("slow"))
         if self.cfg["feed"].get("stats"):
             m.addAction(_("stats_title") + "…", lambda: self.open_place("stats"))
-        people = m.addMenu(_("menu_people"))
+        # a submenu made by addMenu(title) is Python's: it went with the local name
+        # before the menu was shown (PySide6 6.8) — so each one is made with its parent
+        people = QMenu(_("menu_people"), m)
+        m.addMenu(people)
         trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
         for feature, label, slot in (
                 ("suggestions", _("suggestions_title"), self.open_suggestions),
@@ -1070,7 +1073,8 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         # debugging, all of it in one place: the full snapshot does what eight items did
         # (stacks, census, trim, tracing, memory, the folders…: diag.full_snapshot)
-        dbg = m.addMenu(_("debug_menu"))
+        dbg = QMenu(_("debug_menu"), m)
+        m.addMenu(dbg)
         dbg.addAction(_("debug_report"), self.bug_report)
         dbg.addAction(_("debug_log_title") + "…", lambda: self.open_place("log"))
         dbg.addAction(_("debug_federation"), self.federation_status)
@@ -1379,7 +1383,8 @@ class MainWindow(QMainWindow):
         from PySide6.QtGui import QActionGroup
 
         from ..common import timed
-        sub = m.addMenu(_("replies_policy"))
+        sub = QMenu(_("replies_policy"), m)  # not addMenu(title): see _app_menu
+        m.addMenu(sub)
         sub.setToolTipsVisible(True)
         sub.menuAction().setToolTip(_("replies_policy_tip"))
         group = QActionGroup(sub)

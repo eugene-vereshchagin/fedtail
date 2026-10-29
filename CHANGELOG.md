@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Qt: the ≡ menu's Debugging and People submenus, and a list's "whose replies" in its
+  lane menu, could open empty or vanish: made by `addMenu(title)`, they were Python's
+  and went with the code that built them before the menu showed (PySide6 6.8). Each is
+  made with its parent menu now.
+- GTK: the ≡ menu didn't open at all — it still looked for the memory-tracing toggle
+  the one Debugging submenu took out.
 - The terminal plays video and gifs right in itself, a console player, when it shows real
   pictures (sixel in Konsole, kitty) — `tui.video = "auto"` opened mpv's window over it on
   a desktop. mpv's status line (time, length, a bar) under the picture, its messages kept

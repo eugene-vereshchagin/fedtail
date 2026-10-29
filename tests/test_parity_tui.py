@@ -236,7 +236,8 @@ class EditorTest(Base):
             await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen), what="lang?")
             app.screen.dismiss("switch")
             await self.wait(pilot, lambda: app.screen is not scr, what="sent")
-            self.assertEqual(scr.query_one("#c-lang", Input).value, "ka")
+            # the editor has gone with its fields: what reached the server says it
+            await self.wait(pilot, lambda: w.languages[-1:] == ["ka"], what="sent as ka")
             app.core.cfg["post"]["lang_check"] = False
 
             # discard, asked first

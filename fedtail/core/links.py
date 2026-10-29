@@ -4,7 +4,8 @@ Servers render @mentions and #hashtags as ordinary web links (to the person's
 or the tag's page on some server). fedtail turns them into in-app links:
 
     @mention of a known account  -> fedtail:account/<id>      (a profile tab)
-    #hashtag                     -> fedtail:tag/<name>        (a tag timeline tab)
+    #hashtag                     -> fedtail:tag/<name> by:<author id>
+                                    (a tag timeline tab: the author's or everyone's)
     a link that looks like a fediverse profile or post
                                  -> fedtail:resolve/<quoted url>
                                     (looked up through your own server; the

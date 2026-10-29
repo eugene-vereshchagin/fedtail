@@ -207,7 +207,7 @@ class GtkSmokeTest(_GtkBase):
         self.assertFalse(self.win.lane_rows["home"].badge.get_visible())
 
     def test_main_menu_and_a_narrow_window(self):
-        for name in ("write", "refresh", "profile", "config", "logs", "about", "quit"):
+        for name in ("write", "refresh", "profile", "settings", "log", "about", "quit"):
             self.assertIsNotNone(self.win.lookup_action(name), name)
         lane = self._lane("home")
         self.win.set_default_size(560, 500)  # ui.max_width is wider: the column narrows

@@ -2238,6 +2238,28 @@ class QtSmokeTest(unittest.TestCase):
             other.quitting = True
             other.close()
 
+    def test_submenus_outlive_the_code_that_made_them(self):
+        """A submenu made by addMenu(title) was Python's and went with its local name, so
+        ≡ → Debugging (and People, a list's "whose replies") opened empty or not at all."""
+        import gc
+
+        import shiboken6
+        from PySide6.QtWidgets import QMenu
+        top = self.win._app_menu()
+        gc.collect()
+        subs = [a.menu() for a in top.actions() if a.menu() is not None]
+        self.assertIn(i18n._("debug_menu"), [a.text() for a in top.actions()])
+        for sub in subs:
+            self.assertTrue(shiboken6.isValid(sub))
+            self.assertTrue(sub.actions(), sub.title())
+        x = adapter.user_list({"id": "L1", "title": "Друзья", "replies_policy": "list"})
+        m = QMenu(self.win)
+        self.win._replies_menu(m, x)  # as _lane_menu calls it: the result dropped
+        gc.collect()
+        self.assertEqual(len(m.actions()[-1].menu().actions()), 3)
+        top.deleteLater()
+        m.deleteLater()
+
     def test_report_a_bug_on_github(self):
         """≡ → "Report a bug on GitHub…": the draft to read, scrubbed of the server;
         "Open GitHub" opens the new-issue page and nothing else leaves."""
