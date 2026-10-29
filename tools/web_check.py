@@ -60,6 +60,11 @@ def make_core():
                                         "preview_url": f"https://img.example/{i}s.png",
                                         "description": "картинка"}]
         w.add(st, home=True)
+    # a post far taller than the screen: read once its end has been on screen (it never
+    # reached "90% in view" and stayed unread for good, 29.10)
+    w.add(status("030", BOB, minute=30, vis="public",
+                 text="<p>" + "<br>".join(f"длинная строка {n}" for n in range(120)) + "</p>"),
+          home=True)
     w.act("a1", "favourite", BOB, st=mine, minute=5)
     # what a lived-in account has and an empty one hides: a list (26.10 — columns
     # broke on the first account with one), a followed tag
@@ -126,7 +131,8 @@ def with_playwright(base, key, out):
         for label, size in (("desktop", (1280, 860)), ("phone", (390, 844))):
             page = browser.new_page(viewport={"width": size[0], "height": size[1]})
             if not REAL:  # pictures and faces of the fake world: drawn here, no network
-                page.route(lambda url: not url.startswith(base),
+                # (and fedtail's /pic for them: its fetch can't reach the fake world)
+                page.route(lambda url: not url.startswith(base) or "/pic?" in url,
                            lambda route: route.fulfill(status=200, content_type="image/png",
                                                        body=_png(route.request.url)))
             page.on("console", lambda m, label=label: m.type in ("error", "warning") and
@@ -145,6 +151,8 @@ def with_playwright(base, key, out):
             page.wait_for_selector(".post, article, #posts > *", timeout=10000)
             page.wait_for_timeout(800)
             page.screenshot(path=str(out / f"{label}-01-home.png"))
+            if label == "desktop":
+                read_by_scrolling(page, base, key)
             if label == "phone":
                 page.click("#menu")
                 page.wait_for_timeout(400)
@@ -331,6 +339,33 @@ def didnt_load(what, body):
         NOTES.append(f"{what}: the server's rate limit (429) — not checked")
     else:
         ERRORS.append(f"{what}: didn't load: {body[:200]}")
+
+
+def read_by_scrolling(page, base, key):
+    """Home scrolled through to its end: every post read, the tall one too (the windows'
+    rule, common/lane.py seen())."""
+    import json
+    import urllib.request
+
+    def unread():
+        r = urllib.request.Request(base + "/api/lane?name=home&keep=1",
+                                   headers={"Cookie": f"fedtail_web={key}"})
+        with urllib.request.urlopen(r, timeout=20) as resp:
+            return {p["sid"] for p in json.loads(resp.read())["posts"] if p["unread"]}
+    if "030" not in unread():
+        NOTES.append("reading: the tall post was read before scrolling (already marked)")
+    for _ in range(60):  # the wheel down, a screen at a time, to the end
+        page.evaluate("() => { const b = document.querySelector('#posts');"
+                      " b.scrollTop += b.clientHeight * 0.8; }")
+        page.wait_for_timeout(120)
+    page.wait_for_timeout(1500)  # the look after the scroll, and the read sent
+    left = unread()
+    if "030" in left:
+        ERRORS.append("reading: the post taller than the screen stayed unread after "
+                      "scrolling past it")
+    elif left:
+        ERRORS.append(f"reading: Home read through by the wheel, still unread: {sorted(left)}")
+    NOTES.append(f"reading: unread after scrolling Home through: {sorted(left) or 'none'}")
 
 
 def main_menu(page, out):

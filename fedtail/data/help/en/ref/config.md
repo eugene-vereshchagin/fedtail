@@ -276,6 +276,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.reply_never_wider` | `true` | A reply is never more public than the original post. |
 | `post.drafts_autosave` | `true` | Drafts are saved as you type and survive closing the window. |
 | `post.cw_field` | `false` | The "content warning / title under the cut" (CW) field is open at once. false — it hides behind the "⚠ Warning" button. |
+| `post.reply_warning` | `"copy"` | A reply starts with the warning (CW) of the post it answers, as Mastodon's own page does: "copy". "none" — a reply starts with no warning (a whole talk under one, the first post's topic, kept going whether it fits or not). |
 | `post.camelcase_hint` | `true` | A hint under the text if a hashtag is written in one case (#georgianews): screen readers read #GeorgiaNews word by word. false — no hint. |
 | `post.plain_posts` | `true` | The command line at the bottom (Ctrl+L), as on Point: #a3f — open, #a3f text — reply, S/U #a3f — subscribe to a thread, S/U @nick — follow a person, ! — boost, ~ — bookmark, D — delete your own, @nick — profile, ? — help. Plain text without a command — a new post (false — commands only, no accidental posts). |
 | `post.language` | `""` | The language of new posts (an ISO 639 code: "ru", "en", "ka"…), servers and clients filter and translate by it. "" — don't say, the server takes the language from the account's settings. The post window can change it for one post. |

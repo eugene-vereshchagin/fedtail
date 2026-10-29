@@ -7,6 +7,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from fedtail.frontends.common import compose
 
@@ -51,6 +52,15 @@ class ComposeTest(unittest.TestCase):
         d = compose.start(View(draft={"text": "x", "visibility": "private"}), "k")
         self.assertEqual(d.visibility, "followers")  # an old draft's word
         self.assertIsNone(d.language)
+
+    def test_a_reply_s_warning_copied_or_not(self):
+        """post.reply_warning: the post's CW carried into the reply ("copy", as
+        Mastodon) or not ("none": a talk stayed under its first post's topic)."""
+        post = types.SimpleNamespace(id="7", warning="fedtail", author=None, mentions=())
+        with mock.patch.object(compose, "reply_mentions", lambda *_a: "@bob "):
+            self.assertEqual(compose.start(View(), "k", reply_to=post).cw, "fedtail")
+            self.assertEqual(compose.start(View(reply_warning="none"), "k",
+                                           reply_to=post).cw, "")
 
     def test_when_utc(self):
         self.assertIsNone(compose.when_utc("  "))

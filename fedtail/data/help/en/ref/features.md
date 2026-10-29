@@ -466,7 +466,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Markdown | has | 0.1.0 | `post.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
 | Preview before sending | has | 0.14.0 | `post.preview` | own | Fedilab |
 | Formatting buttons | has | 0.22.0 | `post.format_bar` | own (Markdown) | Fedilab, Phanpy |
-| Content warning (CW) | has | 0.2.0 | `post.cw_field` | `spoiler_text` | everyone |
+| Content warning (CW) | has | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
@@ -501,7 +501,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Formatting buttons.** Buttons by the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. Where they stand: left (the default) or right — a column, top or bottom — a row, or none; only when the server understands Markdown.
 
-**Content warning (CW).** The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself.
+**Content warning (CW).** The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself, as Mastodon does — or not (`post.reply_warning = "none"`, since 0.22.0).
 
 **Pictures: drag, paste, description, focus.** Drag a file in or paste from the clipboard. A double click on a picture — the description and the focus point. A picture without a description — before sending, ask “Describe” or “Send as is”. Marking pictures sensitive — with a tick.
 

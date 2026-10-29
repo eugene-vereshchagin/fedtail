@@ -334,6 +334,9 @@ _STRINGS = {
         "deps_mpv": "видео из терминала",
         "deps_chafa": "картинки в терминале в настоящем размере (sixel, kitty)",
         "tui_play_mark": "видео — v",
+        "lang_hidden_info": ["только {langs}: скрыт {n} пост на других языках",
+                             "только {langs}: скрыто {n} поста на других языках",
+                             "только {langs}: скрыто {n} постов на других языках"],
         "tui_view_mark": "картинки — v",
         "tui_viewer_missing": "Картинки здесь — крупными блоками: для настоящего размера и "
                               "цвета поставь chafa (sudo apt install chafa) — Konsole, kitty, "
@@ -2152,6 +2155,8 @@ _STRINGS = {
         "deps_mpv": "video from the terminal",
         "deps_chafa": "pictures in the terminal at their real size (sixel, kitty)",
         "tui_play_mark": "video — v",
+        "lang_hidden_info": ["{langs} only: {n} post in other languages hidden",
+                             "{langs} only: {n} posts in other languages hidden"],
         "tui_view_mark": "pictures — v",
         "tui_viewer_missing": "Pictures here are coarse blocks: for their real size and "
                               "colours install chafa (sudo apt install chafa) — Konsole, "

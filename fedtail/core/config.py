@@ -167,6 +167,7 @@ DEFAULTS = {
         "reply_never_wider": True,
         "drafts_autosave": True,
         "cw_field": False,
+        "reply_warning": "copy",   # a reply starts with the post's warning, or none
         "camelcase_hint": True,
         "plain_posts": True,
         "language": "",
@@ -352,6 +353,7 @@ CHOICES = {
     ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
     ("post", "format_bar"): {"left", "right", "top", "bottom", "off"},
+    ("post", "reply_warning"): {"copy", "none"},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
@@ -508,7 +510,8 @@ FILE_LAYOUT = (
      + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
                    "unload_hidden_minutes keep_hidden_lanes")),
     ("post", _keys("post", "default_visibility send_timeout reply_never_wider drafts_autosave "
-                           "cw_field camelcase_hint plain_posts language languages spellcheck "
+                           "cw_field reply_warning camelcase_hint plain_posts language "
+                           "languages spellcheck "
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "report_forward quote_policy quote_action quote_prefix invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "

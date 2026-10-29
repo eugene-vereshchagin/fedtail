@@ -1638,6 +1638,25 @@ class CoreTest(TmpDir):
         self.assertEqual(tried, [])
         self.assertEqual(core.store.kv_get("list_pending"), [])
 
+    def test_a_lane_says_what_the_language_filter_hid(self):
+        """lanes.languages took posts out of a lane: its line says how many (a lane of
+        one post of forty, the rest gone without a word, 29.10)."""
+        from fedtail import i18n
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        core, w = self.make(lanes={"languages": ["ru"], "languages_in": ["home"]})
+        core.connect().result()
+        for i, lang in enumerate(("en", "de", "ru")):  # (a page is 3 here)
+            words = "слова " if lang == "ru" else "words "
+            st = status(f"07{i}", BOB, minute=i, vis="public", text=words * 20)
+            st["language"] = lang
+            w.add(st, home=True)
+        core.poll_once()
+        self.assertEqual([st["id"] for _i, st in core.lane_entries("home")], ["072"])
+        self.assertEqual(core.language_hidden("home"), 2)
+        built = LaneModel(View(core), "home").build(False)
+        self.assertIn(i18n._("lang_hidden_info", n=2, langs="ru"), built.info)
+
     def test_list_pending_let_go_when_already_in(self):
         # the logs (29.10): "is already in list" — a 422 for the same two every round
         core, w = self.make()

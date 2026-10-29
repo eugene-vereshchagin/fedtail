@@ -360,6 +360,17 @@ class LaneModel:
             info = _("media_filter_info", n=len(entries))
         if held:
             info = _("held_info", n=held) + (" · " + info if info else "")
+        # a browse lane still asking its server: said in the line over whatever is shown
+        # already (one stale post on its own, and no word of more on the way: 29.10)
+        if getattr(view, "lane_waiting", lambda _n: False)(self.name):
+            info = "⟳ " + _("loading") + (" · " + info if info else "")
+        # lanes.languages took some out: said, so a lane of one post of forty explains
+        # itself (29.10) — the same line in every interface
+        gone = getattr(view, "language_hidden", lambda _n: 0)(self.name)
+        if gone:
+            words = _("lang_hidden_info", n=gone,
+                      langs=", ".join(view.cfg["lanes"].get("languages") or ()))
+            info = info + " · " + words if info else words
         posts = [e for _, e in entries]
         parents = view.parents(posts)
         answers = view.my_replies(posts)  # {post id: [my replies to it]}

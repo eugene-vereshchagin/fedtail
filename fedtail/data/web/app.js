@@ -258,6 +258,9 @@ function renderOne(m, all) {
       img.title = m.alt || w("image_loading");  // the windows' "loading…" till it comes
       img.loading = "lazy";
       img.referrerPolicy = "no-referrer";
+      // its place kept before it comes (the server says its size): pictures coming in
+      // pushed the posts below away, and the one the lane opened on went off screen
+      if (m.w && m.h) { img.width = m.w; img.height = m.h; }
       img.onload = () => { img.title = m.alt; };
       img.onclick = () => view(m, all);
       // a preview the server couldn't make: the original; neither — say so, try later
@@ -1444,17 +1447,78 @@ function firstVisible() {  // the first card or event row in sight: where a redr
 
 // ---- read marks: a post seen whole is read (reading.mark_read = on_scroll) ---------------
 let observer = null;
+// What is read: the windows' rule (common/lane.py seen()), not "90% of the card in view"
+// — a card taller than the screen never got there and stayed unread for good, and the
+// next opening started from it, days back (29.10). On screen whole; taller than the
+// screen and its end come into view; the lane's end on screen with it; or the reader
+// went on past it after seeing it.
+function seenState(top, bottom, vtop, vbottom, atEnd, glimpsed, slack = 2) {
+  const vh = vbottom - vtop;
+  const onScreen = top < vbottom && bottom > vtop;
+  const fully = top >= vtop - slack && bottom <= vbottom + slack;
+  const tallAndDone = bottom - top > vh && vtop < bottom && bottom <= vbottom + slack;
+  const tail = atEnd && onScreen;
+  const passed = glimpsed && bottom <= vtop + slack;
+  if (fully || tallAndDone || tail || passed) return "read";
+  return onScreen ? "glimpsed" : null;
+}
+
+const reading = { box: null, glimpsed: new Set(), timer: 0 };
+
 function watchRead(box) {
   if (observer) observer.disconnect();
+  reading.glimpsed = new Set();
   if (state.me.mark_read !== "on_scroll") return;
-  observer = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      read(e.target);
-      observer.unobserve(e.target);
-    }
-  }, { root: box, threshold: 0.9 });
-  for (const c of box.querySelectorAll(".post.unread, .event.unread")) observer.observe(c);
+  if (reading.box !== box) {
+    reading.box = box;
+    reading.last = box.scrollTop;
+    box.addEventListener("scroll", () => {
+      sweptRead(box);
+      clearTimeout(reading.timer);
+      reading.timer = setTimeout(() => lookRead(box), 250);
+    }, { passive: true });
+  }
+  setTimeout(() => lookRead(box), 400);  // what the lane opened on
+}
+
+// what the screen went over on its way (the windows' rule, qt/feedview.py _scrolled):
+// a card the screen passed whole in one step of less than a screen is read, though no
+// look caught it standing — scrolling on, the look only came where the wheel stopped
+// (29.10: 16 posts of Home stayed unread after reading it through); a jump (the bar
+// dragged, End) counts nothing
+function sweptRead(box) {
+  if (state.me.mark_read !== "on_scroll" || document.hidden) return;
+  const now = box.scrollTop, old = reading.last ?? now;
+  reading.last = now;
+  const vh = box.clientHeight;
+  if (now === old || Math.abs(now - old) > vh) return;
+  const view = box.getBoundingClientRect();
+  // in the box's own coordinates: where the screen was, and where it is
+  const lo = Math.min(old, now), hi = Math.max(old, now) + vh;
+  for (const c of box.querySelectorAll(".post.unread, .event.unread")) {
+    const r = c.getBoundingClientRect();
+    if (!r.height) continue;
+    const top = r.top - view.top + now, bottom = top + r.height;
+    if (top > hi) break;
+    if (top >= lo - 2 && bottom <= hi + 2) read(c);
+  }
+}
+
+function lookRead(box) {
+  if (state.me.mark_read !== "on_scroll" || document.hidden) return;
+  const view = box.getBoundingClientRect();
+  const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 2;
+  const glimpsed = new Set();
+  for (const c of box.querySelectorAll(".post.unread, .event.unread")) {
+    const r = c.getBoundingClientRect();
+    if (!r.height) continue;
+    const key = c.dataset.id || c.dataset.key;
+    const got = seenState(r.top, r.bottom, view.top, view.bottom, atEnd,
+                          reading.glimpsed.has(key));
+    if (got === "read") read(c);
+    else if (got === "glimpsed") glimpsed.add(key);
+  }
+  reading.glimpsed = glimpsed;
 }
 
 function unmark(card) {  // a card seen: no longer marked new; its id goes to the server

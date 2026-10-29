@@ -339,6 +339,16 @@ class TuiLongLaneTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.pause(0.8)
             after = len(core.unread_ids(ids))
             self.assertLess(after, unread)
+            # read through by the wheel, a few lines at a time: everything passed is read
+            posts.scroll_to(y=0, animate=False)
+            await pilot.pause(0.5)
+            built = [it.entry.id for it in posts.children if hasattr(it, "entry")]
+            while posts.scroll_y < posts.max_scroll_y:
+                posts.scroll_to(y=posts.scroll_y + 5, animate=False)
+                await pilot.pause(0.02)
+            await pilot.pause(0.8)
+            left = core.unread_ids([(None, {"id": i}) for i in built])
+            self.assertEqual(sorted(left), [], "passed by the wheel, still unread")
             # the window grows as the cursor comes to its end
             posts.focus()
             before = len(posts.children)

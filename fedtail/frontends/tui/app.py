@@ -945,7 +945,7 @@ class FedtailApp(App, PostsMixin):
         # seen()) — not only the post under the cursor: posts read by the wheel stayed
         # unread, and the next start offered a score of them (29.10)
         self.watch(self.query_one("#posts", ListView), "scroll_y",
-                   lambda _old, _new: self._seen_soon(), init=False)
+                   lambda old, new: (self._swept(old, new), self._seen_soon()), init=False)
         if self._theme_wanted:
             try:
                 self.theme = self._theme_wanted
@@ -1408,6 +1408,45 @@ class FedtailApp(App, PostsMixin):
             self._seen_timer.stop()
         self._seen_timer = self.set_timer(0.4, self._mark_on_screen)
 
+    def _swept(self, old, new):
+        """What the screen went over on its way (the windows' rule): a post it passed
+        whole in a step of less than a screen is read — the look came only where the
+        wheel stopped."""
+        if not self.lane or not self.screen_stack or self.screen is not \
+                self.screen_stack[0] or self.core.cfg["read"]["mark_read"] != "on_scroll":
+            return
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:
+            return
+        vh = lv.content_region.height
+        if old == new or abs(new - old) > vh:
+            return
+        base = lv.content_region.y - lv.scroll_y  # the list's own coordinates: + this
+        lo, hi = min(old, new), max(old, new) + vh
+        ids = []
+        for it in lv.children:
+            if not isinstance(it, PostItem) or it.region.height <= 0:
+                continue
+            top = it.region.y - base
+            if top > hi:
+                break
+            if top >= lo - 1 and top + it.region.height <= hi + 1:
+                ids.append(it.entry.id)
+        if ids:
+            self._read_ids(ids)
+
+    def _read_ids(self, ids):
+        read = self.lane_model(self.lane).read(ids)
+        if not read:
+            return
+        lv = self._main("#posts", ListView)
+        unread = self.core.unread([it.entry for it in lv.children
+                                   if isinstance(it, PostItem) and it.entry.id in read])
+        if unread:
+            self.core.mark_read(sorted(unread))
+            self.update_lane_counts()
+
     def _mark_on_screen(self):
         """The posts the screen shows (or went past after showing) are read — the same
         rule as the windows' (common/lane.py seen, LaneModel.read)."""
@@ -1438,15 +1477,8 @@ class FedtailApp(App, PostsMixin):
             elif got == "glimpsed":
                 glimpsed.add(it.key)
         self._glimpsed = glimpsed
-        if not ids:
-            return
-        read = self.lane_model(self.lane).read(ids)
-        if read:
-            unread = self.core.unread([it.entry for it in lv.children
-                                       if isinstance(it, PostItem) and it.entry.id in read])
-            if unread:
-                self.core.mark_read(sorted(unread))
-                self.update_lane_counts()
+        if ids:
+            self._read_ids(ids)
 
     # ---- a lane's window: only the rows near the reading place are built ---------------
     # A lane of thousands of posts built every row at once ("from the start of time",

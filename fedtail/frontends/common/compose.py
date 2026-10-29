@@ -65,13 +65,16 @@ def start(view, key, reply_to=None, start_text="", invite=False):
     else:
         if start_text:
             s.text = start_text
+        # the post's warning carried on (post.reply_warning = "copy", as Mastodon's
+        # page) or not ("none": a talk stayed under its first post's topic, 29.10)
+        keep_cw = view.cfg["post"].get("reply_warning", "copy") == "copy"
         if invite and reply_to is not None:  # only the one called: nobody else bothered
             s.text, s.hint = "@", "invite_hint"
-            s.cw = reply_to.warning or ""
+            s.cw = (reply_to.warning or "") if keep_cw else ""
         elif reply_to is not None:
             me = view.me
             s.text = reply_mentions(reply_to, me.handle if me else "")
-            s.cw = reply_to.warning or ""
+            s.cw = (reply_to.warning or "") if keep_cw else ""
     s.visibility = vis if vis in VISIBILITIES else DEFAULT_VIS
     return s
 

@@ -164,7 +164,8 @@ img.emoji { height: 1.3em; width: auto; vertical-align: -0.25em; margin: 0 1px; 
 .post .media { display: grid; gap: 4px; margin-top: 8px; grid-template-columns: 1fr 1fr; }
 .post .media.n1 { grid-template-columns: 1fr; }
 .post .media figure { margin: 0; min-width: 0; }
-.post .media img, .post .media video { width: 100%; max-height: 380px; object-fit: cover;
+.post .media img, .post .media video { width: 100%; height: auto; max-height: 380px;
+                                        object-fit: cover;
                                         border-radius: 8px; background: var(--line);
                                         display: block; cursor: zoom-in; }
 .post .media.n1 img, .post .media.n1 video { object-fit: contain; width: auto; max-width: 100%; }

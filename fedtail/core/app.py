@@ -33,6 +33,7 @@ from . import (
     auth,
     custom,
     lanes,
+    langs,
     proto,
     remote,
     search,
@@ -1067,6 +1068,15 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def _browse_waiting(self):
         return self.__dict__.setdefault("_browse_waiting_set", set())
 
+    @property
+    def _lang_out(self):
+        return self.__dict__.setdefault("_lang_out_counts", {})
+
+    def language_hidden(self, name):
+        """How many of the lane's posts lanes.languages left out (the last time it was
+        made), 0 when none or no filter there."""
+        return self._lang_out.get(name, 0)
+
     def lane_waiting(self, name):
         """A browse lane (Federated, Local) just opened, its server not answered yet:
         the lane says "loading…" (with the opossum) instead of looking empty."""
@@ -1162,6 +1172,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # out of a lane full of them further down (28.10)
         shows = self._chip_shows(name) if lane.chips else None
         scanned, full = 0, False
+        # lanes.languages: how many it took out, said in the lane's line (a lane showing
+        # one post of forty, the rest gone without a word, 29.10)
+        by_lang = bool(ctx.languages) and lanes.in_scope(lane.name, ctx.languages_in)
+        lang_out = 0
         rows = self.store.iter_items(lane.source, max_rows=horizon)
         if not repeats:
             rows = self._without_repeats(lane.source, rows)
@@ -1177,11 +1191,16 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 continue
             if shows is not None and not shows(st):
                 continue
+            if by_lang and not langs.wanted(real(st), ctx.languages, ctx.detect,
+                                            ctx.min_words):
+                lang_out += 1
+                continue
             if lanes.keeps(lane, st, ctx):
                 kept.append((item_id, st))
                 if len(kept) >= limit:
                     full = True
                     break
+        self._lang_out[name] = lang_out
         # what "Older" does next: the store has more to look through, or only the server
         self._lane_deep[name] = not full and scanned >= horizon
         kept.reverse()

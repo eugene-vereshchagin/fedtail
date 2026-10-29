@@ -2,6 +2,17 @@
 
 ## 0.22.0 — in progress
 
+- The web page counts a post read by the windows' rule (`common/lane.py` seen()): one
+  taller than the screen once its end has been in view, and what the screen went past in
+  a scroll — "90% of it in view" kept tall posts unread for good, and posts scrolled
+  through stayed unread (16 of Home in the check): the next opening started days back.
+  Pictures keep their place before they come (their size from the server). The same
+  "went past in a scroll" in the terminal.
+- A lane's line says what lanes.languages took out ("ru only: 39 posts in other languages
+  hidden") and that a browse lane is still loading — a lane of one post of forty had
+  explained nothing (every interface: the line is the common one).
+- `post.reply_warning`: a reply starts with the post's warning ("copy", as Mastodon's own
+  page, the default) or with none ("none").
 - The terminal: a lane builds the rows near where reading stands, more as the cursor
   comes near an end — a lane of thousands of posts built every row at once; find and
   J look through the whole lane. What scrolled over the screen is read, as in the

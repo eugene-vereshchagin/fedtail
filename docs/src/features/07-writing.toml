@@ -98,13 +98,13 @@ android = "has"
 since = "0.2.0"
 name.ru = "Предупреждение (CW)"
 name.en = "Content warning (CW)"
-config = "`post.cw_field`"
+config = "`post.cw_field`, `post.reply_warning`"
 api = "`spoiler_text`"
 others.ru = "у всех"
 others.en = "everyone"
 clients = ["all"]
-details.ru = "Поле CW открыто сразу или прячется за кнопкой «⚠ Предупреждение». В ответе CW исходного поста подставляется сам."
-details.en = "The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself."
+details.ru = "Поле CW открыто сразу или прячется за кнопкой «⚠ Предупреждение». В ответе CW исходного поста подставляется сам, как у Mastodon, — или нет (`post.reply_warning = \"none\"`, с 0.22.0)."
+details.en = "The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself, as Mastodon does — or not (`post.reply_warning = \"none\"`, since 0.22.0)."
 
 [[feature]]
 id = "compose-media"
