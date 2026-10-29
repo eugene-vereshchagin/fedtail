@@ -151,6 +151,31 @@ class LaneHoleTest(unittest.TestCase):
         self.assertIn("hole in a lane", said.output[0])
         self.assertTrue(view.rows)
 
+    def test_one_cards_room_left_blank_is_mended(self):
+        """Not only a screen mostly empty: one card's room left blank (the last post at
+        the lane's end, then a post's height of nothing, 29.10) is a hole too; a lane
+        whose places are true has none."""
+        self._pictures(30, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        self.pump(0.3)
+        view._hole_said = 0
+        with self.assertNoLogs("fedtail.frontends.qt.feedview", "WARNING"):
+            view._check_holes()
+        sb = view.verticalScrollBar()
+        vt, vh = sb.value(), view.viewport().height()
+        key = next(k for k in view.order if view._ys[k] > vt + 20
+                   and view._ys[k] + view.rows[k].height() < vt + vh)
+        view._let_go(key)  # its room on screen, nothing in it
+        with self.assertLogs("fedtail.frontends.qt.feedview", "WARNING") as said:
+            view._check_holes()
+        self.assertIn("empty", said.output[0])
+        self.assertIn(key, view.rows)  # built again where it stands
+
 
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class LaneStoodTest(unittest.TestCase):

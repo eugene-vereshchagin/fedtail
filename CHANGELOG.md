@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Qt: any empty stretch on screen (40 px and more, the gaps between cards aside) counts as a
+  hole in a lane — one card's room left blank at the lane's end too, not only a screen
+  mostly empty; said in the log with what stands where, and mended.
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.

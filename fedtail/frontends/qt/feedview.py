@@ -776,36 +776,51 @@ class FeedView(QScrollArea):
         return [s.entry.id for s in self.model if s.unread and s.entry is not None]
 
     # ---- what the reader saw --------------------------------------------------------
+    HOLE_PX = 40  # an empty stretch on screen this tall, the gaps between cards aside
+
     def _check_holes(self):
-        """The screen mostly empty with nothing waiting to be built: a hole in the
-        lane (29.10, not seen in the bench) — said in the log with what stands where,
-        once a minute at most, so a report shows it."""
+        """An empty stretch on the screen with nothing waiting to be built: a hole in the
+        lane — the screen mostly empty, or a card's room left blank (at the lane's end:
+        the last post, then a post's height of nothing, 29.10). Said in the log with what
+        stands where, once a minute at most, so a report shows it; and mended: every place
+        again from the heights known now, the cards near the screen built — once a hole."""
         if not self.windowed or self._pending or not self.model or self._paused:
             return
         sb = self.verticalScrollBar()
         top, vh = sb.value(), self.viewport().height()
         if vh < 100 or self._total <= vh:
             return
-        shown = 0
-        for k in self.order:
-            r = self.rows[k]
-            y = self._ys.get(k, 0)
-            shown += max(0, min(top + vh, y + r.height()) - max(top, y))
-        if shown >= vh * 0.5:
+        bottom = min(top + vh, self._total)
+        spans = [(self._ys.get(k, 0), self._ys.get(k, 0) + self.rows[k].height())
+                 for k in self.order]
+        if self.header.count():
+            spans.append((self.strip.head[0], self.strip.head[0] + self._chrome[0]))
+        if self.footer.count():
+            spans.append((self.strip.foot_top, self.strip.foot_top + self._chrome[1]))
+        at, hole, shown = top, None, 0
+        for a, b in sorted(spans):
+            if b <= at:
+                continue
+            if a >= bottom:
+                break
+            if a - at > self.HOLE_PX and hole is None:
+                hole = (at, a)
+            shown += min(b, bottom) - max(a, at)
+            at = max(at, b)
+        if hole is None and bottom - at > self.HOLE_PX:
+            hole = (at, bottom)
+        if hole is None:
             return
         now = time.monotonic()
         if now - getattr(self, "_hole_said", 0) >= 60:
             self._hole_said = now
             want = self._wanted()
-            log.warning("hole in a lane: %d of %d px on screen covered at %d (max %d, "
-                        "total %d, width %d, hidden %d, target %s); wanted %s; built %s; "
-                        "places %s", shown, vh, top, sb.maximum(), self._total,
-                        self._width, len(self._hidden), self._target, want[:12],
-                        self.order[:12],
+            log.warning("hole in a lane: %d–%d empty, %d of %d px on screen covered at %d "
+                        "(max %d, total %d, width %d, hidden %d, target %s); wanted %s; "
+                        "built %s; places %s", hole[0], hole[1], shown, vh, top,
+                        sb.maximum(), self._total, self._width, len(self._hidden),
+                        self._target, want[:12], self.order[-12:],
                         [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
-        # mended, not only said: every place again from the heights known now and the
-        # cards near the screen built (a lane opened empty at its end, the read posts
-        # above it, 29.10); once per hole — a lane that is short at its end stays so
         if getattr(self, "_mended_at", None) != (top, self._total):
             self._mended_at = (top, self._total)
             self._lay_out()
