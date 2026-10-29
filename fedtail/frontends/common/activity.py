@@ -49,10 +49,15 @@ def notice_text(n):
 
 
 def groups(entries):
-    """Neighbouring Activity of one kind about one post become one row."""
+    """Neighbouring Activity of one kind about one post become one row — but a request
+    (to follow me, to answer, to boost) waits for my yes or no about its own person: a
+    row of its own each. Glued, 62 follow requests were one line of three names "and 59
+    more" over 62 pairs of buttons, none saying whose (29.10)."""
     out = []
     for a in entries:
         key = (act_key(a), a.post.id if a.post else None)
+        if a.kind == "request":
+            key += (a.id,)
         if out and out[-1]["key"] == key:
             out[-1]["entries"].append(a)
         else:

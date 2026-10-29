@@ -82,6 +82,22 @@ class ActivityWordsTest(unittest.TestCase):
         self.assertEqual(row.when, "01 … 02")
         self.assertTrue(row.unread)
 
+    def test_requests_are_rows_of_their_own(self):
+        """Requests wait for a yes or no about their own person: never glued into one row
+        (62 follow requests were three names "and 59 more" over 62 nameless pairs of
+        buttons, 29.10); likes of one post still are one row."""
+        t = datetime(2026, 1, 1, tzinfo=UTC)
+        asks = [Activity(Ref("m", "", str(i)), "request", acc(n), t, str(i), asks="follow")
+                for i, n in enumerate("ABC")]
+        rows = activity.rows(asks, "0", lambda d: "")
+        self.assertEqual([[p.handle for p in r.people] for r in rows],
+                         [[acc(n).handle] for n in "CBA"])
+        parts = [activity.event_parts(r, lambda d: "") for r in rows]
+        self.assertEqual([len(p.answers) for p in parts], [1, 1, 1])
+        likes = [Activity(Ref("m", "", str(i)), "like", acc(n), t, str(i))
+                 for i, n in enumerate("AB")]
+        self.assertEqual(len(activity.rows(likes, "0", lambda d: "")), 1)
+
 
 class AboutTest(unittest.TestCase):
     def test_platform_names(self):

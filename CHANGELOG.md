@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Requests (to follow me, to answer, to boost) are a row each, with whose they are: 62 follow
+  requests were glued into one row — three names "and 59 more" over 62 pairs of buttons
+  that didn't say whose. Every interface and the phone (`common/activity.groups`).
 - Qt: any empty stretch on screen (40 px and more, the gaps between cards aside) counts as a
   hole in a lane — one card's room left blank at the lane's end too, not only a screen
   mostly empty; said in the log with what stands where, and mended.
