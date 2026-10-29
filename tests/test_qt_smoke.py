@@ -98,6 +98,19 @@ class QtSmokeTest(unittest.TestCase):
             self.fail("condition not reached")
         return True
 
+    def on_page(self, dlg, name, tab=None, rows=None):
+        """Wait for a common place to show page `name` (its tab; that many rows)."""
+        self.pump(until=lambda: dlg.page is not None and dlg.page.name == name
+                  and (tab is None or dlg.page.tab == tab)
+                  and (rows is None or len(dlg.page.rows) == rows))
+        return dlg.page
+
+    @staticmethod
+    def place_btn(dlg, key, act):
+        """A row's button on a common place by its row key and action."""
+        return next(b for r in dlg.page.rows if r.key == key for b in r.buttons
+                    if b.act[1] == act)
+
     def bridge_wait(self, fut):
         self.pump(until=fut.done)
         return fut.result()
@@ -675,15 +688,13 @@ class QtSmokeTest(unittest.TestCase):
         # silence: a filter added in the dialog, a mute from a post's menu, a post folded
         # by a "warn" filter
         from fedtail.frontends.qt.card import CardSpec, PostRow
-        from fedtail.frontends.qt.silence import SilenceDialog
-        dlg = SilenceDialog(self.win)
-        dlg.show()
-        dlg.words.setText("крипта, nft")
-        dlg._add_filter()
-        self.pump(until=lambda: dlg.filter_list.count() == 1)
-        dlg.filter_list.setCurrentRow(0)
-        dlg._delete_filter()
-        self.pump(until=lambda: dlg.filter_list.count() == 0)
+        dlg = self.win.open_place("silence", tab="filters")  # the common place
+        self.on_page(dlg, "silence", "filters", rows=0)
+        dlg.fields["words"][1].setText("крипта, nft")
+        dlg.press(dlg.page.submit)
+        self.on_page(dlg, "silence", "filters", rows=1)
+        dlg.press(self.place_btn(dlg, dlg.page.rows[0].key, "filter_delete"))
+        self.on_page(dlg, "silence", "filters", rows=0)
         from fedtail.frontends.qt.dialogs import Choose
         self.win.on_link("fedtail:mute/013")  # how long first
         ask = next(w for w in self.win.findChildren(Choose) if w.isVisible())
@@ -692,12 +703,11 @@ class QtSmokeTest(unittest.TestCase):
         ask.accept()
         self.pump(until=lambda: "B" in self.core.muted)
         self.assertEqual(self.world.mute_terms["B"], {"duration": 3600, "notifications": False})
-        dlg.reload()
-        self.pump(until=lambda: dlg.muted_list.count() == 1)
-        dlg.muted_list.setCurrentRow(0)
-        dlg._undo(dlg.muted_list, "mute")
+        dlg.go("silence", tab="muted")
+        self.on_page(dlg, "silence", "muted", rows=1)
+        dlg.press(self.place_btn(dlg, "B", "unmute"))
         self.pump(until=lambda: "B" not in self.core.muted)
-        dlg.accept()
+        dlg.close()
         folded = dict(self.core.store.get_status("013"),
                       filtered=[{"filter": {"title": "шум", "filter_action": "warn"}}])
         row = PostRow(CardSpec(key="x", entry=E(folded)), self.win.ctx)
@@ -1184,21 +1194,22 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(tab._keeps(adapter.post(self.world.statuses["011"])))
 
     def test_timed_filters_hidden_posts_and_list_replies(self):
-        from PySide6.QtWidgets import QMenu, QMessageBox
-
-        from fedtail.frontends.qt.silence import SilenceDialog
+        from PySide6.QtWidgets import QLabel, QMenu, QMessageBox
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
-        dlg = SilenceDialog(self.win)
-        dlg.words.setText("спойлер")
-        self.assertEqual(dlg.span.toolTip(), i18n._("filter_for_q"))
-        dlg.span.setCurrentIndex(2)  # a day
-        dlg._add_filter()
-        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        dlg = self.win.open_place("silence", tab="filters")
+        self.on_page(dlg, "silence", "filters", rows=0)
+        dlg.fields["words"][1].setText("спойлер")
+        span = dlg.fields["expires"][1]
+        self.assertTrue(any(w.text() == i18n._("filter_for_q")  # the question under it
+                            for w in dlg.findChildren(QLabel)))
+        span.setCurrentIndex(span.findData("86400"))  # a day
+        dlg.press(dlg.page.submit)
+        self.on_page(dlg, "silence", "filters", rows=1)
         self.assertEqual(next(iter(self.world.filters.values()))["expires_in"], 86400)
         made = adapter.word_filter(next(iter(self.world.filters.values())))
         self.assertIn(i18n._("filter_until", until=made.expires.astimezone().strftime(
-            "%d.%m.%Y %H:%M")), dlg.filter_list.item(0).text())
+            "%d.%m.%Y %H:%M")), dlg.page.rows[0].line)
         # hide this post: in the ⋯ menu, asked once, a filter of single posts
         from fedtail.frontends.common import actions
         self.core.poll_once()
@@ -1213,11 +1224,11 @@ class QtSmokeTest(unittest.TestCase):
             self.pump(until=lambda: "011" in self.core.hidden_posts)
         finally:
             QMessageBox.question = keep
-        dlg.reload()
-        self.pump(until=lambda: dlg.filter_list.count() == 2)
-        texts = [dlg.filter_list.item(i).text() for i in range(2)]
+        dlg.load()
+        self.on_page(dlg, "silence", "filters", rows=2)
+        texts = [r.title + " " + r.line for r in dlg.page.rows]
         self.assertTrue(any(i18n._("posts_n", n=1) in t for t in texts), texts)
-        dlg.accept()
+        dlg.close()
         # whose replies a list shows
         self.world.lists["L1"] = {"title": "Друзья", "exclusive": False, "members": set(),
                                   "replies_policy": "list"}
@@ -1320,10 +1331,8 @@ class QtSmokeTest(unittest.TestCase):
         the posts sharing a link, the server's terms, blocks and translator."""
         from PySide6.QtCore import Qt
 
-        from fedtail.frontends.common.timed import KEEP
         from fedtail.frontends.qt.compose import Compose
         from fedtail.frontends.qt.profile import ProfileDialog
-        from fedtail.frontends.qt.silence import FilterEditDialog, SilenceDialog
         from fedtail.frontends.qt.social import LinkPostsWidget, server_html
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
@@ -1331,23 +1340,21 @@ class QtSmokeTest(unittest.TestCase):
 
         # a filter edited: words, hide, where, for good — the window's answer, then saved
         made = self.core.add_filter("шум", ["крипта", "nft"]).result()
-        dlg = SilenceDialog(self.win)
-        self.pump(until=lambda: dlg.filter_list.count() == 1)
-        f = dlg._filter_objs[made["id"]]
-        edit = FilterEditDialog(dlg, f)
-        self.assertEqual(edit.words.text(), "крипта, nft")
-        self.assertEqual(edit.span.currentData(), KEEP)
-        edit.words.setText("nft, web3")
-        edit.action.setCurrentIndex(1)
-        got = edit.changes()
-        self.assertEqual((got["words"], got["action"], got["expires_in"]),
-                         (["nft", "web3"], "hide", None))
-        dlg.filter_list.setCurrentRow(0)
-        dlg._edit_filter(answer=got)
+        dlg = self.win.open_place("silence", tab="filters")
+        self.on_page(dlg, "silence", "filters", rows=1)
+        dlg.press(self.place_btn(dlg, made["id"], "filter_edit"))  # its own form
+        self.on_page(dlg, "filter")
+        self.assertEqual(dlg.fields["words"][1].text(), "крипта, nft")
+        self.assertEqual(dlg.fields["expires"][1].currentData(), "")  # the end it has
+        dlg.fields["words"][1].setText("nft, web3")
+        action = dlg.fields["action"][1]
+        action.setCurrentIndex(action.findData("hide"))
+        dlg.press(dlg.page.submit)
         self.pump(until=lambda: self.world.filters[made["id"]]["filter_action"] == "hide")
         self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
                          ["nft", "web3"])
-        dlg.accept()
+        self.on_page(dlg, "silence", "filters")  # back to the list
+        dlg.close()
 
         # a video gets a cover; the cover goes with it to the server (the 4th part)
         c = Compose(self.win)
@@ -1418,7 +1425,7 @@ class QtSmokeTest(unittest.TestCase):
             self.assertIn(words, page)
         # the dialogs closed and gone before the next test: left to the interpreter's
         # exit they went in the wrong order (CI, 3.12: a crash after the last test)
-        for w in (edit, dlg, c, rep, prof):
+        for w in (dlg, c, rep, prof):
             try:
                 w.close()
                 w.deleteLater()
@@ -1894,7 +1901,7 @@ class QtSmokeTest(unittest.TestCase):
     def test_remote_post_menu_whole_text_and_tildes(self):
         """A post from another server: "Read it whole" in ⋯, the dialog from what its
         server gave; "From another account" when the window has one; ~~x~~ struck."""
-        from PySide6.QtWidgets import QDialog, QLabel, QMenu
+        from PySide6.QtWidgets import QLabel, QMenu
 
         from fedtail.frontends.qt.card import CardSpec, PostRow
         self.win.start()
@@ -1916,15 +1923,28 @@ class QtSmokeTest(unittest.TestCase):
         self.win.cfg["feed"]["text_markup"] = False
         plain = PostRow(CardSpec(key="098", entry=E(st)), self.win.ctx)
         self.assertFalse(any("<s>" in w.text() for w in plain.findChildren(QLabel)))
-        self.win._show_whole(st, {"type": "Event", "name": "Встреча", "summary": "",
-                                  "content": "<p>приходите</p>", "url": "https://e.example/1",
-                                  "start": "2026-11-01T18:00:00Z", "end": "",
-                                  "location": "Библиотека"})
-        dlg = [d for d in self.win.findChildren(QDialog) if d.windowTitle() == "Встреча"]
-        self.assertEqual(len(dlg), 1)
-        dlg[0].close()
-        self.win._show_whole(st, None)  # the server said nothing: a line, no dialog
-        self.assertIn("не отдал", self.win.statusBar().currentMessage())
+        from concurrent.futures import Future
+        event = {"type": "Event", "name": "Встреча", "summary": "",
+                 "content": "<p>приходите</p>", "url": "https://e.example/1",
+                 "start": "2026-11-01T18:00:00Z", "end": "", "location": "Библиотека"}
+
+        def answer(got):
+            f = Future()
+            f.set_result(got)
+            return f
+        self.win.ctx.view.long_form = lambda _p: answer(event)
+        self.core.store.put_statuses([st])  # a card's post is a stored one
+        dlg = self.win.read_whole(st)  # the common place, the same as every window's
+        self.pump(until=lambda: dlg.page is not None
+                  and any(r.kind == "heading" for r in dlg.page.rows))
+        self.assertEqual(next(r.title for r in dlg.page.rows if r.kind == "heading"), "Встреча")
+        self.assertTrue(any(r.line == "Библиотека" for r in dlg.page.rows))
+        dlg.close()
+        self.win.ctx.view.long_form = lambda _p: answer(None)  # nothing: the page says so
+        dlg = self.win.read_whole(st)
+        self.pump(until=lambda: dlg.page is not None and dlg.page.name == "long_form")
+        self.assertEqual(dlg.page.rows, [])
+        dlg.close()
 
     def test_columns_side_by_side(self):
         """❯: the lanes in columns, the same widgets moved over; a lane clicked on the
@@ -2843,7 +2863,6 @@ class QtSmokeTest(unittest.TestCase):
             AccountsWidget,
             QuotesWidget,
             ServerInfoDialog,
-            TrendsWidget,
         )
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
@@ -2900,8 +2919,11 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(self.win.tabs.currentWidget(), QuotesWidget)
         self.world.trends = {"statuses": [], "tags": [{"name": "linux", "history": []}],
                              "links": []}
-        self.win.open_trends()
-        self.assertIsInstance(self.win.tabs.currentWidget(), TrendsWidget)
+        trends = self.win.open_trends()  # the common place
+        self.pump(until=lambda: trends.page is not None and any(
+            "linux" in (r.title or "") + str(getattr(r.data, "name", ""))
+            for r in trends.page.rows))
+        trends.close()
         self.world.suggested = [NEWS]
         self.win.open_suggestions()
         sugg = self.win.tabs.currentWidget()
@@ -3398,20 +3420,24 @@ class QtSmokeTest(unittest.TestCase):
                                             "content": "<p>здравствуйте</p>"}}]
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
-        dlg = self.win.show_filtered()
-        self.pump(until=lambda: dlg.list.count() == 1)
-        self.assertIn("здравствуйте", dlg.list.item(0).text())
-        self.assertEqual(dlg.combos["for_new_accounts"].currentData(), "filter")
-        dlg.combos["for_not_following"].setCurrentIndex(2)  # drop
+        dlg = self.win.show_filtered()  # the common place
+        self.on_page(dlg, "filtered", rows=1)
+        self.assertIn("здравствуйте", dlg.page.rows[0].line)
+        combo = dlg.fields["for_new_accounts"][1]
+        self.assertEqual(combo.currentData(), "filter")
+        drop = dlg.fields["for_not_following"][1]
+        drop.setCurrentIndex(drop.findData("drop"))
+        dlg.press(dlg.page.submit)
         self.pump(until=lambda: self.world.policy["for_not_following"] == "drop")
-        dlg.list.setCurrentRow(0)
-        dlg.accept_btn.click()
+        self.on_page(dlg, "filtered", rows=1)
+        dlg.press(self.place_btn(dlg, "r1", "yes"))
         self.pump(until=lambda: self.world.answered == [("r1", True)])
-        self.pump(until=lambda: dlg.list.count() == 0)
+        self.on_page(dlg, "filtered", rows=0)
         dlg.close()
-        self.world.policy = None
+        self.world.policy = None  # a server that holds nothing back: no form to change
         dlg = self.win.show_filtered()
-        self.pump(until=lambda: not dlg.accept_btn.isEnabled())
+        self.pump(until=lambda: dlg.page is not None and dlg.page.submit is None
+                  and dlg.page.name == "filtered" and dlg.page.hint)
         dlg.close()
 
     def test_help_panel(self):

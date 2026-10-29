@@ -254,45 +254,6 @@ def open_people(win, key, title, fetch, dismiss=None, dismiss_label=""):
     return page
 
 
-def open_trends(win):
-    key = "trends"
-    page = win.extra_tabs.get(key)
-    if page is not None:
-        win.tabs.set_current_page(win.tabs.page_num(page))
-        return page
-    page, box, _title = win._new_tab(_("trends_title"), lambda: win.close_extra(key))
-    win.extra_tabs[key] = page
-
-    def got(t):
-        if t.get("tags"):
-            box.append(_section(_("trends_tags")))
-            for tag in t["tags"][:10]:
-                if isinstance(tag, Tag):
-                    box.append(TagRow(win, tag))
-        if t.get("links"):
-            box.append(_section(_("trends_links")))
-            for ln in t["links"][:10]:  # links: as the server gives them (no model yet)
-                get = ln.get if isinstance(ln, dict) else (lambda k, d="", o=ln: getattr(o, k, d))
-                lab = Gtk.Label(xalign=0, wrap=True)
-                lab.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-                lab.set_markup(
-                    "<b>" + link_markup(get("url", "") or "", get("title", "") or "") + "</b>\n"
-                    + GLib.markup_escape_text(f"{get('provider_name', '') or ''} · "
-                                              f"{(get('description', '') or '')[:200]}"))
-                lab.add_css_class("ft-card")
-                lab.connect("activate-link", lambda _l, u: (win.on_link(u), True)[1])
-                box.append(lab)
-        if t.get("statuses"):
-            box.append(_section(_("trends_posts")))
-            short = win.view.short_ids(t["statuses"])
-            for p in t["statuses"]:
-                box.append(Card(win.ctx, p.id, p, short_id=short.get(real(p).id)))
-        if not any(t.values()):
-            box.append(Gtk.Label(label=_("trends_none")))
-    win.call(win.view.trends(), got)
-    return page
-
-
 def open_search(win, query):
     """People, tags and posts for what's typed in the sidebar's box; addresses are
     fetched from their home server by mine."""

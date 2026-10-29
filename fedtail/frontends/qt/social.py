@@ -22,8 +22,8 @@ from ...i18n import _
 from ...model.text import snippet
 from ..common import server
 from ..common.server import PROBE_MARKS, _has  # noqa: F401  (Qt's names)
-from .feed import AccountRow, FeedView, TagRow, _button, _Header, _PagedTab
-from .text import clean, esc
+from .feed import AccountRow, FeedView, _button, _Header, _PagedTab
+from .text import clean
 
 log = logging.getLogger(__name__)
 
@@ -204,58 +204,6 @@ class RemoteLaneWidget(_PagedTab):
             self.header.info.setText(_("remote_public_closed", host=self.host))
 
 
-class TrendsWidget(_PagedTab):
-    """What's talked about on my server: tags, links, posts."""
-
-    def __init__(self, win):
-        super().__init__(win, _("trends_title"))
-        self.top = QWidget()
-        self.top_lay = QVBoxLayout(self.top)
-        self.top_lay.setContentsMargins(0, 0, 0, 0)
-        self.top_lay.setSpacing(8)
-        self.view.header.addWidget(self.top)
-        self.btn_more.hide()  # one page: what's trending now
-        self.header.add(_button("", self.reload, icon="view-refresh", tip=_("refresh")))
-        self.reload()
-
-    def reload(self):
-        self.win.bridge.call(self.core.trends(), ok=self._got, fail=self.win.error)
-
-    def _got(self, t):
-        while self.top_lay.count():
-            item = self.top_lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        theme = self.win.theme
-        if t["tags"]:
-            self.top_lay.addWidget(_section(_("trends_tags")))
-            for tag in t["tags"][:10]:
-                self.top_lay.addWidget(TagRow(self.win, tag))
-        if t["links"]:
-            self.top_lay.addWidget(_section(_("trends_links")))
-            for ln in t["links"][:10]:  # links: as the server gives them (no model yet)
-                label = QLabel(f'<a href="{esc(ln.get("url", ""))}" style="color:'
-                               f'{theme.c["link"].name()};"><b>{esc(ln.get("title") or "")}'
-                               f'</b></a><br><span style="color:{theme.c["muted"].name()};">'
-                               f'{esc(ln.get("provider_name") or "")} · '
-                               f'{esc((ln.get("description") or "")[:200])}</span>')
-                label.setTextFormat(Qt.TextFormat.RichText)
-                label.setWordWrap(True)
-                label.setObjectName("card")
-                label.linkActivated.connect(self.win.on_link)
-                self.top_lay.addWidget(label)
-        if t["statuses"]:
-            self.top_lay.addWidget(_section(_("trends_posts")))
-        if not any(t.values()):
-            self.top_lay.addWidget(QLabel(_("trends_none")))
-        self.items = list(t["statuses"])
-        self.render()
-
-
-def _section(text):
-    label = QLabel(text)
-    label.setObjectName("sectionTitle")
-    return label
 
 
 def server_html(win, info):

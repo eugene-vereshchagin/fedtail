@@ -29,6 +29,7 @@ class PlaceWindow:
         self.places = Places(self.view)
         self.name, self.arg, self.tab, self.cursor = name, arg, tab, ""
         self.fields = {}
+        self.page = None  # the page drawn last (as Qt's PlaceDialog keeps it)
         self.window = _window(win, _(PLACES.get(name, name)), 640, 640)
         outer = _box()
         self.hint = Gtk.Label(wrap=True, xalign=0)
@@ -70,6 +71,7 @@ class PlaceWindow:
         return w
 
     def draw(self, page):
+        self.page = page
         self.window.set_title(page.title)
         self.hint.set_text(page.hint)
         self.hint.set_visible(bool(page.hint))

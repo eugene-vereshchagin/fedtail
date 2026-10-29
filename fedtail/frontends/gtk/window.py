@@ -972,12 +972,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self.open_path(diag.logs_dir(self.view.paths))
 
     def silence(self, tab="filters"):
-        from . import dialogs
-        return dialogs.silence(self, tab)
+        """Filters, muted, blocked, servers (common/places.py "silence")."""
+        return self.open_place("silence", tab=tab)
 
     def show_filtered(self):
-        from . import dialogs
-        return dialogs.filtered(self)
+        """The notifications the server held back (common/places.py "filtered")."""
+        return self.open_place("filtered")
 
     def show_scheduled(self):
         if self.cfg["post"].get("scheduled_to_draft"):  # the place, with "To the editor"
@@ -1011,8 +1011,8 @@ class MainWindow(Gtk.ApplicationWindow):
                                   lambda cur: self.view.directory(cur, local))
 
     def open_trends(self):
-        from . import people
-        return people.open_trends(self)
+        """What's talked about on my server (common/places.py "trends")."""
+        return self.open_place("trends")
 
     def open_search(self, query):
         from ...core import taggroups
@@ -2067,8 +2067,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def read_whole(self, st):
         """📄 The whole text from the author's server (an article, an event)."""
-        from . import postinfo
-        return postinfo.read_whole(self, st)
+        from ...model import real
+        return self.open_place("long_form", real(st).id)
 
     def edit_profile(self):
         """My profile edited: name, bio, fields, pictures, who may follow."""

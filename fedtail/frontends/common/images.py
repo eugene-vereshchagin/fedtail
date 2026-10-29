@@ -20,7 +20,6 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit
 
 import requests
-from requests.adapters import HTTPAdapter
 
 from ... import diag
 from ...core import remote
@@ -187,7 +186,9 @@ class Cache:
         self.http.headers["User-Agent"] = USER_AGENT
         # every worker keeps its connection to the server instead of opening a new one
         conns = self.FEED_WORKERS + self.BIG_WORKERS + 1
-        adapter = HTTPAdapter(pool_connections=16, pool_maxsize=conns)
+        # every connection to an address checked as it's made (core/remote.py: no DNS
+        # rebinding a picture's address into the home network)
+        adapter = remote.Adapter(pool_connections=16, pool_maxsize=conns)
         self.http.mount("https://", adapter)
         self.http.mount("http://", adapter)
         # timings for the log and the stats line: where the time of a picture goes

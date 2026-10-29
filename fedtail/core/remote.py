@@ -9,7 +9,10 @@ followed here, by hand, never by requests):
   network, not link-local (a cloud's metadata service), not multicast or reserved.
   The user's own server is exempt (some run it at home, on a private address);
 * the body is read up to a limit and no further: a picture that never ends, a
-  gigabyte "JSON", stop there.
+  gigabyte "JSON", stop there;
+* the connection goes to the very address that was checked (Adapter): a name that
+  answers a public address to the check and 127.0.0.1 a moment later (DNS rebinding)
+  meets a connection made already — the name is resolved once, when it connects.
 
 No token is ever attached here: callers pass no Authorization and none is added.
 """
@@ -90,10 +93,108 @@ def check(url, schemes=("https",), own_hosts=()):
         raise Refused(f"{host}: not a public address")
 
 
+def _addresses(host, port, own):
+    """The addresses a connection to host may go to: all of them public (or the host
+    one of the user's own) — else Refused. Resolved here, once: what is checked is what
+    is connected to."""
+    host = (host or "").rstrip(".").lower()
+    try:
+        literal = ipaddress.ip_address(host.strip("[]").split("%", 1)[0])
+    except ValueError:
+        literal = None
+    if host in own:
+        return None  # the user's own server: as the system resolves it
+    if literal is not None:
+        if not _public_ip(str(literal)):
+            raise Refused(f"{host}: not a public address")
+        return [str(literal)]
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        raise Refused(f"local name {host}")
+    try:
+        addrs = list(dict.fromkeys(a[4][0] for a in socket.getaddrinfo(
+            host, port, type=socket.SOCK_STREAM)))
+    except (OSError, UnicodeError):
+        return None  # unresolvable: the connection fails on its own
+    if not addrs or not all(_public_ip(a) for a in addrs):
+        raise Refused(f"{host}: not a public address")
+    return addrs
+
+
+def _pinned(base, own):
+    """A urllib3 connection class that connects to the addresses _addresses checked —
+    the certificate and the Host header still the name's."""
+    class Pinned(base):
+        def _new_conn(self):
+            addrs = _addresses(self._dns_host, self.port, own)
+            if not addrs:
+                return super()._new_conn()
+            name, last = self._dns_host, None
+            try:
+                for addr in addrs:  # as create_connection would: each in turn
+                    self._dns_host = addr
+                    try:
+                        return super()._new_conn()
+                    except Exception as e:  # noqa: BLE001 — the next address, or this
+                        last = e
+                raise last
+            finally:
+                self._dns_host = name
+    return Pinned
+
+
+class Adapter(requests.adapters.HTTPAdapter):
+    """requests' adapter for other people's servers: every connection to an address
+    checked when it is made (see the module's words). own: the user's own hosts, exempt
+    from the public-address rule. Through a proxy (net.proxy) the proxy resolves, as the
+    user chose."""
+
+    def __init__(self, *args, own=(), **kw):
+        self.own = set(own)
+        super().__init__(*args, **kw)
+
+    def init_poolmanager(self, *args, **kw):
+        from urllib3.connection import HTTPConnection, HTTPSConnection
+        from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+        super().init_poolmanager(*args, **kw)
+        http = type("PinnedPool", (HTTPConnectionPool,),
+                    {"ConnectionCls": _pinned(HTTPConnection, self.own)})
+        https = type("PinnedTLSPool", (HTTPSConnectionPool,),
+                     {"ConnectionCls": _pinned(HTTPSConnection, self.own)})
+        self.poolmanager.pool_classes_by_scheme = {"http": http, "https": https}
+
+
+_SHARED = None
+
+
+def pinned(session, own_hosts=()):
+    """session with Adapter on it (mounted once; its own pool size kept), or a shared
+    one of ours for the requests module itself (or None). own_hosts join the adapter's.
+    Anything else that only looks like a session (a transport of its own: a test's,
+    another library's) is used as it is — it does its own connecting."""
+    global _SHARED
+    if session is None or session is requests:
+        if _SHARED is None:
+            _SHARED = requests.Session()
+        session = _SHARED
+    elif not isinstance(session, requests.Session):
+        return session
+    for scheme in ("https://", "http://"):
+        got = session.get_adapter(scheme)
+        if not isinstance(got, Adapter):
+            size = getattr(got, "_pool_maxsize", requests.adapters.DEFAULT_POOLSIZE)
+            got = Adapter(pool_connections=getattr(got, "_pool_connections", 10),
+                          pool_maxsize=size, own=own_hosts)
+            session.mount(scheme, got)
+        else:
+            got.own.update(own_hosts)
+    return session
+
+
 def open_url(session, url, *, timeout, schemes=("https",), own_hosts=(), headers=None):
-    """A streamed response for url, its redirects followed by hand and each checked.
-    The caller closes it (with ... as r:)."""
+    """A streamed response for url, its redirects followed by hand and each checked —
+    and connected to the address checked (pinned). The caller closes it (with ... as r:)."""
     from . import health
+    session = pinned(session, {h.lower() for h in own_hosts})
     for _ in range(MAX_REDIRECTS + 1):
         u = urlsplit(url)
         t = time.monotonic()

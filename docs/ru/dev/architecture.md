@@ -86,7 +86,20 @@ fedtail/
     view.py          View: ядро, каким его видят фронтенды — на входе и выходе модель (Post,
                      Share, Account, ThreadItem…), с кэшем на ленту; им пользуются cli, tui,
                      web и Qt (tests/test_layering.py не пускает в frontends/ сырой JSON)
-    app.py           Core: фасад, с которым говорят фронтенды (см. §4, §9)
+    app.py           Core: фасад, с которым говорят фронтенды (см. §4, §9); его части ниже
+    proto.py         протокол, на котором говорит это ядро: его единственная дверь в protocols/
+    poll.py          раунды: цикл опроса, один раунд, его темп (медленный режим, бюджеты), поток
+    people.py        аккаунты, отношения, подписки, мои имена для людей, «не в Ленте»
+    thread_ops.py    треды: загрузка и дозагрузка, родители, треды-подписки
+    writing.py       посты, правка, «удалить и переписать», черновики, дополнение в редакторе
+    silence.py       глушение, блок, фильтры сервера, заглушённый хештег, скрытые посты
+    lists.py         списки сервера и ленты тегов
+    activity.py      события (уведомления): загрузка, раскладка по лентам, просмотр
+    syncing.py       сторона ядра в синхронизации (движок — core/sync/)
+    origin.py        чужие серверы без моего токена: честные счётчики, профили, публичные ленты
+    translate.py     перевод по щелчку и сам собой
+    push.py          Web Push для Web-страницы
+    markers.py       позиция чтения, общая с другими клиентами
     social.py        SocialMixin для Core: кто отреагировал, цитаты, тренды, рекомендации,
                      каталог, сведения о сервере; 404 помечает возможность отсутствующей
                      (Core.supports, NotSupported)
@@ -508,7 +521,7 @@ docs/                ru/dev/, en/dev/ — документы для разраб
   раз в `lists.refresh_minutes`; `core.silenced(st)` (автор или бустнувший заглушён или
   заблокирован, или фильтр сервера с действием "hide") применяется в `lane_entries` и
   `_notify`; фильтры "warn" сворачивают карточку как CW (`card._build`). Фильтры:
-  `/api/v2/filters` (`core.filters/add_filter/delete_filter`), окно — `qt/silence.py`.
+  `/api/v2/filters` (`core.filters/add_filter/delete_filter`), окно — общее место `silence` (`common/places.py`), его рисует каждый интерфейс.
 * **Поиск и подписка** — `core.search(q)` (`/api/v2/search?resolve=true` +
   relationships), `core.people(acc, "following"|"followers", max_id)` (листание по
   заголовку Link через `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/

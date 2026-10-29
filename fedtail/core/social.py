@@ -17,10 +17,10 @@ from urllib.parse import urlparse
 
 import requests
 
-from ..protocols.base import ServerError
-from ..protocols.mastodon import counters
-from ..protocols.mastodon.api import ApiError
+from . import proto
 from .model import real
+from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import ServerError
 
 # follow requests stand in Activity as entries of their own (activity.requests)
 FOLLOW_REQUEST = "follow_request:"
@@ -147,7 +147,7 @@ class SocialMixin:
         s = real(status)
 
         def job():
-            url = counters.origin_api_url(s, self.auth["server"])
+            url = proto.counters.origin_api_url(s, self.auth["server"])
             if not url:
                 return {"accounts": [], "relations": {}, "total": None}, None
             theirs = self._origin_get(f"{url}/{kind}?limit=80") or []
@@ -528,7 +528,7 @@ class SocialMixin:
     def probe_server(self):
         """Ask my server what it can do (core/probe.py). Future: the round's result,
         kept for next time; the features it answered for are offered — or not — from now."""
-        from ..protocols.mastodon import probe
+        probe = proto.probe
 
         def job():
             got = probe.run(self.api, self.caps)
@@ -540,7 +540,7 @@ class SocialMixin:
 
     def last_probe(self):
         """The last round of probe_server, or None (never checked)."""
-        from ..protocols.mastodon import probe
+        probe = proto.probe
         return self.store.kv_get(probe.KV)
 
     def load_translation_languages(self):

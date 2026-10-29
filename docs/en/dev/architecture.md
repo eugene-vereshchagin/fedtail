@@ -87,7 +87,20 @@ fedtail/
     view.py          View: the core as frontends see it — model in, model out (Post,
                      Share, Account, ThreadItem…), cached per lane; cli, tui and web use
                      it, Qt too (tests/test_layering.py keeps frontends/ off raw JSON)
-    app.py           Core: the facade the frontends talk to (see §4, §9)
+    app.py           Core: the facade the frontends talk to (see §4, §9); its parts below
+    proto.py         the protocol this core speaks: its one door into protocols/
+    poll.py          the rounds: the poll loop, one round, its pace (slow mode, budgets), the stream
+    people.py        accounts, relationships, following, my names for people, "not in Home"
+    thread_ops.py    threads fetched and completed, parents, the threads I follow
+    writing.py       posting, editing, redrafting, drafts, what the editor completes
+    silence.py       mutes, blocks, server filters, a hashtag muted, posts hidden
+    lists.py         the server's lists and the lanes of tags
+    activity.py      events (notifications): fetched, put into the lanes that take them, seen
+    syncing.py       the Core's side of sync (the engine: core/sync/)
+    origin.py        other servers without my token: honest counts, profiles, public lanes
+    translate.py     translation on a click and by itself
+    push.py          Web Push for the web page
+    markers.py       the read position shared with other clients
     social.py        SocialMixin of Core: who reacted, quotes, trends, suggestions, directory,
                      server info; a 404 marks a feature missing (Core.supports, NotSupported)
     auth.py          token file (JSON, 0600)
@@ -499,7 +512,7 @@ the prefixed ones a rule names (`account:`, `remote:`, `rss:`… — `sources.py
   `lists.refresh_minutes`; `core.silenced(st)` (author or booster muted/blocked, or a
   server filter with action "hide") is applied in `lane_entries` and `_notify`; "warn"
   filters fold the card like a CW (`card._build`). Filters: `/api/v2/filters`
-  (`core.filters/add_filter/delete_filter`), `qt/silence.py` is the dialog.
+  (`core.filters/add_filter/delete_filter`), the window is the common place `silence` (`common/places.py`), drawn by every interface.
 * **Search and follow** — `core.search(q)` (`/api/v2/search?resolve=true` +
   relationships), `core.people(acc, "following"|"followers", max_id)` (Link-header
   paging via `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/

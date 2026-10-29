@@ -2388,7 +2388,7 @@ class CoreTest(TmpDir):
         self.assertEqual(nodes[0].status["id"], "050")
 
     def test_send_timeout_looks_before_saying_not_sent(self):
-        from fedtail.core.app import MaybeSent
+        from fedtail.core.writing import MaybeSent
         core, w = self.make()
         w.add(status("050", BOB, minute=1), home=True)
         core.connect().result()

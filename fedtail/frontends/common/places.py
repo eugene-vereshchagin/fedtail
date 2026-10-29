@@ -166,6 +166,17 @@ def _acc_id(a):
     return a.id if isinstance(a, Account) else str(a)
 
 
+
+def _local_time(iso):
+    """An ISO time as the reader's clock says it ("12.11.2026 19:00"); as it is when it
+    isn't one."""
+    from datetime import datetime
+    try:
+        t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return iso
+    return (t.astimezone() if t.tzinfo else t).strftime("%d.%m.%Y %H:%M")
+
 class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
     """The places on one View.
 
@@ -1112,7 +1123,8 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         if isinstance(got, dict):
             if got.get("name"):
                 page.rows.append(Row("heading", str(got["name"])))
-            when = " — ".join(str(got[k]) for k in ("start", "end") if got.get(k))
+            when = " — ".join(_local_time(str(got[k])) for k in ("start", "end")
+                              if got.get(k))
             if when or got.get("location"):
                 page.rows.append(Row("text", when, str(got.get("location") or "")))
             for key in ("summary", "content"):
@@ -1265,11 +1277,11 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
                 page.rows.append(self._tag_row(x))
             elif tab == "posts":
                 page.rows.append(Row("post", data=x, key=x.id))
-            else:
-                url = x.get("url") if isinstance(x, dict) else getattr(x, "url", "")
-                title = x.get("title") if isinstance(x, dict) else getattr(x, "title", "")
-                page.rows.append(Row("item", title or url, url, key=url, buttons=(
-                    self._btn(_("open_browser"), "url", "open", url),)))
+            else:  # a Card (View.trends): where it is from and what it says
+                about = " · ".join(t for t in (x.provider, x.description[:200]) if t)
+                page.rows.append(Row("item", x.title or x.url, about or x.url, key=x.url,
+                                     buttons=(self._btn(_("open_browser"), "url", "open",
+                                                        x.url),)))
         return page
 
     def _a_url_open(self, url, _v, _c, _ans):
@@ -1358,8 +1370,10 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             page.submit = self._btn(_("save") + " · " + _("filtered_policy"), "filtered",
                                     "policy")
         for r in got.get("requests") or ():
-            page.rows.append(Row("account", acc_line(r.who),
-                                 _("filtered_count", n=r.count) if r.count else "",
+            from ...model.text import snippet  # the last of them, as the windows had it
+            said = " · ".join(x for x in (_("filtered_count", n=r.count) if r.count else "",
+                                          snippet(r.last, 120) if r.last else "") if x)
+            page.rows.append(Row("account", acc_line(r.who), said,
                                  data=r.who, key=r.id, buttons=(
                 self._btn(_("filtered_accept"), "filtered", "yes", r.id, primary=True),
                 self._btn(_("filtered_dismiss"), "filtered", "no", r.id),

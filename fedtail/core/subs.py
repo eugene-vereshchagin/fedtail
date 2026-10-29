@@ -20,8 +20,8 @@ thread are kept in `left_members`, and every dropped mention joins them.
 import logging
 from datetime import UTC, datetime, timedelta
 
-from ..protocols.mastodon.api import ApiError
 from .model import real
+from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .store import now_iso
 
 log = logging.getLogger(__name__)

@@ -83,14 +83,12 @@ from .login import LoginDialog
 from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
-from .silence import SilenceDialog
 from .social import (
     AccountsWidget,
     LinkPostsWidget,
     QuotesWidget,
     RemoteLaneWidget,
     ServerInfoDialog,
-    TrendsWidget,
 )
 from .viewer import ImageOverlay
 
@@ -795,7 +793,7 @@ class MainWindow(QMainWindow):
             t.addSeparator()
         for tab, key in (("filters", "silence_filters"), ("muted", "silence_muted"),
                          ("blocked", "silence_blocked"), ("domains", "tender_domains")):
-            t.addAction(_(key) + "…", lambda _c=False, x=tab: SilenceDialog(self, x).exec())
+            t.addAction(_(key) + "…", lambda _c=False, x=tab: self.open_place("silence", tab=x))
         if self.cfg["notify"]["filtered"] != "off":
             t.addSeparator()
             t.addAction(_("filtered_title") + "…", self.show_filtered)
@@ -2017,13 +2015,8 @@ class MainWindow(QMainWindow):
         self.open_accounts(key, _(key), lambda cur: self.core.directory(cur, local))
 
     def open_trends(self):
-        for w in self.extra_tabs():
-            if isinstance(w, TrendsWidget):
-                self._front(w)
-                w.reload()
-                return
-        w = TrendsWidget(self)
-        self._add_tab(w, w.title)
+        """What's talked about on my server: tags, posts, links (common/places.py)."""
+        return self.open_place("trends")
 
     def show_server_info(self):
         self.bridge.call(self.ctx.view.server_info(),
@@ -2268,54 +2261,8 @@ class MainWindow(QMainWindow):
 
     def read_whole(self, st):
         """📄 The whole text from the author's server: an article your server cut to a
-        title and a link, an event with its time and place."""
-        self.statusBar().showMessage(_("long_form_wait"), 4000)
-        st = self._post(st)
-        self.bridge.call(self.ctx.view.long_form(st), ok=lambda d: self._show_whole(st, d),
-                         fail=self.error)
-
-    def _show_whole(self, st, d):
-        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser
-
-        from ..richtext import esc, sanitize
-
-        def fmt_time(iso):
-            from datetime import datetime
-            try:
-                t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-                return (t.astimezone() if t.tzinfo else t).strftime("%d.%m.%Y %H:%M")
-            except ValueError:
-                return esc(iso)
-        if not d:
-            self.error(_("long_form_none"))
-            return
-        dlg = QDialog(self)
-        dlg.setWindowTitle(d["name"] or _("long_form_title"))
-        dlg.resize(min(820, self.width() - 60), min(760, self.height() - 60))
-        lay = QVBoxLayout(dlg)
-        parts = []
-        if d["name"]:
-            parts.append(f"<h2>{esc(d['name'])}</h2>")
-        event = [x for x in (
-            "🗓 " + " — ".join(fmt_time(t) for t in (d["start"], d["end"]) if t)
-            if d["start"] else "", "📍 " + esc(d["location"]) if d["location"] else "") if x]
-        if event:
-            parts.append("<p><b>" + "<br>".join(event) + "</b></p>")
-        if d["summary"]:
-            parts.append(f"<p><i>{sanitize(d['summary'])}</i></p>")
-        parts.append(sanitize(d["content"]) or esc(snippet(st, 2000)))
-        view = QTextBrowser()
-        view.setOpenLinks(False)
-        view.anchorClicked.connect(lambda u: self.on_link(u.toString()))
-        view.setHtml("".join(parts))
-        lay.addWidget(view, 1)
-        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        if d["url"]:
-            b = box.addButton(_("open_browser"), QDialogButtonBox.ButtonRole.ActionRole)
-            b.clicked.connect(lambda: self.open_url(d["url"]))
-        box.rejected.connect(dlg.reject)
-        lay.addWidget(box)
-        dlg.show()
+        title and a link, an event with its time and place (common/places.py)."""
+        return self.open_place("long_form", real_entry(self._post(st)).id)
 
     def play_video(self, m, items=None):
         """A video or a gifv: over the window (ui.video_player), or in the browser.
@@ -2425,10 +2372,8 @@ class MainWindow(QMainWindow):
         self.bridge.call(self.ctx.view.translate(post), ok=got, fail=self.error)
 
     def show_filtered(self):
-        from .filtered import FilteredDialog
-        dlg = FilteredDialog(self)
-        dlg.show()
-        return dlg
+        """The notifications the server held back (common/places.py "filtered")."""
+        return self.open_place("filtered")
 
     def _remind_filtered(self):
         """notify.filtered = "remind": say once at start if someone is held back."""

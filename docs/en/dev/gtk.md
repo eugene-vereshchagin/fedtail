@@ -52,8 +52,8 @@ decisions are checked in `tests/test_common.py` without a toolkit; the Qt smoke 
 machine (the sandbox has no PySide6). Shared code doesn't import a toolkit — a test checks that. What stays in
 Qt is about widgets: layout, the message window's tabs (`MessageTabs.sync`), drawing.
 
-Leaks found along the way that must be closed before copying: `qt/silence.py` and
-`qt/announce.py` read the server's raw dicts; `View.read_ids` reaches into `_core.store`;
+Leaks found along the way that must be closed before copying (`qt/silence.py` is gone since —
+silence is a common place now): `qt/announce.py` reads the server's raw dicts; `View.read_ids` reaches into `_core.store`;
 `richtext.plain_tip` wraps text in Qt's `<qt>…</qt>`; architecture.md §13 doesn't describe the
 events `arrived`, `thread_grew`, `rate_limited`, `capabilities_changed`, `prefetch`,
 `prefetch_video`.

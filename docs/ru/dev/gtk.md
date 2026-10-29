@@ -52,8 +52,8 @@ Qt — родное KDE-приложение. GTK — для «гномовод�
 PySide6 нет). Общее не импортирует тулкит — это проверяет тест. В Qt остаётся то, что про
 виджеты: раскладка, вкладки окна сообщений (`MessageTabs.sync`), рисование.
 
-Попутно найденные утечки, которые надо закрыть до копирования: `qt/silence.py` и
-`qt/announce.py` читают сырые словари сервера; `View.read_ids` лезет в `_core.store`;
+Попутно найденные утечки, которые надо закрыть до копирования (`qt/silence.py` с тех пор
+нет — глушилки теперь общее место): `qt/announce.py` читает сырые словари сервера; `View.read_ids` лезет в `_core.store`;
 `richtext.plain_tip` заворачивает в Qt-шный `<qt>…</qt>`; в architecture.md §13 не описаны
 события `arrived`, `thread_grew`, `rate_limited`, `capabilities_changed`, `prefetch`,
 `prefetch_video`.

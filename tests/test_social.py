@@ -291,7 +291,6 @@ class SocialTest(TmpDir):
     def test_counters_through_my_other_accounts(self):
         """The author's server won't tell a stranger: ask as my account there, or as an
         account on a server that has the post; each token only to its own server."""
-        from unittest import mock
         core, w = self.make(feed={"honest_counters": True})
         st = w.add(dict(status("170", BOB, minute=1, vis="public"),
                         uri="https://social.example/users/bob/statuses/170",
@@ -302,24 +301,21 @@ class SocialTest(TmpDir):
                                         ("https://other.example", "T2")]
         sent = []
 
-        class R:
-            def __init__(self, data):
-                self.status_code, self._d = 200, data
+        class Client:  # the protocol's client for each of my other accounts
+            def __init__(self, server, token):
+                self.host = server.split("/")[2]
+                sent.append((self.host, token))
 
-            def json(self):
-                return self._d
+            def status(self, sid):
+                assert self.host == "social.example" and sid == "170"
+                return dict(st, favourites_count=7)
 
-        def get(url, headers=None, params=None, timeout=None, allow_redirects=True):
-            self.assertFalse(allow_redirects)  # a token never follows a redirect
-            sent.append((url.split("/")[2], headers["Authorization"]))
-            if url.startswith("https://social.example/"):
-                return R(dict(st, favourites_count=7))
-            return R({"statuses": [dict(st, favourites_count=4)]})
-        with mock.patch("requests.get", get):
-            core._honest_counts([st])
+            def search_statuses(self, q, limit=40):
+                return [dict(st, favourites_count=4)]
+        core.api_class = Client
+        core._honest_counts([st])
         self.assertEqual(core.store.get_status("170")["favourites_count"], 7)
-        self.assertEqual(sorted(sent), [("other.example", "Bearer T2"),
-                                        ("social.example", "Bearer T1")])
+        self.assertEqual(sorted(sent), [("other.example", "T2"), ("social.example", "T1")])
 
     def test_a_server_without_it(self):
         """404: the feature is remembered as missing and frontends are told."""

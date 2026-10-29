@@ -523,9 +523,8 @@ def tour_menus(app, out, core, win):
             shoot_menu(menu, out, "menu-post")
     else:
         ERRORS.append("no post card on screen for the ⋯ menu")
-    from fedtail.frontends.qt.silence import SilenceDialog
     for name, fn in (("tab-profile", lambda: win.open_account(core.me["id"])),
-                     ("dlg-silence", lambda: SilenceDialog(win, "filters").exec()),
+                     ("dlg-silence", lambda: win.open_place("silence", tab="filters")),
                      ("dlg-scheduled", win.show_scheduled),
                      ("dlg-filtered", win.show_filtered),
                      ("dlg-server", win.show_server_info),
@@ -533,7 +532,7 @@ def tour_menus(app, out, core, win):
                      ("dlg-help", win.open_help),
                      ("tab-suggestions", win.open_suggestions),
                      ("tab-directory", lambda: win.open_directory(False)),
-                     ("tab-trends", win.open_trends),
+                     ("dlg-trends", win.open_trends),
                      ("tab-search", lambda: win.open_search("o")),
                      ("dlg-profile", win.edit_profile),
                      # the places in a window of their own (qt/place.py): slow mode, the

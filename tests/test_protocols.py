@@ -43,6 +43,17 @@ class ProtocolLayerTest(unittest.TestCase):
                 for n, s in _code_strings(p) if re.search(r"/api/v\d", s)]
         self.assertEqual(hits, [], "\n".join(hits))
 
+    def test_one_door_into_a_protocol(self):
+        """Outside protocols/, nothing imports a protocol's modules (mastodon.api, its
+        adapter, probe, counters…) — the core goes through core/proto.py, the rest
+        through the core; protocols.base (the shared words) is for everyone."""
+        inside = re.compile(r"^\s*(from|import)\s+(fedtail\.|\.+)protocols\.(?!base\b)\w+",
+                            re.M)
+        hits = [str(rel) for rel, p in _outside_protocols()
+                if rel.as_posix() != "core/proto.py" and inside.search(
+                    p.read_text(encoding="utf-8"))]
+        self.assertEqual(hits, [])
+
     def test_the_core_calls_only_the_listed_client(self):
         used = {}
         for p in (ROOT / "core").glob("*.py"):

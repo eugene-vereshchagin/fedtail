@@ -110,6 +110,11 @@
 | поиск | `search(q, kind)` | нет |
 | расширения | `lists`, `filters`, `tags`, `announcements`, `translate`, `scheduled`, `report`, `markers` | нет |
 
+Кроме клиента, `Protocol` несёт то, что ядру нужно вокруг него: `address` (то, что набрал
+человек → URL сервера), `tune` (настройки клиента), `probe`, `counters`, `urls` (публичные
+страницы чужих серверов, их берут без токена через `core/remote.py`). Ядро добирается до
+всего этого только через `core/proto.py`.
+
 Протокол — **синхронный**, как сейчас `api.py`: ядро само гоняет его в рабочих потоках.
 Это сохраняет нынешнюю модель потоков без async-переделки.
 
@@ -160,7 +165,7 @@ Lemmy. Раскладки (`window.layout = single | columns | split`) — за�
 | 0 ✓ | сборка мусора в базе + incremental vacuum | тест: база не растёт на прогоне тысяч постов |
 | 1 ✓ | `fedtail/model/` + адаптер Mastodon → модель; никто ещё не пользуется | тесты адаптера на `tests/fakes.py` и образцах GTS/Mastodon/Akkoma; `tools/model_check.py` — прогон адаптера по своей базе |
 | 2 ✓ | ядро отдаёт фронтендам модель (`core/view.py`: View поверх Core); фронтенды по одному: cli ✓ → tui ✓ → web ✓ (переписан) → qt ✓ | `tests/test_layering.py`: во всём `frontends/` нет полей протокола и базы |
-| 3 ✓ | `api.py`, поток, честные счётчики и проверка возможностей уехали в `protocols/mastodon/`; ядро берёт клиента, его ошибки, поток и `Capabilities` из `Protocol` (`protocols/base.py`), а методы клиента, которые оно зовёт, перечислены там же (`CLIENT`) | `tests/test_protocols.py`: путей `/api/v…` в коде вне `protocols/` нет, ядро зовёт только `CLIENT`, у Mastodon-клиента есть весь `CLIENT`, фронтенды не лезут в `protocols.mastodon` |
+| 3 ✓ | `api.py`, поток, честные счётчики и проверка возможностей уехали в `protocols/mastodon/`; ядро берёт клиента, его ошибки, поток и `Capabilities` из `Protocol` (`protocols/base.py`), а методы клиента, которые оно зовёт, перечислены там же (`CLIENT`). С 29.10 у ядра одна дверь — `core/proto.py`: кроме этого, `Protocol` даёт разбор адреса, настройки клиента, проверку возможностей, счётчики и адреса публичных страниц чужих серверов — ни один модуль ядра больше не импортирует `protocols.mastodon` | `tests/test_protocols.py`: путей `/api/v…` в коде вне `protocols/` нет, ядро зовёт только `CLIENT`, у Mastodon-клиента есть весь `CLIENT`, модули протокола вне `protocols/` импортирует только `core/proto.py` |
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — одно место: что сервер сказал о себе, ответы проверки, отказы «такого нет» и известное о софте (`KNOWN`); `Core.supports` спрашивает его, ответы переживают переподключение, последняя проверка действует с запуска; событие `capabilities_changed` — фронтенды прячут кнопки сразу | `tests/test_protocols.py`, `test_social.py`, smoke: «Очистить» уходит, как только сервер отказал |
 | 5 ✓ | ростер (`View.roster()` → `RosterGroup` / `RosterItem`) и `window.layout = "split"` на Qt: окно-ростер, окно сообщений со своими вкладками, строка ввода, лица — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + скриншоты `tools/screenshots.py` |
 | 6 ✓ | темы в духе QIP, Psi+ и Агента; тема задаёт и вид раскладки (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, скриншоты |

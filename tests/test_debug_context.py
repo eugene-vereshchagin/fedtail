@@ -39,6 +39,11 @@ class SecretsTest(unittest.TestCase):
     """The config's secrets — an API key, a proxy's or a WebDAV address's password — go
     into neither the log nor the bug report as they are."""
 
+    def tearDown(self):  # whatever a test did, no proxy is left for the next ones
+        import os
+        for name in config._PROXY_VARS:
+            self.assertNotIn("proxy.example", os.environ.get(name, ""))
+
     TEXT = ('[feed]\ntranslate_key = "sk-live-123"\ntranslate_url = "https://t.example"\n'
             '[net]\nproxy = "socks5h://me:hunter2@proxy.example:1080"\n'
             '[sync]\nwebdav = "https://bob:pw@dav.example/fedtail"\n')
@@ -64,7 +69,8 @@ class SecretsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             p = paths.resolve("t", config=str(Path(d) / "c.toml"), data=str(Path(d) / "data"))
             p.config_file.write_text(self.TEXT, "utf-8")
-            cfg, _w = config.load(p.config_file)
+            import tomllib  # validate, not load: load puts net.proxy into the environment
+            cfg, _w = config.validate(tomllib.loads(self.TEXT))
             with mock.patch.object(diag, "is_on", return_value=True), \
                     self.assertLogs("fedtail", logging.INFO) as got:
                 diag.debug_context(p, cfg, "qt")

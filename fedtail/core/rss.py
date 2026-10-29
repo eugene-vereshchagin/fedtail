@@ -154,7 +154,7 @@ def fetch(url, own_hosts=(), timeout=12):
     """The feed at url, its items as posts; [] when it can't be had."""
     import requests
 
-    from ..protocols.mastodon.api import USER_AGENT
+    from ..version import USER_AGENT
     from . import remote
     host = urlsplit(url).hostname or "?"
     try:

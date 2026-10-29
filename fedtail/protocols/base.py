@@ -11,6 +11,10 @@ A protocol is a package under ``fedtail/protocols/`` that exposes a ``PROTOCOL``
 * ``capabilities(instance)`` — what the server says about itself → ``Capabilities``.
 * ``adapter`` — the server's objects → ``fedtail.model`` (``post``, ``account``, …).
 * ``stream`` — a live stream class, or None.
+* ``address``, ``tune``, ``probe``, ``counters``, ``urls`` — the server's address from
+  what a person typed, the client's settings, "what can it do", the honest counters
+  from a post's own server, and the addresses of other servers' public pages: the core
+  reaches the protocol through these, never into its modules (core/proto.py).
 
 The core still keeps a server's raw objects in its store and reads some of their fields
 (that is the Mastodon dialect every server of today speaks); what reaches the frontends
@@ -167,3 +171,10 @@ class Protocol:
     capabilities: Any   # (instance dict) -> Capabilities
     adapter: Any        # module: the server's objects -> fedtail.model
     stream: Any = None  # module with the live stream, or None
+    # what the core used to reach around the protocol for (protocols.md, stage 3):
+    address: Any = None   # (what a person typed: "social.example", @me@host) -> its URL
+    tune: Any = None      # (slow_seconds=…) -> None: the client's own settings
+    probe: Any = None     # module: run(client, caps), features(result), KV
+    counters: Any = None  # module: origin_api_url(status, own), merge(status, origin)
+    urls: Any = None      # the addresses of other servers' public pages: search, lookup,
+    #                       statuses, public, tag (fetched without a token, core/remote)

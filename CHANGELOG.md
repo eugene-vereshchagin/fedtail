@@ -2,6 +2,19 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: a picture from another server can't be turned into a request to this computer or
+  one at home by its name answering differently the second time (DNS rebinding): every
+  outside fetch (pictures, link previews, other servers' pages) connects to the address
+  that was checked, the name kept for TLS and `Host`.
+- Every window draws the same places: silence (filters, muted, blocked, servers), a
+  filter's own form, filtered notifications, trends and "Read it whole" are the common
+  pages in Qt and GTK too (each had a dialog of its own with its own gaps); an event's
+  start and end show in local time.
+- Inside: the core reaches a protocol only through `core/proto.py` (it called the Mastodon
+  module directly in places — counters, search addresses, the slow-server tune, the
+  server's probe), a test keeps it so; `core/app.py` is split into parts by what they do
+  (silence, lists, activity, sync, polling, people, threads, writing, …).
+
 - More of the lanes by their rules: a lane waits out of the sidebar till it has something
   by its rule's `hide_empty` (the fedtail set's "Important people"), not its name; the
   columns with nothing chosen are the set's first lane, its replies and mentions and a lane

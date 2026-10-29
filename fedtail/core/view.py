@@ -45,8 +45,8 @@ from ..model import (
     Translation,
     real,
 )
-from ..protocols.mastodon import adapter
 from . import links
+from .proto import adapter  # the protocol's: server objects → the model (core/proto.py)
 
 
 def _then(fut, fn):
@@ -435,7 +435,7 @@ class View:
         without my token (public, from elsewhere); "" otherwise."""
         from urllib.parse import urlparse
 
-        from ..protocols.mastodon import counters
+        from .proto import counters
         url = counters.origin_api_url(self._raw(real(post)),
                                       (self._core.auth or {}).get("server", ""))
         return (urlparse(url).hostname or "") if url else ""
@@ -698,6 +698,18 @@ class View:
         """Future: [Announcement] not dismissed yet, oldest first."""
         return _then(self._core.announcements(),
                      lambda got: [adapter.announcement(a) for a in got or ()])
+
+    def trends(self):
+        """Future: {"statuses": [Post], "tags": [Tag], "links": [Card]} — what's talked
+        about on my server; a trending link is a link preview (Card), as the server
+        gives it."""
+        def model(got):
+            got = got or {}
+            return {"statuses": [self.entry(x) for x in got.get("statuses") or ()],
+                    "tags": [adapter.tag(x) for x in got.get("tags") or ()],
+                    "links": [c for c in (adapter.card(x) for x in got.get("links") or ())
+                              if c is not None]}
+        return _then(self._core.trends(), model)
 
     def server_info(self):
         """Future: my server about itself (ServerInfo)."""

@@ -184,30 +184,33 @@ class CountersTest(CoreCase):
                 self.assertEqual(c._other_accounts(), [])
 
     def test_counts_via_accounts_errors(self):
+        """My other accounts' servers, asked through the protocol's client — each token
+        to its own server: one down, one that has another post — nothing taken; one with
+        the very post — its counts."""
         import requests
         c = self.connect()
         st = dict(status("042", BOB, minute=42), uri="https://far.test/users/b/statuses/42")
         c._other_accounts = lambda: [("https://far.test", "T1"), ("https://other.test", "T2")]
+        made = []
 
-        class R:
-            status_code = 200
+        class Client:
+            def __init__(self, server, token):
+                made.append((server, token))
+                self.server = server
 
-            def __init__(self, body):
-                self.body = body
+            def status(self, sid):
+                assert sid == "42"
+                raise requests.ConnectionError("down")
 
-            def json(self):
-                if isinstance(self.body, Exception):
-                    raise self.body
-                return self.body
-        answers = [requests.ConnectionError("down"), R({"statuses": [{"uri": "else"}]})]
-
-        def get(*_a, **_k):
-            a = answers.pop(0)
-            if isinstance(a, Exception):
-                raise a
-            return a
-        with mock.patch("requests.get", get):
-            self.assertIsNone(c._counts_via_accounts(st, "https://far.test/api/v1/statuses/42"))
+            def search_statuses(self, q, limit=40):
+                return [{"uri": "else"}]
+        c.api_class = Client  # how the core makes its clients (tests give their own)
+        self.assertIsNone(c._counts_via_accounts(st, "https://far.test/api/v1/statuses/42"))
+        self.assertEqual(made, [("https://far.test", "T1"), ("https://other.test", "T2")])
+        Client.search_statuses = lambda self, q, limit=40: [
+            {"uri": q, "favourites_count": 7, "reblogs_count": 1}]
+        got = c._counts_via_accounts(st, "https://far.test/api/v1/statuses/42")
+        self.assertEqual(got["favourites_count"], 7)
 
 
 class MoreTest(CoreCase):

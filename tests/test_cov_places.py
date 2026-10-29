@@ -247,8 +247,10 @@ class PlacesUnitTest(unittest.TestCase):
         self.assertTrue(v.called("cancel_scheduled"))
         v.answers["trends"] = {"tags": [NS(name="t", following=False)],
                                "statuses": [NS(id="P")],
-                               "links": [{"url": "https://a", "title": "A"},
-                                         NS(url="https://b", title="")]}
+                               "links": [NS(url="https://a", title="A", provider="",
+                                            description=""),
+                                         NS(url="https://b", title="", provider="",
+                                            description="")]}
         self.assertEqual(pl.page("trends").rows[0].kind, "tag")
         self.assertEqual(pl.page("trends", tab="posts").rows[0].kind, "post")
         links = pl.page("trends", tab="links").rows
@@ -279,8 +281,8 @@ class PlacesUnitTest(unittest.TestCase):
         self.assertIn(_("server_translates_none"), lines)
         info.contact = None
         self.assertEqual(Places(v).page("server").rows[1].line, "a@x")
-        r1 = NS(id="R1", who=acc("B"), count=3)
-        r2 = NS(id="R2", who=acc("C"), count=0)
+        r1 = NS(id="R1", who=acc("B"), count=3, last=None)
+        r2 = NS(id="R2", who=acc("C"), count=0, last=None)
         v.answers["filtered"] = {"requests": [r1, r2]}
         pg = Places(v).page("filtered")
         self.assertEqual([r.line for r in pg.rows], [_("filtered_count", n=3), ""])

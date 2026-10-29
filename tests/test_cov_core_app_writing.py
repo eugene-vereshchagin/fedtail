@@ -8,7 +8,7 @@ from unittest import mock
 
 import requests
 
-from fedtail.core.app import MaybeSent
+from fedtail.core.writing import MaybeSent
 from fedtail.protocols.mastodon.api import ApiError
 
 from .fakes import BOB, ME, status

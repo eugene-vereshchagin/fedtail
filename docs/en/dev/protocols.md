@@ -110,6 +110,11 @@ A mandatory part and optional extensions (can't do it — doesn't declare it).
 | search | `search(q, kind)` | no |
 | extensions | `lists`, `filters`, `tags`, `announcements`, `translate`, `scheduled`, `report`, `markers` | no |
 
+Besides the client, a `Protocol` carries what the core needs around it: `address` (what a
+person typed → the server's URL), `tune` (the client's settings), `probe`, `counters`, `urls`
+(other servers' public pages, fetched without a token through `core/remote.py`). The core
+reaches all of it through `core/proto.py` alone.
+
 The protocol is **synchronous**, as `api.py` is now: the core runs it in worker threads itself.
 That keeps today's threading model without an async rewrite.
 
@@ -160,7 +165,7 @@ the roster is the model's data, the same for all.
 | 0 ✓ | garbage collection in the database + incremental vacuum | a test: the database doesn't grow over a run of thousands of posts |
 | 1 ✓ | `fedtail/model/` + the Mastodon adapter → model; nobody uses it yet | adapter tests on `tests/fakes.py` and samples from GTS/Mastodon/Akkoma; `tools/model_check.py` — the adapter run over your own database |
 | 2 ✓ | the core gives frontends the model (`core/view.py`: View over Core); frontends one by one: cli ✓ → tui ✓ → web ✓ (rewritten) → qt ✓ | `tests/test_layering.py`: no protocol or database fields anywhere in `frontends/` |
-| 3 ✓ | `api.py`, the stream, honest counters and the capability probe moved to `protocols/mastodon/`; the core takes the client, its errors, the stream and `Capabilities` from a `Protocol` (`protocols/base.py`), and the client methods it calls are listed there too (`CLIENT`) | `tests/test_protocols.py`: no `/api/v…` paths in the code outside `protocols/`, the core calls only `CLIENT`, the Mastodon client has all of `CLIENT`, frontends don't reach into `protocols.mastodon` |
+| 3 ✓ | `api.py`, the stream, honest counters and the capability probe moved to `protocols/mastodon/`; the core takes the client, its errors, the stream and `Capabilities` from a `Protocol` (`protocols/base.py`), and the client methods it calls are listed there too (`CLIENT`). Since 29.10 the core has one door, `core/proto.py`: besides those, `Protocol` gives the address parser, the client's settings, the probe, the counters and the addresses of other servers' public pages — no module of the core imports `protocols.mastodon` any more | `tests/test_protocols.py`: no `/api/v…` paths in the code outside `protocols/`, the core calls only `CLIENT`, the Mastodon client has all of `CLIENT`, nothing outside `protocols/` but `core/proto.py` imports a protocol's modules |
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — one place: what the server said about itself, the probe's answers, "no such thing" refusals and what's known of the software (`KNOWN`); `Core.supports` asks it, the answers survive a reconnect, the last probe counts from the start; the `capabilities_changed` event — frontends hide buttons at once | `tests/test_protocols.py`, `test_social.py`, smoke: "Clear" goes as soon as the server refused |
 | 5 ✓ | the roster (`View.roster()` → `RosterGroup` / `RosterItem`) and `window.layout = "split"` on Qt: a roster window, a messages window with its own tabs, an input line, faces — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + screenshots by `tools/screenshots.py` |
 | 6 ✓ | themes in the spirit of QIP, Psi+ and Agent; a theme sets the layout's look too (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, screenshots |

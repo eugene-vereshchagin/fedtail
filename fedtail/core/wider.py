@@ -16,9 +16,8 @@ from __future__ import annotations
 import logging
 import time
 
-from ..protocols.mastodon.api import public_url as _public_url
-from ..protocols.mastodon.api import tag_url
 from . import taggroups
+from .proto import urls as _urls
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ CLOSED_S = 6 * 3600  # a lane closed to strangers: asked again after this
 
 def public_url(host, limit=40):
     """Their public lane: their own people's posts, as anyone sees it."""
-    return _public_url(host, local=True, limit=limit)
+    return _urls.public(host, local=True, limit=limit)
 
 
 class Wider:
@@ -152,7 +151,7 @@ class Wider:
         return rss.fetch(url, own_hosts=self.core._own_hosts())
 
     def _one(self, kind, host, lane, tag):
-        url = tag_url(host, tag) if kind == "tag" else public_url(host)
+        url = _urls.tag(host, tag) if kind == "tag" else public_url(host)
         page = self.core._origin_get(url)
         if not isinstance(page, list):
             raise LookupError(host)
@@ -177,4 +176,4 @@ class Wider:
         return new
 
 
-__all__ = ["Wider", "public_url", "tag_url"]
+__all__ = ["Wider", "public_url"]

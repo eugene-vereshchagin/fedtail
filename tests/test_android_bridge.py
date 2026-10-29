@@ -394,7 +394,8 @@ class BridgeTest(_Base):
         steps = json.loads(self.bridge.selfcheck_steps())
         self.assertIn("lanes", steps)
         results = []
-        with mock.patch("requests.get") as get:  # the made-up world's pictures
+        # the made-up world's pictures (core/remote.py asks through a session of its own)
+        with mock.patch("requests.Session.get") as get:
             r = get.return_value  # what core/remote.py reads of an answer: streamed
             r.__enter__.return_value = r
             r.is_redirect, r.headers, r.status_code = False, {}, 200

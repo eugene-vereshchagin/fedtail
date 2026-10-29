@@ -32,6 +32,11 @@ def _done(value):
     return f
 
 
+
+def _place_btn(pw, key, act):
+    """A row's button on a common place by its row key and action."""
+    return next(b for r in pw.page.rows if r.key == key for b in r.buttons if b.act[1] == act)
+
 def pump(until=None, timeout=3.0):
     """Run the main loop until until() is true (or a while, when None)."""
     ctx = GLib.MainContext.default()
@@ -638,13 +643,10 @@ class GtkSmokeTest(_GtkBase):
                                                 "location": "", "summary": "",
                                                 "content": "<p>всё</p>",
                                                 "url": "https://e.test/a"})
-        before = set(Gtk.Window.list_toplevels())
-        self.win.read_whole(card.post)
-        pump(timeout=0.4)
-        new = [w for w in Gtk.Window.list_toplevels() if w not in before]
-        self.assertEqual([w.get_title() for w in new], ["Статья"])
-        for w in new:
-            w.close()
+        pw = self.win.read_whole(card.post)  # the common place, as in Qt
+        self.assertTrue(pump(lambda: pw.page is not None and any(
+            r.kind == "heading" and r.title == "Статья" for r in pw.page.rows), 3))
+        pw.window.close()
 
     def test_add_to_list(self):
         """"Add to list" from a post's ⋯ and a profile, as in Qt: someone not followed —
@@ -1357,19 +1359,19 @@ class GtkSmokeTest(_GtkBase):
         tag suggestions, the posts sharing a link, the server's terms, blocks and
         translator."""
         from fedtail.frontends.common import server, timed
-        from fedtail.frontends.gtk import dialogs, postinfo
+        from fedtail.frontends.gtk import postinfo
 
         # a filter edited: the window's answer, then saved
         made = self.core.add_filter("шум", ["крипта", "nft"]).result()
-        dlg = dialogs.silence(self.win)
-        self.assertTrue(pump(lambda: dlg.filters.get_row_at_index(0) is not None, 5))
-        dlg.filters.select_row(dlg.filters.get_row_at_index(0))
-        dlg.change_filter()  # the edit window, filled from the filter
-        ed = dlg.editing
-        self.assertEqual(ed.words.get_text(), "крипта, nft")
-        ed.words.set_text("nft, web3")
-        ed.action.set_selected(1)
-        ed.ok.emit("clicked")
+        pw = self.win.open_place("silence", tab="filters")  # the common place, as in Qt
+        self.assertTrue(pump(lambda: pw.page is not None and pw.page.rows, 5))
+        pw.press(_place_btn(pw, made["id"], "filter_edit"))  # its own form
+        self.assertTrue(pump(lambda: pw.page.name == "filter", 5))
+        self.assertEqual(pw.fields["words"][1].get_text(), "крипта, nft")
+        pw.fields["words"][1].set_text("nft, web3")
+        drop, values = pw.fields["action"][1]
+        drop.set_selected(values.index("hide"))
+        pw.press(pw.page.submit)
         self.assertTrue(pump(lambda: self.world.filters[made["id"]]["filter_action"] == "hide",
                              5))
         self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
@@ -1377,7 +1379,7 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(timed.filter_changes("", "a, b", "warn", [], timed.KEEP),
                          {"title": None, "words": ["a", "b"], "action": "warn",
                           "contexts": ["home"], "expires_in": None})
-        dlg.close()
+        pw.window.close()
 
         # a video gets a cover; it goes with it to the server (the 4th part)
         c = self.win.compose_panel()
@@ -1444,23 +1446,21 @@ class GtkSmokeTest(_GtkBase):
             self.assertIn(words, page)
 
     def test_timed_filters_hidden_posts_and_list_replies(self):
-        from fedtail.frontends.gtk import dialogs, lists
+        from fedtail.frontends.gtk import lists
         from fedtail.protocols.mastodon import adapter
-        dlg = dialogs.silence(self.win)
-        dlg.words.set_text("спойлер")
-        dlg.span.set_selected(2)  # a day
-        dlg.add.emit("clicked")
+        pw = self.win.open_place("silence", tab="filters")  # the common place, as in Qt
+        self.assertTrue(pump(lambda: "words" in pw.fields, 5))
+        pw.fields["words"][1].set_text("спойлер")
+        drop, values = pw.fields["expires"][1]
+        drop.set_selected(values.index("86400"))  # a day
+        pw.press(pw.page.submit)
         self.assertTrue(pump(lambda: self.world.filters, 5))
         made = next(iter(self.world.filters.values()))
         self.assertEqual(made["expires_in"], 86400)
         when = adapter.word_filter(made).expires.astimezone().strftime("%d.%m.%Y %H:%M")
 
         def rows():
-            out, r = [], dlg.filters.get_first_child()
-            while r is not None:
-                out.append(r.get_child().get_label())
-                r = r.get_next_sibling()
-            return out
+            return [r.title + " " + r.line for r in (pw.page.rows if pw.page else ())]
         self.assertTrue(pump(lambda: any(i18n._("filter_until", until=when) in t
                                          for t in rows()), 5), rows())
         # hide this post: in the ⋯ menu (common/actions.py), asked once
@@ -1471,10 +1471,10 @@ class GtkSmokeTest(_GtkBase):
         self.win.confirm = lambda title, text, then, yes="": then()
         self.win.on_link("fedtail:hidepost/011")
         self.assertTrue(pump(lambda: "011" in self.core.hidden_posts, 5))
-        dlg.reload()
+        pw.load()
         self.assertTrue(pump(lambda: any(i18n._("posts_n", n=1) in t for t in rows()), 5),
                         rows())
-        dlg.close()
+        pw.window.close()
         # whose replies a list shows: three radio buttons in the list's menu
         made = []
         self.win.call(self.view.create_list("Друзья"), made.append)
