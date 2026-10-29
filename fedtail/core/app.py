@@ -1557,9 +1557,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self.mark_read(found)  # I answered it, so I have read it
             self.emit("parents")
 
-    def _own_hosts(self):
+    def own_hosts(self):
         """My servers' hostnames: exempt from remote's public-address rule (a server
         at home on a private address still shows its own pictures)."""
+        return self._own_hosts()
+
+    def _own_hosts(self):
+        """(own_hosts.)"""
         from urllib.parse import urlparse
         server = (self.auth or {}).get("server") or ""
         return {(urlparse(server).hostname or "").lower()} - {""}

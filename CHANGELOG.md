@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The web page shows every picture through fedtail itself (`/pic`: the windows' disk
+  cache, fetched the checked way when missing): some servers give their pictures to no
+  other site, and the browser asked them itself — avatars stayed grey; the browser no
+  longer tells other servers who looks either (`img-src 'self'`).
+- The web page: ↔, the posts across the whole width or in a column of `ui.max_width`,
+  the same remembered state as the windows' (the column was 760 px, always); "▲ earlier"
+  no longer stuck at "loading…" when the core didn't ask for a page — nothing older came.
 - Fixed (Qt): a gap above the last post of a lane (or one card over another) for 15–30 s,
   till the lane's next refresh: a card whose height changed without saying so (a picture
   in, a warning opened) kept its old place, and a lane opened among tall pictures could

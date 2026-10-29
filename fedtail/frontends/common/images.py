@@ -17,6 +17,7 @@ import time
 import weakref
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import requests
@@ -406,29 +407,10 @@ class Cache:
             self._pre_seen.clear()
 
     def _prefetch_one(self, url):
-        p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
-        if p.exists():
+        if picture_path(self.cache_dir, url).exists():
             return
-        t = time.monotonic()
-        try:
-            with self._open(url, (6, 30)) as r:
-                r.raise_for_status()
-                kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
-                if not kind.startswith("image/"):
-                    return  # an error page, a video: not for the picture cache
-                data = remote.read(r, PICTURE_MAX)
-        except requests.RequestException as e:
-            log.debug("prefetch %s: %s", url, e.__class__.__name__)
-            return
-        if not data:
-            return
-        fmt, why = self._readable(data)
-        if fmt is None:  # cut short, or not a picture: never into the cache
-            log.debug("prefetch %s: %d B, %s — not kept", url, len(data), why)
-            return
-        p.write_bytes(data)
-        self._count_write()
-        log.debug("prefetch %s: %d B in %.1f s", url, len(data), time.monotonic() - t)
+        if fetch_picture(self.cache_dir, url, self._open) is not None:
+            self._count_write()
 
     # ---- videos on disk: fetched ahead ("all"), and every one played ------------------
     def _video_path(self, url):
@@ -758,3 +740,39 @@ class Cache:
         if ms > 50:
             log.debug("image %s: %.0f ms in the window for %d cards (%dx%d)", _short(key[0]),
                       ms, len(callbacks), *self.size(img))
+
+
+def picture_path(cache_dir, url):
+    """Where the disk cache keeps url's picture (whether it is there or not)."""
+    return Path(cache_dir) / hashlib.sha1(url.encode()).hexdigest()
+
+
+def fetch_picture(cache_dir, url, opener):
+    """url's picture into the disk cache (the windows' and the web page's one cache) if
+    it isn't there: only an image, whole and of a picture format (imagesniff), never an
+    error page. opener(url, timeout): a streamed answer through core.remote (no token,
+    public addresses, redirects checked). → the file, or None."""
+    from . import imagesniff
+    p = picture_path(cache_dir, url)
+    if p.exists() and p.stat().st_size:
+        return p
+    t = time.monotonic()
+    try:
+        with opener(url, (6, 30)) as r:
+            r.raise_for_status()
+            kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+            if not kind.startswith("image/"):
+                return None  # an error page, a video: not for the picture cache
+            data = remote.read(r, PICTURE_MAX)
+    except requests.RequestException as e:
+        log.debug("prefetch %s: %s", url, e.__class__.__name__)
+        return None
+    if not data:
+        return None
+    fmt, why = imagesniff.readable(data)
+    if fmt is None:  # cut short, or not a picture: never into the cache
+        log.debug("prefetch %s: %d B, %s — not kept", url, len(data), why)
+        return None
+    p.write_bytes(data)
+    log.debug("prefetch %s: %d B in %.1f s", url, len(data), time.monotonic() - t)
+    return p

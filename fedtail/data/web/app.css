@@ -117,14 +117,15 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
 .colbtns { display: inline-flex; white-space: nowrap; }
 .colbtns button.tool { padding: 2px 6px; }
 #coltools[hidden], #cols-btn[hidden] { display: none; }
-#cols-btn.on { background: var(--ctx); }
+#cols-btn.on, #wide-btn.on { background: var(--ctx); }
 #scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 5; }
 #scrim[hidden] { display: none; }
 
 /* ---- a post ---------------------------------------------------------------------- */
 .post { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
         min-width: 0; box-sizing: border-box;
-        padding: 10px 12px 6px; margin: 0 auto 10px; max-width: 760px; position: relative;
+        padding: 10px 12px 6px; margin: 0 auto 10px; max-width: var(--postw, 760px);
+        position: relative;
         box-shadow: var(--shadow); margin-left: max(0px, calc(var(--depth, 0) * 16px)); }
 #posts .post { margin-left: auto; }
 .post.cursor { outline: 2px solid var(--accent); outline-offset: -1px; }
@@ -208,7 +209,8 @@ img.emoji { height: 1.3em; width: auto; vertical-align: -0.25em; margin: 0 1px; 
 
 /* ---- a profile ------------------------------------------------------------------- */
 .profile { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-           padding: 12px; margin: 0 auto 12px; max-width: 760px; overflow: hidden; }
+           padding: 12px; margin: 0 auto 12px; max-width: var(--postw, 760px);
+           overflow: hidden; }
 .profile .header { width: calc(100% + 24px); margin: -12px -12px 8px; max-height: 160px;
                    object-fit: cover; display: block; }
 .profile .head { display: flex; gap: 12px; align-items: center; }

@@ -58,12 +58,12 @@ class PiecesTest(TmpDir):
         m = Media(R, "image", url="", preview="http://plain/p.png",
                   remote_url="https://far/x.png", alt="a", width=3, height=4)
         self.assertEqual(web.media_json(m), {"kind": "image", "preview": "",
-                                             "url": "https://far/x.png", "alt": "a",
+                                             "url": "/pic?u=https%3A%2F%2Ffar%2Fx.png", "alt": "a",
                                              "w": 3, "h": 4})
         self.assertIsNone(web.card_json(None))
         self.assertIsNone(web.card_json(Card("http://plain")))  # not https: no card
         self.assertEqual(web.card_json(Card("https://a", "T", image="https://i",
-                                            provider="P"))["image"], "https://i")
+                                            provider="P"))["image"], "/pic?u=https%3A%2F%2Fi")
 
     def test_poll(self):
         self.assertIsNone(web.poll_json(None))
@@ -205,7 +205,7 @@ class WebHostTest(TmpDir):
             self.assertEqual(h.out["compose"], {
                 "edit": "P", "text": "src", "cw": "cw", "visibility": "public",
                 "media": [{"id": "m1", "alt": "a", "kind": "image",
-                           "url": "https://x/m1.png", "focus": [0.5, -0.5]}]})
+                           "url": "/pic?u=https%3A%2F%2Fx%2Fm1.png", "focus": [0.5, -0.5]}]})
             h.compose(quote=post)
             self.assertEqual(h.out["compose"], {"quote": "R", "quote_of": "@bob@x"})
         h.compose(reply_to=post, invite=True)

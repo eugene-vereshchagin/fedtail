@@ -872,7 +872,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | ◐ | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. Android: the config is edited in the app; no data folder |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | · | ✓ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | · | · | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. Android: a desktop tool |
-| Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (column width, editor size, tracing). Android: nothing to hover with |
+| Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (editor size, tracing). Android: nothing to hover with |
 
 ---
 

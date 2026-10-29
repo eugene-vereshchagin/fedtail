@@ -23,7 +23,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 
 from ... import __version__, i18n, version
 from ...core import config
@@ -45,7 +45,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/sw.js": ("sw.js", "text/javascript; charset=utf-8")}
 POSSUM = {"/possum.png": ("fedtail.png", "image/png"),
           "/possum.gif": ("fedtail-swing.gif", "image/gif")}
-CSP = ("default-src 'self'; img-src 'self' https: data:; media-src https: 'self'; "
+CSP = ("default-src 'self'; img-src 'self' data:; media-src https: 'self'; "
        "style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
        "base-uri 'none'; form-action 'self'")
 WAIT_SECONDS = 25
@@ -134,6 +134,15 @@ def _https(url):
     return url if isinstance(url, str) and url.startswith("https://") else ""
 
 
+def _pic(url):
+    """A picture's address for the page: through this server (/pic, the windows' disk
+    cache and their checked fetch) — the browser asked other servers itself, and some
+    give their pictures to no other site (avatars stayed grey, 29.10); it no longer
+    tells them who looks either."""
+    url = _https(url)
+    return "/pic?u=" + quote(url, safe="") if url else ""
+
+
 def _iso(t):
     return t.isoformat().replace("+00:00", "Z") if t else ""
 
@@ -142,7 +151,7 @@ def account_json(acc):
     if acc is None:
         return {"id": None, "handle": "", "name": "", "avatar": "", "url": "", "bot": False}
     out = {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
-           "avatar": _https(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
+           "avatar": _pic(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
     if acc.color:  # people.nick_colors: my colour for their name
         out["color"] = acc.color
     if acc.emojis and ":" in out["name"]:  # :blobcat: in a name — its picture, as in a post
@@ -164,7 +173,7 @@ def with_emojis(html, emojis):
     address are escaped, so nothing of the post becomes markup)."""
     if not emojis or ":" not in html:
         return html
-    pics = {e.shortcode: _https(e.static_url or e.url) for e in emojis}
+    pics = {e.shortcode: _pic(e.static_url or e.url) for e in emojis}
 
     def one(m):
         url = pics.get(m.group(1))
@@ -185,7 +194,9 @@ def _api_error(e):
 
 
 def media_json(m):
-    return {"kind": m.kind, "preview": _https(m.preview), "url": _https(m.url or m.remote_url),
+    url = m.url or m.remote_url  # a picture through /pic too; a video plays from its own
+    return {"kind": m.kind, "preview": _pic(m.preview),
+            "url": _pic(url) if m.kind == "image" else _https(url),
             "alt": m.alt, "w": m.width, "h": m.height}
 
 
@@ -213,7 +224,7 @@ def card_json(card):
     if card is None or not _https(card.url):
         return None
     return {"url": card.url, "title": card.title, "description": card.description,
-            "image": _https(card.image), "provider": card.provider}
+            "image": _pic(card.image), "provider": card.provider}
 
 
 def quote_json(view, quote):
@@ -452,7 +463,7 @@ class _WebHost:
                  "visibility": real(edit).visibility,
                  # its pictures stay; their descriptions and focus can change
                  "media": [{"id": m.ref.id, "alt": m.alt, "kind": m.kind,
-                            "url": _https(m.preview or m.url),
+                            "url": _pic(m.preview or m.url),
                             "focus": list(m.focus) if m.focus else None}
                            for m in real(edit).media]}
         elif quote is not None:
@@ -734,6 +745,10 @@ class Web:
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
                 "older_ahead": bool(c["feed"].get("older_ahead")),
+                # the posts' column, as the windows': ui.max_width (0: the whole width),
+                # and ↔ — the same remembered state as theirs
+                "max_width": int(c["ui"].get("max_width") or 0),
+                "full_width": bool(self.core.get_state("full_width")),
                 "visibility": self.core.default_visibility(),
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),
@@ -1211,6 +1226,12 @@ class Web:
                 {"n": None, "asked": False}
         return {"n": self.core.load_older(name).result() or 0}
 
+    def full_width(self, on):
+        """↔: the posts across the whole width or in a column — remembered as the
+        windows remember it (the state "full_width"), for every interface."""
+        self.core.set_state("full_width", bool(on))
+        return {"ok": True, "full_width": bool(on)}
+
     def activate(self, name):
         """The lane on screen (for notifications and the next start): a POST."""
         name = self._lane_name(name)
@@ -1289,7 +1310,7 @@ class Web:
         top = {e.id for e in pinned}
         info = account_json(acc)
         info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
-                    header=_https(acc.header_static) if acc else "",
+                    header=_pic(acc.header_static) if acc else "",
                     counts=" · ".join((_("posts_n", n=acc.posts),
                                        _("followers_n", n=acc.followers),
                                        _("following_n", n=acc.following))) if acc else "",
@@ -2011,7 +2032,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
          "close_tip", "to_end_tip", "unread_tip",
          # columns: lanes side by side (ui.layout = "columns", ❯)
-         "columns", "columns_tip", "column_left", "column_right", "column_close",
+         "columns", "columns_tip", "full_width_tip", "column_left", "column_right", "column_close",
          # ≡ as a window: its groups, as the windows' submenus
          "web_menu_lanes", "web_menu_look", "tender_menu", "menu_people", "accounts",
          "debug_menu")
@@ -2096,6 +2117,35 @@ class Handler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.FORBIDDEN, _("web_forbidden"), "text/plain; charset=utf-8")
 
     # ---- GET ---------------------------------------------------------------------
+    PIC_TYPES = {"jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif",
+                 "webp": "image/webp", "avif": "image/avif", "bmp": "image/bmp",
+                 "ico": "image/x-icon"}
+
+    def _picture(self, url):
+        """/pic?u=<https url>: the picture from the disk cache, fetched into it first
+        when it isn't there (common/images.fetch_picture: no token, public addresses,
+        redirects checked; only a whole picture is kept or given)."""
+        from ...core import remote
+        from ..common import images as pictures
+        from ..common import imagesniff
+        if not url.startswith("https://"):
+            return self._send(HTTPStatus.BAD_REQUEST, b"", "text/plain")
+        view = self.web.core
+        own = view.own_hosts()
+        p = pictures.fetch_picture(
+            view.paths.cache_dir, url,
+            lambda u, timeout: remote.open_url(None, u, timeout=timeout,
+                                               schemes=("https",), own_hosts=own))
+        if p is None:
+            return self._send(HTTPStatus.NOT_FOUND, b"", "text/plain")
+        data = p.read_bytes()
+        fmt, _why = imagesniff.readable(data)
+        ctype = self.PIC_TYPES.get(fmt or "")
+        if ctype is None:  # a format the cache keeps but a browser can't show
+            return self._send(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, b"", "text/plain")
+        return self._send(HTTPStatus.OK, data, ctype,
+                          extra=(("Cache-Control", "private, max-age=86400"),))
+
     def do_GET(self):  # noqa: N802 — http.server's name
         u = urlsplit(self.path)
         q = {k: v[-1] for k, v in parse_qs(u.query).items()}
@@ -2120,6 +2170,8 @@ class Handler(BaseHTTPRequestHandler):
             data = resources.files("fedtail").joinpath(
                 "data/icons/" + POSSUM[u.path][0]).read_bytes()
             return self._send(HTTPStatus.OK, data, POSSUM[u.path][1])
+        if u.path == "/pic":
+            return self._picture(q.get("u", ""))
         if u.path == "/theme.css":
             return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),
@@ -2200,6 +2252,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/preview": lambda: web.preview(body),
             "/api/save": lambda: web.save_media(body.get("url")),
             "/api/older": lambda: web.older(body.get("name"), bool(body.get("ahead"))),
+            "/api/full_width": lambda: web.full_width(body.get("on")),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
             "/api/command": lambda: web.command(str(body.get("line", "")),

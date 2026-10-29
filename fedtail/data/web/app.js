@@ -1080,16 +1080,19 @@ function renderEvent(ev) {
 function olderButton() {
   if (!state.older) return null;
   // the windows' words: "▼ earlier" at the end when newest first, "▲ earlier" on top
-  const b = el("button", "older", w(state.me.order === "newest_first" ? "older_down" : "older_up"));
+  const words = w(state.me.order === "newest_first" ? "older_down" : "older_up");
+  const b = el("button", "older", words);
   b.type = "button";
   const fetch = async (ahead) => {
     b.disabled = true;
     try {
       const r = await api("/api/older", { name: state.lane, ahead });
-      if (ahead && !r.asked) { b.disabled = false; return; }  // the core didn't ask
+      // the core didn't ask (one at a time, or the last page was empty): the button's
+      // words back — it stayed "loading…" for good, and nothing older came (29.10)
+      if (ahead && !r.asked) { b.disabled = false; b.textContent = words; return; }
       if (!r.n) { b.textContent = w("no_older"); return; }
       await selectLane(state.lane, true);
-    } catch (e) { toast(e.message); b.disabled = false; }
+    } catch (e) { toast(e.message); b.disabled = false; b.textContent = words; }
   };
   b.onclick = () => fetch(false);
   // reading.older_ahead: the button a screen away — the core fetches a page itself
@@ -1134,6 +1137,26 @@ async function columnsStart() {
   window.matchMedia("(max-width: 760px)").addEventListener("change", (e) => {
     if (e.matches && cols.on) setColumns(false, true);  // a phone's width: one lane
   });
+}
+
+// ↔ — the posts across the whole width, or in a column of ui.max_width: the windows'
+// button, the same remembered state ("full_width") for every interface
+function widthSetup(me) {
+  const btn = $("#wide-btn");
+  const column = me.max_width || 760;  // 0 in the config: the whole width, ↔ off
+  let full = me.full_width || !me.max_width;
+  const apply = () => {
+    document.documentElement.style.setProperty("--postw", full ? "none" : column + "px");
+    btn.classList.toggle("on", full);
+  };
+  btn.title = w("full_width_tip");
+  btn.setAttribute("aria-label", w("full_width_tip"));
+  btn.onclick = () => {
+    full = !full;
+    apply();
+    api("/api/full_width", { on: full }).catch((e) => toast(e.message));
+  };
+  apply();
 }
 
 async function setColumns(on, quiet) {
@@ -1991,6 +2014,7 @@ function helpGo(step) {
 // once it is in, the page starts anew as any
 function loginOnly(me) {
   if (me.lang) document.documentElement.lang = me.lang;
+  widthSetup(me);
   state.loginOnly = true;
   for (const id of ["#write", "#write2", "#allread", "#refresh", "#more", "#menu"]) {
     const b = $(id);

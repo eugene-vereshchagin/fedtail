@@ -68,6 +68,33 @@ class WebTest(TmpDir):
         help_page = json.loads(self.req("/api/page?name=help")[2])
         self.assertIn("<h1", help_page["rows"][0]["html"])
 
+    def test_pictures_come_through_the_page_s_own_server(self):
+        """The page's pictures are /pic: the windows' disk cache, fetched into it the
+        checked way when missing — some servers give pictures to no other site, and the
+        browser had asked them itself (grey avatars, 29.10)."""
+        import io
+
+        from PIL import Image
+
+        from fedtail.frontends.common import images as pictures
+        url = "https://pics.example/avatar.png"
+        self.assertEqual(web._pic(url), "/pic?u=https%3A%2F%2Fpics.example%2Favatar.png")
+        self.assertEqual(web._pic("http://pics.example/a.png"), "")  # never plain http
+        buf = io.BytesIO()
+        Image.new("RGB", (4, 4), (200, 10, 10)).save(buf, "PNG")
+        p = pictures.picture_path(self.core.paths.cache_dir, url)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(buf.getvalue())
+        r = urllib.request.Request(self.base + web._pic(url),
+                                   headers={"Cookie": f"{web.COOKIE}={self.key}"})
+        with urllib.request.urlopen(r, timeout=30) as resp:
+            self.assertEqual(resp.headers["Content-Type"], "image/png")
+            self.assertEqual(resp.read(), buf.getvalue())
+        # not in the cache and nowhere to get it from (the tests are offline): 404
+        self.assertEqual(self.req(web._pic("https://nowhere.example/x.png"))[0], 404)
+        self.assertEqual(self.req("/pic?u=" + url, cookie=False)[0], 403)
+        self.assertNotIn("https:", web.CSP.split("img-src")[1].split(";")[0])
+
     def test_a_page_that_hangs_up_is_no_error(self):
         # a reload or a closed tab while /api/wait waits: the answer has nowhere to go —
         # no traceback on the terminal (it was two BrokenPipeErrors), the server goes on
@@ -395,8 +422,8 @@ class WebTest(TmpDir):
         self.core.poll_once()
         _c, _h, body = self.req("/api/lane?name=home")
         post = next(p for p in json.loads(body)["posts"] if p["sid"] == "003")
-        self.assertIn('<img class="emoji" src="https://x.example/b.png" alt=":blob:"',
-                      post["html"])
+        self.assertIn('<img class="emoji" src="/pic?u=https%3A%2F%2Fx.example%2Fb.png" '
+                      'alt=":blob:"', post["html"])
         self.assertEqual([o["share"] for o in post["poll"]["options"]], [25, 75])
         self.assertIn("4", post["poll"]["summary"])
         code, _h, body = self.req("/api/vote", {"id": "003", "choices": [1]})
