@@ -2246,11 +2246,21 @@ class QtSmokeTest(unittest.TestCase):
         dlg = IssueDialog(self.win)
         self.assertIn(i18n._("issue_system"), dlg.text.toPlainText())
         dlg.text.setPlainText("сломалось на https://example.test/@mira/1")
+        from unittest import mock
+
+        from PySide6.QtWidgets import QApplication
         opened = []
-        self.win.open_url = opened.append
-        dlg.go()
+        with mock.patch("fedtail.frontends.qt.opener.open_link",
+                        lambda u: opened.append(u) or True):
+            dlg.go()
         self.assertTrue(opened[0].startswith("https://github.com/"))
         self.assertNotIn("example.test", opened[0])
+        self.assertIn("сломалось", QApplication.clipboard().text())  # the whole text
+        dlg = IssueDialog(self.win)  # no browser came: said, the address copied
+        with mock.patch("fedtail.frontends.qt.opener.open_link", lambda u: False):
+            dlg.go()
+        self.assertEqual(dlg.note.text(), i18n._("issue_not_opened"))
+        self.assertTrue(QApplication.clipboard().text().startswith("https://github.com/"))
 
     def test_settings_window_writes_one_line(self):
         """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,
