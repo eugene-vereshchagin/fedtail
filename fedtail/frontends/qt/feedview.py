@@ -30,6 +30,7 @@ from ... import diag
 from ...model import Share
 from ...model import real as real_entry
 from ..common.lane import seen
+from ..common.strip import Strip
 from .card import _set_prop as _mark
 from .card import row_class
 
@@ -60,9 +61,19 @@ class FeedView(QScrollArea):
     KEPT = ("cw_open", "translation", "show_translation")  # what a card let go remembers
     FIRST_GUESS = 160  # a card's height before any was measured here
 
+    # the places (common/strip.py, shared with GTK's lane): these names are the strip's
+    _ys = property(lambda self: self.strip.ys,
+                   lambda self, v: setattr(self.strip, "ys", v))
+    _h = property(lambda self: self.strip.h, lambda self, v: setattr(self.strip, "h", v))
+    _hidden = property(lambda self: self.strip.hidden,
+                       lambda self, v: setattr(self.strip, "hidden", v))
+    _width = property(lambda self: self.strip.width,
+                      lambda self, v: setattr(self.strip, "width", v))
+
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
+        self.strip = Strip(self.GAP, self.MARGIN, self.FIRST_GUESS)
         self.setObjectName("feed")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # j / k and friends
         self.cursor_key = None
@@ -142,17 +153,10 @@ class FeedView(QScrollArea):
         self._seen_timer.start()
 
     def _guess(self):
-        hs = [h for w, h in self._h.values() if w == self._width]
-        return int(sum(hs) / len(hs)) if hs else self.FIRST_GUESS
+        return self.strip.guess()
 
     def _height(self, key, guess):
-        got = self._h.get(key)
-        if got is None:
-            return guess
-        w, h = got
-        if w == self._width or not w:
-            return h
-        return max(20, int(h * w / max(1, self._width)))  # wider — shorter, about
+        return self.strip.height(key, guess)
 
     def _measure(self, row, width):
         row.ensurePolished()  # the theme's fonts and margins first: they are the height
@@ -175,31 +179,21 @@ class FeedView(QScrollArea):
             self._width = w
             for key, row in self.rows.items():  # the ones there: measured at once
                 self._h[key] = (w, self._measure(row, w))
-        y = self.MARGIN
-        if self.header.count():
-            hh = self._head.sizeHint().height()
-            self._head.setGeometry(x, y, w, hh)
+        hh = self._head.sizeHint().height() if self.header.count() else 0
+        fh = self._foot.sizeHint().height() if self.footer.count() else 0
+        self._total = self.strip.lay_out(w, hh, fh)
+        ys = self._ys
+        if hh:
+            self._head.setGeometry(x, self.strip.head[0], w, hh)
             self._head.show()
-            y += hh + (self.GAP if hh else 0)
         else:
             self._head.hide()
-        guess = self._guess()
-        ys = {}
-        for spec in self.model:
-            key = spec.key
-            ys[key] = y
-            if key in self._hidden:
-                continue
-            y += self._height(key, guess) + self.GAP
-        self._ys = ys
-        if self.footer.count():
-            fh = self._foot.sizeHint().height()
-            self._foot.setGeometry(x, y, w, fh)
+        if fh:
+            self._foot.setGeometry(x, self.strip.foot_top, w, fh)
             self._foot.show()
-            y += fh
         else:
             self._foot.hide()
-        self._total = y + self.MARGIN
+        guess = self._guess()
         self.body.setFixedSize(self.viewport().width(), self._total)
         for key, row in self.rows.items():
             row.setGeometry(x, ys[key], w, self._height(key, guess))
@@ -244,35 +238,13 @@ class FeedView(QScrollArea):
         """The keys whose places are near the screen (all of them, not windowed)."""
         if not self.windowed:
             return [s.key for s in self.model if s.key not in self._hidden]
-        held = {k for k in self._held | {self.cursor_key, self.found_key}
-                if k in self._index and k not in self._hidden}
         sb = self.verticalScrollBar()
-        vh = max(1, self.viewport().height())
-        lo = sb.value() - self.AHEAD * vh
-        hi = sb.value() + vh + self.AHEAD * vh
-        guess = self._guess()
-        keys, start = [], self._first_place(lo, guess)
-        for spec in self.model[start:]:
-            key = spec.key
-            if self._ys.get(key, 0) > hi:
-                break
-            if key not in self._hidden:
-                keys.append(key)
-        if held - set(keys):
-            keys = [s.key for s in self.model if s.key in held or s.key in set(keys)]
-        return keys
+        return self.strip.wanted(sb.value(), self.viewport().height(), self.AHEAD,
+                                 self._held | {self.cursor_key, self.found_key})
 
     def _first_place(self, y, guess):
         """The index in the model of the first place whose bottom is below y."""
-        lo, hi = 0, len(self.model)
-        while lo < hi:
-            mid = (lo + hi) // 2
-            key = self.model[mid].key
-            if self._ys.get(key, 0) + self._height(key, guess) <= y:
-                lo = mid + 1
-            else:
-                hi = mid
-        return lo
+        return self.strip.first_place(y, guess)
 
     _paused = False  # the cards let go for a restyle: none built till they're brought back
 
@@ -312,21 +284,13 @@ class FeedView(QScrollArea):
     def _on_screen(self, want):
         """Of the keys wanted, those whose places the screen shows now, and the held."""
         sb = self.verticalScrollBar()
-        top, bottom = sb.value(), sb.value() + max(1, self.viewport().height())
-        guess = self._guess()
-        held = self._held | {self.cursor_key, self.found_key}
-        return [k for k in want if k in held or (
-            self._ys.get(k, 0) < bottom and self._ys.get(k, 0) + self._height(k, guess) > top)]
+        return self.strip.on_screen(want, sb.value(), self.viewport().height(),
+                                    self._held | {self.cursor_key, self.found_key})
 
     def _by_nearness(self, keys):
         """Nearest the screen first — below it first at the same distance (reading on)."""
         sb = self.verticalScrollBar()
-        top, bottom = sb.value(), sb.value() + max(1, self.viewport().height())
-
-        def far(k):
-            y = self._ys.get(k, 0)
-            return (top - y) * 1.2 if y < top else y - bottom
-        return sorted(keys, key=far)
+        return self.strip.by_nearness(keys, sb.value(), self.viewport().height())
 
     def _build_more(self):
         """A few of the cards beyond the screen, SLICE_MS at most, then the window's
@@ -366,10 +330,7 @@ class FeedView(QScrollArea):
                 row._build()
         row.setParent(self.body)
         h = self._measure(row, w)
-        new = False
-        if self._h.get(key) != (w, h):
-            new = self._height(key, guess) != h
-            self._h[key] = (w, h)
+        new = self.strip.measured(key, w, h, guess)
         row.setGeometry(x, self._ys.get(key, 0), w, h)
         row.installEventFilter(self._watch)
         row.show()
@@ -401,12 +362,7 @@ class FeedView(QScrollArea):
         places, built or not: the one there now is what the reader sees."""
         if not self.model:
             return None
-        v = self.verticalScrollBar().value()
-        guess = self._guess()
-        for spec in self.model[self._first_place(v, guess):]:
-            if spec.key not in self._hidden and spec.key in self._ys:
-                return spec.key, self._ys[spec.key] - v
-        return None
+        return self.strip.anchor(self.verticalScrollBar().value())
 
     def _reading_anchor(self):
         """The card that holds the reading place: the anchor being held, while one is,
@@ -628,11 +584,11 @@ class FeedView(QScrollArea):
         anchor = self._reading_anchor() if keep_position else None
         self.model = list(specs)
         self._index = {s.key: i for i, s in enumerate(self.model)}
+        self.strip.set_keys(s.key for s in self.model)
         for key in [k for k in self.rows if k not in self._index]:
             self._let_go(key)
         for key in [k for k in self._kept if k not in self._index]:
             del self._kept[key]
-        self._hidden &= set(self._index)
         for key, row in self.rows.items():
             spec = self.model[self._index[key]]
             if row.spec is not spec:

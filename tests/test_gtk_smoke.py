@@ -1918,30 +1918,42 @@ class GtkBigLaneTest(unittest.TestCase):
         return False
 
     def test_only_a_window_is_built_and_the_loop_keeps_going(self):
-        from fedtail.frontends.gtk import lane as lane_mod
+        """Only the cards within a screen of the screen exist, each at its place on
+        the strip (common/strip.py), as in the Qt window."""
         lv = self.lane()
-        self.assertLessEqual(len(lv.rows), lane_mod.WINDOW)
+        self.loop(lambda: not lv._pending(), 5)
+        page = lv.adj.get_page_size()
+        self.assertLess(len(lv.rows), 60)  # of 2000
         self.assertEqual(lv.order[-1], self.big[-1][0])  # opened at the newest end
+        top = lv._top()
+        for k in lv.order:  # every card that exists is near the screen
+            y = lv.strip.ys[k]
+            self.assertLess(abs(y - top), page * 3 + lv.strip.height(k), k)
+        self.assertGreater(lv.list.total, page * 50)  # the body: every place
         self.assertLess(self.worst, self.STEP_MAX, "the main loop stopped for too long")
 
     def test_scrolling_up_grows_without_a_jump(self):
+        """Scrolled up past what's built: the cards there come, the far ones go, and
+        the post on top of the screen stays where it is while the places above it
+        settle (their heights measured)."""
         lv = self.lane()
-        before = len(lv.rows)
-        grow, lv._grow = lv._grow, lambda: None
-        lv.adj.set_value(0)  # at the top of what's built…
+        self.loop(lambda: not lv._pending(), 5)
+        far = set(lv.order)
+        lv.adj.set_value(max(0, lv.adj.get_value() - lv.adj.get_page_size() * 6))
+        self.assertTrue(self.loop(lambda: not lv._pending() and lv.order
+                                  and not set(lv.order) & far, 5))
         pump(timeout=0.3)
         top = lv._first_visible()
-        offset = lv._y(lv.rows[top]) - lv.adj.get_value()
-        lv._grow = grow
-        lv._grow()  # …older ones join above
-        self.assertTrue(self.loop(lambda: len(lv.rows) > before, 5))
-        self.loop(lambda: not lv._pending() and lv._held_upper is None, 5)
-        pump(timeout=0.2)
-        # the post at the top is still where it was on screen: the view moved with it
-        self.assertAlmostEqual(lv._y(lv.rows[top]) - lv.adj.get_value(), offset, delta=2)
+        offset = lv.strip.ys[top] - lv._top()
+        lv.adj.set_value(lv.adj.get_value() - lv.adj.get_page_size() * 0.5)  # a bit more
+        self.loop(lambda: not lv._pending(), 5)
+        lv.adj.set_value(lv.adj.get_value() + lv.adj.get_page_size() * 0.5)  # and back
+        self.loop(lambda: not lv._pending(), 5)
+        pump(timeout=0.3)
+        # the post at the top is where it was on screen: what was measured above held it
+        self.assertAlmostEqual(lv.strip.ys[top] - lv._top(), offset, delta=2)
         self.assertGreater(lv.adj.get_value(), 0)
         self.assertLess(self.worst, self.STEP_MAX)
-
 
 def _walk(widget):
     """widget and everything inside it."""

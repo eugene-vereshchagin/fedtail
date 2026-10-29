@@ -404,7 +404,7 @@ def run(layout, theme, posts, profile, maximized=False):
 
 def on_screen(lv):
     """How many cards are in the lane's window right now (0: an empty stretch)."""
-    top = lv.adj.get_value()
+    top = lv._top() if hasattr(lv, "_top") else lv.adj.get_value()  # in the body
     bottom = top + lv.adj.get_page_size()
     n = 0
     for card in list(lv.rows.values()):

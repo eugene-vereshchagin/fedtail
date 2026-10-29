@@ -1,14 +1,18 @@
-"""A lane on screen: its header, the posts as cards in a scrolled list, "Older".
+"""A lane on screen: its header, the posts as cards, "Older".
 
-A lane may hold thousands of posts; a GTK card costs a few milliseconds to build and
-lay out, so only a window of them is on screen (as qt/feed.py does): WINDOW cards
-around where reading starts, built in small batches between frames so the window never
-stops answering, more joining as the view nears an end, the far end trimmed past
-MAX_ROWS.
+A lane may hold thousands of posts; a GTK card costs milliseconds to build and lay out.
+So, as in the Qt window (qt/feedview.py), every post has a place — a top and a height —
+on one strip (common/strip.py, the same code for both toolkits), the body is as tall as
+all of them, and only the cards within a screen above and below the screen exist,
+placed by hand (Body). The ones on screen are built at once, the others a few at a time
+between frames, nearest first; the ones gone far are let go. Before (a run of up to 120
+rows in a ListBox, grown at its ends) GTK laid out every row at each scroll step and the
+reader waited at the edge of what was built: 420 turns over 100 ms in the bench against
+Qt's 4 (29.10).
 
-Nothing jumps (docs/en/dev/design.md): rows are kept by key and never rebuilt while on screen;
-when rows go in or out above what is being read, the view moves by exactly the height
-they added or took away. Posts seen while the window is active are marked read.
+Nothing jumps (docs/en/dev/design.md): when places above the screen change (a card built
+and measured, posts come in), the card on top of the screen is held where it was. Posts
+seen while the window is active are marked read.
 
 What the lane shows — the cards, the filters, conversations, the media funnel, the
 divider, where reading starts, what counts as read — is common/lane.py's, the same as
@@ -26,31 +30,51 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.cardtext import thread_news_bit
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
+from ..common.strip import Strip
 from .card import Card, Separator, link_markup
 from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
 SEEN_DELAY_MS = 400
-WINDOW = 30         # cards built when a lane opens: a few above where reading starts
-BACK = 8            # …of them above it
-STEP = 20           # cards added when the view nears an end
-MAX_ROWS = 120      # more than this on screen: the far end goes (every row is laid out
-                    # again at each scroll step: a long list costs on every frame)
-BATCH_MS = 25       # building cards for at most this long at a time, then a frame
-FRAME_MS = 40       # what laying a batch out may take: the number per batch follows it
-PER_BATCH = (2, 4, 12)  # cards a batch: at least, to start with, at most
-HOLD_MS = 250       # the view held still this long after rows changed above it
+AHEAD = 1.0         # cards exist this many screens above and below the screen
+SLICE_MS = 12       # the cards beyond the screen are built this long at a time
+GAP = 8             # between cards
+FIRST_GUESS = 160   # a card's height before any was measured here
+HOLD_S = 1.5        # the reading place held this long after the places last changed
 
 
-def window_around(n, anchor, size=WINDOW, back=BACK):
-    """[lo, hi) of n keys to show first: `back` above anchor and the rest below it,
-    shifted to fit."""
-    if n <= size:
-        return 0, n
-    lo = max(0, anchor - back)
-    hi = min(n, lo + size)
-    return max(0, hi - size), hi
+class Body(Gtk.Widget):
+    """The cards, each at its place on the strip: as tall as every place together, the
+    cards that exist allocated where the strip says (their widths the body's). A card
+    that wants another height (its pictures came, a warning opened) is measured again
+    here, and the lane lays the places out anew."""
+
+    def __init__(self, lane):
+        super().__init__()
+        self.lane = lane
+        self.total = 0
+        self.min_width = 0
+
+    def do_measure(self, orientation, _for_size):
+        if orientation == Gtk.Orientation.VERTICAL:
+            return self.total, self.total, -1, -1
+        return self.min_width, self.min_width, -1, -1
+
+    def do_size_allocate(self, width, height, _baseline):
+        from gi.repository import Graphene, Gsk
+        lane = self.lane
+        if width != lane.strip.width:
+            GLib.idle_add(lane._width_changed, priority=GLib.PRIORITY_HIGH_IDLE)
+        changed = False
+        for key, box in lane.boxes.items():
+            h = box.measure(Gtk.Orientation.VERTICAL, width)[1]
+            if lane.strip.measured(key, width, h):
+                changed = True
+            y = lane.strip.ys.get(key, 0)
+            box.allocate(width, h, -1, Gsk.Transform().translate(Graphene.Point().init(0, y)))
+        if changed:  # the places below move: laid out anew, the reading place held
+            GLib.idle_add(lane._relayout, priority=GLib.PRIORITY_HIGH_IDLE)
 
 
 class LaneView(Gtk.Box):
@@ -65,23 +89,23 @@ class LaneView(Gtk.Box):
         self.index = {}          # key -> its place in self.keys
         self.specs = {}          # key -> CardSpec (common/lane.py)
         self.unread = set()      # keys of the unread cards
-        self.rows = {}           # key -> Card on screen
-        self.order = []          # keys on screen, top to bottom: a run of self.keys
+        self.rows = {}           # key -> Card that exists now
+        self.boxes = {}          # key -> what stands at its place (the card, or the
+                                 # "new below" line and the card)
+        self.order = []          # keys of the cards that exist, top to bottom
         self.sep_above = None    # the key the "new below" line sits above
         self._glimpsed = set()   # unread cards seen in part (common/lane.py seen())
         self.positioned = False
         self.dirty = True        # the lane changed while not on screen
         self.stopped = False     # the window closed: no more work queued
-        self._queue = []         # (side, [keys]) waiting to be built: side "end" | "start"
-        self._building = 0
-        self._tick = 0           # a batch waiting for the next frame
+        self.strip = Strip(GAP, 0, FIRST_GUESS)  # the places (common/strip.py)
+        self._waiting = []       # keys near the screen not built yet, nearest first
+        self._more = 0           # the idle source building them
         self._seen_timer = 0
-        # while rows go in or out above what's being read: the height of the content
-        # last seen, and until when to hold the view still (see _hold)
-        self._held_upper = None
-        self._hold_timer = 0
-        self._anchor = None      # (key, its offset from the top of the view) while held
-        self._ticking = 0
+        self._held = set()       # keys built wherever the screen is (gone to: bring)
+        # where reading is held while the places settle: (key, its offset from the
+        # screen's top, until when) — or ("end", newest_end, until)
+        self._target = None
 
         words = Gtk.Box(spacing=8)  # the title, "N new", what's shown; the buttons beside
         self.title = Gtk.Label(label=ctx.theme.word("lane_title", title), xalign=0)
@@ -173,9 +197,9 @@ class LaneView(Gtk.Box):
         self.older.connect("clicked", lambda _b: self.load_older())
         self.older.set_visible(False)  # only once the oldest stored post is on screen
 
-        self.list = Gtk.ListBox()
-        self.list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.list = Body(self)  # the cards at their places (the strip's)
         self.list.add_css_class("ft-feed")
+        self.list.set_overflow(Gtk.Overflow.HIDDEN)
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         column.set_margin_start(8)
         column.set_margin_end(8)
@@ -212,7 +236,7 @@ class LaneView(Gtk.Box):
         self.adj.connect("value-changed", lambda _a: self._scrolled())
         # reading.older_ahead: the "older" end in sight — the core fetches a page itself
         self.adj.connect("value-changed", lambda _a: self._older_in_sight())
-        self.adj.connect("changed", lambda _a: self._adjusted())
+        self.adj.connect("changed", lambda _a: self._apply_target())
         self.append(self.scroll)
 
     # ---- the lane's contents ---------------------------------------------------------
@@ -232,6 +256,8 @@ class LaneView(Gtk.Box):
         # for their own): said in the lane, big, as Qt does
         self.empty_note.set_visible(bool(getattr(built, "empty", False)))
         specs = built.specs
+        old_sep = self.sep_above[0] if self.sep_above else None
+        anchor = self._reading_anchor() if self.positioned and self.order else None
         self.sep_above = None
         keys, sep = [], False
         for sp in specs:
@@ -245,14 +271,16 @@ class LaneView(Gtk.Box):
         self.keys, self.specs = keys, {sp.key: sp for sp in specs if sp.key != SEPARATOR}
         self.unread = {k for k in keys if self.specs[k].unread}
         self.index = index = {k: i for i, k in enumerate(keys)}
+        del old_keys
         for k in [k for k in self.order if k not in index]:
             self._remove(k)
-        self._queue = [(side, [k for k in ks if k in index and k not in self.rows])
-                       for side, ks in self._queue]
-        if not self.order and not self._pending():
-            self._open(specs)
-        else:
-            self._take_new(old_keys, index)
+        new_sep = self.sep_above[0] if self.sep_above else None
+        if new_sep != old_sep:  # the "new below" line moved: its cards made again
+            for k in (old_sep, new_sep):
+                if k in self.rows:
+                    self._remove(k)
+        self.strip.set_keys(keys)
+        self._waiting = [k for k in self._waiting if k in index and k not in self.rows]
         for k in self.order:  # "you replied" under what's on screen: a reply just sent
             card = self.rows[k]
             if isinstance(card, EventRow) and card.ids != EventRow.ids_of(self.specs[k]):
@@ -260,8 +288,13 @@ class LaneView(Gtk.Box):
             card.set_unread(k in self.unread)
             self.rows[k].set_my_replies(self.specs[k].extra.get("my_replies", ()))
         self._pill(len(self.unread))
+        self._lay_out()
+        if not self.positioned:
+            self._open(specs)
+        elif anchor is not None:
+            self._hold_at(anchor)
+        self._realize()
         self._older_visible()
-        self._build_soon()
 
     def apply_read(self, ids):
         """Posts marked read (here as they were seen, or anywhere else): their marks
@@ -300,8 +333,9 @@ class LaneView(Gtk.Box):
         """Another filter or view: the lane anew, placed anew."""
         for k in list(self.order):
             self._remove(k)
-        self._queue = []
+        self._waiting = []
         self.keys, self.index = [], {}
+        self.strip.set_keys([])
         self.positioned = False
         self._glimpsed = set()
         self.refresh()
@@ -381,300 +415,242 @@ class LaneView(Gtk.Box):
         return button
 
     def _open(self, specs):
-        """The first window: around where reading starts (common/lane.py start())."""
+        """Where reading starts (common/lane.py start()): the screen goes there — the
+        first unread at the top (or its bottom, newest first), else the newest end."""
+        self.positioned = True
         if not self.keys:
-            self.positioned = True
             return
-        key, _where = self.lm.start(specs)
+        key, where = self.lm.start(specs)
         if key == SEPARATOR:
             key = self.sep_above[0] if self.sep_above else None
+        if key is None and self.unread:  # the first unread
+            key = next((k for k in self.keys if k in self.unread), None)
+            where = "bottom" if self.newest_first else "top"
         if key in self.index:
-            target = self.index[key]
+            self._go(key, where)
         else:
-            target = 0 if self.newest_first else len(self.keys) - 1
-        lo, hi = window_around(len(self.keys), target)
-        # from the target down first, then what's above it: reading starts at once
-        self._queue = [("end", self.keys[target:hi]), ("start", self.keys[lo:target][::-1])]
-
-    def _take_new(self, old_keys, index):
-        """New keys inside the run on screen go in at their place; past its ends they
-        join only when that end was the lane's end (the reader is there), a STEP at most:
-        the rest comes as the view nears it."""
-        if not self.order:
-            return
-        lo, hi = index[self.order[0]], index[self.order[-1]] + 1
-        inside = [k for k in self.keys[lo:hi] if k not in self.rows]
-        if inside:
-            self._queue.append(("inside", inside))
-        old_last = old_keys[-1] if old_keys else None
-        if old_last in self.rows and hi < len(self.keys):
-            self._queue.append(("end", self.keys[hi:hi + STEP]))
-        old_first = old_keys[0] if old_keys else None
-        if old_first in self.rows and lo > 0 and self.newest_first:
-            self._queue.append(("start", self.keys[max(0, lo - STEP):lo][::-1]))
+            self._go_end(self.newest_first)
+        self._schedule_seen()
 
     def _pending(self):
-        return any(ks for _side, ks in self._queue)
+        """Cards near the screen still to be built."""
+        return bool(self._waiting)
 
-    # ---- building in batches ---------------------------------------------------------
-    def _build_soon(self):
-        if self._building or self._tick or not self._pending():
-            return
-        self._next_batch()
+    # ---- the places --------------------------------------------------------------------
+    def _width_now(self):
+        w = self.list.get_width()
+        if w <= 0:
+            w = self.scroll.get_width() - 16
+        return max(50, w)
 
-    def _next_batch(self):
-        """A batch a frame: on screen, at the next frame (so each batch is laid out
-        before the next is made — idle callbacks ran several between two frames, and
-        one frame then laid out them all); out of sight, when the loop is idle."""
-        if self.get_mapped():
-            self._tick = self.add_tick_callback(self._on_tick)
+    def _lay_out(self):
+        """Every place again (common/strip.py), the body as tall as them all."""
+        total = self.strip.lay_out(self._width_now())
+        if total != self.list.total:
+            self.list.total = total
+            self.list.queue_resize()
         else:
-            self._building = GLib.idle_add(self._build_batch, priority=GLib.PRIORITY_LOW)
+            self.list.queue_allocate()
 
-    def _on_tick(self, *_a):
-        self._tick = 0
-        self._build_batch()
+    def _relayout(self):
+        """Cards measured another height than their places: the places anew, the
+        reading place held."""
+        if self.stopped:
+            return GLib.SOURCE_REMOVE
+        anchor = self._reading_anchor()
+        self._lay_out()
+        if anchor is not None:
+            self._hold_at(anchor)
+        self._realize()
         return GLib.SOURCE_REMOVE
 
-    def _build_batch(self):
-        """Build cards for BATCH_MS, all on one side (so the view can be held still),
-        then give the window a frame."""
-        self._building = 0
-        if self.stopped or self.get_root() is None:  # the window is gone: nothing more
-            self._queue = []
+    def _width_changed(self):
+        """Another width (the window, ↔): the places for it, the reading place held."""
+        if self.stopped or self.list.get_width() == self.strip.width:
             return GLib.SOURCE_REMOVE
-        while self._queue and not self._queue[0][1]:
-            self._queue.pop(0)
-        if not self._queue:
-            self._done_building()
-            return GLib.SOURCE_REMOVE
-        side, keys = self._queue[0]
-        start = time.monotonic()
-        first = self._first_visible() if self.positioned else None
-        if side == "start":
-            above = self.positioned
-        elif side == "inside" and first is not None:
-            # this batch: only keys on the same side of the view as the first one
-            above = self.index[keys[0]] < self.index[first]
+        return self._relayout()
+
+    def _offset(self):
+        """The body's top in the scrolled column ("Older" or the empty note above it)."""
+        y = y_in(self.list, self.clamp)  # (not the viewport: it moves with the scroll)
+        return y or 0
+
+    def _top(self):
+        """The screen's top in the body's coordinates."""
+        return self.adj.get_value() - self._offset()
+
+    def _reading_anchor(self):
+        t = self._target
+        if t is not None and t[0] != "end" and time.monotonic() < t[2] and \
+                t[0] in self.strip.ys:
+            return t[0], t[1]
+        return self.strip.anchor(max(0, self._top()))
+
+    def _hold_at(self, anchor, seconds=HOLD_S):
+        """The card of anchor (key, offset from the screen's top) kept there while the
+        places settle — the upper bound changes after GTK allocates, so it is put back
+        then too (_apply_target)."""
+        self._target = (anchor[0], anchor[1], time.monotonic() + seconds)
+        self._apply_target()
+
+    def _go(self, key, where="top"):
+        """The screen to key's place: its top a little below the screen's top, or
+        (where="bottom") its bottom at the screen's bottom."""
+        y = self.strip.ys.get(key)
+        if y is None:
+            return
+        if where == "bottom":
+            off = self.adj.get_page_size() - self.strip.height(key) - 40
         else:
-            above = False
-        if not above and self._held_upper is not None:
-            # rows below change the height too: wait till the view is let go
-            self._building = GLib.timeout_add(HOLD_MS, self._build_batch)
+            off = 40
+        self._hold_at((key, off))
+
+    def _go_end(self, newest_first):
+        self._target = ("end", newest_first, time.monotonic() + HOLD_S)
+        self._apply_target()
+
+    def _apply_target(self):
+        t = self._target
+        if t is None:
+            return
+        if time.monotonic() > t[2]:
+            self._target = None
+            return
+        page, upper = self.adj.get_page_size(), self.adj.get_upper()
+        top = self._target_top()
+        if top is None:
+            self._target = None
+            return
+        value = max(0, min(top + self._offset(), upper - page))
+        self._applied = upper
+        if abs(self.adj.get_value() - value) > 0.5:
+            self._setting = True
+            try:
+                self.adj.set_value(value)
+            finally:
+                self._setting = False
+
+    def _target_top(self):
+        """Where the screen's top is going, in the body (the target's), or None."""
+        t = self._target
+        if t is None:
+            return None
+        if t[0] == "end":
+            return 0 if t[1] else max(0, self.strip.total - self.adj.get_page_size())
+        return self.strip.top_for((t[0], t[1]))
+
+    # ---- which cards exist -------------------------------------------------------------
+    def _realize(self):
+        """The cards near the screen built (those on it at once, the rest a few at a
+        time), the ones gone far let go."""
+        if self.stopped or not self.keys:
+            return
+        page = self.adj.get_page_size() or 600
+        going = self._target_top() if self._target is not None and \
+            time.monotonic() < self._target[2] else None
+        # on its way somewhere (GTK places the screen after it allocates): the cards
+        # there, not where the screen stands this moment
+        top = max(0, going if going is not None else self._top())
+        want = self.strip.wanted(top, page, AHEAD, self._held)
+        wanted = set(want)
+        gone = [k for k in self.order if k not in wanted]
+        for k in gone:
+            self._remove(k)
+        if gone:  # their memory back to the system once the scrolling settles
+            diag.trim_soon("cards scrolled past")
+        now = self.strip.on_screen(want, top, page, self._held)
+        made = [k for k in now if k not in self.rows]
+        if made:
+            with diag.busy(f"gtk lane {self.name}: build"):
+                for k in made:
+                    self._make(k)
+        self._waiting = self.strip.by_nearness([k for k in want if k not in self.rows],
+                                               top, page)
+        if self._waiting and not self._more:
+            self._more = GLib.idle_add(self._build_more, priority=GLib.PRIORITY_LOW)
+        if made:
+            self.list.queue_allocate()
+        if not self._waiting:
+            self._done_building()
+
+    def _build_more(self):
+        """A few of the cards beyond the screen, SLICE_MS at most, then a frame."""
+        self._more = 0
+        if self.stopped or self.get_root() is None:
+            self._waiting = []
             return GLib.SOURCE_REMOVE
-        if above:
-            self._hold()
-        self._fit_batch(start)
-        made = 0
-        # the reader waiting at the edge of what's built (nothing on screen moves): a
-        # bigger batch — a long frame then costs less than more frames of waiting
-        at_edge = self.positioned and side == "end" and \
-            self.adj.get_value() + self.adj.get_page_size() >= self.adj.get_upper() - 2
-        limit, budget = (self._per_batch * 2, BATCH_MS * 2) if at_edge else \
-            (self._per_batch, BATCH_MS)
+        until = time.monotonic() + SLICE_MS / 1000
         with diag.busy(f"gtk lane {self.name}: build"):
-            while keys and (time.monotonic() - start) * 1000 < budget and \
-                    made < limit:
-                take = []
-                while keys and len(take) < min(4, limit - made):
-                    if side == "inside" and first is not None and \
-                            (self.index[keys[0]] < self.index[first]) != above:
-                        break
-                    take.append(keys.pop(0))
-                if not take:  # the rest is on the view's other side: a batch of its own
-                    break
-                self._make(take)
-                made += len(take)
-        self._batch_end = time.monotonic()
-        self._build_soon_after()
-        return GLib.SOURCE_REMOVE
-
-    def _fit_batch(self, now):
-        """Building a card is the cheap part: laying it out (its text shaped, wrapped,
-        measured) costs ten times more, and all of a batch is laid out in the next frame.
-        So the number of cards a batch follows how long the last batch's frame took:
-        fewer when it held the window, more when there was room."""
-        if not hasattr(self, "_per_batch"):
-            self._per_batch, self._batch_end = PER_BATCH[1], None
-        if self._batch_end is None:
-            return
-        took = (now - self._batch_end) * 1000
-        lo, _start, hi = PER_BATCH
-        if took > FRAME_MS * 3:
-            self._per_batch = max(lo, self._per_batch // 2)
-        elif took < FRAME_MS:
-            self._per_batch = min(hi, self._per_batch + 2)
-
-    def _build_soon_after(self):
-        if self._pending():
-            self._next_batch()
+            while self._waiting and time.monotonic() < until:
+                k = self._waiting.pop(0)
+                if k in self.index and k not in self.rows:
+                    self._make(k)
+        self.list.queue_allocate()
+        if self._waiting:
+            self._more = GLib.idle_add(self._build_more, priority=GLib.PRIORITY_LOW)
         else:
             self._done_building()
+        return GLib.SOURCE_REMOVE
 
     def _done_building(self):
-        if getattr(self, "_wanted", None) is not None:
-            GLib.idle_add(self._bring_wanted, priority=GLib.PRIORITY_LOW)
-        elif self.positioned:
-            # still near an end (the reader held there, waiting): more at once — no
-            # scroll event comes while the view stands at the edge
-            GLib.idle_add(self._grow_idle, priority=GLib.PRIORITY_LOW)
         self._older_visible()
         self._schedule_seen()  # new cards may be on screen already
-        if not self.positioned and self.get_mapped():
-            GLib.idle_add(self._position, priority=GLib.PRIORITY_LOW)
-        self._trim()
 
-    def _make(self, keys):
-        for k in keys:
-            sp = self.specs[k]
-            if sp.extra.get("event"):  # a like, a follow, a request… in any lane
-                card = EventRow(self.ctx, sp)
-            else:
-                card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
-                            short_id=sp.extra.get("short_id"),
-                            my_replies=sp.extra.get("my_replies", ()),
-                            via=sp.extra.get("via"), open_at=sp.open_at)
-                line = conversation_line(sp)
-                if line:
-                    card.add_conversation(*line)
-                news = thread_news_bit(sp)
-                if news is not None:
-                    card.add_thread_news(news)
-                if sp.extra.get("deleted"):  # gone from its server, kept here
-                    from ..common.cardtext import Bit
-                    card.add_thread_news(Bit("🗑 " + _("deleted_mark"), "",
-                                             _("deleted_mark_tip")))
-            row = Gtk.ListBoxRow(activatable=False, selectable=False)
-            if self.sep_above and k == self.sep_above[0]:
-                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-                box.append(Separator(self.sep_above[1]))
-                box.append(card)
-                row.set_child(box)
-            else:
-                row.set_child(card)
-            pos = self._position_for(k)
-            self.list.insert(row, pos)
-            self.order.insert(pos, k)
-            self.rows[k] = card
-
-    def _position_for(self, key):
-        """Where key goes among the rows on screen (they follow self.keys): a bisect."""
-        i = self.index[key]
+    def _make(self, k):
+        sp = self.specs[k]
+        if sp.extra.get("event"):  # a like, a follow, a request… in any lane
+            card = EventRow(self.ctx, sp)
+        else:
+            card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
+                        short_id=sp.extra.get("short_id"),
+                        my_replies=sp.extra.get("my_replies", ()),
+                        via=sp.extra.get("via"), open_at=sp.open_at)
+            line = conversation_line(sp)
+            if line:
+                card.add_conversation(*line)
+            news = thread_news_bit(sp)
+            if news is not None:
+                card.add_thread_news(news)
+            if sp.extra.get("deleted"):  # gone from its server, kept here
+                from ..common.cardtext import Bit
+                card.add_thread_news(Bit("🗑 " + _("deleted_mark"), "",
+                                         _("deleted_mark_tip")))
+        if self.sep_above and k == self.sep_above[0]:
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            box.append(Separator(self.sep_above[1]))
+            box.append(card)
+        else:
+            box = card
+        box.set_parent(self.list)
+        mw = box.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+        if mw > self.list.min_width:
+            self.list.min_width = mw
+            self.list.queue_resize()
+        self.rows[k] = card
+        self.boxes[k] = box
+        i = self.index[k]
         lo, hi = 0, len(self.order)
-        while lo < hi:
+        while lo < hi:  # the order of the lane: a bisection
             mid = (lo + hi) // 2
             if self.index.get(self.order[mid], -1) < i:
                 lo = mid + 1
             else:
                 hi = mid
-        return lo
+        self.order.insert(lo, k)
 
     def _first_visible(self):
-        """The first row reaching below the view's top: a bisection (the rows are in
-        order down the list) — looking at every row on every scroll step was a good part
-        of what scrolling a long lane cost; one not laid out yet: row by row."""
-        top = self.adj.get_value()
-        order, lo, hi = self.order, 0, len(self.order)
-        while lo < hi:
-            mid = (lo + hi) // 2
-            card = self.rows[order[mid]]
-            y = self._y(card)
-            if y is None:
-                break
-            if y + card.get_height() > top:
-                hi = mid
-            else:
-                lo = mid + 1
-        else:
-            return order[lo] if lo < len(order) else None
-        for k in order:
-            card = self.rows[k]
-            y = self._y(card)
-            if y is not None and y + card.get_height() > top:
-                return k
-        return None
+        """The first card reaching below the screen's top (by the places)."""
+        a = self.strip.anchor(max(0, self._top()))
+        return a[0] if a is not None and a[0] in self.rows else None
 
     def _remove(self, key):
-        card = self.rows.pop(key, None)
+        self.rows.pop(key, None)
+        box = self.boxes.pop(key, None)
         if key in self.order:
             self.order.remove(key)
-        if card is None:
-            return
-        row = card.get_parent()
-        while row is not None and not isinstance(row, Gtk.ListBoxRow):
-            row = row.get_parent()
-        if row is not None:
-            self.list.remove(row)
-            forget(row)
-
-    def _trim(self):
-        """More rows than MAX_ROWS: the end farther from the view goes."""
-        extra = len(self.order) - MAX_ROWS
-        if extra <= 0 or not self.positioned:
-            return
-        top = self.adj.get_value()
-        bottom_gap = self.adj.get_upper() - (top + self.adj.get_page_size())
-        if top > bottom_gap:  # reading near the bottom: the top goes, the view held still
-            self._hold()
-            for k in self.order[:extra]:
-                self._remove(k)
-        else:
-            for k in self.order[-extra:]:
-                self._remove(k)
-        self._older_visible()
-
-    def _hold(self):
-        """Rows go in or out above what's being read: from now until HOLD_MS after the
-        last such change the view stays still. Two ways at once: every change of the
-        content's height moves the view by as much, in the same frame (_adjusted); and
-        on each frame the post that was at the top is put back where it was on screen,
-        which mends what the first misses (cards elsewhere wrapping their text anew)."""
-        if self._held_upper is None:
-            self._held_upper = self.adj.get_upper()
-            key = self._first_visible()
-            y = self._y(self.rows[key]) if key is not None else None
-            self._anchor = (key, y - self.adj.get_value()) if y is not None else None
-            self._ticking = self.list.add_tick_callback(self._keep_anchor)
-        if self._hold_timer:
-            GLib.source_remove(self._hold_timer)
-        self._hold_timer = GLib.timeout_add(HOLD_MS, self._let_go)
-
-    def _keep_anchor(self, _widget, _clock):
-        if self._anchor is None:
-            return GLib.SOURCE_CONTINUE
-        key, offset = self._anchor
-        card = self.rows.get(key)
-        y = self._y(card) if card is not None else None
-        if y is None:
-            return GLib.SOURCE_CONTINUE
-        want = max(0, y - offset)
-        if abs(want - self.adj.get_value()) > 0.5:
-            self.adj.set_value(want)
-        return GLib.SOURCE_CONTINUE
-
-    def _let_go(self):
-        self._hold_timer = 0
-        if not self.stopped and self.get_mapped() and \
-                any(c.get_height() <= 0 for c in self.rows.values()):
-            # cards made but not laid out yet (a slow frame): their height is still to
-            # come, so the view is held on until it has
-            self._hold_timer = GLib.timeout_add(HOLD_MS // 2, self._let_go)
-            return GLib.SOURCE_REMOVE
-        self._keep_anchor(None, None)
-        if self._ticking:
-            self.list.remove_tick_callback(self._ticking)
-            self._ticking = 0
-        self._held_upper = None
-        self._anchor = None
-        return GLib.SOURCE_REMOVE
-
-    def _adjusted(self):
-        if self._held_upper is None:
-            return
-        upper = self.adj.get_upper()
-        moved, self._held_upper = upper - self._held_upper, upper
-        if moved:
-            self.adj.set_value(max(0, self.adj.get_value() + moved))
+        if box is not None:
+            box.unparent()
+            forget(box)
 
     def _older_visible(self):
         """'Earlier' only when the oldest post stored is on screen (or nothing is)."""
@@ -688,36 +664,8 @@ class LaneView(Gtk.Box):
         self.older.set_visible(oldest in self.rows and not self._pending())
 
     def _grow(self):
-        """The view nears an end of what's built: more from the lane there — STEP, and
-        twice as many each time the reader comes back to that end soon after (scrolling
-        fast, a fling: the cards must stay ahead, not be waited for at the edge)."""
-        if self._pending() or not self.order or not self.positioned:
-            return
-        lo, hi = self.index[self.order[0]], self.index[self.order[-1]] + 1
-        value, page, upper = (self.adj.get_value(), self.adj.get_page_size(),
-                              self.adj.get_upper())
-        side = None
-        if value + page * 3 >= upper and hi < len(self.keys):
-            side = "end"
-        elif value <= page * 2 and lo > 0:
-            side = "start"
-        if side is None:
-            return
-        now = time.monotonic()
-        last_side, last_at, step = getattr(self, "_last_grow", (None, 0.0, STEP))
-        step = min(MAX_ROWS // 2, step * 2) if side == last_side and now - last_at < 1.0 \
-            else STEP
-        self._last_grow = (side, now, step)
-        if side == "end":
-            self._queue.append(("end", self.keys[hi:hi + step]))
-        else:
-            self._queue.append(("start", self.keys[max(0, lo - step):lo][::-1]))
-        self._build_soon()
-
-    def _grow_idle(self):
-        if not self.stopped and self.get_root() is not None:
-            self._grow()
-        return GLib.SOURCE_REMOVE
+        """The cards near the screen now (scrolled): what was _grow in the run of rows."""
+        self._realize()
 
     def _pill(self, n):
         self.pill.set_visible(n > 0)
@@ -739,8 +687,8 @@ class LaneView(Gtk.Box):
             GLib.idle_add(lambda: self.mark_all_read() and False)
         if self.dirty:
             self.refresh()
-        elif not self.positioned and not self._pending():
-            GLib.idle_add(self._position, priority=GLib.PRIORITY_LOW)
+        else:
+            GLib.idle_add(self._relayout, priority=GLib.PRIORITY_LOW)  # its width now
 
     def hidden(self):
         """Another lane in front: "unread only" shows anew what's unread next time; out
@@ -759,9 +707,11 @@ class LaneView(Gtk.Box):
     def _drop_cards(self):
         for k in list(self.order):
             self._remove(k)
-        self._queue = []
+        self._waiting = []
         self.keys, self.index = [], {}
+        self.strip.set_keys([])
         self.positioned = False
+        self._target = None
 
     def unload(self):
         """Its cards let go (ui.keep_hidden_lanes / unload_hidden_minutes,
@@ -776,80 +726,51 @@ class LaneView(Gtk.Box):
         return True
 
     def bring(self, key, then=None):
-        """key's card on screen near the top — built around it if it wasn't (find,
-        a link to a post far away); then(card) once it's there."""
-        if key in self.rows:
-            y = self._y(self.rows[key])
-            if y is not None:
-                self.adj.set_value(max(0, y - 40))
-            if then is not None:
-                then(self.rows[key])
-            return
+        """key's card on screen near the top — built there if it wasn't (find, a link
+        to a post far away); then(card) once it's there."""
         if key not in self.index:
             return
-        for k in list(self.order):
-            self._remove(k)
-        target = self.index[key]
-        lo, hi = window_around(len(self.keys), target)
-        self._queue = [("end", self.keys[target:hi]), ("start", self.keys[lo:target][::-1])]
+        self._held = {key}
         self.positioned = True  # placed here, not where reading starts
-        self._wanted = (key, then)
-        self._build_soon()
-
-    def _bring_wanted(self):
-        key, then = self._wanted
-        self._wanted = None
-        if key in self.rows:
-            self.bring(key, then)
-        return GLib.SOURCE_REMOVE
+        self._go(key)
+        self._realize()
+        if then is not None and key in self.rows:
+            then(self.rows[key])
 
     def jump_first_unread(self):
-        """↓ To new: the first unread at the top (built around it, if it wasn't), or —
-        nothing new — the lane's newest end."""
+        """↓ To new: the first unread at the top, or — nothing new — the lane's newest
+        end."""
+        self._held = set()
         target = next((k for k in self.keys if k in self.unread), None)
-        if target is not None and target in self.rows:
-            y = self._y(self.rows[target])
-            if y is not None:
-                self.adj.set_value(max(0, y - 40))
-                return
-        if target is None and self.keys:
-            end = self.keys[0] if self.newest_first else self.keys[-1]
-            if end in self.rows:
-                self.adj.set_value(0 if self.newest_first else
-                                   self.adj.get_upper() - self.adj.get_page_size())
-                return
-        self._reset()  # not built: the lane anew, around where reading starts
+        if target is not None:
+            self._go(target)
+        elif self.keys:
+            self._go_end(self.newest_first)
+        self._realize()
 
     def _position(self):
-        """Opened: where reading starts (common/lane.py start()) — the first unread at
-        the top, or the newest end when all is read."""
-        if self.positioned or self._pending() or self.get_root() is None:
-            return GLib.SOURCE_REMOVE
-        specs = [self.specs[k] for k in self.order]
-        key, where = self.lm.start(specs)
-        if key is None and self.unread:  # the divider's card is not built: the first unread
-            key = next((k for k in self.order if k in self.unread), None)
-            where = "bottom" if self.newest_first else "top"
-        card = self.rows.get(key) if key is not None else None
-        y = self._y(card) if card is not None else None
-        if y is not None and where == "bottom":
-            self.adj.set_value(max(0, y + card.get_height() - self.adj.get_page_size() + 40))
-        elif y is not None:
-            self.adj.set_value(max(0, y - 40))
-        elif self.newest_first:
-            self.adj.set_value(0)
-        else:
-            self.adj.set_value(self.adj.get_upper() - self.adj.get_page_size())
-        self.positioned = True
-        self._schedule_seen()
+        """Placed where reading starts (common/lane.py start()), once."""
+        if not self.positioned and self.get_root() is not None:
+            self._open([self.specs[k] for k in self.keys])
+            self._realize()
         return GLib.SOURCE_REMOVE
 
     def _y(self, widget):
-        return y_in(widget, self.list)
+        """A card's top in the body (its place), or None."""
+        key = getattr(widget, "key", None)
+        if key is None:
+            key = next((k for k, c in self.rows.items() if c is widget), None)
+        return self.strip.ys.get(key) if key in self.rows else None
 
     def _scrolled(self):
+        if self._target is not None and not getattr(self, "_setting", False):
+            if self.adj.get_upper() != getattr(self, "_applied", None):
+                self._apply_target()  # GTK clamped it to a new height: back on target
+            else:  # moved by the reader: it goes where the reader goes
+                self._target = None
+                self._held = set()
         self._schedule_seen()
-        self._grow()
+        self._realize()
 
     def _schedule_seen(self):
         if self._seen_timer or self.lazy:
@@ -864,19 +785,19 @@ class LaneView(Gtk.Box):
         if not self.positioned or root is None or not root.is_active() or \
                 not self.get_mapped():
             return GLib.SOURCE_REMOVE
-        vtop = self.adj.get_value()
+        vtop = self._top()
         vbot = vtop + self.adj.get_page_size()
-        at_end = vtop >= self.adj.get_upper() - self.adj.get_page_size() - 1
+        at_end = self.adj.get_value() >= self.adj.get_upper() - self.adj.get_page_size() - 1
         keys, unplaced, glimpsed = [], False, set()
         for k in self.order:
             card = self.rows[k]
             if not card.unread:
                 continue
-            y = self._y(card)
-            if y is None or card.get_height() <= 0:
-                unplaced = True  # not laid out yet: look again in a moment
+            y, h = self.strip.ys.get(k), self.strip.h.get(k)
+            if y is None or h is None:
+                unplaced = True  # not measured yet: look again in a moment
                 continue
-            got = seen(y, y + card.get_height(), vtop, vbot, at_end, k in self._glimpsed)
+            got = seen(y, y + h[1], vtop, vbot, at_end, k in self._glimpsed)
             if got == "read":
                 keys.append(k)
             elif got == "glimpsed":
@@ -907,15 +828,12 @@ class LaneView(Gtk.Box):
     def stop(self):
         """The window closes: whatever is queued is dropped (the core may close too)."""
         self.stopped = True
-        self._queue = []
-        for attr in ("_building", "_seen_timer", "_hold_timer"):
+        self._waiting = []
+        for attr in ("_more", "_seen_timer"):
             src = getattr(self, attr, 0)
             if src:
                 GLib.source_remove(src)
                 setattr(self, attr, 0)
-        if self._tick:
-            self.remove_tick_callback(self._tick)
-            self._tick = 0
 
     def window_activated(self):
         self._schedule_seen()
