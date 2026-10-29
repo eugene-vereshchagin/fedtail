@@ -140,6 +140,12 @@ class View:
         if isinstance(x, Relationship):
             return _rel_raw(x)
         if isinstance(x, list):
+            posts = [v for v in x if isinstance(v, (Post, Share))]
+            if len(posts) > 1:  # a lane's posts: one query, not one each (a GUI freeze
+                # of 342 ms in get_status, 29.10: parents, my replies, short ids — each)
+                got = self._core.store.get_statuses({v.id for v in posts})
+                return [got.get(v.id) or self._raw(v) if isinstance(v, (Post, Share))
+                        else self._in(v) for v in x]
             return [self._in(v) for v in x]
         if isinstance(x, tuple):
             return tuple(self._in(v) for v in x)

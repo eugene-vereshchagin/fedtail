@@ -533,6 +533,65 @@ def trim_memory():
     return round((before - after) / 1024, 1)
 
 
+_soon = {"at": 0.0, "why": "", "thread": None, "lock": threading.Lock(),
+         "wake": threading.Event()}
+TRIM_AFTER_S = 5.0
+
+
+def trim_soon(why=""):
+    """Memory back to the system a few seconds after the window let a lot of it go —
+    cards scrolled past, a lane unloaded, a tab closed — and not only at the next stats
+    tick: smem right after reading through lanes saw the freed memory still held (29.10:
+    145 → 387 MB; the tick 5 minutes later gave 81 MB back). Waits for things to settle
+    (each call puts it off again; one thread waits for all of them), off the window's
+    thread, without a gc pass (malloc_trim lets go of the GIL; a gc pass wouldn't).
+    Off with debug.trim_memory."""
+    if not _state.get("trim_on", True):
+        return
+    with _soon["lock"]:
+        _soon["at"] = time.monotonic() + TRIM_AFTER_S
+        _soon["why"] = why or "let go"
+        if _soon["thread"] is None:
+            t = threading.Thread(target=_trim_waiter, name="fedtail-trim-soon",
+                                 daemon=True)
+            _soon["thread"] = t
+            t.start()
+    _soon["wake"].set()
+
+
+def _trim_waiter():
+    while True:
+        _soon["wake"].wait()
+        while True:
+            with _soon["lock"]:
+                left = _soon["at"] - time.monotonic()
+                if left <= 0:
+                    _soon["wake"].clear()
+                    why = _soon["why"]
+                    break
+            time.sleep(min(left, TRIM_AFTER_S))
+        try:
+            freed = _malloc_trim()
+        except Exception:  # noqa: BLE001 — a nicety, never a crash
+            log.debug("trim failed", exc_info=True)
+            continue
+        if freed:
+            log.debug("memory: %.1f MB given back (%s)", freed, why)
+
+
+def _malloc_trim():
+    """malloc_trim alone (no gc pass): the MB the resident size went down by, or None."""
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+    except (OSError, AttributeError):
+        return None
+    before = _proc_status().get("VmRSS") or 0
+    libc.malloc_trim(0)
+    after = _proc_status().get("VmRSS") or 0
+    return round((before - after) / 1024, 1)
+
+
 def _proc_status():
     out = {}
     if os.name == "nt":
@@ -679,6 +738,7 @@ def start_stats(cfg):
     from . import leaks
     _state["trend"] = leaks.Trend(int(d.get("leak_samples", 12)))
     _state["census_on"] = bool(d.get("object_census", True)) and is_on()
+    _state["trim_on"] = bool(d.get("trim_memory", True))
     if d.get("tracemalloc", False):
         leaks.start_tracing()
     if minutes <= 0 or not _state.get("on", True):

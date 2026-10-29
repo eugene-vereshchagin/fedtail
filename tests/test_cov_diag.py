@@ -150,6 +150,26 @@ class DiagMoreTest(unittest.TestCase):
         with mock.patch.object(ctypes, "CDLL", side_effect=OSError):
             self.assertIsNone(diag.trim_memory())
 
+    def test_trim_soon_once_things_settle(self):
+        """Cards let go in a burst (scrolling): one trim after the last of them, off the
+        window's thread; off with debug.trim_memory."""
+        import time
+        calls = []
+        with mock.patch.object(diag, "TRIM_AFTER_S", 0.1), \
+                mock.patch.object(diag, "_malloc_trim", lambda: calls.append(1) or 1.0):
+            for _ in range(5):
+                diag.trim_soon("cards scrolled past")
+                time.sleep(0.02)
+            end = time.monotonic() + 3
+            while not calls and time.monotonic() < end:
+                time.sleep(0.02)
+            time.sleep(0.2)
+            self.assertEqual(calls, [1])
+            with mock.patch.dict(diag._state, {"trim_on": False}):
+                diag.trim_soon("off")
+                time.sleep(0.3)
+            self.assertEqual(calls, [1])
+
     def test_stats_without_proc_fd(self):
         real_listdir = diag.os.listdir
 

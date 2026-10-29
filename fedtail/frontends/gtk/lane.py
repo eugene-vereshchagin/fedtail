@@ -772,6 +772,7 @@ class LaneView(Gtk.Box):
             log.info("lane %s unloaded: %d cards let go", self.name, len(self.order))
             self._drop_cards()
             self.dirty = True
+            diag.trim_soon("a lane unloaded")
         return True
 
     def bring(self, key, then=None):

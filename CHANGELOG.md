@@ -2,6 +2,14 @@
 
 ## 0.22.0 — in progress
 
+- Smoother, the Qt window: a lane opened or a jump far builds at once only the cards on
+  screen, the ones a screen above and below a few at a time between the window's other
+  work (built all at once they froze it for 300–430 ms; in the bench the stalls over
+  100 ms opening the lanes went from 13 to 1); a lane's posts are looked up in one query,
+  not one each (a 342 ms freeze when a lane was redrawn).
+- Memory freed goes back to the system a few seconds after cards are let go (scrolled
+  past, a lane unloaded), not only at the next stats tick: `smem` right after reading
+  through lanes showed the freed memory as still used.
 - Fixed: someone waiting to go into a list, followed by now and already in it, was asked
   for again every round (a 422 "already in list" each time, two of them in a log of an
   hour); followed and still refused — let go.

@@ -169,6 +169,18 @@ So the order of the plan holds for the core, but the window's weight is in the c
 
   `reading.build_at_once` is gone (said so, if a config still has it). The budgets
   (`tests/test_budgets.py`) moved down with it.
+* **Cards built a few at a time; memory back soon** (29.10, the author's report). The
+  window's log had six freezes of 300–430 ms, five of them a lane opened or a far jump
+  building the cards of a screen above and below all at once (`card.__init__`,
+  `_measure`), one a lane redrawn looking its posts up one by one. Now the cards on screen
+  are built at once and the others `SLICE_MS` (8 ms) at a time between the window's
+  work, nearest first (`FeedView._build_more`); a list of posts handed to the core is one
+  query (`View._in`). The bench, 4000 posts, opening the lanes: `_lay_out` at most 210 →
+  110 ms, stalls over 100 ms 13 → 1. A card is ~6 ms of `QLayout.activate` alone here
+  (its real height) — the slice holds one card at least. And `smem` right after reading
+  through lanes said 145 → 387 MB with the freed memory not yet given back (the stats
+  tick 5 minutes later gave 81 MB back): `diag.trim_soon` trims 5 s after cards are let go
+  (scrolled past, a lane unloaded), one thread, no gc pass.
 * **A new lane's fill** (`store.link_items`, `core/custom.py`, 29.10). Where the core alone
   was heavy: a free lane (and Unsorted) takes its feeds' posts, stored already, and wrote
   them back through `put_items` — each one serialised anew, its stored text read in to

@@ -444,6 +444,7 @@ class LaneWidget(QWidget):
         self.unloaded = True
         self.dirty = True
         log.info("lane %s unloaded: %d cards let go", self.name, n)
+        diag.trim_soon("a lane unloaded")
         return True
 
     def refresh_now(self):

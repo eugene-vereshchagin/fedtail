@@ -26,6 +26,7 @@ from dataclasses import replace
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import QFrame, QScrollArea, QVBoxLayout, QWidget
 
+from ... import diag
 from ...model import Share
 from ...model import real as real_entry
 from ..common.lane import seen
@@ -99,6 +100,9 @@ class FeedView(QScrollArea):
         self._relayout = QTimer(self, singleShot=True, interval=0)
         self._relayout.timeout.connect(self._settle_heights)
         self._dirty = set()  # cards that asked for another height
+        self._pending = []   # keys near the screen not built yet (_build_more)
+        self._more = QTimer(self, singleShot=True, interval=0)
+        self._more.timeout.connect(self._build_more)
         self._seen_timer = QTimer(self, singleShot=True, interval=350)
         self._seen_timer.timeout.connect(self._emit_seen)
         # while the feed keeps moving the quiet moment never comes: look every so often
@@ -272,50 +276,110 @@ class FeedView(QScrollArea):
 
     _paused = False  # the cards let go for a restyle: none built till they're brought back
 
+    SLICE_MS = 8  # the cards beyond the screen are built this long at a time
+
     def _realize(self, depth=0):
-        """The cards near the screen built, the others let go."""
+        """The cards near the screen built, the others let go. The ones on screen (and
+        held) at once; the ones a screen above and below a few at a time, between the
+        window's other work — built all at once they froze it for 300–430 ms when a
+        lane opened or a jump went far (the logs of 29.10: card.__init__, _measure)."""
         if self._paused:
             return
         want = self._wanted()
         wanted = set(want)
-        for key in [k for k in self.rows if k not in wanted]:
+        gone = [k for k in self.rows if k not in wanted]
+        for key in gone:
             self._let_go(key)
+        if gone:  # their memory back to the system once the scrolling settles
+            diag.trim_soon("cards scrolled past")
+        now = self._on_screen(want) if self.windowed else want
         x, w = self._column()
         guess = self._guess()
         new = False
-        for key in want:
-            if key in self.rows:
-                continue
-            spec = self.model[self._index[key]]
-            row = row_class(spec)(spec, self.ctx)
-            kept = self._kept.pop(key, None)
-            if kept:
-                changed = False
-                for a, v in kept.items():
-                    if getattr(row, a, None) != v:
-                        setattr(row, a, v)
-                        changed = True
-                if changed:
-                    row._build()
-            row.setParent(self.body)
-            h = self._measure(row, w)
-            if self._h.get(key) != (w, h):
-                new = new or self._height(key, guess) != h
-                self._h[key] = (w, h)
-            row.setGeometry(x, self._ys.get(key, 0), w, h)
-            row.installEventFilter(self._watch)
-            row.show()
-            self.rows[key] = row
-            if hasattr(row, "card"):
-                if key == self.cursor_key:
-                    _mark(row.card, "keyed", True)
-                if key == self.found_key:
-                    _mark(row.card, "found", "true")
+        for key in now:
+            if key not in self.rows:
+                new = self._build(key, x, w, guess) or new
+        self._pending = self._by_nearness([k for k in want if k not in self.rows])
         self.order = [k for k in want if k in self.rows]
         if new and depth < 4:
             # heights not as guessed: the places anew (and the cards near the screen again)
             self._lay_out(depth=depth + 1)
+            return
+        if self._pending:
+            self._more.start()
         self._seen_timer.start()
+
+    def _on_screen(self, want):
+        """Of the keys wanted, those whose places the screen shows now, and the held."""
+        sb = self.verticalScrollBar()
+        top, bottom = sb.value(), sb.value() + max(1, self.viewport().height())
+        guess = self._guess()
+        held = self._held | {self.cursor_key, self.found_key}
+        return [k for k in want if k in held or (
+            self._ys.get(k, 0) < bottom and self._ys.get(k, 0) + self._height(k, guess) > top)]
+
+    def _by_nearness(self, keys):
+        """Nearest the screen first — below it first at the same distance (reading on)."""
+        sb = self.verticalScrollBar()
+        top, bottom = sb.value(), sb.value() + max(1, self.viewport().height())
+
+        def far(k):
+            y = self._ys.get(k, 0)
+            return (top - y) * 1.2 if y < top else y - bottom
+        return sorted(keys, key=far)
+
+    def _build_more(self):
+        """A few of the cards beyond the screen, SLICE_MS at most, then the window's
+        turn again; on until they are all there."""
+        if self._paused or not self._pending:
+            return
+        x, w = self._column()
+        guess = self._guess()
+        until = time.monotonic() + self.SLICE_MS / 1000
+        new = False
+        while self._pending and time.monotonic() < until:
+            key = self._pending.pop(0)
+            if key in self.rows or key not in self._index or key in self._hidden:
+                continue
+            new = self._build(key, x, w, guess) or new
+        self.order = [s.key for s in self.model if s.key in self.rows]
+        if new:
+            self._lay_out()  # places anew, the reading place held; what's left requeued
+            return
+        if self._pending:
+            self._more.start()
+        else:
+            self._seen_timer.start()
+
+    def _build(self, key, x, w, guess):
+        """One card made and put in its place. → whether its height is not as guessed."""
+        spec = self.model[self._index[key]]
+        row = row_class(spec)(spec, self.ctx)
+        kept = self._kept.pop(key, None)
+        if kept:
+            changed = False
+            for a, v in kept.items():
+                if getattr(row, a, None) != v:
+                    setattr(row, a, v)
+                    changed = True
+            if changed:
+                row._build()
+        row.setParent(self.body)
+        h = self._measure(row, w)
+        new = False
+        if self._h.get(key) != (w, h):
+            new = self._height(key, guess) != h
+            self._h[key] = (w, h)
+        row.setGeometry(x, self._ys.get(key, 0), w, h)
+        row.installEventFilter(self._watch)
+        row.show()
+        self.rows[key] = row
+        if hasattr(row, "card"):
+            if key == self.cursor_key:
+                _mark(row.card, "keyed", True)
+            if key == self.found_key:
+                _mark(row.card, "found", "true")
+        return new
 
     def _let_go(self, key):
         row = self.rows.pop(key)
@@ -636,6 +700,7 @@ class FeedView(QScrollArea):
         for key in list(self.rows):
             self._let_go(key)
         self.order = []
+        self._pending = []
         # the restyle resizes and re-lays out everything: no card is built meanwhile —
         # it would be built in the old theme, and kept
         self._paused = True
