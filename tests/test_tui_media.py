@@ -101,10 +101,16 @@ class TermcapsTest(unittest.TestCase):
         mpv = which_of("mpv")
         self.assertEqual(termcaps.video(desk, "auto", which_of()), ("browser", None))
         self.assertEqual(termcaps.video(desk, "browser", mpv), ("browser", None))
+        # Konsole on a desktop shows sixel: the console player, not a window over it
         how, argv = termcaps.video(desk, "auto", mpv, loop=True)
-        self.assertEqual(how, "window")
+        self.assertEqual((how, argv[-2]), ("terminal", "--vo=sixel"))
         self.assertIn("--loop-file=inf", argv)
+        self.assertIn("--term-osd-bar=yes", argv)
+        desk_plain = termcaps.detect({"DISPLAY": ":0", "TERM": "xterm"}, platform="linux")
+        how, argv = termcaps.video(desk_plain, "auto", mpv)  # no pictures there: a window
+        self.assertEqual(how, "window")
         self.assertIn("--force-window=immediate", argv)
+        self.assertEqual(termcaps.video(desk, "window", mpv)[0], "window")
         self.assertEqual(termcaps.video(ssh, "window", mpv)[0], "window")
         for caps, vo in ((ssh, "sixel"), (kitty, "kitty"), (plain, "tct")):
             how, argv = termcaps.video(caps, "auto", mpv)
@@ -283,8 +289,10 @@ class AppMediaTest(Base):
         async with app.run_test(size=(100, 30)) as pilot:
             await self.started(pilot, app)
             await self.to(pilot, app, "002")
-            desk = app_mod.termcaps.Caps("Konsole", "sixel", True)
-            ssh = app_mod.termcaps.Caps("Konsole", "sixel", False)
+            # a desktop's terminal without pictures: mpv's window; one with sixel
+            # (Konsole, here or over ssh): the console player, in the terminal itself
+            desk = app_mod.termcaps.Caps("xterm", None, True)
+            ssh = app_mod.termcaps.Caps("Konsole", "sixel", True)
             with mock.patch.object(app_mod.termcaps.shutil, "which", which_of("mpv")), \
                     mock.patch.object(app_mod.subprocess, "Popen") as popen, \
                     mock.patch.object(app_mod.subprocess, "run") as run:
@@ -295,7 +303,7 @@ class AppMediaTest(Base):
                 self.assertEqual(argv[-1], "https://example.test/002.png")
                 self.assertTrue(popen.call_args[1]["start_new_session"])
                 self.assertIn(app_mod._("tui_playing"), self.notes)
-                # no desktop: into this terminal, the app suspended
+                # sixel there: into this terminal, the app suspended
                 app.caps = lambda: ssh
                 log = []
                 with mock.patch.object(type(app), "is_headless", False), \

@@ -1518,9 +1518,10 @@ picture_rows = 8
 viewer = "auto"
 
 # Video and gifs (v on a post with a video, Enter on it among the pictures) play in mpv:
-# "auto" — in a window of its own on a desktop, drawn right in the terminal otherwise (over
-# ssh: sixel, kitty, or coloured text); "window" — always a window; "terminal" — always
-# in the terminal; "browser" — open in the browser. No mpv — the browser, and it says so.
+# "auto" — right in the terminal, a console player (space, arrows, q back), when the terminal
+# shows real pictures (sixel in Konsole, kitty), else in a window of its own on a desktop,
+# else as coloured text; "window" — always a window; "terminal" — always in the terminal;
+# "browser" — open in the browser. No mpv — the browser, and it says so.
 video = "auto"
 
 

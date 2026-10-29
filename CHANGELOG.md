@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- The terminal plays video and gifs right in itself, a console player, when it shows real
+  pictures (sixel in Konsole, kitty) — `tui.video = "auto"` opened mpv's window over it on
+  a desktop. mpv's status line (time, length, a bar) under the picture, its messages kept
+  to errors; space, the arrows, q back to the lanes.
 - A post read once is read everywhere: reading a boost marks its post read too, and a boost
   counts read when its post is — as itself in another lane, or as someone else's boost. Each
   was read by its own id: the same post stood unread in the next lane, interface or device

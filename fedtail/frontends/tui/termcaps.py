@@ -106,19 +106,26 @@ VIDEO_MODES = ("auto", "window", "terminal", "browser")
 
 
 def video(caps, mode="auto", which=None, loop=False):
-    """How to play a video here: ("window", argv) — mpv in a window of its own (a
-    desktop is there); ("terminal", argv) — mpv drawing into this terminal (sixel,
-    kitty, or coloured text); ("browser", None) — no mpv, or asked for. The address
-    goes at the end of argv."""
+    """How to play a video here: ("terminal", argv) — mpv drawing into this terminal,
+    a console player of its own (sixel, kitty, or coloured text; its keys: space, the
+    arrows, q back to the lanes, its status line under the picture); ("window", argv) —
+    mpv in a window of its own; ("browser", None) — no mpv, or asked for. "auto": in
+    the terminal when it shows real pictures (Konsole's sixel, kitty), else a window on
+    a desktop, else coloured text — a window over the terminal it was run in looked
+    like another program taking over (29.10). The address goes at the end of argv."""
     which = which or shutil.which
     mpv = which("mpv")
     if mode == "browser" or not mpv:
         return "browser", None
-    base = [mpv, "--really-quiet"] + (["--loop-file=inf"] if loop else [])
-    if mode == "window" or (mode == "auto" and caps.display):
-        return "window", base + ["--force-window=immediate"]
+    looped = ["--loop-file=inf"] if loop else []
+    pictures = caps.graphics in ("sixel", "kitty")
+    if mode == "window" or (mode == "auto" and caps.display and not pictures):
+        return "window", [mpv, "--really-quiet", *looped, "--force-window=immediate"]
     vo = {"kitty": "kitty", "sixel": "sixel"}.get(caps.graphics or "", "tct")
-    return "terminal", base + [f"--vo={vo}", "--terminal=yes"]
+    # the console player: mpv's own status line (time, length, paused), its messages
+    # kept to errors; the keys are its own while it plays
+    return "terminal", [mpv, "--msg-level=all=error", "--term-osd=force",
+                        "--term-osd-bar=yes", *looped, f"--vo={vo}", "--terminal=yes"]
 
 
 # the terminals' own notifications: an escape code the terminal turns into a desktop one
