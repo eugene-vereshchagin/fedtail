@@ -683,7 +683,12 @@ class View:
             r.raise_for_status()
             kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
             data = remote.read(r, MEDIA_MAX)
-        if kind.startswith("image/"):  # never keep an error page in the shared cache
+        # never an error page or half a picture in the shared cache — and not by
+        # "image/" alone: pictures kept on S3 and the like come as octet-stream (the
+        # bytes tell, as for the windows and the web page: common/images.fetch_picture)
+        from . import imagesniff
+        if not kind.startswith(("text/", "video/", "audio/")) and \
+                imagesniff.readable(data)[0] is not None:
             try:
                 path.write_bytes(data)
             except OSError:

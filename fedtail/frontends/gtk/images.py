@@ -18,13 +18,13 @@ _LOADER = {"jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp", "bmp": "b
 
 def decode(data, max_side, fmt=None):
     """A Gdk.Texture of the picture in data, no bigger than max_side — or None. fmt:
-    read by that loader only, not by whichever claims the bytes (common/imagesniff.py)."""
+    read by that loader only, not by whichever claims the bytes (core/imagesniff.py)."""
     import gi
     gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import GdkPixbuf
 
     if fmt is None:
-        from ..common import imagesniff
+        from ...core import imagesniff
         fmt, _why = imagesniff.readable(data)
         if fmt is None:
             return None

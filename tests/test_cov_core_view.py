@@ -181,13 +181,18 @@ class ViewTest(TmpDir):
 
             def __exit__(self, *a):
                 return False
-        for kind, keep in (("image/png; q=1", True), ("text/html", False)):
-            url = f"https://cdn.test/{kind[:4]}"
+        png = b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + bytes(17) + b"\0\0\0\0IEND\xaeB`\x82"
+        # by the bytes, not the header: an emoji off S3 comes as octet-stream (TUI, 30.10)
+        for i, (kind, data, keep) in enumerate((
+                ("image/png; q=1", png, True), ("application/octet-stream", png, True),
+                ("text/html", png, False), ("image/png", b"<html>", False),
+                ("image/png", png[:20], False))):  # cut short
+            url = f"https://cdn.test/{i}"
             path = self.core.paths.cache_dir / hashlib.sha1(url.encode()).hexdigest()
             with mock.patch("fedtail.core.remote.open_url", return_value=R(kind)), \
-                    mock.patch("fedtail.core.remote.read", return_value=b"data"):
-                self.assertEqual(v.media_bytes(url).result(timeout=T), b"data")
-            self.assertEqual(path.exists(), keep)
+                    mock.patch("fedtail.core.remote.read", return_value=data):
+                self.assertEqual(v.media_bytes(url).result(timeout=T), data)
+            self.assertEqual(path.exists(), keep, kind)
         url = "https://cdn.test/ro"
         with mock.patch("fedtail.core.remote.open_url", return_value=R("image/png")), \
                 mock.patch("fedtail.core.remote.read", return_value=b"d"), \

@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- Web page: a server's emoji in a name show as pictures in Activity's rows too, as on a
+  card — they stood as `:blob:`. Each event row carries its people's emoji
+  (`EventParts.emojis`), for the windows to use as well.
+- The terminal keeps a server's custom emoji and pictures stored on S3 in the picture
+  cache: they come as `application/octet-stream`, and only `image/*` was kept, so they
+  were downloaded again at every look. Whether a file is a whole picture is told by its
+  bytes now, the same check for every interface (`core/imagesniff.py`).
 - Qt: the ≡ menu's Debugging and People submenus, and a list's "whose replies" in its
   lane menu, could open empty or vanish: made by `addMenu(title)`, they were Python's
   and went with the code that built them before the menu showed (PySide6 6.8). Each is

@@ -119,13 +119,13 @@ class Cache:
 
     @staticmethod
     def _readable(data):
-        from . import imagesniff
+        from ...core import imagesniff
         return imagesniff.readable(data)
 
     def _decode(self, data, max_side):
         """decode(), but only for bytes that are one of a post's picture formats and
         came whole: anything else never reaches a decoder (see imagesniff)."""
-        from . import imagesniff
+        from ...core import imagesniff
         fmt, why = self._readable(data)
         if fmt is None:
             log.debug("image: %d B not decoded: %s", len(data), why)
@@ -752,7 +752,7 @@ def fetch_picture(cache_dir, url, opener, readable=None):
     it isn't there: only an image, whole and of a picture format (imagesniff), never an
     error page. opener(url, timeout): a streamed answer through core.remote (no token,
     public addresses, redirects checked). → the file, or None."""
-    from . import imagesniff
+    from ...core import imagesniff
     p = picture_path(cache_dir, url)
     if p.exists() and p.stat().st_size:
         return p

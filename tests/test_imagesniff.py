@@ -1,4 +1,4 @@
-"""Pictures sniffed before any decoder sees them (common/imagesniff.py): the format by
+"""Pictures sniffed before any decoder sees them (core/imagesniff.py): the format by
 its first bytes, a file cut short by a flaky connection told apart — so that no plugin
 of the toolkit goes guessing on bytes that aren't its own (the crash of 28.10)."""
 
@@ -6,7 +6,7 @@ import io
 import struct
 import unittest
 
-from fedtail.frontends.common import imagesniff as s
+from fedtail.core import imagesniff as s
 
 
 def _picture(fmt):

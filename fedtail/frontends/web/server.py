@@ -264,7 +264,13 @@ def event_json(spec, dismiss_one=True):
     Every action is a fedtail: link: /api/link does it, as for a card's ⋯."""
     from ..common.activity import ANSWER_WORDS, event_parts
     parts = event_parts(spec.extra["row"], web_date, dismiss_one)
-    return {"kind": parts.kind, "people": [list(x) for x in parts.people], "more": parts.more,
+    people = []
+    for i, (name, url) in enumerate(parts.people):
+        emojis = parts.emojis[i] if i < len(parts.emojis) else ()
+        # :blobcat: in a name — its picture, as on a card (account_json)
+        people.append([name, url, with_emojis(escape(name), emojis)
+                       if emojis and ":" in name else ""])
+    return {"kind": parts.kind, "people": people, "more": parts.more,
             "what": parts.what, "when": parts.when, "notice": parts.notice,
             "post": parts.post, "post_link": parts.post_link, "hide": parts.hide,
             "hide_tip": parts.hide_tip, "answers": [list(x) for x in parts.answers],
@@ -2157,9 +2163,8 @@ class Handler(BaseHTTPRequestHandler):
         """/pic?u=<https url>: the picture from the disk cache, fetched into it first
         when it isn't there (common/images.fetch_picture: no token, public addresses,
         redirects checked; only a whole picture is kept or given)."""
-        from ...core import remote
+        from ...core import imagesniff, remote
         from ..common import images as pictures
-        from ..common import imagesniff
         if not url.startswith("https://"):
             return self._send(HTTPStatus.BAD_REQUEST, b"", "text/plain")
         view = self.web.core

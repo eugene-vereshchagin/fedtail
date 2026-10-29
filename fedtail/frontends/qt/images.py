@@ -24,9 +24,9 @@ def decode(data, max_side, fmt=None):
     (a JPEG is read at a fraction of its size) instead of decoding all of a 4000-px
     photo and shrinking it after — less time, less memory, the GUI thread waits less.
     fmt: read as that format only — Qt doesn't go asking every plugin installed
-    (common/imagesniff.py says why)."""
+    (core/imagesniff.py says why)."""
     if fmt is None:
-        from ..common import imagesniff
+        from ...core import imagesniff
         fmt, _why = imagesniff.readable(data)
         if fmt is None:
             return QImage()

@@ -5,7 +5,7 @@ ActivityWidget and the GTK window draw these rows."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ...i18n import _
 
@@ -167,6 +167,7 @@ class EventParts:
     answers: list         # [(yes_link, no_link)] — one pair per request waiting
     tip: str              # who, when — each of the row's events
     unread: bool
+    emojis: list = field(default_factory=list)  # [(Emoji…)] of each of people: :code:s
 
 
 def event_parts(row, date, dismiss_one=True):
@@ -191,7 +192,7 @@ def event_parts(row, date, dismiss_one=True):
     if len(times) > 1 and date(times[-1]) != when:
         when = f"{date(times[-1])} … {when}"
     return EventParts(
-        kind=row.kind, people=people,
+        kind=row.kind, people=people, emojis=[tuple(p.emojis or ()) for p in row.people],
         more=_("act_more", n=row.more) if row.more > 0 else "",
         what=row.what, when=when, notice=row.notice,
         post=f"«{snippet(post, 160)}»" if post is not None else "",

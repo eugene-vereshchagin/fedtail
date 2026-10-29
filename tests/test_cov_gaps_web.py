@@ -47,6 +47,24 @@ class WebGapsTest(TmpDir):
         got = web.account_json(adapter.account(raw))
         self.assertIn("blob.png", got["name_html"])
 
+    def test_a_name_with_its_emoji_in_activity(self):
+        """An event's row names people as a card does: :blob: as its picture, the
+        rest of the name escaped; a name without a code goes as plain text (30.10)."""
+        from types import SimpleNamespace
+        bob = adapter.account(dict(fakes.BOB, display_name="<b>Bob</b> :blob:", emojis=[
+            {"shortcode": "blob", "url": "https://x/blob.png",
+             "static_url": "https://x/blob.png"}]))
+        ann = adapter.account(dict(fakes.BOB, id="A", display_name="Ann"))
+        row = SimpleNamespace(kind="favourite", people=[bob, ann], entries=[], post=None,
+                              request=False, more=0, what="liked", notice="",
+                              unread=False)
+        got = web.event_json(SimpleNamespace(extra={"row": row}, unread=False))
+        (name, url, html), plain = got["people"]
+        self.assertEqual(url, "fedtail:account/" + bob.id)
+        self.assertIn("/pic?u=https%3A%2F%2Fx%2Fblob.png", html)
+        self.assertIn("&lt;b&gt;Bob", html)  # the name's own markup stays text
+        self.assertEqual(plain, ["Ann", "fedtail:account/A", ""])
+
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)
         me = self.web.me()  # logged in, not connected yet: connected now
