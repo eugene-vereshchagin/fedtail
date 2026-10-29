@@ -1167,6 +1167,7 @@ class FedtailApp(App, PostsMixin):
         rows = max(2, int(tcfg.get("picture_rows", 8)))
         cols = rows * 4  # about a 2:1 box: room for a landscape photo
         cache = self._pictures
+        asked = 0
         for item in items:
             if not isinstance(item, PostItem):
                 continue
@@ -1176,6 +1177,7 @@ class FedtailApp(App, PostsMixin):
             url = m.preview or (m.url if m.kind == "image" else "")
             if not url:
                 continue
+            asked += 1
             key = (url, cols, rows) if not real_ones else ("bytes", url)
             if key in cache:
                 if real_ones:
@@ -1196,6 +1198,12 @@ class FedtailApp(App, PostsMixin):
                     self._picture_failed = True
                     return
                 if drawn is None:
+                    # read but not drawn: a format Pillow here can't open (AVIF on an
+                    # older Pillow) — said once aloud, as a failed fetch is
+                    (log.debug if self._picture_failed else log.warning)(
+                        "tui picture %s: %d B, not a picture this Pillow reads", url,
+                        len(f.result() or b""))
+                    self._picture_failed = True
                     return
                 if len(cache) > 400:
                     cache.clear()
@@ -1205,6 +1213,8 @@ class FedtailApp(App, PostsMixin):
                 else:
                     self.in_ui(self._put_picture, item, drawn)
             self.core.media_bytes(url).add_done_callback(done)
+        log.debug("tui pictures: %d of %d rows have one (%s)", asked, len(items),
+                  "real" if real_ones else "drawn in text")
 
     @staticmethod
     def _put_picture(item, drawn):

@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- The terminal says in its log how many posts on screen have a picture, and aloud (once)
+  when a picture came but this Pillow can't read it — "no pictures" was silent then.
 - Qt: a lane whose screen stands empty with cards to show there builds them, not only
   says so in the log (the log line now tells the scroll's maximum, the hidden cards and
   the target too).
