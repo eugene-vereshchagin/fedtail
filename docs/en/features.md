@@ -325,6 +325,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
+| The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
@@ -361,6 +362,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Who liked and boosted.** Lists of people at the counters. If your server doesn't know everyone, the rest is read from the author's server.
 
 **Honest counters.** Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server.
+
+**The numbers under the posts on screen kept fresh.** A lane keeps each post as it came — with the numbers of that moment, mostly none. Every `counts_minutes` minutes the posts that were on screen are asked of your server again in one request, and replies, boosts and likes change in place (only the row of buttons is redrawn). With `honest_counters`, the authors' servers are asked too. A post with more replies in a thread you follow: that thread is checked at the very next round, and "Commented posts" learn of the new at once. Every interface and the phone.
 
 **Who quoted my post.** The list of quotes of my post and “take my post out of this quote”.
 

@@ -98,6 +98,7 @@ fedtail/
     activity.py      events (notifications): fetched, put into the lanes that take them, seen
     syncing.py       the Core's side of sync (the engine: core/sync/)
     origin.py        other servers without my token: honest counts, profiles, public lanes
+    counts.py        the posts on screen (on_screen) asked again: fresh counts, threads woken
     translate.py     translation on a click and by itself
     push.py          Web Push for the web page
     markers.py       the read position shared with other clients

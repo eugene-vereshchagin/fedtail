@@ -1244,6 +1244,11 @@ class Web:
         return {"title": title, "info": info, "hint": hint,
                 "last": sidebar.start_lane(self.core, names, closable=False)}
 
+    def on_screen(self, ids):
+        """The posts on the page's screen: their numbers asked again in a while."""
+        self.core.on_screen([str(i) for i in (ids or [])][:200])
+        return {"ok": True}
+
     def stood(self, lane, key, end=False):
         """The card on top of the page's screen, the scroll standing (LaneModel.stood):
         where the lane opens next time, in every interface; end — at the lane's end."""
@@ -2279,6 +2284,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/save": lambda: web.save_media(body.get("url")),
             "/api/older": lambda: web.older(body.get("name"), bool(body.get("ahead"))),
             "/api/full_width": lambda: web.full_width(body.get("on")),
+            "/api/on_screen": lambda: web.on_screen(body.get("ids")),
             "/api/stood": lambda: web.stood(body.get("lane"), body.get("key"),
                                             bool(body.get("end"))),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),

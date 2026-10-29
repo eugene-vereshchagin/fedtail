@@ -295,6 +295,15 @@ class MergedCore:
         for _tag, (core, ids) in groups.items():
             core.mark_read(ids)
 
+    def on_screen(self, ids):
+        """The posts on screen, each to its own account's core (counts.py)."""
+        groups = {}
+        for x in ids or ():
+            core, tag, sid = self.split(x)
+            groups.setdefault(tag, (core, []))[1].append(sid)
+        for _tag, (core, own) in groups.items():
+            core.on_screen(own)
+
     def set_active_lane(self, name):
         for core, _tag, own in self._own_lane(name) if name else []:
             core.set_active_lane(own)

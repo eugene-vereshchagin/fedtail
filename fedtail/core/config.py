@@ -95,6 +95,7 @@ DEFAULTS = {
         "repeat_boosts": False,
         "first_run_mark_read": True,
         "honest_counters": False,
+        "counts_minutes": 5,
         "counters_via_accounts": True,
         "remember_choices": False,
         "complete_threads": True,
@@ -408,6 +409,7 @@ SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
     ("feed", "thread_recheck_minutes"): 0,
+    ("feed", "counts_minutes"): 0,
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
     ("sync", "interval_seconds"): 15,
@@ -494,7 +496,8 @@ FILE_LAYOUT = (
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button links_in_app")
-     + _keys("feed", "show_moved honest_counters counters_via_accounts translate "
+     + _keys("feed", "show_moved honest_counters counts_minutes counters_via_accounts "
+             "translate "
                      "translate_all translate_auto translate_backend translate_url "
                      "translate_key")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "

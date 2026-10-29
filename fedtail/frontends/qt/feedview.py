@@ -907,10 +907,17 @@ class FeedView(QScrollArea):
         # the cards on screen, those glimpsed before and those the scroll went past
         near = set(self._glimpsed) | self._swept
         start = self._first_below(vtop)
+        shown = []
         for key in self.order[start:]:
             if self._top(self.rows[key]) >= vbot:
                 break
             near.add(key)
+            sid = getattr(self.rows[key], "status_id", None)
+            if sid and not str(sid).startswith("event:"):
+                shown.append(sid)
+        tell = getattr(getattr(self.ctx, "view", None), "on_screen", None)
+        if shown and tell is not None:
+            tell(shown)  # their numbers asked again in a while (core/counts.py)
         swept, self._swept = self._swept, set()
         for key in [k for k in self.order if k in near]:
             row = self.rows.get(key)

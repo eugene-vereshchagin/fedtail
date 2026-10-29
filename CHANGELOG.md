@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The numbers under the posts on screen are kept fresh (`card.counts_minutes`, 5): every
+  interface and the phone say which posts they show, and the round asks my server again
+  for them in one request (`GET /api/v1/statuses?id[]=`, one by one where it can't); with
+  `honest_counters` the authors' servers too. Only a post's row of buttons is redrawn. A
+  followed thread whose post shows more replies is checked at the next round, so
+  "Commented posts" learns of new comments at once (`core/counts.py`). A lane kept each
+  post as it came, its numbers of that moment, mostly none.
 - Requests (to follow me, to answer, to boost) are a row each, with whose they are: 62 follow
   requests were glued into one row — three names "and 59 more" over 62 pairs of buttons
   that didn't say whose. Every interface and the phone (`common/activity.groups`).

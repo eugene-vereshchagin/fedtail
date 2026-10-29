@@ -233,6 +233,23 @@ details.ru = "Твой сервер знает только те лайки и �
 details.en = "Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server."
 
 [[feature]]
+id = "fresh-counters"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Числа под постами на экране свежие"
+name.en = "The numbers under the posts on screen kept fresh"
+config.ru = "`card.counts_minutes` (5)"
+config.en = "`card.counts_minutes` (5)"
+api.ru = "`GET /api/v1/statuses?id[]=` (Mastodon 4.3+), иначе по одному"
+api.en = "`GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Лента хранит пост, каким он пришёл, — с числами той минуты, обычно нулями. Раз в `counts_minutes` минут посты, что были на экране, переспрашиваются у твоего сервера одним запросом, и ответы, бусты, лайки обновляются на месте (перерисовывается только строка кнопок). С `honest_counters` — ещё и у серверов авторов. У поста прибавилось ответов, а тред у тебя в подписках — он проверяется на следующем же круге, и «Посты с комментами» узнают о новом сразу. Во всех интерфейсах и на телефоне."
+details.en = "A lane keeps each post as it came — with the numbers of that moment, mostly none. Every `counts_minutes` minutes the posts that were on screen are asked of your server again in one request, and replies, boosts and likes change in place (only the row of buttons is redrawn). With `honest_counters`, the authors' servers are asked too. A post with more replies in a thread you follow: that thread is checked at the very next round, and \"Commented posts\" learn of the new at once. Every interface and the phone."
+
+[[feature]]
 id = "quoted-by"
 status = "has"
 android = "has"

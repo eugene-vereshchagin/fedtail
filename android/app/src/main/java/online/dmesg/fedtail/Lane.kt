@@ -228,7 +228,9 @@ fun LaneScreen(
                 }
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
-            StoodWhileScrolling(state) { key, end -> if (model.aimKey == null) model.stood(key, end) }
+            StoodWhileScrolling(state, shown = { model.onScreen(it) }) { key, end ->
+                if (model.aimKey == null) model.stood(key, end)
+            }
             // "earlier" where the older posts would come: on top, or at the end when newest first
             val earlier: @Composable () -> Unit = {
                 if (model.laneOlder) Earlier(model.loadingOlder,

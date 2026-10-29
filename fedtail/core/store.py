@@ -1028,6 +1028,13 @@ class Store:
             db.executemany("INSERT OR IGNORE INTO sub_members VALUES (?, ?)",
                            [(m, root_id) for m in members])
 
+    def sub_wake(self, root_id, now):
+        """A followed thread asked about at the next round, however quiet it was: its
+        post on screen says it has more replies (core/counts.py)."""
+        with self._tx() as db:
+            db.execute("UPDATE subs SET checked='', last_activity=MAX(last_activity, ?) "
+                       "WHERE root_id=?", (now, root_id))
+
     def subs_count(self):
         with self._reading() as db:
             return db.execute("SELECT COUNT(*) FROM subs").fetchone()[0]

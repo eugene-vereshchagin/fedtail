@@ -382,6 +382,11 @@ class PollMixin:
                 self._step("subs")
             if self._opened_threads:  # feed.thread_recheck_minutes: open threads grow
                 self.recheck_threads()
+            try:  # feed.counts_minutes: the posts on screen, their numbers asked again
+                self.refresh_counts()
+            except Exception as e:  # noqa: BLE001 — the next round
+                log.debug("counts: %s", e)
+            self._step("counts")
             lazy = {lane.source for lane in self.lanes if lane.lazy}
             # a lane read through needs its sources caught up, even Local's
             lazy -= {lane.source for lane in self.lanes if not lane.lazy} | \

@@ -346,6 +346,10 @@ class FakeApi:
             raise ApiError(404, "not found")
         return self.w.statuses[sid]
 
+    def statuses(self, ids):  # Mastodon 4.3+: several at once
+        self.w.batches = getattr(self.w, "batches", 0) + 1
+        return [self.w.statuses[i] for i in ids if i in self.w.statuses]
+
     def context(self, sid):
         all_ = self.w.statuses
         anc, cur = [], all_[sid]

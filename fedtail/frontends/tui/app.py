@@ -1508,6 +1508,11 @@ class FedtailApp(App, PostsMixin):
         top = next((it for it in lv.children if isinstance(it, (PostItem, EventItem))
                     and it.region.height > 0 and it.region.y + it.region.height > vtop),
                    None)
+        shown = [real(it.entry).id for it in lv.children if isinstance(it, PostItem)
+                 and it.entry is not None and it.region.height > 0
+                 and it.region.y < vbot and it.region.y + it.region.height > vtop]
+        if shown:  # their numbers asked again in a while (core/counts.py)
+            self.core.on_screen(shown)
         if top is not None and getattr(top, "key", None):  # where it opens next, anywhere
             self.lane_model(self.lane).stood(top.key, lv.scroll_y >= lv.max_scroll_y - 2)
         if self.core.cfg["read"]["mark_read"] != "on_scroll":

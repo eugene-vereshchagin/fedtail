@@ -810,6 +810,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The card on top of the screen, the scroll standing: where the lane opens next
      *  time, on the phone or anywhere else (LaneModel.stood). */
+    private var shownKeys: List<String> = emptyList()
+
+    /** The posts on screen: their numbers asked again in a while (core/counts.py). */
+    fun onScreen(keys: List<String>) {
+        if (keys == shownKeys) return
+        shownKeys = keys
+        val ids = posts.filter { it.key in keys }.map { it.id }
+        if (ids.isNotEmpty()) viewModelScope.launch { Core.onScreen(ids) }
+    }
+
     fun stood(key: String, end: Boolean) {
         val lane = current ?: return
         val k = if (end) "" else key // at the lane's end: no place kept, it opens as ever

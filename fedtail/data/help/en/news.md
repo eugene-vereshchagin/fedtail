@@ -9,6 +9,7 @@ What's new in the latest versions, and the plans.
 
 - A draft's pictures travel with it
 - Sync: WebDAV spoken directly, the journal packed
+- The numbers under the posts on screen kept fresh
 - Formatting buttons
 - Mute a hashtag in one click
 

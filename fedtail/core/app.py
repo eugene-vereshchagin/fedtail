@@ -40,6 +40,7 @@ from . import (
     sources,
 )
 from .activity import ActivityMixin
+from .counts import CountsMixin
 from .events import Events
 from .lists import ListsMixin
 from .markers import MarkersMixin
@@ -191,6 +192,7 @@ def _filter_hits(st, filters):
     return out
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
+           CountsMixin,
            OriginMixin, SyncMixin, ActivityMixin, ListsMixin, SilenceMixin, TranslateMixin,
            SocialMixin):
     """The core the frontends talk to: one account, its store, its rounds. Its parts

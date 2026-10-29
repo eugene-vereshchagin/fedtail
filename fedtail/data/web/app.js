@@ -1498,7 +1498,7 @@ function watchRead(box) {
       reading.timer = setTimeout(() => { stoodAt(box); lookRead(box); }, 250);
     }, { passive: true });
   }
-  setTimeout(() => lookRead(box), 400);  // what the lane opened on
+  setTimeout(() => { stoodAt(box); lookRead(box); }, 400);  // what the lane opened on
 }
 
 // the card on top of the screen, the scroll standing: where the lane opens next time,
@@ -1507,6 +1507,17 @@ function watchRead(box) {
 function stoodAt(box) {
   if (document.hidden || !state.lane) return;
   const view = box.getBoundingClientRect();
+  // the posts on screen: their numbers asked again in a while (core/counts.py)
+  const shown = [];
+  for (const c of box.querySelectorAll(".post")) {
+    const r = c.getBoundingClientRect();
+    if (r.height && r.bottom > view.top && r.top < view.bottom && c.dataset.id) shown.push(c.dataset.id);
+  }
+  const said = shown.join(",");
+  if (shown.length && said !== stoodAt.shown) {
+    stoodAt.shown = said;
+    api("/api/on_screen", { ids: shown }).catch(() => {});
+  }
   for (const c of box.querySelectorAll(".post, .event")) {
     const r = c.getBoundingClientRect();
     if (!r.height || r.bottom <= view.top + 2) continue;

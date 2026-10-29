@@ -818,6 +818,12 @@ class LaneView(Gtk.Box):
             self.lm.stood(anchor[0], self.adj.get_value() >= self.adj.get_upper()
                           - self.adj.get_page_size() - 40)
         keys, unplaced, glimpsed = [], False, set()
+        shown = [self.rows[k].entry.id for k in self.order
+                 if self.rows[k].entry is not None and self.strip.ys.get(k) is not None
+                 and self.strip.ys[k] < vbot and self.strip.ys[k] +
+                 self.strip.height(k) > vtop]
+        if shown:  # their numbers asked again in a while (core/counts.py)
+            self.ctx.view.on_screen(shown)
         for k in self.order:
             card = self.rows[k]
             if not card.unread:

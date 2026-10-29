@@ -632,6 +632,10 @@ class Api:
     def status(self, sid):
         return self.get(f"/api/v1/statuses/{seg(sid)}")
 
+    def statuses(self, ids):
+        """Several posts at once (Mastodon 4.3+; up to 40): their counts asked again."""
+        return self.get("/api/v1/statuses", {"id[]": list(ids)}) or []
+
     def context(self, sid):
         return self.get(f"/api/v1/statuses/{seg(sid)}/context")
 

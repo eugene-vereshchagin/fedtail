@@ -616,6 +616,11 @@ show_moved = true
 # reached it). That's a request to another server — without your token, but with your IP.
 honest_counters = false
 
+# The numbers under the posts on screen (replies, boosts, likes) asked of your server again
+# every so many minutes, in one request — a lane keeps each post as it came, with the
+# numbers of that moment; with honest_counters, of the authors' servers too. 0 — never.
+counts_minutes = 5
+
 # If the author's server won't give the numbers without a login: ask them as another account of yours
 # (a fedtail profile) — on the author's server, if you have one there, or on a server that already
 # has the post. Each account's token goes only to its own server.
