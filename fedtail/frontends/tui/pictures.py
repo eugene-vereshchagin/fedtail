@@ -165,6 +165,34 @@ def text(data, cols, rows):
     return blocks(data, cols, rows)
 
 
+_chafa_said = {"failed": False}
+
+
+def how(want="auto"):
+    """In words, how the lane's pictures are drawn now — said in the log at start and by
+    tools/tui_check.py: "chafa installed, nothing changed" was not to be told from
+    outside (29.10)."""
+    if Image is None:
+        return "none: Pillow (python3-pil) is missing"
+    if want not in ("auto", "blocks", "inline"):
+        return f"none in the lane (tui.pictures = {want!r}), v shows them"
+    kind = graphics() if want != "blocks" else None
+    if kind:
+        return f"{kind} through textual-image"
+    path = _chafa()
+    if path:
+        return f"chafa's symbols ({path}); real pixels need textual-image"
+    return "half blocks (no chafa, no textual-image)"
+
+
+def _failed(what):
+    """Why chafa didn't draw: said once at warning (the half blocks drawn instead
+    looked like "chafa does nothing"), then at debug."""
+    (log.debug if _chafa_said["failed"] else log.warning)("chafa: %s — half blocks "
+                                                         "instead", what)
+    _chafa_said["failed"] = True
+
+
 def _by_chafa(path, data, cols, rows):
     if opened(data, (8, 8)) is None:  # not a picture we would draw: nor chafa
         return None
@@ -176,7 +204,7 @@ def _by_chafa(path, data, cols, rows):
                               "--polite", "on", "--size", f"{max(2, cols)}x{max(1, rows)}",
                               tmp], capture_output=True, timeout=CHAFA_TIMEOUT, check=False)
     except (OSError, subprocess.SubprocessError) as e:
-        log.debug("chafa: %s", e)
+        _failed(e)
         return None
     finally:
         try:
@@ -184,7 +212,7 @@ def _by_chafa(path, data, cols, rows):
         except OSError:
             pass
     if got.returncode != 0 or not got.stdout:
-        log.debug("chafa: exit %s %s", got.returncode, got.stderr[:200])
+        _failed(f"exit {got.returncode} {got.stderr[:200]!r}")
         return None
     out = Text.from_ansi(got.stdout.decode("utf-8", "replace").rstrip("\n"),
                          no_wrap=True, overflow="crop")

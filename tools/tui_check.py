@@ -93,6 +93,12 @@ async def walk(out):
                  + ("" if pictures.available() else " — Pillow (python3-pil) is missing: "
                     "no pictures in the terminal at all"))
     core, w = make_core()
+    NOTES.append(f"pictures in the lane: {pictures.how(pictures.mode(core.cfg))}")
+    sample = pictures.text(png(64, 40, (200, 40, 40)), 16, 4) if pictures.available() \
+        else None
+    NOTES.append("pictures: a sample drawn, "
+                 + ("by chafa" if sample is not None and "▀" not in sample.plain
+                    else "in half blocks" if sample is not None else "not at all"))
     app = FedtailApp(core)
 
     def fake_bytes(url):  # the pictures: made here, no network

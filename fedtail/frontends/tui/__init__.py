@@ -15,6 +15,7 @@ def run(core, instance, argv):
     from . import pictures
     # textual-image asks the terminal what it can show: only before Textual takes it
     pictures.prepare(pictures.mode(core.cfg))
+    log.info("pictures in the lane: %s", pictures.how(pictures.mode(core.cfg)))
     from .app import FedtailApp
     app = FedtailApp(core, instance)
     try:

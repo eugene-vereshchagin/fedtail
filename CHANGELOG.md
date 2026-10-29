@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- The terminal says how its pictures are drawn (textual-image, chafa, half blocks or none, and
+  why): in the log at start and in `tools/tui_check.py`'s notes, with a sample drawn; chafa
+  failing is a warning once in the log, not a silent fall back to half blocks.
 - The terminal: with chafa installed the pictures in the lane and in the app's picture
   view are chafa's (true colour, its many glyph shapes) — installing it changed nothing
   there before, only the v viewer used it; our half blocks without it.

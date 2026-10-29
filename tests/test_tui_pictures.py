@@ -74,3 +74,30 @@ class ChafaTest(unittest.TestCase):
         self.assertLessEqual(max(len(x) for x in lines), 20)
         self.assertTrue(got.spans)  # coloured
         self.assertIsNone(pictures.text(b"not a picture", 20, 6))
+
+    def test_how_they_are_drawn_is_said(self):
+        """The log at start and tools/tui_check.py say which way the lane's pictures
+        go; chafa failing is a warning once, the half blocks drawn instead."""
+        from unittest import mock
+
+        from fedtail.frontends.tui import pictures
+        with mock.patch.object(pictures, "_chafa", lambda: "/usr/bin/chafa"), \
+                mock.patch.dict(pictures._graphics, {"kind": None}):
+            self.assertIn("chafa", pictures.how("auto"))
+            self.assertIn("v shows", pictures.how("key"))
+        with mock.patch.object(pictures, "_chafa", lambda: None), \
+                mock.patch.dict(pictures._graphics, {"kind": "sixel"}):
+            self.assertIn("sixel", pictures.how("auto"))
+            self.assertIn("half blocks", pictures.how("blocks"))
+        with mock.patch.object(pictures, "Image", None):
+            self.assertIn("Pillow", pictures.how("auto"))
+        pictures._chafa_said["failed"] = False
+        with mock.patch.object(pictures, "_chafa", lambda: "/nonexistent/chafa"), \
+                self.assertLogs(pictures.log, "WARNING") as said:
+            got = pictures.text(self.png(), 20, 6)
+        self.assertIn("▀", got.plain)  # ours instead
+        self.assertIn("half blocks instead", said.output[0])
+        with mock.patch.object(pictures, "_chafa", lambda: "/bin/false"), \
+                self.assertLogs(pictures.log, "DEBUG") as said:
+            pictures.text(self.png(), 20, 6)
+        self.assertTrue(all("DEBUG" in x for x in said.output))  # once loud is enough
