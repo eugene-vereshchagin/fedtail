@@ -187,31 +187,33 @@ class BridgeTest(_Base):
         self.assertIn("# mine", self.call("config_text")["text"])
 
     def test_sync_from_the_phone(self):
+        """The phone syncs through the place every interface draws (common/syncplace.py),
+        not calls of its own: where, a round, the key shown, another key taken."""
         from fedtail.core.sync import crypto
         if not crypto.available():
             self.skipTest("needs cryptography")
         self.demo()
-        self.assertEqual(self.call("sync_status"), {"enabled": False, "key": False})
+        self.assertEqual(self.call("page", "sync")["name"], "sync")
         meet = self.tmp / "meet"
         meet.mkdir()
-        text = self.call("config_text")["text"]
-        head, _, sync = text.rpartition("\n[sync]\n")  # the table, not a mention of it
-        sync = sync.replace("enabled = false", "enabled = true", 1)
-        sync = sync.replace('backend = "server"', 'backend = "folder"', 1)
-        sync = sync.replace('folder = ""', f'folder = "{meet.as_posix()}"', 1)
-        on = head + "\n[sync]\n" + sync
-        self.assertEqual(self.call("config_save", on), {"ok": True})
-        self.call("open")
-        st = self.call("sync_status")
-        self.assertTrue(st["enabled"])
-        self.assertEqual(st["backend"], "folder")
-        self.assertEqual(self.call("sync_now"), {"sent": 0, "got": 0})
-        key = self.call("sync_key")["key"]
+
+        def act(*a, values=None, confirmed=False):
+            return self.call("place_act", json.dumps(["sync", *a]), confirmed,
+                             json.dumps(values) if values is not None else None)
+        act("where", "", values={"url": "", "folder": meet.as_posix(), "webdav": ""})
+        act("first", "")
+        core = self.bridge._s["core"]
+        self.assertEqual(core.sync_status()["backend"], "folder")
+        self.assertIn("message", act("now", ""))
+        key = core.sync_key()
         self.assertTrue(key)
+        self.assertEqual(act("show", "", confirmed=True)["open"], {"page": "sync_key"})
+        self.assertEqual(act("copykey", "")["copy"], key)
         other = crypto.key_text(crypto.new_key())
-        self.assertTrue(self.call("sync_join", other)["kid"])
-        self.assertEqual(self.call("sync_key")["key"], other)
-        self.assertIn("error", json.loads(self.bridge.sync_join("nonsense")))
+        act("take", "", values={"key": other, "password": ""})
+        self.assertEqual(core.sync_key(), other)
+        for gone in ("sync_status", "sync_key", "sync_join", "sync_now"):  # 0.21's own
+            self.assertFalse(hasattr(self.bridge, gone), gone)
 
     def test_the_overview_of_lanes(self):
         self.demo()
@@ -393,7 +395,10 @@ class BridgeTest(_Base):
         self.assertIn("lanes", steps)
         results = []
         with mock.patch("requests.get") as get:  # the made-up world's pictures
-            get.return_value.content = b"x" * 2048
+            r = get.return_value  # what core/remote.py reads of an answer: streamed
+            r.__enter__.return_value = r
+            r.is_redirect, r.headers, r.status_code = False, {}, 200
+            r.iter_content.return_value = [b"x" * 2048]
             for name in steps:
                 r = json.loads(self.bridge.selfcheck_step(name))
                 self.assertEqual(r["name"], name)

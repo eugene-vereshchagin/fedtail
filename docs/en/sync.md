@@ -98,7 +98,11 @@ and text) for the next device, what to sync, changing the server, turning it off
 **A password for new devices** (optional, there too — "Set a password…"). It's not your
 account's password nor the server's: you make it up. The key goes into the sync journal
 sealed by it (scrypt + AES-GCM), and a new device needs the password instead of the long
-key. Forgot it — nothing breaks: the key can always be copied from a working device.
+key. Forgot it — nothing breaks: the key can always be copied from a working device. At
+least 10 characters; a phrase of a few words is best. On a sync server the key is kept
+under an id made of the password *and your fediverse account* (a new device logs into it
+anyway) — so a guess tests only you, and two people with one password never meet; the
+server keeps no one's key in another's place.
 
 A device without the key that finds someone's journal in the store doesn't make a key of
 its own: it says the key is needed (and that it can be taken by a password, if it is in

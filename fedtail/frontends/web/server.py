@@ -946,16 +946,15 @@ class Web:
         their titles and folded or not (one state for every window), each lane's count
         and the tip the windows give it."""
         from ..common import sidebar
-        from ..tui.model import lane_label, start_lane
         core = self.core
         folded = sidebar.folded(core)
         out = []
         for group, names in sidebar.groups(core, core.cfg):
             title = None
             if group:
-                title = _("lists_header") if group == "lists" else _("grp_" + group)
+                title = sidebar.group_title(group)
             for i, name in enumerate(names):
-                label, n = lane_label(core, name, 60)
+                label, n = sidebar.lane_label(core, name, 60)
                 tip = _("tip_" + name)
                 fresh = sidebar.fresh(core, name) if n else 0
                 out.append({"name": name, "title": label, "unread": n,
@@ -964,7 +963,7 @@ class Web:
                             "tip": "" if tip == "tip_" + name else tip,
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})
-        first = start_lane(core, [x["name"] for x in out])
+        first = sidebar.start_lane(core, [x["name"] for x in out], closable=False)
         for x in out:
             x["start"] = x["name"] == first
         return out

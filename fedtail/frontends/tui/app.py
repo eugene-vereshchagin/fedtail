@@ -34,17 +34,14 @@ from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
 from ...version import NAME
-from ..common import timed
+from ..common import sidebar, timed
 from ..richtext import openable
 from . import pictures, termcaps
 from .model import (
     Commands,
     DeleteGuard,
     event_lines,
-    lane_groups,
-    lane_label,
     show_post,
-    start_lane,
 )
 
 log = logging.getLogger(__name__)
@@ -994,7 +991,7 @@ class FedtailApp(App, PostsMixin):
         self.set_interval(30, self._slow_title)  # slow mode: when the next batch comes
         await self.fill_lanes()
         self.core.start_polling()
-        first = start_lane(self.core, self._lane_names())
+        first = sidebar.start_lane(self.core, self._lane_names(), closable=False)
         if first:
             await self.select_lane(first)
         self._main("#posts", ListView).focus()
@@ -1020,7 +1017,7 @@ class FedtailApp(App, PostsMixin):
             self._lanes_busy = False
 
     async def _fill_lanes(self):
-        from ..common import sidebar
+
         lv = self._main("#lanes", ListView)
         if not lv.is_mounted:  # news before the screen is up, or while the app ends
             return
@@ -1029,14 +1026,15 @@ class FedtailApp(App, PostsMixin):
         await lv.clear()
         items = []
         folded = sidebar.folded(self.core)
-        for key, title, names in lane_groups(self.core):
-            if title is not None:
-                n = sum(lane_label(self.core, x)[1] for x in names) if key in folded else 0
+        for key, names in sidebar.groups(self.core, self.core.cfg):
+            title = sidebar.group_title(key)
+            if title is not None and names:
+                n = sum(sidebar.lane_label(self.core, x)[1] for x in names) if key in folded else 0
                 items.append(GroupItem(key, title, key in folded, n))
                 if key in folded:
                     continue
             for name in names:
-                title_, n = lane_label(self.core, name, self.lanes_width - 2)
+                title_, n = sidebar.lane_label(self.core, name, self.lanes_width - 2)
                 items.append(LaneItem(name, title_, n, sidebar.fresh(self.core, name) if n else 0))
         if not lv.is_mounted:  # the app ended while the list was being cleared
             return
@@ -1047,24 +1045,24 @@ class FedtailApp(App, PostsMixin):
                 break
 
     async def fold_group(self, item):
-        from ..common import sidebar
+
         sidebar.fold(self.core, item.group)
         await self.fill_lanes()
 
     def _slow_title(self):
         """The subtitle: "@me", how fresh the lanes are ("⟳ updating the lanes…",
         "updated at 14:32"), and in slow mode when the next batch comes."""
-        from ..common import sidebar
+
         me = self.core.me
         slow = sidebar.status_words(self.core)
         self.sub_title = "@" + (me.handle if me else "") + (f" · {slow}" if slow else "")
 
     def update_lane_counts(self):
-        from ..common import sidebar
+
         self._slow_title()
         for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
-                title, n = lane_label(self.core, item.lane, self.lanes_width - 2)
+                title, n = sidebar.lane_label(self.core, item.lane, self.lanes_width - 2)
                 item.update(title, n, sidebar.fresh(self.core, item.lane) if n else 0)
 
     async def select_lane(self, name):

@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import VISIBILITIES, Scheduled
 from ..common import compose as rules
 from ..common import split
-from ..common.split import talk_with  # noqa: F401  (Qt's name for it)
+from ..richtext import plain_tip
 from .card import VIS_KEY
 
 log = logging.getLogger(__name__)
@@ -239,7 +239,7 @@ class InputDock(QWidget):
         account = split.face(faces_mode(self.win), account, me)
         self._to = account
         self.face.setVisible(account is not None)
-        self.face.setToolTip("@" + account.handle if account else "")
+        self.face.setToolTip(plain_tip("@" + account.handle) if account else "")
         set_face(self.win, self.face, account.avatar_static if account else "", self,
                  "_face_url")
 
@@ -416,7 +416,7 @@ class AgentFace(QWidget):
         name = (who.name or who.username) if who else ""
         self.name.setText(self.name.fontMetrics().elidedText(
             name, Qt.TextElideMode.ElideRight, AGENT_FACE - 2))  # inside the column's margins
-        self.name.setToolTip(name)
+        self.name.setToolTip(plain_tip(name))  # someone's name: never drawn as HTML
         link = win.theme.css("link")
         self.link.setText(f'<a href="#" style="color:{link}">{_("faces_profile")}</a>'
                           if who else "")
@@ -635,7 +635,7 @@ class AuthorBar(QWidget):
         self._shown = now
         self.about.setText(self.about.fontMetrics().elidedText(
             text, Qt.TextElideMode.ElideRight, max(40, self.about.width())))
-        self.about.setToolTip(text)
+        self.about.setToolTip(plain_tip(text))
         from . import icons
         self._steady_width()
         icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
@@ -966,7 +966,8 @@ class TalkWidget(QWidget):
         self.refresh()
 
     def add_sent(self, post):
-        """A message of mine just sent: here at once, before the Direct lane has it."""
+        """A message of mine just sent: here at once, before a lane of private messages
+        has it."""
         self.sent[post.id] = post
         self._key = None
         self.refresh()
@@ -975,13 +976,7 @@ class TalkWidget(QWidget):
     def refresh(self):
         from .card import make_spec
         view = self.win.ctx.view
-        if "direct" not in self.win.core.lane_by_name:
-            return
-        mine = talk_with(view, view.entries("direct"), self.who.handle)
-        have = {e.id for _i, e in mine}
-        mine += [(None, p) for pid, p in self.sent.items() if pid not in have]
-        mine.sort(key=lambda x: (x[1].created is not None, x[1].created or 0))
-        unread = view.unread([e for _i, e in mine])
+        mine, unread = split.talk(view, self.who.handle, self.sent.values())
         key = (tuple(e.id for _i, e in mine), tuple(sorted(unread)))
         if key == self._key:
             return

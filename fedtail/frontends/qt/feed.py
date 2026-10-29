@@ -29,15 +29,7 @@ from ...model import Relationship
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity, timed
-from ..common.lane import (  # noqa: F401  (Qt's names for them)
-    CONVERSATION_LANES,
-    MEDIA_KINDS,
-    POSTS_ONLY_LANES,
-    SEPARATOR,
-    LaneModel,
-    media_kinds,
-    seen,
-)
+from ..common.lane import MEDIA_KINDS, LaneModel
 from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
 from .card import CardSpec, make_spec

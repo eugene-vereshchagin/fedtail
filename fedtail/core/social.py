@@ -201,14 +201,14 @@ class SocialMixin:
             self.emit("status_updated", st)
             self.emit("subs_changed", None)
             if on:
-                self.emit("lanes_updated", {"subs": [], "mentions": []})
+                self.redraw("subs", "mentions")
             return st
         return self.submit(job)
 
     # ---- direct conversations: read here = read on the server -----------------------
     def sync_conversations(self):
         """What the server keeps as conversations: which of their last posts are unread.
-        Called by the poll when the direct lane is on (one cheap request)."""
+        Called by the poll when a lane of private messages is on (one cheap request)."""
         if not self.supports("conversations"):
             return
         try:

@@ -18,8 +18,8 @@ from . import lanes as lanes_mod
 # the weightiest first: a batch chimes with the first of these it has
 EVENTS = ("direct", "reply", "mention", "thread", "request", "activity", "message",
           "online", "sent")
-LANE_EVENT = {"direct": "direct", "replies": "reply", "to_me": "reply", "mentions": "mention",
-              "subs": "thread", "requests": "request", "activity": "activity"}
+# a lane's sound by how personal its rule is (Core.lane_rank: 0 private … 3 threads)
+RANK_EVENT = {0: "direct", 1: "reply", 2: "mention", 3: "thread"}
 
 
 def enabled(cfg):
@@ -36,9 +36,18 @@ def enabled(cfg):
     return ".dev" in __version__
 
 
-def event_for_lane(name):
-    """The sound a lane's news makes: its own, or "message" (home, lists, bots…)."""
-    return LANE_EVENT.get(name, "message")
+def event_for_lane(rank=4, events=None):
+    """The sound a lane's news makes, by its rule, never its name: how personal it is
+    (rank: Core.lane_rank — private, a reply, a mention, a followed thread), else what
+    events it takes ("requests" — follow requests only; any other — "activity"), else a
+    plain "message" (Home, lists, bots…). events: the event words a lane of events
+    takes, None for a lane of posts."""
+    if rank in RANK_EVENT:
+        return RANK_EVENT[rank]
+    if events is not None:
+        return "request" if events and set(events) <= {"follow_request", "pending"} \
+            else "activity"
+    return "message"
 
 
 def weightiest(events):
@@ -58,12 +67,15 @@ class Chime:
             config re-read takes effect at once).
         chosen: ``(lane, wanted, never) -> bool`` — lanes.chosen with lists' titles
             (Core.lane_chosen); the plain ``lanes.chosen`` when None.
+        event_of: ``lane -> event`` — Core.lane_sound (by the lane's rule); "message"
+            for every lane when None.
         clock: monotonic seconds (tests pass their own).
     """
 
-    def __init__(self, cfg, chosen=None, clock=time.monotonic):
+    def __init__(self, cfg, chosen=None, clock=time.monotonic, event_of=None):
         self.cfg = cfg
         self.chosen = chosen or (lambda n, w, x=(): lanes_mod.chosen(n, w, x))
+        self.event_of = event_of or (lambda _name: "message")
         self.clock = clock
         self._last = None
 
@@ -81,7 +93,7 @@ class Chime:
         sounds off, no lane asked for, or too soon after the last one."""
         if not self.on:
             return None
-        event = weightiest(event_for_lane(n) for n in lanes_with_news if self.lane_wanted(n))
+        event = weightiest(self.event_of(n) for n in lanes_with_news if self.lane_wanted(n))
         return self._pass(event)
 
     def for_moment(self, event):

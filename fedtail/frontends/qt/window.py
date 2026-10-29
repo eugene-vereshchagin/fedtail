@@ -1189,13 +1189,10 @@ class MainWindow(QMainWindow):
         """ui.start_lane: "none" — every lane closed behind the curtain (nothing gets
         read by just starting; Enter opens the last one); "last" — the lane of last
         time; or a lane by name."""
-        want = self.cfg["ui"]["start_lane"]
-        if want == "none":
+        name = sidebar.start_lane(self.core, self.lane_order)
+        if name is None:
             self.close_all()
             return
-        name = self.core.get_state("lane") if want == "last" else want
-        if name not in self.lane_items:  # the first time, or a lane that's off
-            name = "home" if "home" in self.lane_items else self.lane_order[0]
         self.select_lane(name)
 
     def _connect_failed(self, err):
@@ -1339,8 +1336,8 @@ class MainWindow(QMainWindow):
                 self.select_lane(current, show=False)
                 self.lane_items[current].set_current(True)
             else:
-                self.select_lane("home" if "home" in self.lane_items
-                                 else self.lane_order[0], show=False)
+                self.select_lane(sidebar.start_lane(self.core, self.lane_order,
+                                                    closable=False), show=False)
         self.update_badges()
 
     def _lane_menu(self, pos):
@@ -2758,7 +2755,8 @@ class MainWindow(QMainWindow):
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown() \
                 and not typing:
             log.info("Enter on the curtain: back to the lane")
-            self.select_lane(self.core.get_state("lane") or "home")
+            self.select_lane(sidebar.start_lane(self.core, self.lane_order,
+                                                 closable=False))
             return
         super().keyPressEvent(e)
 

@@ -287,8 +287,11 @@ def model(view, lang=None, text=None):
             o.kind = "int"
         elif isinstance(default, list):
             items = None
-            if (section, key) in _LANE_LISTS:
-                items = sorted(config.LANE_NAMES)
+            if (section, key) in _LANE_LISTS:  # the sets' lanes and the ones shown now —
+                # one's own and the lanes of tags too (a list goes by its title, as it was)
+                items = sorted(config.LANE_NAMES | {
+                    x.name for x in (getattr(view, "lanes", None) or ())
+                    if not str(x.name).startswith("list:")})
             elif (section, key) in _ITEMS:
                 items = sorted(_ITEMS[(section, key)])
             if items is not None:

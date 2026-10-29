@@ -115,3 +115,18 @@ class DavBackendTest(Devices):
         out = p.act("sync", "dav", "", {"user": "me", "password": "secret"})
         self.assertFalse(out.error, out.error)
         self.assertEqual(p.page("sync").tab, "key")  # on to the key, as a folder does
+
+    def test_no_secret_in_clear_across_the_net(self):
+        """http:// only to this computer or one at home: a WebDAV password or a server's
+        invite code would go in clear otherwise — refused with words, nothing kept. The
+        host as parsed: "localhost.evil.example" is not localhost."""
+        core = self.desk
+        p = Places(View(core))
+        for url in ("http://dav.example/fedtail", "http://localhost.evil.example/x",
+                    "http://127.0.0.1.nip.io/x"):
+            out = p.act("sync", "where", "", {"url": "", "folder": "", "webdav": url})
+            self.assertIn("https://", out.error, url)
+            self.assertNotEqual(core.cfg["sync"]["webdav"], url)
+        with self.assertRaises(ValueError):
+            core.sync_setup(url="http://sync.example")
+        self.assertTrue(core.sync_setup(webdav=self.dav.url + "fedtail") is not None)

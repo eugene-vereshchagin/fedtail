@@ -30,7 +30,6 @@ a copy of their logic.
     settings() / setting_set(…) / settings_apply()   the settings page: the config's options
                                              by chapter, written into the file one at a time
     config_text() / config_save(text)        the config file, edited in the app
-    sync_*                                   sync with the other devices (core/sync)
     places() / page(name, arg, tab, cursor)  every place of the ≡ menu (common/places.py:
                                              search, lists, silence, the server, help…) as data
     place_act(act, confirmed, values, answer)   a place's button, a form sent, a line typed
@@ -1178,6 +1177,7 @@ def _check_thread():
 def _check_pictures():
     import requests
 
+    from fedtail.core import remote
     from fedtail.version import USER_AGENT
     p = _first_post(lambda x: x.get("media") or (x.get("account") or {}).get("avatar"))
     if p is None:
@@ -1187,10 +1187,13 @@ def _check_pictures():
     out = []
     for url in [u for u in urls if u]:
         t = time.monotonic()
-        # never with the token: pictures live on other servers
-        r = requests.get(url, timeout=20, headers={"User-Agent": USER_AGENT})
-        r.raise_for_status()
-        out.append(f"{len(r.content) // 1024} KB {round((time.monotonic() - t) * 1000)} ms")
+        # never with the token, and the way the app itself fetches them (core/remote.py:
+        # public addresses only, each redirect checked, the size capped)
+        with remote.open_url(requests, url, timeout=20,
+                             headers={"User-Agent": USER_AGENT}) as r:
+            r.raise_for_status()
+            got = remote.read(r, 16 * 1024 * 1024)
+        out.append(f"{len(got) // 1024} KB {round((time.monotonic() - t) * 1000)} ms")
     return "; ".join(out)
 
 
@@ -1278,8 +1281,9 @@ def _check_find():
     if p is None:
         return "no words to look for"
     word = max(p["text"].split(), key=len)[:20]
-    lane = next((x["name"] for x in _s["web"].lanes() if x["name"] == "home"), None)
-    got = _s["web"].find(lane or _s["web"].lanes()[0]["name"], word)
+    lanes_now = _s["web"].lanes()
+    lane = next((x["name"] for x in lanes_now if x["start"]), lanes_now[0]["name"])
+    got = _s["web"].find(lane, word)
     every = _s["web"].find_everywhere(word)
     return f"{word!r}: {len(got.get('ids', []))} here, {len(every.get('hits', []))} lanes"
 
@@ -1382,29 +1386,3 @@ def config_save(text):
     return _answer(go)
 
 
-# ---- sync with the account's other devices ----------------------------------------------
-
-def sync_status():
-    """→ {"enabled", "key", "login", "where", "pending", "last": {at, error}}."""
-    def go():
-        core = _core()
-        st = core.sync_status()
-        if st is None:
-            return {"enabled": False, "key": bool(core.sync_key())}
-        return {"enabled": True, **st}
-    return _answer(go)
-
-
-def sync_key():
-    return _answer(lambda: {"key": _core().sync_key() or ""})
-
-
-def sync_join(text):
-    return _answer(lambda: {"kid": _core().sync_join(text)})
-
-
-def sync_now():
-    def go():
-        done = _core().sync_now()
-        return {"sent": done[0], "got": done[1]} if done else {"failed": True}
-    return _answer(go)

@@ -632,6 +632,7 @@ translate_all = false
 # post.language / post.languages) by themselves: the translation in place of the text,
 # marked "translated from …". The original — in the browser or "Post JSON". Your server
 # translates (if it can) or LibreTranslate below; a few posts at a time, in the background.
+# LibreTranslate is given by itself only public posts: a private one is translated on a click.
 translate_auto = false
 
 # Who translates: "server" — your server (its /translate; not every one has it) or

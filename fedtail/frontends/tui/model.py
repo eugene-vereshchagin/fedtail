@@ -168,20 +168,6 @@ class DeleteGuard:
         return False
 
 
-def lane_label(core, name, width=22):
-    """(title, number) of a lane's row on the left. The number is the core's for every
-    lane alike (common/sidebar.count): unread posts, events not seen in a lane that
-    takes them; nothing for a browse lane."""
-    from ..common import sidebar
-    title = core.lane_title(name) or _("lane_" + name)
-    n = sidebar.count(core, name)
-    count = f" {n}" if n else ""
-    room = max(4, width - len(count))
-    if len(title) > room:
-        title = title[:room - 1] + "…"
-    return title, n
-
-
 def event_lines(parts):
     """An event's row (common/activity.EventParts) as lines of (kind, text, link):
     who (each name opens the person) — what · when, × (hides the row), a request's
@@ -218,30 +204,3 @@ def event_lines(parts):
     return lines
 
 
-def ordered_lanes(core):
-    """[(group title or None, [lane names])] in the window's sidebar order
-    (ui.sidebar_groups: with section titles, or without)."""
-    return [(title, names) for _key, title, names in lane_groups(core)]
-
-
-def lane_groups(core):
-    """[(group key or None, its title or None, [lane names])]: the sections of the
-    windows' sidebar (common/sidebar.py folds them by key)."""
-    from ...core import lanes as lanes_module
-    groups = lanes_module.grouped(core.lanes)
-    if not core.cfg["ui"]["sidebar_groups"]:
-        return [(None, None, [n for _g, names in groups for n in names])]
-    out = []
-    for group, names in groups:
-        if names:
-            out.append((group, _("lists_header") if group == "lists" else
-                        _("grp_" + group), names))
-    return out
-
-
-def start_lane(core, names):
-    """The lane to open first: the one of last time, else Home, else the first."""
-    want = core.get_state("lane")
-    if want in names:
-        return want
-    return "home" if "home" in names else (names[0] if names else None)

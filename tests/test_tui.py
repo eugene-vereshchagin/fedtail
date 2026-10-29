@@ -269,3 +269,26 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
+class MarkupTest(unittest.IsolatedAsyncioTestCase):
+    async def test_words_are_shown_not_read_as_markup(self):
+        """A post's words in a dialog (deleting it: "Sure? «…»") are text, not Textual
+        markup: "[/b]" broke the dialog, "[@click=app.quit]" was an action."""
+        from textual.app import App
+        from textual.widgets import Static
+
+        from fedtail.frontends.tui.screens import ConfirmScreen
+
+        text = "a [/b] and [@click=app.quit]quit[/] [b]x"
+        app = App()
+        async with app.run_test() as pilot:
+            app.push_screen(ConfirmScreen("[/i] title", text))
+            await pilot.pause(0.1)
+            shown = str(app.screen.query_one("#q-text", Static).render())
+            self.assertIn("[/b]", shown)
+            self.assertIn("[@click=app.quit]", shown)
+            await pilot.press("n")
+            await pilot.pause(0.05)
+            self.assertTrue(app.is_running)

@@ -26,6 +26,7 @@ any = [{}]
 
 [[fedtail]]
 name = "home"
+start = true  # the lane opened first (ui.start_lane names none here)
 group = "standard"
 source = "home"
 any = [
@@ -129,6 +130,7 @@ slot = "tags"
 
 [[mastodon]]
 name = "home"
+start = true
 group = "standard"
 source = "home"
 any = [
@@ -213,6 +215,7 @@ slot = "tags"
 
 [[tusky]]
 name = "home"
+start = true
 group = "standard"
 source = "home"
 any = [
@@ -280,6 +283,7 @@ slot = "tags"
 
 [[phanpy]]
 name = "home"
+start = true
 group = "standard"
 source = "home"
 any = [
@@ -356,6 +360,7 @@ slot = "tags"
 
 [[fedilab]]
 name = "home"
+start = true
 group = "standard"
 source = "home"
 any = [

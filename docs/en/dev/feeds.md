@@ -184,6 +184,7 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `bundle` | `"author"` — each author's posts together, the busiest first (a catch-up read person by person) |
 | `view` | `"threads"` — a card a thread (its post) with how many new comments, the threads with something new only (Point's way: "Commented posts") |
 | `open_at` | where a thread opened from the lane's card stands: `"post"` or `"first_unread"` (its first unread comment; none — the post); none — `threads.open_at`. The card's links say it (`fedtail:thread/<id>` / `fedtail:threadnew/<id>`, `common/links.thread_url`), the thread finds the place itself once loaded (`View.thread_focus`) — the same in every interface and on the phone |
+| `start` | `true` — the set's lane opened first when `ui.start_lane` names none of its lanes ("none" where an interface can't show every lane closed, "last" the first time, a lane that's off): `common/sidebar.start_lane`, one rule for every interface and the phone. Each built-in set marks its Home; none marked — the sidebar's first |
 | `until` (of a condition) | the condition holds till then — a date `"2026-11-01"` or a moment; after it, as if it weren't there (a mute for a week in `none`, a lane for a trip) |
 | `text_in = "name"` (of a condition) | `text` looks in the author's name and @nick too (with `text_regex` — a regular expression) |
 | `author = "hidden_home"` | someone taken out of Home on their profile ("Not in Home", `people.home_hide`), still followed; every set's Home has it in `none` |

@@ -20,6 +20,10 @@ class Resp:
         self.status_code = status
         self._body = body
         self.ok = status < 400
+        self.headers = {}
+
+    def iter_content(self, _size):  # read capped (backends._capped): the JSON is json()
+        return iter(())
 
     def json(self):
         if isinstance(self._body, Exception):

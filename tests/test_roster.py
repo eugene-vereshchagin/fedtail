@@ -63,15 +63,16 @@ class RosterTest(TmpDir):
         core.poll_once()
         v = View(core)
         threads = next((g for g in v.roster() if g.name == "threads"), None)
-        if "subs" not in core.lane_by_name:
-            self.assertIsNone(threads)
-            return
+        # the lane of followed threads by its rule (Core.thread_lanes), whatever its name:
+        # "subs", or the fedtail set's "Commented posts" (it had none: no lane "subs")
         self.assertIsNotNone(threads)
         item = threads.items[0]
         self.assertIsInstance(item, RosterItem)
         self.assertEqual((item.kind, item.key), ("thread", "100"))
-        self.assertEqual(item.unread, 1)
-        self.assertEqual(item.ids, ("102",))
+        self.assertIn("102", item.ids)
+        self.assertEqual(item.unread, len(item.ids))
+        if "subs" in core.lane_by_name:  # the thread's own lane: the mention isn't in it
+            self.assertEqual(item.ids, ("102",))
         self.assertIn("мой тред", item.title)
         core.cfg["ui"]["roster_threads"] = 0
         self.assertFalse(any(g.name == "threads" for g in v.roster()))

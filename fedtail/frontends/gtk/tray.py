@@ -161,7 +161,8 @@ class Tray:
         """One property, made only when asked: the panel asks again after every
         NewToolTip, and the icon's pixels as a PyGObject-built variant took 0.3 s each
         time (the night of 22.10: a freeze per new post)."""
-        icon = "online.dmesg.fedtail"
+        from ...desktop import desktop_id
+        icon = desktop_id()  # the app's icon, installed under its id (AGENTS.md: only so)
         make = {
             "Category": lambda: GLib.Variant("s", "Communications"),
             "Id": lambda: GLib.Variant("s", "fedtail"),

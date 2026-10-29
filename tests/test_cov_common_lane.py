@@ -41,6 +41,9 @@ class View:
     def entries(self, _name):
         return list(self._entries)
 
+    def lane_rank(self, name):  # the core's, by the rule: here by the preset's
+        return {"replies": 1, "mentions": 2, "subs": 3}.get(name, 4)
+
     def unread(self, entries):
         return {e.id for _i, e in entries if e.id in self._unread}
 

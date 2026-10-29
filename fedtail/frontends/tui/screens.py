@@ -56,8 +56,10 @@ class ConfirmScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static(self.q_title, id="q-title")
-            yield Static(self.text, id="q-text")
+            # Text, not a str: a str is Textual markup — a post's "[/b]" broke the dialog,
+            # "[@click=…]" made an action of it
+            yield Static(Text(self.q_title), id="q-title")
+            yield Static(Text(self.text), id="q-text")
             yield Static(Text(_("tui_yes_no"), style="dim"))
 
     def action_answer(self, yes):
@@ -82,7 +84,7 @@ class AskScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Static(Text(self.q_title, style="bold"))
-            yield Static(self.question)
+            yield Static(Text(self.question))
             yield Input(value=self.text, id="ask")
 
     def on_mount(self):
@@ -128,7 +130,7 @@ class MenuScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static(self.m_title, id="menu-title")
+            yield Static(Text(self.m_title), id="menu-title")
             yield ListView(*[ChoiceItem("─" * 20, None, False) if it == "-" else
                              ChoiceItem(it[0], it[1]) for it in self.items], id="menu")
             yield Static("", id="menu-hint")
@@ -201,9 +203,9 @@ class ChooseScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static(self.c_title, id="choose-title")
+            yield Static(Text(self.c_title), id="choose-title")
             if self.text:
-                yield Static(self.text, id="choose-text")
+                yield Static(Text(self.text), id="choose-text")
             yield ListView(*[ChoiceItem(label, key) for key, label in self.options],
                            id="choose")
             if self.check:
@@ -421,26 +423,27 @@ class PlaceScreen(Screen):
         widgets = []
         for f in page.form:
             if f.kind == "check":
-                w = Checkbox(f.label, bool(f.value))
+                w = Checkbox(Text(f.label), bool(f.value))
                 widgets.append(w)
             elif f.kind == "checks":
                 if f.label:
-                    widgets.append(Label(f.label))
-                boxes = [(v, Checkbox(words, v in (f.value or ()))) for v, words in f.choices]
+                    widgets.append(Label(Text(f.label)))
+                boxes = [(v, Checkbox(Text(words), v in (f.value or ())))
+                         for v, words in f.choices]
                 row = Horizontal if len(boxes) <= 4 else Vertical  # many: one under another
                 widgets.append(row(*[b for _v, b in boxes], classes="checks"))
                 w = boxes
             elif f.kind == "choice":
-                widgets.append(Label(f.label))
+                widgets.append(Label(Text(f.label)))
                 w = Select([(words, v) for v, words in f.choices], value=f.value,
                            allow_blank=False)
                 widgets.append(w)
             elif f.kind == "text":
-                widgets.append(Label(f.label))
+                widgets.append(Label(Text(f.label)))
                 w = TextArea(str(f.value or ""))
                 widgets.append(w)
             else:
-                widgets.append(Label(f.label))
+                widgets.append(Label(Text(f.label)))
                 w = Input(value=str(f.value or ""), placeholder=f.label,
                           password=f.kind == "secret")
                 widgets.append(w)

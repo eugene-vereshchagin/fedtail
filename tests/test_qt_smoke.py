@@ -3041,7 +3041,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(win.dock.target.id, thread.posts[0].id)
         win.dock.text.clear()
         # a private talk with one person: a tab of its own, the input line to them
-        from fedtail.frontends.qt.dock import TalkWidget, talk_with
+        from fedtail.frontends.common.split import talk_with
+        from fedtail.frontends.qt.dock import TalkWidget
         who = thread.posts[0].author
         win.write_to(who)
         self.assertIsInstance(win.tabs.currentWidget(), TalkWidget)

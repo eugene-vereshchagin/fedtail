@@ -49,6 +49,27 @@ class BackendError(Exception):
 
 
 PROTOCOL = 2  # what fedtail-sync speaks with this fedtail (PROTOCOL.md)
+# the most a sync server's answer may be: a page of blobs (PAGE of max_blob_kb, base64)
+# or a picture — far more than either; beyond it the server isn't one to believe
+ANSWER_MAX = 64 * 1024 * 1024
+
+
+def _capped(r, most=ANSWER_MAX):
+    """The answer's bytes, read once and kept on it; more than `most` — refused."""
+    got = getattr(r, "_fedtail_body", None)
+    if got is not None:
+        return got
+    chunks, size = [], 0
+    for chunk in r.iter_content(64 * 1024):
+        size += len(chunk)
+        if size > most:
+            r.close()
+            raise BackendError("other", "sync: an answer bigger than any it should give")
+        chunks.append(chunk)
+    r._fedtail_body = got = b"".join(chunks)
+    r._content = got  # r.json() and r.content read what was read
+    r._content_consumed = True
+    return got
 
 
 class HttpBackend:
@@ -89,11 +110,21 @@ class HttpBackend:
             raise BackendError("gone", "sync server: 404 (not a fedtail-sync 0.22 here?)")
         if r.status_code >= 400:
             raise BackendError("other", f"sync server: HTTP {r.status_code}")
+        if r.status_code >= 300:  # not followed (_call): sync.url should be where it points
+            raise BackendError("other", f"sync server: HTTP {r.status_code} to "
+                                        f"{r.headers.get('Location', '?')} — put that "
+                                        "address in sync.url")
 
     def _call(self, method, path, **kw):
+        """One request to the server — never followed elsewhere: a redirect would carry
+        the journal's id and the invite code to another host (requests drops only
+        Authorization); the answer read at most ANSWER_MAX (the store is not trusted)."""
         self.ready()
         try:
-            return self.s.request(method, f"{self.url}/v2{path}", timeout=TIMEOUT, **kw)
+            r = self.s.request(method, f"{self.url}/v2{path}", timeout=TIMEOUT,
+                               allow_redirects=False, stream=True, **kw)
+            _capped(r)  # read (capped) while the error can still say why
+            return r
         except requests.RequestException as e:
             raise BackendError("other", f"sync server: {self._net(e)}") from e
 
@@ -102,9 +133,11 @@ class HttpBackend:
         again next time)."""
         if getattr(self, "_said", None) is None:
             try:
-                r = self.s.get(f"{self.url}/v2", timeout=TIMEOUT)
+                r = self.s.get(f"{self.url}/v2", timeout=TIMEOUT, allow_redirects=False,
+                               stream=True)
+                _capped(r)
                 said = r.json() if r.ok else {}
-            except (requests.RequestException, ValueError):
+            except (requests.RequestException, ValueError, BackendError):
                 return {}
             self._said = said if isinstance(said, dict) else {}
         return self._said
@@ -157,18 +190,24 @@ class HttpBackend:
         except (ValueError, AttributeError, TypeError):
             return 0
 
-    # ---- the key under a password: /v2/escrow/<id> ---------------------------------
+    # ---- the key under a password: /v2/escrow, its id in a header -------------------
+    # (the id is a password's stretch: in a URL it would sit in every log of a request)
     def escrow_put(self, eid, blob):
-        self._check(self._call("PUT", f"/escrow/{eid}", data=blob,
-                               headers={"Content-Type": "application/octet-stream"}))
+        r = self._call("PUT", "/escrow", data=blob,
+                       headers={"Content-Type": "application/octet-stream",
+                                "X-Fedtail-Escrow": eid})
+        if r.status_code == 409:
+            raise BackendError("other", "sync server: 409 (another journal's key is kept "
+                                        "under this password: choose another)")
+        self._check(r)
 
     def escrow_get(self, eid):
         """The sealed key, or None — none under this id (the password is another)."""
-        r = self._call("GET", f"/escrow/{eid}")
+        r = self._call("GET", "/escrow", headers={"X-Fedtail-Escrow": eid})
         if r.status_code == 404:
             return None
         self._check(r)
-        return r.content
+        return _capped(r)
 
     # ---- the pictures of drafts (PROTOCOL.md: /v2/media) ---------------------------
     def media_kb(self):
@@ -372,8 +411,11 @@ class DavTree:
     def _call(self, method, path="", **kw):
         from urllib.parse import quote
         try:
-            return self.s.request(method, self.url + quote(path), timeout=TIMEOUT,
-                                  allow_redirects=False, **kw)
+            most = kw.pop("most", ANSWER_MAX)
+            r = self.s.request(method, self.url + quote(path), timeout=TIMEOUT,
+                               allow_redirects=False, stream=True, **kw)
+            _capped(r, most)  # someone's server: no answer bigger than it should be
+            return r
         except requests.RequestException as e:
             from urllib.parse import urlsplit
 
@@ -408,13 +450,11 @@ class DavTree:
         path = f"{sub}/" if sub else ""
         r = self._call("PROPFIND", path, headers={"Depth": "1", "Content-Type": "text/xml"},
                        data=b'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop>'
-                            b'<d:resourcetype/></d:prop></d:propfind>', stream=True)
+                            b'<d:resourcetype/></d:prop></d:propfind>', most=DAV_LIST_MAX)
         if r.status_code == 404:
             return None
         self._check(r, path)
-        body = r.raw.read(DAV_LIST_MAX + 1, decode_content=True)
-        if len(body) > DAV_LIST_MAX:
-            raise BackendError("other", f"WebDAV {path}: a listing too big")
+        body = _capped(r)
         try:
             root = _xml(body)
         except (ET.ParseError, ValueError) as e:

@@ -426,7 +426,8 @@ class ChipsTest(FreeBase):
         i18n.setup("ru")
         core, w = self.setup_lane()
         m = LaneModel(View(core), "feed")
-        self.assertEqual(m.filters, ["main", "all", "chip:1", "chip:2", "unread"])
+        # a lane of posts like Home: "posts only" too — by its rule, as Home has it
+        self.assertEqual(m.filters, ["main", "all", "posts", "chip:1", "chip:2", "unread"])
         self.assertEqual(m.filter_words("main")[0], "Основное")
         self.assertEqual(m.filter_words("chip:1")[0], "Комменты")
         self.assertIn("Комменты", m.filter_words("chip:1")[1])
@@ -451,6 +452,7 @@ class ChipsTest(FreeBase):
         got = web.Web(core, "KEY").lane("feed")
         self.assertEqual([f[:2] for f in got["filters"]],
                          [["main", "Main"], ["all", i18n._("show_all")],
+                          ["posts", i18n._("posts_only")],
                           ["chip:1", "Комменты"], ["chip:2", "Моё"],
                           ["unread", i18n._("unread_only")]])
         self.assertEqual(got["filter"], "main")
@@ -722,6 +724,20 @@ class RequestsInActivityTest(FreeBase):
         core.poll_once()
         self.assertEqual(core.activity_entries(), [])
         self.assertEqual(core.follow_requests, [])  # nobody shows them: not even asked
+
+    def test_off_for_a_lane_of_events_of_any_name(self):
+        """activity.requests = false keeps follow requests out of every lane of events
+        that takes others too — a lane of one's own like Activity under another name —
+        not only of the lane called "activity"; a lane of requests alone keeps them."""
+        own = [{"name": "bell", "any": [{"event": ["favourite", "follow_request"]}]},
+               {"name": "asks", "any": [{"event": "follow_request"}]}]
+        cfg, _w = config.validate({"activity": {"requests": False},
+                                   "lanes": {"custom": own}})
+        rules = {c.name: c.rule for c in custom.load(cfg)[0]}
+        stopped = [c for c in rules["bell"].none if c.sets.get("event") == {"follow_request"}]
+        self.assertTrue(stopped)
+        self.assertFalse([c for c in rules["asks"].none
+                          if c.sets.get("event") == {"follow_request"}])
 
     def test_answer_by_id_alone(self):
         core, w = self.make_new()

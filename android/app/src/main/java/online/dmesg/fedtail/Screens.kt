@@ -150,7 +150,6 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
                 p == Place.Settings -> SettingsPlace(model, snack)
                 p == Place.SelfCheck -> SelfCheckPlace(model, snack, share)
                 p == Place.Config -> ConfigPlace(model, snack)
-                p == Place.Sync -> SyncPlace(model, snack, openBrowser)
                 cols == 1 -> when (p) {
                     null -> if (model.current == null) HubScreen(model, snack)
                             else LaneScreen(model, snack, openBrowser, laneState)
@@ -886,67 +885,3 @@ private fun ConfigPlace(model: AppModel, snack: SnackbarHostState) {
     }
 }
 
-// ---- sync --------------------------------------------------------------------------------
-
-@Composable
-private fun SyncPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit) {
-    val clipboard = LocalClipboardManager.current
-    var key by remember { mutableStateOf("") }
-    var done by remember { mutableStateOf("") }
-    val info = model.syncInfo
-    PlaceScaffold(stringResource(R.string.sync), model, snack) { mod ->
-        Column(mod.padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (info == null) {
-                CircularProgressIndicator()
-                return@Column
-            }
-            if (!info.optBoolean("enabled")) {
-                Text(stringResource(R.string.sync_off), style = MaterialTheme.typography.bodyMedium)
-                OutlinedButton(onClick = { model.back(); model.openSettings("sync") }) {
-                    Text(stringResource(R.string.settings))
-                }
-            } else {
-                val last = info.optJSONObject("last")
-                Fact(stringResource(R.string.sync_where),
-                    info.optString("backend") + " " + info.optString("where"))
-                Fact(stringResource(R.string.sync_login), info.optString("login").ifBlank { "—" })
-                Fact(stringResource(R.string.sync_key_id), info.optString("key").ifBlank { "—" })
-                Fact(stringResource(R.string.sync_pending), "${info.optInt("pending")}")
-                Fact(stringResource(R.string.sync_last), listOfNotNull(
-                    last?.optString("at")?.takeIf { it.isNotBlank() },
-                    last?.optString("error")?.takeIf { it.isNotBlank() }).joinToString("\n")
-                    .ifBlank { "—" })
-                Button(onClick = { model.syncNow { done = it } }, enabled = !model.syncBusy,
-                    modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_now)) }
-                if (done.isNotBlank()) Text(stringResource(R.string.sync_done, done))
-            }
-            HorizontalDivider()
-            Text(stringResource(R.string.sync_key_intro), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = { model.syncShowKey() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.sync_key_show))
-            }
-            if (model.syncKeyShown.isNotBlank()) {
-                Text(model.syncKeyShown, fontFamily = FontFamily.Monospace)
-                TextButton(onClick = { clipboard.setText(AnnotatedString(model.syncKeyShown)) }) {
-                    Text(stringResource(R.string.copy))
-                }
-            }
-            OutlinedTextField(value = key, onValueChange = { key = it },
-                label = { Text(stringResource(R.string.sync_key_paste)) },
-                modifier = Modifier.fillMaxWidth())
-            OutlinedButton(onClick = { model.syncJoin(key); key = "" }, enabled = key.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_join)) }
-        }
-    }
-}
-
-@Composable
-private fun Fact(label: String, value: String) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyLarge)
-    }
-}

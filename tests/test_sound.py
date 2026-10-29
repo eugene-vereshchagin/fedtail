@@ -16,8 +16,9 @@ from fedtail.core.sounds import EVENTS, Chime, event_for_lane, weightiest
 from fedtail.frontends import soundpack, themefile
 from fedtail.frontends.common.sound import Player, Sounds
 
-from . import fakes
+from . import fakes, test_cli
 from .fakes import BOB, ME, FakeApi, status
+from .test_core import TmpDir
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -39,16 +40,20 @@ class Clock:
 
 class ChimeTest(unittest.TestCase):
     def test_lanes_have_their_events(self):
-        self.assertEqual(event_for_lane("replies"), "reply")
-        self.assertEqual(event_for_lane("direct"), "direct")
-        self.assertEqual(event_for_lane("home"), "message")
-        self.assertEqual(event_for_lane("list:L1"), "message")
+        """By the rule, never the name: how personal (Core.lane_rank), the events taken."""
+        self.assertEqual(event_for_lane(1), "reply")
+        self.assertEqual(event_for_lane(0), "direct")
+        self.assertEqual(event_for_lane(3), "thread")
+        self.assertEqual(event_for_lane(4), "message")
+        self.assertEqual(event_for_lane(4, {"follow_request"}), "request")
+        self.assertEqual(event_for_lane(4, {"favourite", "follow"}), "activity")
         self.assertEqual(weightiest(["message", "thread", "reply"]), "reply")
         self.assertIsNone(weightiest([]))
 
     def test_a_batch_chimes_once_with_the_weightiest(self):
         clock = Clock()
-        ch = Chime(cfg(), clock=clock)
+        named = {"subs": "thread", "replies": "reply", "direct": "direct"}
+        ch = Chime(cfg(), clock=clock, event_of=lambda n: named.get(n, "message"))
         self.assertEqual(ch.for_news(["subs", "replies", "direct"]), "direct")
         clock.t += 1  # within min_gap_seconds: quiet
         self.assertIsNone(ch.for_news(["replies"]))
@@ -288,6 +293,27 @@ class SilentTest(unittest.TestCase):
                        player=FakePlayer(), only_bell=True)
             s.play("message", focused=True)
         self.assertEqual(beeps, [])
+
+
+class LaneSoundTest(TmpDir):
+    """A real core's lanes sound by their rules: "Commented" (followed threads) is a
+    thread — it was a "message", the thread sound never played; a lane of one's own
+    that takes private posts is private, whatever it's called."""
+    make = test_cli.CliTest.make
+
+    def test_by_the_rule(self):
+        core, _w = self.make()
+        self.assertEqual(core.lane_sound("direct"), "direct")
+        self.assertEqual(core.lane_sound("to_me"), "reply")
+        self.assertEqual(core.lane_sound("commented"), "thread")
+        self.assertEqual(core.lane_sound("home"), "message")
+        self.assertEqual(core.lane_sound("activity"), "activity")
+        self.assertEqual(core.lane_sound("no such lane"), "message")
+        shown = {x.name for x in core.lanes}
+        self.assertTrue(set(core.private_lanes()) <= shown)
+        self.assertIn("direct", core.private_lanes())
+        self.assertTrue(core.thread_lanes())  # this set's: "subs"
+        self.assertTrue(all(core.lane_rank(n) == 3 for n in core.thread_lanes()))
 
 
 class SoundsTest(unittest.TestCase):

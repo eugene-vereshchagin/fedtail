@@ -2,6 +2,60 @@
 
 ## 0.22.0 — in progress
 
+- Lanes behave by their rules, not their names — a set of lanes of one's own (or another
+  preset) gets everything the built-in names had:
+  - the lane opened first (`ui.start_lane`) is decided once for every interface: the
+    terminal, the web page and the phone ignored the option, and five places fell back to
+    a lane called "home" — now each set marks its own (`start = true` in its rule);
+  - leaving or muting a thread, a bookmark taken back, another device's thread state:
+    the lanes those sources fill look again (they were told by source names — "subs",
+    "mentions" — that the fedtail set has no lanes of, so "Commented posts" and "To me"
+    stayed as they were);
+  - a lane's sound comes from its rule: followed threads sound as threads ("Commented
+    posts" was a plain "message", the thread sound never played), a lane of one's own
+    with private posts as a private message;
+  - private messages — the server's conversations kept read, my own messages in the
+    dialogue, the chat window of the split layout — work with any lane that takes them,
+    not only one named "direct";
+  - the split layout's roster shows followed threads from the set's lane of them (with
+    no lane called "subs" it showed none);
+  - the sidebar's sections are the rules' `group`: a lane in two sections at once, or in
+    the section its name had rather than its rule's, is gone;
+  - "posts only", "as conversations", checking my replies, "via #tag" and
+    `activity.requests` go by what a lane's rule takes, not a list of names.
+
+- Safer with what others send and what the config holds:
+  - the bug report and the debugging log keep the config with its secrets taken out
+    (`feed.translate_key`, a password in `net.proxy` or any other address);
+  - a post's `mailto:` link keeps only its subject and body (`attach=` went to the mail
+    client);
+  - the terminal shows a post's words in its dialogs as text (`[/b]` broke the "delete?"
+    dialog, `[@click=…]` was an action);
+  - someone's name, handle or "about" line in a Qt tooltip is never drawn as HTML;
+  - `sync.url`, `sync.webdav` and `feed.translate_url` take `http://` only to this
+    computer or one at home, by the host as parsed ("http://localhost.evil.example" passed
+    before), from the config and from ≡ → Sync alike;
+  - a login of long ago to a plain `http://` server on the internet no longer sends its
+    token: log in anew with `https://`;
+  - logs that can't go where they should go to a folder of the temporary one that is the
+    owner's only (another user's folder of that name, or a link, is refused);
+  - the phone's self-check fetches pictures the way the app does (public addresses only,
+    the size capped).
+
+- Automatic translation through LibreTranslate (`feed.translate_auto`) sends out only
+  public posts: a direct or followers-only post went to the outside service as it arrived.
+  Such a post is translated on a click now (the server's own translation refuses them
+  anyway).
+
+- Sync, the key under a password on a sync server: kept under an id of the password and
+  the fediverse account, not of the password alone — a guess tested every person on the
+  server at once, and a journal could put its key in another's place (now refused, 409).
+  The id goes in a header, never in a URL a log keeps; scrypt is four times as hard
+  (`FTK2`; the older blobs still open); a password is 10 characters at least. The sync
+  client follows no redirect (the journal's id and the invite code went along), reads no
+  answer bigger than any a store should give, and a server's code makes at most
+  `journals_per_invite` journals (fedtail-syncserver).
+
 - Lighter core: a new free lane (or one whose rule changed) fills from the stored posts by
   linking them, not writing every one back — the fill had held its posts three times over,
   a 25 MB peak the process kept. The core alone, 4000 posts: 89.5 → 72.5 MB; every lane's

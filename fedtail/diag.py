@@ -248,13 +248,32 @@ class NoQueries(logging.Filter):
         return True
 
 
+def _own_folder(where):
+    """A folder in the shared temporary one, made the owner's only (0700) — or refused
+    (OSError) when someone else made it first or it's a link: another user of the machine
+    must not read the logs, nor have them written where they say."""
+    import stat
+    where.mkdir(mode=0o700, exist_ok=True)
+    st = os.lstat(where)
+    if not stat.S_ISDIR(st.st_mode):
+        raise OSError(f"{where}: not a folder")
+    if hasattr(os, "getuid"):
+        if st.st_uid != os.getuid():
+            raise OSError(f"{where}: someone else's")
+        if st.st_mode & 0o077:
+            os.chmod(where, 0o700)
+
+
 def _writable(folder, paths):
     """The log folder if it can be written to; else one in the temporary folder (a
     data folder made read-only, a full disk); None — nowhere at all."""
     import tempfile
     for where in (folder, Path(tempfile.gettempdir()) / f"fedtail-logs-{paths.profile}"):
         try:
-            where.mkdir(parents=True, exist_ok=True)
+            if where == folder:
+                where.mkdir(parents=True, exist_ok=True)
+            else:
+                _own_folder(where)
             probe = where / ".write-test"
             probe.write_text("", "utf-8")
             probe.unlink()
@@ -887,8 +906,37 @@ def _toolkits():
     return out
 
 
+# options whose value is a secret: never in a log or a report as it is (redact)
+SECRET_OPTIONS = {"translate_key"}
+_USERINFO = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/@\s\"']+@")
+_SECRET_LINE = re.compile(r"(?m)^(\s*(?:" + "|".join(sorted(SECRET_OPTIONS)) +
+                          r")\s*=\s*)(\"[^\"\n]*\"|'[^'\n]*')")
+
+
+def redact(value):
+    """A value as a log or a report may hold it: a URL's user and password ("socks5h://
+    me:pw@host" — net.proxy, a WebDAV address) taken out, whatever the option."""
+    if isinstance(value, str):
+        return _USERINFO.sub(r"\1***@", value)
+    if isinstance(value, list):
+        return [redact(v) for v in value]
+    if isinstance(value, dict):
+        return {k: "***" if k in SECRET_OPTIONS and v else redact(v)
+                for k, v in value.items()}
+    return value
+
+
+def redact_config(text):
+    """config.toml's text for a log or a report: the secret options' values (an API key)
+    and every URL's user and password replaced by ***, the rest as it is."""
+    text = _SECRET_LINE.sub(lambda m: m.group(1) + ('"***"' if len(m.group(2)) > 2
+                                                     else m.group(2)), text)
+    return _USERINFO.sub(r"\1***@", text)
+
+
 def changed_options(cfg):
-    """{"section.key": value} of the options that differ from the defaults."""
+    """{"section.key": value} of the options that differ from the defaults (secrets
+    redacted: SECRET_OPTIONS, a URL's password)."""
     from .core.config import DEFAULTS
     out = {}
     for section, values in (cfg or {}).items():
@@ -897,7 +945,8 @@ def changed_options(cfg):
             continue
         for key, val in values.items():
             if key not in base or base[key] != val:
-                out[f"{section}.{key}"] = val
+                out[f"{section}.{key}"] = "***" if key in SECRET_OPTIONS and val \
+                    else redact(val)
     return out
 
 
@@ -917,10 +966,11 @@ def debug_context(paths, cfg, ui):
     except OSError:
         text = ""
     if text.strip():
-        log.info("config file %s:\n%s", paths.config_file, text.rstrip())
+        log.info("config file %s:\n%s", paths.config_file, redact_config(text).rstrip())
 
 
 # ---- bug report ----------------------------------------------------------------------------------
+# sync_auth.json: 0.21's sync login (a token) — gone since, but a profile may still hold one
 REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm", "sync.key",
                "sync_auth.json", "sync_invite.json", "sync_webdav.json"}
 
@@ -942,14 +992,18 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
                         and f.name != "latest.log" \
                         and (not f.name[:1].isdigit() or f.stat().st_mtime >= since):
                     tar.add(f, arcname=f"logs/{f.name}")
-        if paths.config_file.exists():
-            tar.add(paths.config_file, arcname="config.toml")
-        data = summary.encode("utf-8")
-        info = tarfile.TarInfo("system.txt")
-        info.size = len(data)
-        info.mtime = int(time.time())
-        tar.addfile(info, io.BytesIO(data))
+        if paths.config_file.exists():  # its secrets redacted (an API key, a proxy's password)
+            _add_text(tar, "config.toml", redact_config(paths.config_file.read_text("utf-8")))
+        _add_text(tar, "system.txt", summary)
     return out
+
+
+def _add_text(tar, name, text):
+    data = text.encode("utf-8")
+    info = tarfile.TarInfo(name)
+    info.size = len(data)
+    info.mtime = int(time.time())
+    tar.addfile(info, io.BytesIO(data))
 
 
 def _system_summary(paths, cfg=None):

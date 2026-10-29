@@ -124,12 +124,25 @@ class ConnectTest(CoreCase):
 class HttpServerTest(CoreCase):
     server = "http://fedi.example.com"
 
-    def test_plain_http_is_warned_and_has_no_stream(self):
+    def test_no_token_in_clear_across_the_internet(self):
+        """A login of long ago to a plain http:// server on the internet: the token isn't
+        sent (as a new login refuses one) — log in anew with https://."""
+        with self.assertLogs("fedtail.core.app", "WARNING") as logs, \
+                self.assertRaises(ValueError) as e:
+            self.connect()
+        self.assertTrue(any("plain http" in x for x in logs.output))
+        self.assertIn("http://", str(e.exception))
+        self.assertIsNone(self.core.api)
+
+
+class HomeHttpServerTest(CoreCase):
+    server = "http://192.168.1.10"  # a server at home: http:// is fine, a stream isn't
+
+    def test_no_stream_over_plain_http(self):
         with self.assertLogs("fedtail.core.app", "WARNING") as logs:
             c = self.connect()
             c.api.has_stream = True
             c._start_stream()
-        self.assertTrue(any("plain http" in x for x in logs.output))
         self.assertTrue(any("not https" in x for x in logs.output))
         self.assertIsNone(getattr(c, "_stream", None))
 

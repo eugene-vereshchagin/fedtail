@@ -197,7 +197,10 @@ class SyncPlaces:
         if dav and not dav.startswith(("https://", "http://")):
             dav = "https://" + dav
         invite = str(values.get("invite") or "").strip() or None
-        v.sync_setup(url=url, folder=folder, webdav=dav, invite=invite)
+        try:
+            v.sync_setup(url=url, folder=folder, webdav=dav, invite=invite)
+        except ValueError as e:  # http:// to someone's server: refused, nothing kept
+            return Out(error=str(e))
         if invite and v.sync_key():  # the code for a journal that waits for it: tried now
             done = v.sync_now()
             if done:

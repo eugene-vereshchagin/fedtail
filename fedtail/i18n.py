@@ -258,6 +258,9 @@ _STRINGS = {
         "sync_save_where": "Сохранить и включить",
         "sync_what_btn": "Что синхронизировать…",
         "sync_saved_on": "Синхронизация включена",
+        "sync_cleartext": "{where}: нужен https:// — по http:// пароль и коды пошли бы "
+                          "открытым текстом (http:// можно только к этому компьютеру или "
+                          "к домашней сети)",
         "sync_saved_off": "Синхронизация выключена",
         "sync_key_hint": "Ключ один на все твои устройства и открывает всё, что синхронизируется: "
                          "не показывай его никому. На новом устройстве: ≡ → Синхронизация → "
@@ -2068,6 +2071,9 @@ _STRINGS = {
         "sync_save_where": "Save and turn on",
         "sync_what_btn": "What to sync…",
         "sync_saved_on": "Sync is on",
+        "sync_cleartext": "{where}: https:// is needed — over http:// the password and the "
+                          "codes would go in clear (http:// only to this computer or one "
+                          "at home)",
         "sync_saved_off": "Sync is off",
         "sync_key_hint": "One key for all your devices, and it opens everything that is synced: "
                          "show it to no one. On the new device: ≡ → Sync → “Add to those set up” → "

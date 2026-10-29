@@ -9,7 +9,7 @@ import re
 import tomllib
 from importlib import resources
 
-from . import presets
+from . import presets, taggroups
 
 DEFAULTS = {
     "account": {"markdown": "auto"},
@@ -569,9 +569,21 @@ def older_place(section, key):
 
 
 # options taken out, as the file names them → what to say instead of "unknown"
+# options taken out, by the names a file may give them (this layout's and 0.20's): what
+# says it now, in place of "unknown key"
+_RULES_SAY = "the lanes' rules say it now (lanes.preset, [[lanes.custom]]: docs/en/dev/feeds.md)"
 GONE = {
     "reading.build_at_once": "reading.build_at_once is gone: only the cards near the screen "
                              "are built now, however long the lane (0.22)",
+    "feed.build_at_once": "feed.build_at_once is gone: only the cards near the screen are "
+                          "built now, however long the lane (0.22)",
+    "lanes.mentions_all": f"lanes.mentions_all is gone (0.21): {_RULES_SAY}",
+    "lanes.direct_apart": f"lanes.direct_apart is gone (0.21): {_RULES_SAY} — a private "
+                          "post stays out of the other lanes while a lane of them is shown "
+                          "(apart = \"direct\")",
+    "lanes.bots_in_home": f"lanes.bots_in_home is gone (0.21): {_RULES_SAY}",
+    "subs.replies_to_me": f"subs.replies_to_me is gone (0.21): {_RULES_SAY}",
+    "threads.replies_to_me": f"threads.replies_to_me is gone (0.21): {_RULES_SAY}",
 }
 
 
@@ -733,8 +745,9 @@ def validate(user):
                 if (section, key) in RENAMED:  # an older name: say what it is now
                     warnings.append(f"{section}.{key} is {section}.{RENAMED[(section, key)][0]} "
                                     "now — `--update-config` moves it")
-                else:
-                    warnings.append(f"unknown key {section}.{key} — ignored")
+                else:  # taken out: what says it now (GONE), else just unknown
+                    warnings.append(GONE.get(f"{section}.{key}",
+                                             f"unknown key {section}.{key} — ignored"))
                 continue
             default = DEFAULTS[section][key]
             # bool is a subclass of int: check it strictly
@@ -781,6 +794,7 @@ def validate(user):
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
            if x not in LANE_NAMES | {"lists"} and x not in free
+           and not taggroups.is_tags(x)  # a lane of tags ("tags:…"), made in the window
            # notify.lanes = ["all"]: everything, the except list takes away
            and not (x == "all" and x in wanted)
            # one list: "list:Друзья" (its title, or its id)
@@ -800,10 +814,16 @@ def validate(user):
     vol = cfg["sound"]["volume"]
     if not 0 <= vol <= 100:
         errors.append(f"sound.volume = {vol}: from 0 to 100")
+    from .remote import cleartext_ok
     url = cfg["sync"]["url"]
-    if url and not (url.startswith("https://") or
-                    url.startswith(("http://localhost", "http://127.0.0.1"))):
-        errors.append(f"sync.url = {url!r}: https:// (http:// only to this computer)")
+    # where a secret goes (the journal's, an invite code, a password, an API key):
+    # https://, http:// only to a machine here or at home — the host as parsed, not a
+    # prefix ("http://localhost.evil.example" isn't localhost)
+    for section, key in (("sync", "url"), ("sync", "webdav"), ("feed", "translate_url")):
+        where = str(cfg[section].get(key) or "")
+        if where and not (where.startswith(("https://", "http://")) and cleartext_ok(where)):
+            errors.append(f"{section}.{key} = {where!r}: https:// (http:// only to this "
+                          "computer or one at home)")
     if url and cfg["sync"]["folder"]:
         errors.append("sync.url and sync.folder are both set: one place to meet, not two")
     if not isinstance(cfg["lanes"]["custom"], list):

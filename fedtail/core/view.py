@@ -73,6 +73,8 @@ PASS = {
     "set_active_lane", "set_state",
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
     "open_at",
+    # lanes by what their rules do, never by their names: plain lists of lane names
+    "private_lanes", "thread_lanes", "lanes_fed_by", "lane_rank",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
@@ -730,7 +732,11 @@ class View:
         # threads I follow and private talks, each a "contact" of its own (as people
         # are in a messenger): the freshest first, ui.roster_threads of each
         keep = int(c.cfg["ui"].get("roster_threads", 15) or 0)
-        for group, lane, kind in (("threads", "subs", "thread"), ("talks", "direct", "talk")):
+        # the lanes for them by their rules (core: thread_lanes, private_lanes), not names
+        talk_lane = next(iter(getattr(c, "private_lanes", list)()), None)
+        for group, lane, kind in (
+                ("threads", next(iter(getattr(c, "thread_lanes", list)()), None), "thread"),
+                ("talks", talk_lane, "talk")):
             if not keep or lane not in c.lane_by_name:
                 continue
             # the same entries, nothing read since: the same conversations (grouping
@@ -763,7 +769,7 @@ class View:
             from ..model.text import norm_handle
             talks = {}
             convs_seen = self.__dict__.get("_roster_convs", {})
-            for g in reversed(convs_seen.get("direct", (None, []))[1]):
+            for g in reversed(convs_seen.get(talk_lane, (None, []))[1]):
                 top = real(g["top"])
                 mine = norm_handle(self.me.handle) if self.me else ""
                 hs = {norm_handle(top.author.handle)} | {norm_handle(m.handle)

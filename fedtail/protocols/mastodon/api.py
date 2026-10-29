@@ -15,6 +15,7 @@ import requests
 
 from ... import version
 from ...core import health
+from ...core.remote import cleartext_ok  # noqa: F401 — the address rule, the core's
 from ..base import Budget, Capabilities, RateLimited, ServerError  # noqa: F401
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
@@ -267,25 +268,6 @@ def server_address(text):
     if not ok:
         raise ValueError(text)
     return f"{scheme}://{host}" + (f":{port}" if port else "")
-
-
-def cleartext_ok(server):
-    """May a token go to this server: https always; http only to a server here or at
-    home — localhost, a loopback or private address, a .local/.lan/.home.arpa name."""
-    import ipaddress
-    from urllib.parse import urlsplit
-    server = (server or "").strip()
-    if not server.lower().startswith("http://"):
-        return True  # https://, or no scheme: Api makes it https
-    host = (urlsplit(server).hostname or "").rstrip(".").lower()
-    if host == "localhost" or host.endswith((".localhost", ".local", ".lan", ".home.arpa",
-                                             ".internal")):
-        return True
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return False
-    return ip.is_loopback or ip.is_private or ip.is_link_local
 
 
 class Api:

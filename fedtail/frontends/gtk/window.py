@@ -633,7 +633,7 @@ class MainWindow(Gtk.ApplicationWindow):
             return True
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and self.curtain_shown() and \
                 not isinstance(self.get_focus(), (Gtk.Text, Gtk.TextView)):
-            name = self.view.get_state("lane") or self._start_lane()
+            name = self._start_lane(closable=False)
             if name in self.lane_rows:
                 self.sidebar.select_row(self.lane_rows[name])
                 return True
@@ -1492,18 +1492,14 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.append(row)
         self.update_badges()
         start = current or self._start_lane()
-        if start == "none" and not current:  # ui.start_lane: every lane closed
+        if start is None:  # ui.start_lane: every lane closed
             self.close_all()
         elif start in self.lane_rows:
             self.sidebar.select_row(self.lane_rows[start])
 
-    def _start_lane(self):
-        want = self.cfg["ui"].get("start_lane") or "last"
-        if want == "none":
-            return want
-        if want == "last":
-            want = self.view.get_state("lane") or "home"
-        return want if want in self.lane_rows else next(iter(self.lane_rows), None)
+    def _start_lane(self, closable=True):
+        """ui.start_lane (common/sidebar.py): a lane, or None — every lane closed."""
+        return sidebar.start_lane(self.view, list(self.lane_rows), closable)
 
     # ---- lanes -------------------------------------------------------------------------
     def current_lane_view(self):

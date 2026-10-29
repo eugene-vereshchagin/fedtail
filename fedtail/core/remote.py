@@ -43,6 +43,27 @@ def _public_ip(text):
                 or ip in ipaddress.ip_network("100.64.0.0/10"))  # carrier NAT, Tailscale
 
 
+def cleartext_ok(server):
+    """May a secret go to this address — a token, a password, an invite code: https
+    always; http only to a machine here or at home — localhost, a loopback or private
+    address, a .local/.lan/.home.arpa name. The host as the URL parser reads it, so
+    "http://localhost.evil.example" is not localhost."""
+    import ipaddress
+    from urllib.parse import urlsplit
+    server = (server or "").strip()
+    if not server.lower().startswith("http://"):
+        return True  # https://, or no scheme: Api makes it https
+    host = (urlsplit(server).hostname or "").rstrip(".").lower()
+    if host == "localhost" or host.endswith((".localhost", ".local", ".lan", ".home.arpa",
+                                             ".internal")):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private or ip.is_link_local
+
+
 def check(url, schemes=("https",), own_hosts=()):
     """Raise Refused unless url may be fetched. own_hosts: hostnames exempt from the
     public-address rule (the user's own server)."""

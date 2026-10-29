@@ -130,7 +130,7 @@ class World:
     """What the atoms need besides the post. The core fills it; every field may stay
     empty — an atom that needs it then is simply not there (and `Facts.unsure` says so)."""
     me_id: str = ""
-    my_host: str = ""                    # my server's domain ("dmesg.example")
+    my_host: str = ""                    # my server's domain ("social.example")
     following: Container = frozenset()   # account ids I follow
     followers: Container = frozenset()   # account ids that follow me
     new_followers: Container = frozenset()  # …of them, followed me lately (< 3 days)
@@ -713,7 +713,8 @@ def _author_word(word, have):
 
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
-             "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at"}
+             "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
+             "start"}
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
@@ -761,6 +762,8 @@ class Rule:
     view: str = ""                 # "threads": one card a thread, the new comments counted
     open_at: str = ""              # a thread from its card: "post" / "first_unread"; ""
                                    # — as threads.open_at says
+    start: bool = False            # the set's lane to open first, when ui.start_lane names
+                                   # none there (common/sidebar.start_lane)
     warnings: list = field(default_factory=list)
 
     @classmethod
@@ -799,6 +802,11 @@ class Rule:
                     warnings.append(f"{key}: {table[key]!r} — one of {sorted(words)}")
         if "group" in table:
             rule.group = str(table["group"])
+        if "start" in table:
+            if isinstance(table["start"], bool):
+                rule.start = table["start"]
+            else:
+                warnings.append(f"start: {table['start']!r} — true or false")
         if "icon" in table:
             if table["icon"] in LANE_ICONS:
                 rule.icon = table["icon"]

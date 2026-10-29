@@ -48,7 +48,6 @@ sealed interface Place {
     data object Settings : Place
     data object SelfCheck : Place
     data object Config : Place
-    data object Sync : Place
 }
 
 /** One option of the settings page — the desktop's settings window's (common/settings.py):
@@ -301,9 +300,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var configError by mutableStateOf<String?>(null)
     var saving by mutableStateOf(false)
 
-    var syncInfo by mutableStateOf<JSONObject?>(null)
-    var syncKeyShown by mutableStateOf("")
-    var syncBusy by mutableStateOf(false)
 
     var loginServer by mutableStateOf("")
     var loginProxyField by mutableStateOf(false)  // net.proxy_at_login
@@ -479,7 +475,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         lanes = parseLanes(arr)
         startLane = (0 until arr.length()).map { arr.getJSONObject(it) }
             .firstOrNull { it.optBoolean("start") }?.optString("name")
-            ?: lanes.firstOrNull { it.name == "home" }?.name ?: lanes.firstOrNull()?.name
+            ?: lanes.firstOrNull()?.name  // the core says which (ui.start_lane)
         loadHub()
         current = null
         screen = Screen.Main
@@ -1431,42 +1427,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // — taken from another device, or out of the journal with its password
         openPage("sync")
     }
-
-    private fun loadSync() {
-        viewModelScope.launch { syncInfo = Core.syncStatus() }
-    }
-
-    fun syncShowKey() {
-        viewModelScope.launch {
-            val got = Core.syncKey()
-            Core.failed(got)?.let { message = it; return@launch }
-            syncKeyShown = got.optString("key")
-        }
-    }
-
-    fun syncJoin(key: String) {
-        viewModelScope.launch {
-            val got = Core.syncJoin(key)
-            Core.failed(got)?.let { message = it; return@launch }
-            loadSync()
-        }
-    }
-
-    fun syncNow(done: (String) -> Unit) {
-        if (syncBusy) return
-        syncBusy = true
-        viewModelScope.launch {
-            val got = Core.syncNow()
-            syncBusy = false
-            Core.failed(got)?.let { message = it }
-            if (!got.has("error")) {
-                done(if (got.optBoolean("failed")) ""
-                     else "${got.optInt("sent")} / ${got.optInt("got")}")
-            }
-            loadSync()
-        }
-    }
-
 
     // ---- every place of the windows' ≡ menu, profiles, the ⋯ menu: the core's answers ----
     /** Opens links in the browser (the activity sets it: App()). */

@@ -183,6 +183,16 @@ class ConfigTest(unittest.TestCase):
         self.assertIn("must be a section", self.errors({"ui": 5}))
         _cfg, w = config.validate({"debug": {"keep": 3}})
         self.assertTrue(any("debug.keep is gone" in x for x in w))
+        # taken out in 0.21/0.22: said what says it now, by either layout's name
+        _cfg, w = config.validate({"lanes": {"mentions_all": True, "bots_in_home": True},
+                                   "feed": {"build_at_once": 5},
+                                   "subs": {"replies_to_me": True}})
+        self.assertFalse([x for x in w if x.startswith("unknown key")], w)
+        self.assertTrue(any("lanes.mentions_all is gone (0.21)" in x for x in w))
+        self.assertTrue(any("build_at_once is gone" in x for x in w))
+        _cfg, w = config.validate({"reading": {"build_at_once": 5}, "threads": {
+            "replies_to_me": True}})
+        self.assertFalse([x for x in w if x.startswith("unknown key")], w)
         self.assertIn("activity.types", self.errors({"activity": {"types": ["nope"]}}))
         self.assertIn("threads.auto", self.errors({"subs": {"auto": ["nope"]}}))
         config.validate({"lanes": {"enabled": []}})  # empty: the set's own order (no error)

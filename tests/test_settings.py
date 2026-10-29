@@ -212,6 +212,22 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(settings.find(chapters, "font"))
         self.assertEqual(settings.find(chapters, "no such thing at all"), [])
 
+    def test_ones_own_lanes_are_offered_where_lanes_are_picked(self):
+        """The checklists of lanes (notify.lanes, icon_count…) offer the lanes shown —
+        one's own and the lanes of tags — not only the sets' names; and such a name in
+        the file is a lane, not "unknown"."""
+        view = _view(Path("/nowhere"))
+        view.lanes = [SimpleNamespace(name="feed"), SimpleNamespace(name="tags:cats"),
+                      SimpleNamespace(name="list:7")]
+        chapters = settings.model(view, lang="en", text="")
+        picks = [v for v, _w in settings.option(chapters, "notify.lanes").choices]
+        self.assertIn("feed", picks)
+        self.assertIn("tags:cats", picks)
+        self.assertNotIn("list:7", picks)  # a list goes by its title, as it did
+        self.assertIn("home", picks)
+        _cfg, warnings = config.validate({"notify": {"lanes": ["tags:cats"]}})
+        self.assertFalse([w for w in warnings if "unknown lanes" in w])
+
     def test_typed_values(self):
         chapters = settings.model(_view(Path("/nowhere")), lang="en", text="")
         poll = settings.option(chapters, "server.interval_seconds")

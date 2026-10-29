@@ -4,6 +4,7 @@ import unittest
 
 from fedtail import i18n
 from fedtail.core.view import View
+from fedtail.frontends.common import sidebar
 from fedtail.frontends.tui import model
 from fedtail.protocols.mastodon.adapter import post as to_post
 
@@ -80,8 +81,8 @@ class TuiModelTest(TmpDir):
         w.add(status("001", BOB, minute=1), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(model.lane_label(core, "home"), ("Home", 1))
-        title, _n = model.lane_label(core, "home", width=4)
+        self.assertEqual(sidebar.lane_label(core, "home"), ("Home", 1))
+        title, _n = sidebar.lane_label(core, "home", width=4)
         self.assertLessEqual(len(title), 4)
 
 
@@ -144,8 +145,8 @@ class ActivityRowsTest(TmpDir):
         w.requests.append(fakes.acct("Q", "quinn@example.org"))
         core.poll_once()
         view = View(core)
-        self.assertEqual(model.lane_label(view, "activity")[1], 1)
-        self.assertEqual(model.lane_label(view, "requests")[1], 1)  # the core's number
-        self.assertEqual(model.lane_label(view, "requests")[1], view.unread_count("requests"))
+        self.assertEqual(sidebar.lane_label(view, "activity")[1], 1)
+        self.assertEqual(sidebar.lane_label(view, "requests")[1], 1)  # the core's number
+        self.assertEqual(sidebar.lane_label(view, "requests")[1], view.unread_count("requests"))
         self.assertEqual([a.kind for a in view.activity()], ["like", "follow"])
         self.assertEqual([x.handle for x in view.follow_requests()], ["quinn@example.org"])

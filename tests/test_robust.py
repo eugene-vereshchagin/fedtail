@@ -132,6 +132,26 @@ class LogFolderTest(unittest.TestCase):
             self.assertEqual(diag._writable(Path(d) / "ok", prof), Path(d) / "ok")
             with mock.patch("tempfile.gettempdir", return_value=str(blocker)):
                 self.assertIsNone(diag._writable(bad, prof))
+            import os
+            import stat
+            if hasattr(os, "getuid"):  # the fallback is the owner's only
+                mode = stat.S_IMODE(os.stat(Path(d) / "fedtail-logs-t").st_mode)
+                self.assertEqual(mode, 0o700)
+                loose = Path(d) / "fedtail-logs-u"
+                loose.mkdir(mode=0o777)
+                os.chmod(loose, 0o777)
+                with mock.patch("sys.stderr", io.StringIO()), \
+                        mock.patch("tempfile.gettempdir", return_value=d):
+                    self.assertEqual(diag._writable(bad, types.SimpleNamespace(profile="u")),
+                                     loose)
+                self.assertEqual(stat.S_IMODE(os.stat(loose).st_mode), 0o700)  # tightened
+                trap = Path(d) / "fedtail-logs-v"  # a link someone left: not followed
+                trap.symlink_to(Path(d) / "ok")
+                with mock.patch("tempfile.gettempdir", return_value=d):
+                    self.assertIsNone(diag._writable(bad, types.SimpleNamespace(profile="v")))
+                with mock.patch("os.getuid", return_value=os.getuid() + 1), \
+                        mock.patch("tempfile.gettempdir", return_value=d):  # someone else's
+                    self.assertIsNone(diag._writable(bad, prof))
 
 
 

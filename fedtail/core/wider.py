@@ -63,10 +63,11 @@ class Wider:
         self.store.kv_set("wider.at", at)
 
     def work(self, federated_open):
-        """[(what, host, lane, tag)] due now: Federated's while it's open (it is browsed),
+        """[(what, host, stream, tag)] due now: the federated stream's while a lane on it is
+        open (it is browsed),
         the lanes of tags' always (they are read through)."""
         out = []
-        if federated_open and "federated" in self.core.lane_by_name:
+        if federated_open:  # a lane on the federated source is open (whatever its name)
             out += [("fed", h, "federated", "") for h in self._hosts("federated_extra")]
         tag_hosts = self._hosts("tags_extra")
         for g in getattr(self.core, "tag_groups", None) or ():
@@ -114,8 +115,10 @@ class Wider:
                     got.setdefault(w[2], []).extend(ids)
         finally:
             self.running = False
-        if got:
-            self.core.emit("lanes_updated", got)
+        if got:  # by stream: to the lanes those streams fill (lanes_fed_by), not by name
+            self.core.emit("lanes_updated", {
+                n: ids for stream, ids in got.items()
+                for n in (self.core.lanes_fed_by(stream) or [stream])})
         return got
 
     def remote_lane(self, host):

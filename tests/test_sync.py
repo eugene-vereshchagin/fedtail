@@ -540,16 +540,28 @@ class ClientServerTest(TmpDir):
 
     @need_crypto
     def test_the_key_under_a_password_through_the_server(self):
+        """The id is the password's and the account's: the same password of two people
+        makes two ids (no global oracle, no meeting); one journal can't take another's
+        place under an id (409); the id goes in a header, never in the URL."""
         key = crypto.new_key()
         b = backends.HttpBackend(self.url, key, self.code)
-        eid = crypto.escrow_id("correct horse battery", self.url)
-        self.assertEqual(eid, crypto.escrow_id("correct horse battery", self.url + "/"))
-        self.assertNotEqual(eid, crypto.escrow_id("correct horse battery", "https://x.test"))
-        b.escrow_put(eid, crypto.escrow_seal(key, "correct horse battery"))
+        pw, me = "correct horse battery", "me@example.test"
+        eid = crypto.escrow_id(pw, self.url, me)
+        self.assertEqual(eid, crypto.escrow_id(pw, self.url + "/", "@ME@example.test"))
+        self.assertNotEqual(eid, crypto.escrow_id(pw, "https://x.test", me))
+        self.assertNotEqual(eid, crypto.escrow_id(pw, self.url, "you@example.test"))
+        with self.assertRaises(ValueError):
+            crypto.escrow_id(pw, self.url, "me")  # no host: not an account
+        b.escrow_put(eid, crypto.escrow_seal(key, pw))
         keyless = backends.HttpBackend(self.url)
-        self.assertEqual(crypto.escrow_open(keyless.escrow_get(eid), "correct horse battery"),
-                         key)
-        self.assertIsNone(keyless.escrow_get(crypto.escrow_id("wrong one!", self.url)))
+        self.assertEqual(crypto.escrow_open(keyless.escrow_get(eid), pw), key)
+        self.assertIsNone(keyless.escrow_get(crypto.escrow_id("wrong one!", self.url, me)))
+        intruder = backends.HttpBackend(self.url, crypto.new_key(), self.code)
+        with self.assertRaises(backends.BackendError) as e:
+            intruder.escrow_put(eid, crypto.escrow_seal(crypto.new_key(), pw))
+        self.assertIn("409", str(e.exception))
+        self.assertEqual(crypto.escrow_open(keyless.escrow_get(eid), pw), key)  # untouched
+        b.escrow_put(eid, crypto.escrow_seal(key, pw))  # its own: replaced, fine
 
     @need_crypto
     def test_a_device_packs_its_journal_on_the_server(self):

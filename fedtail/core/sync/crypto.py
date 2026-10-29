@@ -157,25 +157,31 @@ def unseal_media(key, blob):
 
 # ---- the key kept in the journal under a password ("escrow") ------------------------
 # A device that knows the key may put it into the journal itself, sealed by a password:
-# a new device with only the password (and the login to the account) takes it from
-# there — no other device needs to be at hand. The store sees one more opaque blob.
+# a new device with only the password (and the fediverse account it logs into) takes it
+# from there — no other device needs to be at hand. The store sees one more opaque blob.
 #
-#     blob = b"FTK1" | salt (16) | nonce (12) | AES-GCM(the key) with the first 20 as AAD
+#     blob = b"FTK2" | salt (16) | nonce (12) | AES-GCM(the key) with the first 20 as AAD
 #
-# The password is stretched with scrypt (n = 2**15, r = 8): slow to guess offline.
+# The password is stretched with scrypt (n = 2**17, r = 8: 128 MB, slow to guess
+# offline). FTK1 (0.21, n = 2**15) is still opened — a folder's journal may hold one —
+# but never made.
 
-ESCROW = b"FTK1"
+ESCROW = b"FTK2"
+ESCROW_OLD = b"FTK1"
 _SALT = 16
-SCRYPT = {"n": 2 ** 15, "r": 8, "p": 1, "maxmem": 64 * 1024 * 1024}
-MIN_PASSWORD = 8
+SCRYPT = {"n": 2 ** 17, "r": 8, "p": 1, "maxmem": 256 * 1024 * 1024}
+_SCRYPT_OLD = {**SCRYPT, "n": 2 ** 15}
+MIN_PASSWORD = 10
 
 
-def _stretch(password, salt):
-    return hashlib.scrypt(password.encode("utf-8"), salt=salt, dklen=KEY_BYTES, **SCRYPT)
+def _stretch(password, salt, params=None):
+    return hashlib.scrypt(password.encode("utf-8"), salt=salt, dklen=KEY_BYTES,
+                          **(params or SCRYPT))
 
 
 def is_escrow(blob):
-    return isinstance(blob, (bytes, bytearray)) and blob[:len(ESCROW)] == ESCROW
+    return isinstance(blob, (bytes, bytearray)) and bytes(blob[:len(ESCROW)]) in (
+        ESCROW, ESCROW_OLD)
 
 
 def escrow_seal(key, password):
@@ -200,7 +206,9 @@ def escrow_open(blob, password):
     except ImportError as e:
         raise CryptoMissing("sync needs the 'cryptography' package") from e
     try:
-        key = _aes(_stretch(password or "", head[len(ESCROW):])).decrypt(nonce, body, head)
+        params = _SCRYPT_OLD if head[:len(ESCROW)] == ESCROW_OLD else SCRYPT
+        key = _aes(_stretch(password or "", head[len(ESCROW):], params)).decrypt(
+            nonce, body, head)
     except InvalidTag as e:
         raise BadBlob("wrong password") from e
     if len(key) != KEY_BYTES:
@@ -224,11 +232,17 @@ def journal_secret(key):
     return hmac.new(key, b"fedtail-journal-secret", hashlib.sha256).hexdigest()
 
 
-def escrow_id(password, where):
+def escrow_id(password, where, who):
     """Where the key under a password is kept on a sync server: an id from the password
-    alone (a new device has nothing else), stretched as the password is, and different
-    for each server (`where`, its address)."""
-    salt = b"fedtail-escrow-id:" + str(where).rstrip("/").lower().encode("utf-8")
+    and the fediverse account (`who`, "user@host" — a new device has logged in to it),
+    stretched as the password is, different for each server (`where`, its address). The
+    account makes it one person's: a guessed password tests one account, not everyone
+    on the server (PROTOCOL.md)."""
+    who = str(who or "").strip().lstrip("@").lower()
+    if "@" not in who:
+        raise ValueError("the account, user@host, is needed")
+    salt = b"fedtail-escrow-id:" + str(where).rstrip("/").lower().encode("utf-8") + \
+        b"\n" + who.encode("utf-8")
     return _stretch(password or "", salt).hex()
 
 

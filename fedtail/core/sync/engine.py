@@ -161,12 +161,7 @@ def save_webdav(paths, password):
     if not password:
         f.unlink(missing_ok=True)
         return
-    f.parent.mkdir(parents=True, exist_ok=True)
-    tmp = f.with_name(f.name + ".part")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as out:
-        json.dump({"password": password}, out)
-    os.replace(tmp, f)
+    auth.save(f, {"password": password})  # the one way a secret file is written here
 
 
 def media_dir(paths):
@@ -566,6 +561,15 @@ class Sync:
                  "`fedtail sync key` → `fedtail sync join`", crypto.key_id(key).hex())
         return key
 
+    def _who(self):
+        """The fediverse account, "user@host": what makes the key under a password one
+        person's on a server (crypto.escrow_id). ValueError before a login."""
+        from ..merged import full_handle
+        who = full_handle(self.core).lstrip("@")
+        if "@" not in who:
+            raise ValueError("log in to the account first")
+        return who
+
     def _keep_escrow(self, blob):
         import base64
         self.store.kv_set("sync.escrow", base64.b64encode(bytes(blob)).decode())
@@ -579,7 +583,7 @@ class Sync:
             if not password:
                 return None
             return backends.HttpBackend(self.cfg["url"]).escrow_get(
-                crypto.escrow_id(password, self.cfg["url"]))
+                crypto.escrow_id(password, self.cfg["url"], self._who()))
         got = self.store.kv_get("sync.escrow")
         if got:
             return base64.b64decode(got)
@@ -607,7 +611,7 @@ class Sync:
             raise RuntimeError(_("sync_webdav_login_first"))
         blob = crypto.escrow_seal(key, password)
         if self.kind() == "server":  # under an id the password makes: found by it alone
-            backend.escrow_put(crypto.escrow_id(password, self.cfg["url"]), blob)
+            backend.escrow_put(crypto.escrow_id(password, self.cfg["url"], self._who()), blob)
         else:
             backend.push(blob, self.device)
         self._keep_escrow(blob)

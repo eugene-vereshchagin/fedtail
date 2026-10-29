@@ -124,7 +124,8 @@ class Custom:
         if self.events_only:  # no posts: its rows are the events it takes
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
                               group="standard" if self.rule.group == "standard"
-                              else "personal", events=True, open_at=self.rule.open_at)
+                              else "personal", events=True, open_at=self.rule.open_at,
+                              start=self.rule.start)
         if self.routed:
             keep = lanes._all  # its stream holds what the rule took
         else:
@@ -141,7 +142,7 @@ class Custom:
                           filter_context=self.rule.filter_context,
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, open_at=self.rule.open_at,
-                          events=bool(self.event_conds))
+                          events=bool(self.event_conds), start=self.rule.start)
 
     def takes(self, status, world, source):
         world = world or atoms.World()
@@ -323,8 +324,10 @@ def load(cfg):
         seen.add(n)
         rule = atoms.Rule.parse({k: v for k, v in t.items() if k not in ("kind", "slot")})
         rule.none = [c for c in rule.none if not c.apart or c.apart in shown]
-        if n == "activity" and not (cfg.get("activity") or {}).get("requests", True):
-            # activity.requests = false: the follow requests stay out of Activity
+        if not (cfg.get("activity") or {}).get("requests", True) and _activity_like(rule):
+            # activity.requests = false: the follow requests stay out of Activity — of
+            # every lane of events that takes others too, whatever it's called (a lane
+            # of requests alone is asked for: it keeps them)
             rule.none.append(atoms.Condition.parse({"event": "follow_request"}))
         title = t.get("title") if own else None
         if isinstance(title, dict):
@@ -368,6 +371,14 @@ def build(cfg, lists=(), tag_groups=()):
     if cfg["lanes"].get("unsorted", True):  # shown only while it holds something (Core)
         out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all, group="personal"))
     return out
+
+
+def _activity_like(rule):
+    """A rule of events only that takes follow requests among other events."""
+    if not rule.any or not all("event" in c.sets for c in rule.any):
+        return False
+    words = {w for c in rule.any for w in c.sets["event"]}
+    return "follow_request" in words and bool(words - {"follow_request", "pending"})
 
 
 def _entry(status):

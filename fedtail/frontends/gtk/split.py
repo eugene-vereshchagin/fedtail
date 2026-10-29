@@ -962,13 +962,7 @@ class TalkPage(Gtk.ScrolledWindow):
     def refresh(self):
         from .card import Card
         view = self.win.view
-        if "direct" not in view.lane_by_name:
-            return
-        mine = split.talk_with(view, view.entries("direct"), self.who.handle)
-        have = {e.id for _i, e in mine}
-        mine += [(None, p) for pid, p in self.sent.items() if pid not in have]
-        mine.sort(key=lambda x: (x[1].created is not None, x[1].created or 0))
-        unread = view.unread([e for _i, e in mine])
+        mine, unread = split.talk(view, self.who.handle, self.sent.values())
         key = (tuple(e.id for _i, e in mine), tuple(sorted(unread)))
         if key == self._key:
             return

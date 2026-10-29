@@ -35,7 +35,7 @@ from ..protocols.mastodon import api as api_module
 from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError, Capabilities
 from ..version import USER_AGENT
-from . import atoms, auth, custom, lanes, presets, search, sources, subs, taggroups, threads
+from . import atoms, auth, custom, lanes, presets, remote, search, sources, subs, taggroups, threads
 from .events import Events
 from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
@@ -245,7 +245,7 @@ class Core(SocialMixin):
         self._limits = {}
         self._horizons = {}  # lane → how many stored items its window looks through
         self._lane_deep = {}  # lane → its store had more than was looked through
-        self.chime = Chime(cfg, chosen=self.lane_chosen)
+        self.chime = Chime(cfg, chosen=self.lane_chosen, event_of=self.lane_sound)
         self._lane_cache = {}
         self._opened_threads = {}  # root id -> when it was opened (thread recheck)
         self._rechecked = {}       # root id -> when it was asked again
@@ -387,11 +387,11 @@ class Core(SocialMixin):
             from ..i18n import _
             if proxy is not None:
                 self.set_proxy(proxy)
-            try:  # "dmesg,online", " social.example ", @me@host, a link: the server's address
+            try:  # "social,example", " social.example ", @me@host, a link: the server's address
                 where = api_module.server_address(server)
             except ValueError:
                 raise ValueError(_("login_bad_server", server=str(server).strip())) from None
-            if not api_module.cleartext_ok(where):
+            if not remote.cleartext_ok(where):
                 # the token would cross the internet in the clear: only a server here,
                 # at home (localhost, a private address, .local/.lan) may be http://
                 raise ValueError(_("login_insecure"))
@@ -503,9 +503,13 @@ class Core(SocialMixin):
                 raise
 
         def connect():
-            if not api_module.cleartext_ok(self.auth["server"]):
-                log.warning("server is plain http on the internet: the token goes in the "
-                            "clear (log in anew with https://)")
+            if not remote.cleartext_ok(self.auth["server"]):
+                # a login of long ago to a plain http:// server on the internet: the token
+                # isn't sent in the clear — log in anew with https:// (as a login refuses)
+                from ..i18n import _
+                log.warning("server is plain http on the internet: the token is not sent "
+                            "(log in anew with https://)")
+                raise ValueError(_("login_insecure"))
             api = self.api_class(self.auth["server"], self.auth["token"])
             me = api.me()
             try:  # the newer document apart: its trouble mustn't cost the older one's facts
@@ -915,7 +919,7 @@ class Core(SocialMixin):
                 except Exception as e:  # noqa: BLE001 — next time; never the round
                     log.info("unfollowed elsewhere: %s", e)
             self._step("silence+lists")
-            if "direct" in self.lane_by_name:
+            if self.private_lanes():
                 self.sync_conversations()  # read here = read on the server (social.py)
                 self._step("conversations")
             # followed threads: for their lane, and for Home's "threads with news"
@@ -991,8 +995,8 @@ class Core(SocialMixin):
             fed_open = "federated" in open_sources
             if self.wider.due(fed_open):
                 self.bg.submit(self.wider.run, fed_open)
-            if "direct" in self.lane_by_name and self._carry_my_direct():
-                self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
+            if self._carry_my_direct():  # read already: no news, no sound
+                self.emit("lanes_updated", {n: [] for n in self.private_lanes()})
             self._step("my direct")
             new_requests = []
             if self._wants_event("follow_request"):
@@ -1484,11 +1488,45 @@ class Core(SocialMixin):
         return {"name": name, "warnings": list(c.warnings), "feeds": sorted(c.feeds),
                 "routed": c.routed, "rows": rows[:n]}
 
+    def lanes_fed_by(self, *sources):
+        """The lanes a source (or several) fills: by their own source or the feeds of a
+        free lane — never by a lane's name. What "look again" goes to after a change in
+        a source: the lane set is the user's (Home or no Home, "mentions" or "to_me")."""
+        want = set(sources)
+        return [x.name for x in self.lanes
+                if x.source in want or want & set(x.feeds or ())]
+
+    def redraw(self, *sources):
+        """lanes_updated with nothing new for the lanes those sources fill: they look
+        again (a thread left, a bookmark taken back)."""
+        names = self.lanes_fed_by(*sources)
+        if names:
+            self.emit("lanes_updated", {n: [] for n in names})
+
+    def private_lanes(self):
+        """The lanes of private messages — whatever their names: the rule says so (a
+        condition of `visibility = "direct"` or `me = "direct"`, lane_rank 0)."""
+        return [x.name for x in self.lanes if self.lane_rank(x.name) == 0]
+
+    def lane_sound(self, name):
+        """The sound a lane's news makes (core/sounds.py), by its rule: how personal it is,
+        or the events it takes."""
+        from .sounds import event_for_lane
+        lane = self.lane_by_name.get(name)
+        events = None
+        if lane is not None and getattr(lane, "events", False) and not lane.source:
+            c = next((c for c in self.customs if c.name == name), None)
+            events = {w for cond in (c.event_conds if c else ()) for w in cond.sets["event"]}
+        return event_for_lane(self.lane_rank(name), events)
+
+    def thread_lanes(self):
+        """The lanes of followed threads, whatever their names: their rule's (lane_rank 3
+        — the subs source, or a condition of my threads)."""
+        return [x.name for x in self.lanes if self.lane_rank(x.name) == 3]
+
     def lane_rank(self, name):
         """How personal a lane is, for one notification a post (feeds.md §5): 0 private,
-        1 replies to me, 2 mentions, 3 followed threads, 4 the rest."""
-        if name == "direct":
-            return 0
+        1 replies to me, 2 mentions, 3 followed threads, 4 the rest — by its rule."""
         c = next((c for c in self.customs if c.name == name), None)
         if c is None:
             return 4
@@ -2442,7 +2480,7 @@ class Core(SocialMixin):
                 self.sync.record_thread(root, "muted" if quiet else "left")
             self._silence_seen = {}  # what was let through before may be muted now
             self.emit("subs_changed", root)
-            self.emit("lanes_updated", {"subs": [], **({"mentions": []} if quiet else {})})
+            self.redraw("subs", *(["mentions"] if quiet else []))
             return root
         return self.submit(job)
 
@@ -2506,8 +2544,14 @@ class Core(SocialMixin):
         sync.folder, sync.webdav) and used at once — sync started, moved or stopped
         without a restart; the server's invite code into the data folder (not the
         config: it makes journals). None — that one unchanged."""
+        from ..i18n import _
         from . import config_edit
         from .sync.engine import save_invite, wanted
+        for where in (url, webdav):  # a secret goes there: never in clear across the net
+            where = str(where or "").strip()
+            if where and not (where.startswith(("https://", "http://")) and
+                              remote.cleartext_ok(where)):
+                raise ValueError(_("sync_cleartext", where=where))
         if invite is not None:
             save_invite(self.paths, invite)
         changes = {}
@@ -2619,7 +2663,7 @@ class Core(SocialMixin):
             self._silence_seen = {}
         log.info("sync: thread %s → %s (another device)", root, state)
         self.emit("subs_changed", root)
-        self.emit("lanes_updated", {"subs": [], "mentions": []})
+        self.redraw("subs", "mentions")
 
     def thread_quiet(self, status):
         """Is this post's thread muted here? (Knows only the posts it has seen there.)"""
@@ -2720,22 +2764,25 @@ class Core(SocialMixin):
         self.set_choice(f"posts_only.{name}", bool(on))
 
     def _carry_my_direct(self, statuses=None):
-        """My direct messages into the mentions stream, where "Direct" reads: the
-        dialogue whole — theirs and mine, by the posts' own time. Mine are read (the store
-        marks every post of mine read), so no count grows. statuses: the ones just sent;
-        None — every one stored that isn't there yet. How many went in."""
-        source = self.lane_by_name["direct"].source if "direct" in self.lane_by_name \
-            else "mentions"
-        if statuses is None:
-            got = self.store.my_direct_outside(source)
-        else:
-            got = [s for s in statuses if s and s.get("visibility") == "direct"
-                   and self.me and s.get("account", {}).get("id") == self.me["id"]]
-        if not got:
-            return 0
-        # an item of its own ("mine:" + id): never one of the server's notification ids
-        return len(self.store.put_items(source, [("mine:" + s["id"], s, s.get("created_at", ""))
-                                                 for s in got]))
+        """My direct messages into the stream of every lane of private messages (whatever
+        its name, private_lanes): the dialogue whole — theirs and mine, by the posts' own
+        time. Mine are read (the store marks every post of mine read), so no count grows.
+        statuses: the ones just sent; None — every one stored that isn't there yet. How
+        many went in (none: no such lane)."""
+        n = 0
+        for source in dict.fromkeys(x.source for x in self.lanes
+                                    if self.lane_rank(x.name) == 0):
+            if not source:
+                continue
+            if statuses is None:
+                got = self.store.my_direct_outside(source)
+            else:
+                got = [s for s in statuses if s and s.get("visibility") == "direct"
+                       and self.me and s.get("account", {}).get("id") == self.me["id"]]
+            # an item of its own ("mine:" + id): never one of the server's notification ids
+            n += len(self.store.put_items(source, [("mine:" + s["id"], s,
+                                                    s.get("created_at", "")) for s in got]))
+        return n
 
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.
@@ -4390,8 +4437,8 @@ class Core(SocialMixin):
                     self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
-                if "direct" in self.lane_by_name and self._carry_my_direct(chain):
-                    self.emit("lanes_updated", {"direct": []})  # the dialogue: mine at once
+                if self._carry_my_direct(chain):  # the dialogue: mine at once
+                    self.emit("lanes_updated", {n: [] for n in self.private_lanes()})
                 self._auto_subscribe([st])
                 if reply_to:
                     # "you replied" under the post answered: the lanes it is in look again
@@ -4509,7 +4556,7 @@ class Core(SocialMixin):
         url = str(feed["translate_url"]).rstrip("/")
         if not url.endswith("/translate"):
             url += "/translate"
-        if url.startswith("http://") and not api_module.cleartext_ok(url):
+        if url.startswith("http://") and not remote.cleartext_ok(url):
             from ..i18n import _
             raise ValueError(_("translate_insecure"))
 
@@ -4564,6 +4611,10 @@ class Core(SocialMixin):
         from . import langs
         lang = langs.base(st.get("language"))
         if not lang or not (st.get("content") or "").strip():
+            return False
+        if self._own_translator() and st.get("visibility") not in ("public", "unlisted"):
+            # by itself, no private post goes to a translator outside the server (the
+            # server's own /translate refuses them too): such a one only on a click
             return False
         mine = {langs.base(current_language())} | {
             langs.base(x) for x in (self.cfg["post"].get("languages") or [])} | {
@@ -4812,7 +4863,7 @@ class Core(SocialMixin):
             if on:
                 self.store.put_items("bookmarks", [(st["id"], st, now_iso())])
             self.emit("status_updated", st)
-            self.emit("lanes_updated", {"bookmarks": []})
+            self.redraw("bookmarks")
             return st
         return self.submit(job)
 

@@ -82,6 +82,16 @@ def openable(url):
         url.strip().lower().startswith(OUTSIDE_SCHEMES)
 
 
+def _mailto(href):
+    """A mailto: link with only the subject and the body it may suggest: "attach=" (and
+    the like: a mail client may take a file of mine with it) or headers of its own go."""
+    from urllib.parse import parse_qsl, quote, urlencode
+    to, _q, query = href.partition("?")
+    keep = [(k, v) for k, v in parse_qsl(query, keep_blank_values=True)
+            if k.lower() in ("subject", "body")]
+    return to + ("?" + urlencode(keep, quote_via=quote) if keep else "")
+
+
 def safe_href(href):
     """The href a post's link may keep — exactly as it will be written, entities already
     decoded — or None. fedtail:resolve/ may wrap only a web address; the other inside
@@ -91,6 +101,8 @@ def safe_href(href):
     if not href or _CONTROL.search(href):
         return None
     low = href.lower()
+    if low.startswith("mailto:"):
+        return _mailto(href)
     if low.startswith(OUTSIDE_SCHEMES):
         return href
     if not low.startswith("fedtail:"):

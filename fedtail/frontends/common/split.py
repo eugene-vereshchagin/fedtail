@@ -102,3 +102,24 @@ def talk_with(view, entries, handle):
         if people == {them}:
             out.append((item, e))
     return out
+
+
+def talk(view, handle, sent=()):
+    """A private talk with one person, as the chat window shows it: [(item, post)] by
+    the posts' own time — what the lanes of private messages hold between us (the core's
+    private_lanes: by their rules, whatever their names), and my messages just sent
+    (`sent`, posts) that no lane has yet — and which of them are unread. ([], set())
+    when no lane takes private messages."""
+    lanes = view.private_lanes() if hasattr(view, "private_lanes") else []
+    mine, have = [], set()
+    for lane in lanes:
+        for item, e in talk_with(view, view.entries(lane), handle):
+            if e.id not in have:
+                have.add(e.id)
+                mine.append((item, e))
+    if not lanes:
+        return [], set()
+    mine += [(None, p) for p in sent if p.id not in have]
+    mine.sort(key=lambda x: (x[1].created is not None, x[1].created or 0))
+    return mine, view.unread([e for _i, e in mine])
+

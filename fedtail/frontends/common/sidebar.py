@@ -5,6 +5,7 @@ the profile's state, so both windows fold the same)."""
 from __future__ import annotations
 
 from ...core import lanes as lanes_mod
+from ...i18n import _
 
 
 def groups(view, cfg):
@@ -16,6 +17,43 @@ def groups(view, cfg):
         out = [(None, [x.name for x in view.lanes if not lanes_mod.is_list(x.name)]),
                ("lists", [x.name for x in view.lanes if lanes_mod.is_list(x.name)])]
     return [(g, names) for g, names in out if g != "lists" or cfg["lists"]["enabled"]]
+
+
+def group_title(group):
+    """A section's heading, None for the plain list's lanes."""
+    if not group:
+        return None
+    return _("lists_header") if group == "lists" else _("grp_" + group)
+
+
+def start_lane(view, names, closable=True):
+    """The lane every interface opens first (ui.start_lane), or None: "none" — every lane
+    closed behind the curtain, nothing read by just starting (an interface that can't
+    show that — closable=False: the terminal, the web page, the phone — and Enter on the
+    curtain take the lane of last time); "last" — the lane of last time; or a lane by
+    name. A lane not there (the first start, a lane off) gives the set's own (its rule's
+    `start = true`, presets.toml), else the sidebar's first — no lane's name assumed.
+    names: the lanes the sidebar has."""
+    want = view.cfg["ui"].get("start_lane") or "none"
+    if want == "none" and closable:
+        return None
+    name = want if want not in ("none", "last") else view.get_state("lane")
+    if name in names:
+        return name
+    return next((x.name for x in view.lanes if getattr(x, "start", False) and x.name in names),
+                names[0] if names else None)
+
+
+def lane_label(view, name, width=22):
+    """(title, number) of a lane's row, cut to width: the terminal's and the web page's
+    sidebar. The number is the core's for every lane alike (count)."""
+    title = view.lane_title(name) or _("lane_" + name)
+    n = count(view, name)
+    number = f" {n}" if n else ""
+    room = max(4, width - len(number))
+    if len(title) > room:
+        title = title[:room - 1] + "…"
+    return title, n
 
 
 def count(view, name):

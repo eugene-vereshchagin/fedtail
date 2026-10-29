@@ -14,8 +14,6 @@ from ...i18n import _
 from ...model import Share, real
 from ...model.text import snippet
 
-POSTS_ONLY_LANES = ("home", "bots", "my_posts", "local")  # "posts only" makes sense here
-CONVERSATION_LANES = ("replies", "mentions", "subs", "to_me")       # …and "as conversations" here
 SEPARATOR = "__sep__"
 
 
@@ -207,7 +205,15 @@ class LaneModel:
         self.newest_first = self.cfg["feed"]["order"] == "newest_first"
         lane = view.lane_by_name.get(name)
         self.lazy = bool(getattr(lane, "lazy", False))
-        self.has_posts_only = name in POSTS_ONLY_LANES or name.startswith("list:")
+        # what the lane's rule makes of it (Core.lane_rank: 0 private, 1 replies, 2
+        # mentions, 3 followed threads, 4 the rest) — never its name: a lane of one's
+        # own is offered the same as the set's
+        rank = view.lane_rank(name) if hasattr(view, "lane_rank") else 4
+        self.rank = rank
+        self.sources = {getattr(lane, "source", None), *(getattr(lane, "feeds", ()) or ())}
+        # "posts only" (the comments hidden): a lane of posts that isn't personal
+        self.has_posts_only = rank == 4 and bool(getattr(lane, "source", None)) and \
+            not getattr(lane, "events", False)
         self.chips = tuple(getattr(lane, "chips", ()) or ())  # a free lane's quick filters
         self.separator_text = separator_text or (lambda n: _("new_below"))
         self.separator = None    # (key of the first unread when the lane opened, count)
@@ -279,7 +285,7 @@ class LaneModel:
         self.separator = None
 
     def conversations_offered(self):
-        return self.name in CONVERSATION_LANES and not self.threads_view
+        return self.rank in (1, 2, 3) and not self.threads_view  # replies, mentions, threads
 
     def conversations(self):
         return self.threads_view or self.conversations_offered() and \
@@ -379,7 +385,7 @@ class LaneModel:
                     s.extra["thread_news"] = n
         tagged = getattr(view, "came_by_tag", None)
         if tagged is not None and view.cfg["feed"].get("why_home") and \
-                self.name == "home":  # "via #tag": why a stranger's post is in Home
+                "home" in self.sources:  # "via #tag": why a stranger's post came by Home
             for s in specs:
                 if s.entry is not None and not isinstance(s.entry, Share):
                     tag = tagged(s.entry)
@@ -389,7 +395,7 @@ class LaneModel:
         at = view.open_at(self.name) if hasattr(view, "open_at") else "post"
         for s in specs:
             s.open_at = at
-        if self.name in ("replies", "mentions", "to_me"):
+        if self.rank in (1, 2):  # replies and mentions: did I answer them elsewhere?
             view.check_my_replies(posts)
         if unknown:
             view.ensure_parents(unknown)

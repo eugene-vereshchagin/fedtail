@@ -74,3 +74,22 @@ class SidebarTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SectionsByRuleTest(unittest.TestCase):
+    def test_a_lane_in_its_rules_section_once(self):
+        """The section is the rule's `group`, never the lane's name: a lane called
+        "home" put among the personal ones is there, and only there (it stood in both)."""
+        from fedtail.core import lanes
+        made = [lanes.Lane("home", "home", lanes._all, group="personal"),
+                lanes.Lane("direct", "mentions", lanes._all, group="standard"),
+                lanes.Lane("feed", "home", lanes._all, group="personal"),
+                lanes.Lane("unsorted", "unsorted", lanes._all),
+                lanes.Lane("list:7", "list:7", lanes._all)]
+        got = dict(lanes.grouped(made))
+        self.assertEqual(got["personal"], ["home", "feed"])
+        self.assertEqual(got["standard"], ["direct", "unsorted"])
+        self.assertEqual(got["lists"], ["list:7"])
+        self.assertNotIn("tags", got)
+        every = [n for names in got.values() for n in names]
+        self.assertEqual(len(every), len(set(every)))

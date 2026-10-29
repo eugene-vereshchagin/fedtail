@@ -10,6 +10,7 @@ from unittest import mock
 
 from fedtail import i18n
 from fedtail.core.view import View
+from fedtail.frontends.common import sidebar
 from fedtail.frontends.common.cardtext import Bit, CardWords
 from fedtail.frontends.tui import model
 from fedtail.protocols.mastodon.adapter import post as to_post
@@ -82,7 +83,7 @@ class TuiModelCornersTest(TmpDir):
         self.assertEqual(model.show_post(self.view, to_post(pic)).body, [])
 
     def test_lane_label_truncates_and_survives_an_old_core(self):
-        title, _n = model.lane_label(self.view, "replies", width=4)
+        title, _n = sidebar.lane_label(self.view, "replies", width=4)
         self.assertTrue(title.endswith("…"))
 
         class Old:  # a core that can't count: no number, nothing breaks
@@ -94,7 +95,7 @@ class TuiModelCornersTest(TmpDir):
 
             def unread_count(self, _n):
                 raise AttributeError("not in this core")
-        self.assertEqual(model.lane_label(Old(), "activity"), ("Activity", 0))
+        self.assertEqual(sidebar.lane_label(Old(), "activity"), ("Activity", 0))
 
     def test_event_lines_of_every_shape(self):
         """A server's notice says itself (no names); many people: "and N more"; no post,
@@ -121,17 +122,34 @@ class TuiModelCornersTest(TmpDir):
         self.assertIn(("muted", " — liked · 11:00", None), top)
 
     def test_lanes_without_groups(self):
+        """The terminal's sections are the windows' (common/sidebar.groups): plain, the
+        lanes and then the lists; with groups, each section titled."""
         self.view.cfg["ui"]["sidebar_groups"] = False
-        got = model.ordered_lanes(self.view)
-        self.assertEqual(len(got), 1)
+        got = sidebar.groups(self.view, self.view.cfg)
         self.assertIsNone(got[0][0])
         self.assertIn("home", got[0][1])
+        self.assertIsNone(sidebar.group_title(got[0][0]))
         self.view.cfg["ui"]["sidebar_groups"] = True
-        self.assertTrue(all(title for title, _n in model.ordered_lanes(self.view)))
+        self.assertTrue(all(sidebar.group_title(g) for g, _n in
+                            sidebar.groups(self.view, self.view.cfg)))
 
     def test_start_lane(self):
-        self.assertIsNone(model.start_lane(self.view, []))
-        self.assertEqual(model.start_lane(self.view, ["local", "home"]), "home")
-        self.assertEqual(model.start_lane(self.view, ["local"]), "local")
+        """ui.start_lane, one rule for every interface: none — closed (or, where every
+        lane can't be closed, the last); last; a lane by name; a lane not there — the
+        set's own start lane (its rule's `start`), not one by its name."""
+        cfg = self.view.cfg["ui"]
+        self.assertIsNone(sidebar.start_lane(self.view, ["local", "home"]))  # none
+        self.assertIsNone(sidebar.start_lane(self.view, [], closable=False))
+        first = next(x.name for x in self.view.lanes if x.start)  # the set's: Home
+        self.assertEqual(first, "home")
+        self.assertEqual(sidebar.start_lane(self.view, ["local", first], closable=False),
+                         first)
+        self.assertEqual(sidebar.start_lane(self.view, ["local"], closable=False), "local")
         self.view.set_state("lane", "local")
-        self.assertEqual(model.start_lane(self.view, ["home", "local"]), "local")
+        self.assertEqual(sidebar.start_lane(self.view, [first, "local"], closable=False),
+                         "local")
+        cfg["start_lane"] = "last"
+        self.assertEqual(sidebar.start_lane(self.view, [first, "local"]), "local")
+        cfg["start_lane"] = first
+        self.assertEqual(sidebar.start_lane(self.view, [first, "local"]), first)
+        cfg["start_lane"] = "none"

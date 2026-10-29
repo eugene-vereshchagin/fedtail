@@ -25,6 +25,8 @@ class Lane:
     chips: tuple = ()
     # the sidebar section a lane goes to when GROUPS doesn't name it (free lanes, Unsorted)
     group: str = ""
+    # the set's lane to open first when ui.start_lane names none there (its rule's `start`)
+    start: bool = False
     # a lane of rules' way of reading (core/custom.py): the order — "arrival", "post_time",
     # or by "replies" / "likes" / "boosts" / "density" (the best where reading starts);
     # window — only posts of the last so many seconds (0: all; mode = "catch_up": 12 h);
@@ -72,7 +74,8 @@ def keeps(lane, st, ctx):
     if lane.name in ctx.hide_in and (st["account"]["id"] in ctx.hidden
                                      or real(st)["account"]["id"] in ctx.hidden):
         return False
-    if lane.name == "home" and ctx.home_hidden_tags and \
+    # "not in Home": out of every lane that reads the home timeline, whatever its name
+    if ctx.home_hidden_tags and (lane.source == "home" or "home" in (lane.feeds or ())) and \
             {(x.get("name") or "").lower() for x in real(st).get("tags") or ()} & \
             ctx.home_hidden_tags:
         return False
@@ -107,40 +110,27 @@ def canonical(name):
     return RENAMED.get(name, name) if isinstance(name, str) else name
 
 
-# the sidebar's sections, in order; a lane goes to the first section that names it,
-# lists get their own section, anything else ends up in "more"
-GROUPS = [
-    ("standard", ["federated", "home", "local", "bots"]),        # from the widest down
-    ("personal", ["my_posts", "direct", "to_me", "mentions", "replies", "subs", "important",
-                  "bookmarks", "my_likes", "activity", "requests"]),
-    ("lists", []),
-    ("tags", []),  # lanes of several hashtags (core/taggroups.py)
-]
+# the sidebar's sections, in order. A lane's section is its rule's (`group`: "standard"
+# or "personal", presets.toml / [[lanes.custom]]), never its name; the server's lists
+# and the lanes of tags have sections of their own
+GROUPS = [("standard", []), ("personal", []), ("lists", []), ("tags", [])]
+SECTIONS = ("standard", "personal")
 
 
 def grouped(lanes):
-    """[(group, [lane names])] for the sidebar, keeping the configured order inside."""
-    names = [lane.name for lane in lanes]
-    own = {lane.name: lane.group for lane in lanes  # each lane's section, as its rule says
-           if getattr(lane, "group", "")}
-    out = []
-    placed = set()
-    for group, members in GROUPS:
-        if group == "lists":
-            got = [n for n in names if is_list(n)]
-        elif group == "tags":
-            got = [n for n in names if taggroups.is_tags(n)]
-            if not got:
-                continue  # no tag lanes: no "Теги" heading either
+    """[(group, [lane names])] for the sidebar, keeping the configured order inside; each
+    lane in one section: a list's, a tag lane's, else its rule's group ("standard" when
+    it says none — Unsorted). "lists" is always there; "tags" only with such lanes."""
+    out = {g: [] for g, _m in GROUPS}
+    for lane in lanes:
+        if is_list(lane.name):
+            out["lists"].append(lane.name)
+        elif taggroups.is_tags(lane.name):
+            out["tags"].append(lane.name)
         else:
-            got = [n for n in names if n in members or own.get(n) == group]
-            if group == "standard":
-                got += [n for n in names if n not in placed and n not in got
-                        and not is_list(n) and not taggroups.is_tags(n) and n not in own
-                        and not any(n in m for _g, m in GROUPS)]
-        placed.update(got)
-        out.append((group, got))
-    return out
+            group = getattr(lane, "group", "") or "standard"
+            out[group if group in SECTIONS else "standard"].append(lane.name)
+    return [(g, names) for g, names in out.items() if g != "tags" or names]
 
 
 LIST_PREFIX = "list:"

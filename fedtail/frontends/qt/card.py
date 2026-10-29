@@ -209,7 +209,7 @@ class EventRow(QWidget):
                      + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
-        top.setToolTip(parts.tip)
+        top.setToolTip(plain_tip(parts.tip))  # names in it: not ours
         top.linkActivated.connect(link)
         line = QHBoxLayout()
         line.addWidget(top, 1)
@@ -635,7 +635,7 @@ class PostRow(QWidget):
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
             avatar.setCursor(Qt.CursorShape.PointingHandCursor)
-            avatar.setToolTip("@" + acc.handle)
+            avatar.setToolTip(plain_tip("@" + acc.handle))
             avatar.setAccessibleName(_("a11y_avatar", acct=acc.handle))
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
@@ -763,7 +763,7 @@ class PostRow(QWidget):
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
             avatar.setCursor(Qt.CursorShape.PointingHandCursor)
-            avatar.setToolTip("@" + acc.handle)
+            avatar.setToolTip(plain_tip("@" + acc.handle))
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar)
             self.ctx.images.face(acc.avatar_static, size,

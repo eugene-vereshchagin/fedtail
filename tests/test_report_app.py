@@ -201,6 +201,19 @@ class TranslateTest(FreeBase):
         core.cfg["post"]["languages"] = ["es"]  # a language I write: left as it is
         self.assertNotIn("[en]", view.entry(raw).text)
 
+    def test_no_private_post_goes_to_a_translator_by_itself(self):
+        """An outside translator (LibreTranslate) is given by itself only what anyone
+        may read: a direct or followers-only post is translated on a click, not sent out
+        as it arrives (the server's own /translate refuses those too)."""
+        core, _w = self.make([])
+        core.cfg["feed"]["translate_backend"] = "libretranslate"
+        core.cfg["feed"]["translate_url"] = "https://translate.example"
+        post = {"id": "9", "language": "es", "content": "<p>hola</p>"}
+        self.assertTrue(core._wants_translation({**post, "visibility": "public"}))
+        self.assertTrue(core._wants_translation({**post, "visibility": "unlisted"}))
+        for vis in ("private", "direct", None):
+            self.assertFalse(core._wants_translation({**post, "visibility": vis}), vis)
+
 
 if __name__ == "__main__":
     unittest.main()
