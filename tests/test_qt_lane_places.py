@@ -176,6 +176,35 @@ class LaneHoleTest(unittest.TestCase):
         self.assertIn("empty", said.output[0])
         self.assertIn(key, view.rows)  # built again where it stands
 
+    def test_a_card_drawn_elsewhere_or_hidden_is_a_hole(self):
+        """The check looks at what Qt draws, not at the places as they should be: the
+        last card hidden, or left where it stood, is a blank (under the last post after
+        a new one came, 29.10 — the log said nothing); mended, it is back in place."""
+        self._pictures(30, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        self.pump(0.3)
+        sb = view.verticalScrollBar()
+        vt, vh = sb.value(), view.viewport().height()
+        key = next(k for k in view.order if view._ys[k] > vt + 20
+                   and view._ys[k] + view.rows[k].height() < vt + vh)
+        row = view.rows[key]
+        row.hide()
+        view._hole_said = 0
+        with self.assertLogs("fedtail.frontends.qt.feedview", "WARNING") as said:
+            view._check_holes()
+        self.assertIn("empty", said.output[0])
+        self.assertTrue(view.rows[key].isVisibleTo(view.body))
+        view.rows[key].move(row.x(), row.y() + 5000)  # left elsewhere
+        view._hole_said, view._mended_at = 0, None
+        with self.assertLogs("fedtail.frontends.qt.feedview", "WARNING"):
+            view._check_holes()
+        self.assertEqual(view.rows[key].y(), view._ys[key])
+
 
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class LaneStoodTest(unittest.TestCase):

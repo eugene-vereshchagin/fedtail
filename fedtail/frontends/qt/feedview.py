@@ -796,15 +796,26 @@ class FeedView(QScrollArea):
         the last post, then a post's height of nothing, 29.10). Said in the log with what
         stands where, once a minute at most, so a report shows it; and mended: every place
         again from the heights known now, the cards near the screen built — once a hole."""
-        if not self.windowed or self._pending or not self.model or self._paused:
+        if not self.windowed or not self.model or self._paused:
+            return
+        if self._pending:
+            if self._more.isActive():
+                return  # still being built
+            # waiting with nothing to build them: a hole that never mends (29.10)
+            log.warning("lane: %d cards waited to be built, none building: %s",
+                        len(self._pending), self._pending[:8])
+            self._more.start()
             return
         sb = self.verticalScrollBar()
         top, vh = sb.value(), self.viewport().height()
         if vh < 100 or self._total <= vh:
             return
         bottom = min(top + vh, self._total)
-        spans = [(self._ys.get(k, 0), self._ys.get(k, 0) + self.rows[k].height())
-                 for k in self.order]
+        # what is drawn where, as Qt has it — not the places as they should be: a card
+        # hidden, or left where it stood, covers nothing (the blank under the last post
+        # after a new one came, 29.10, said nothing in the log)
+        spans = [(r.y(), r.y() + r.height()) for r in
+                 (self.rows[k] for k in self.order) if r.isVisibleTo(self.body)]
         if self.header.count():
             spans.append((self.strip.head[0], self.strip.head[0] + self._chrome[0]))
         if self.footer.count():
@@ -833,8 +844,15 @@ class FeedView(QScrollArea):
                         sb.maximum(), self._total, self._width, len(self._hidden),
                         self._target, want[:12], self.order[-12:],
                         [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
+            log.warning("hole in a lane: drawn %s", [
+                (k, r.y(), r.height(), r.isVisibleTo(self.body)) for k, r in
+                ((k, self.rows[k]) for k in self.order) if r.y() + r.height() > top - vh
+                and r.y() < bottom + vh])
         if getattr(self, "_mended_at", None) != (top, self._total):
             self._mended_at = (top, self._total)
+            for row in self.rows.values():  # a card of the lane hidden: shown again
+                if not row.isVisibleTo(self.body):
+                    row.show()
             self._lay_out()
 
     def _check_places(self):

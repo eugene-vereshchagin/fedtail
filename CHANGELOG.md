@@ -54,6 +54,11 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- Qt: the hole check looks at what is drawn, not at the places as they should be — a card
+  hidden or left where it stood is a blank; said in the log with each card's real place,
+  and mended (shown again, put back). Cards waiting to be built with nothing building
+  them are said and built. The blank under the last post after a new one came said
+  nothing in the log.
 - A follow request waiting stands among the events by when it came (when fedtail first
   saw it: the API gives no time of it) — it took the account's creation date ("asks to
   follow you · 9 Oct 2024") and stood on top of a lane read oldest first, its "followed
