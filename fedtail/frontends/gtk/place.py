@@ -190,7 +190,11 @@ class PlaceWindow:
             self.form.append(w)
             self.fields[f.name] = ("text", w)
         else:
-            w = Gtk.Entry(text=str(f.value or ""), placeholder_text=f.label)
+            # its words above it, as every other field's (as Qt's: a grey placeholder
+            # alone made it look switched off)
+            if f.label:
+                self.form.append(Gtk.Label(label=f.label, xalign=0))
+            w = Gtk.Entry(text=str(f.value or ""))
             if f.kind == "secret":  # a password: dots, as everywhere
                 w.set_visibility(False)
                 w.set_input_purpose(Gtk.InputPurpose.PASSWORD)

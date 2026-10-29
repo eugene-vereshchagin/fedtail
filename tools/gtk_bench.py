@@ -254,7 +254,7 @@ def run(layout, theme, posts, profile, maximized=False):
     gi_setup.load_adwaita("off")
     i18n.setup("ru")
     ui = {"start_lane": "home", "adwaita": "off", "theme": theme, "layout": layout,
-          "columns": ["home", "mentions", "local"] if layout == "columns" else []}
+          "columns": []}  # nothing chosen: the set's own (its rules), as in life
     if snap:
         cfg = real.config(snap, ui)
     else:
@@ -332,7 +332,8 @@ def run(layout, theme, posts, profile, maximized=False):
         meter.scenario("rewind: fling (5 pages a frame)",
                        lambda: rewind(meter, lv, 40, 40, "fling"))
 
-    for lane in ("mentions", "local", "replies"):
+    # three other lanes, as the sidebar has them (lanes are made by rules: no names)
+    for lane in [n for n in win.lane_rows if n != "home"][:3]:
         if lane in win.lane_rows:
             def open_lane(lane=lane):
                 win.select_lane(lane)
@@ -382,7 +383,7 @@ def run(layout, theme, posts, profile, maximized=False):
 
     if layout == "split" and win.roster is not None:
         meter.scenario("roster: refresh", lambda: (win.roster.refresh(), None)[1])
-        for name in ("mentions", "local"):
+        for name in [n for n in win.lane_rows if n != "home"][:2]:
             meter.scenario(f"tab: open {name}", lambda n=name: (win.roster.open(n), None)[1])
         meter.scenario("tabs: switch around", lambda: _switch_tabs(meter, win))
 

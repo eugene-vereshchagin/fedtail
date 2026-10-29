@@ -157,7 +157,7 @@ def run(layout, theme, posts, profile, maximized=False):
     i18n.setup("ru")
     app = QApplication.instance() or QApplication([])
     ui = {"start_lane": "home", "theme": theme, "layout": layout,
-          "columns": ["home", "mentions", "local"] if layout == "columns" else []}
+          "columns": []}  # nothing chosen: the set's own (its rules), as in life
     if snap:
         cfg = real.config(snap, ui)
     else:
@@ -242,7 +242,8 @@ def run(layout, theme, posts, profile, maximized=False):
                                       max(5, bar.maximum() // max(1, bar.pageStep() * 5)),
                                       "fling"))
 
-    for name in ("mentions", "local", "replies"):
+    # three other lanes, as the sidebar has them (lanes are made by rules: no names)
+    for name in [n for n in win.lane_items if n != "home"][:3]:
         def open_lane(name=name):
             win.select_lane(name)
             return lambda: win.lane_on_screen(name)

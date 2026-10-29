@@ -246,8 +246,12 @@ class PlaceDialog(QDialog):
             self.form.addWidget(w)
             self.fields[f.name] = ("text", w)
         else:
+            # its words above it, as every other field's: the words only inside an empty
+            # field, grey, made it look switched off (the sync's invite code, 29.10)
+            if f.label:
+                self.form.addWidget(QLabel(f.label))
             w = QLineEdit(str(f.value or ""))
-            w.setPlaceholderText(f.label)
+            w.setAccessibleName(f.label)
             if f.kind == "secret":  # a password: dots, as everywhere
                 w.setEchoMode(QLineEdit.EchoMode.Password)
             self.form.addWidget(w)

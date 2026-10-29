@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Fixed (Qt, GTK): a one-line field of a window's place (≡ → Sync's address and invite
+  code, a filter's words, a list's name…) had its words only as grey text inside it, so
+  an empty one looked switched off; its words are above it now, as every other field's
+  (the terminal, the web page and the phone had them already).
 - Much smoother, the GTK window: a lane is one strip of places with only the cards near
   the screen built (as Qt's, the same code: `common/strip.py`), a few at a time between
   frames — no more laying out every card at each scroll step nor waiting at the edge of
