@@ -761,8 +761,12 @@ def fetch_picture(cache_dir, url, opener, readable=None):
         with opener(url, (6, 30)) as r:
             r.raise_for_status()
             kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
-            if not kind.startswith("image/"):
-                return None  # an error page, a video: not for the picture cache
+            # an error page, a video: not for the picture cache. Not by "image/" alone:
+            # pictures kept on S3 and the like come as application/octet-stream — a
+            # server's custom emoji stood as :code: on the web page (29.10); the bytes
+            # tell (imagesniff below)
+            if kind.startswith(("text/", "video/", "audio/")):
+                return None
             data = remote.read(r, PICTURE_MAX)
     except requests.RequestException as e:
         log.debug("prefetch %s: %s", url, e.__class__.__name__)

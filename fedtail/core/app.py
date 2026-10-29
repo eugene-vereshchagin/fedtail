@@ -2003,7 +2003,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         return self.store.kv_get(f"ui.{key}", default)
 
     def set_state(self, key, value):
-        self.store.kv_set(f"ui.{key}", value)
+        # by the background: the interfaces set it from their own threads (the window
+        # froze 21 s here, the disk busy, 29.10)
+        self.store.kv_set_soon(f"ui.{key}", value)
 
     # ---- shutdown ----------------------------------------------------------------
     def _list_waiting(self):

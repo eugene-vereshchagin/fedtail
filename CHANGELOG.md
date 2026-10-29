@@ -54,6 +54,18 @@
 - The web page's lane counts are circles coloured as the windows' (it showed bare
   numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
   windows kept it by the lanes' names, twice; now one rule for every interface.
+- The window froze for 21 s, the disk busy: the commit that crossed SQLite's 1000 WAL
+  pages checkpointed the database itself, fsync and all, and it was the window's (a
+  lane's place saved). The WAL is checkpointed by the store's own thread now
+  (`wal_autocheckpoint = 0`), and the interfaces' small states (`set_state`) are written
+  by it a moment later, seen at once.
+- Web: custom emoji in names are drawn (the page had the server's `name_html` and showed
+  the plain name); a picture is taken by its bytes, not by the type its server names —
+  emoji kept on S3 come as `application/octet-stream` and stood as `:code:`.
+- Web: my answer shows in the thread open beside as it is sent (the thread is drawn
+  again, the screen on it); before, only after opening the thread anew.
+- Web: ✎ ✕ of my own post stand in the head's row, before the #code and the time — they
+  covered both; the bar's columns and full-width buttons are drawn alike, one size.
 - The place a lane opens at is the last card seen whole at the bottom of the screen —
   what was read last — and it opens there, at the bottom (on top when new posts came
   under it). It was the card on top: opened on top, the one above peeked in and was taken

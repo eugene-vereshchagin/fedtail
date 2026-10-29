@@ -111,7 +111,7 @@ function renderPost(p, inThread) {
     card.append(s);
   } else if (p.shared_by) {
     const s = el("div", "shared", "♻ ");
-    const by = el("a", "", p.shared_by.name || p.shared_by.handle);
+    const by = nameEl("a", "", p.shared_by);
     by.href = "#";
     by.onclick = (e) => { e.preventDefault(); openAccount(p.shared_by.id); };
     s.append(by);
@@ -126,7 +126,7 @@ function renderPost(p, inThread) {
   face.append(avatar(p.account));
   head.append(face);
   const names = el("div", "names");
-  const who = el("a", "who", p.account.name || p.account.handle);
+  const who = nameEl("a", "who", p.account);
   if (p.account.color) who.style.color = p.account.color;  // people.nick_colors
   who.href = "#";
   who.onclick = (e) => { e.preventDefault(); openAccount(p.account.id); };
@@ -429,11 +429,20 @@ function renderCard(c) {
   return a;
 }
 
+// a person's name, its :emoji: as pictures (the server's name_html: escaped there, the
+// pictures through /pic) — they stood as :code: on the page (29.10)
+function nameEl(tag, cls, acc) {
+  const e = el(tag, cls);
+  if (acc.name_html) e.innerHTML = acc.name_html;
+  else e.textContent = acc.name || acc.handle;
+  return e;
+}
+
 function renderQuote(q) {
   const box = el("div", "quote");
   if (q.note) { box.append(el("span", "muted", "❝ " + q.note)); return box; }
   const head = el("div", "quote-head");
-  head.append(avatar(q.account, "ava small"), el("b", "", q.account.name || q.account.handle),
+  head.append(avatar(q.account, "ava small"), nameEl("b", "", q.account),
               el("span", "acct", " @" + q.account.handle), el("span", "time", " · " + when(q.created)));
   box.append(head, el("div", "", q.text));
   if (q.id) box.onclick = () => openThread(q.id);
@@ -1791,8 +1800,9 @@ function watchThreadProgress(id, token, show) {
 
 // at: where it stands once drawn — "post", or "first_unread" (common/links.py THREAD_AT:
 // a card's open_at, a fedtail:threadnew/ link)
-async function openThread(id, at) {
+async function openThread(id, at, show) {
   const token = showSide(w("web_thread"));
+  state.thread = { token, id, at };  // drawn again when my answer in it is sent
   // "loading…" with the opossum swinging beside it, as the windows have it
   const wait = loadingBox(w("thread_loading"));
   $("#side-body").textContent = "";
@@ -1817,7 +1827,9 @@ async function openThread(id, at) {
     let focus = null;
     for (const p of t.posts) {
       const card = renderPost(p, true);
-      if (p.sid === t.focus || p.id === t.focus) { card.classList.add("cursor"); focus = card; }
+      // show: my answer just sent, the screen on it; else the post it opened at
+      const here = show ? p.sid === show || p.id === show : p.sid === t.focus || p.id === t.focus;
+      if (here) { card.classList.add("cursor"); focus = card; }
       body.append(card);
     }
     if (t.posts.length) $("#side-title").textContent = w("web_thread") + " · @" + t.posts[0].account.handle;
@@ -1907,7 +1919,7 @@ async function openAccount(id, show) {
     const head = el("div", "head");
     head.append(avatar(a.account, "ava big"));
     const names = el("div", "names");
-    names.append(el("b", "", a.account.name), el("span", "acct", "@" + a.account.handle));
+    names.append(nameEl("b", "", a.account), el("span", "acct", "@" + a.account.handle));
     head.append(names);
     box.append(head);
     const note = el("div", "body");
@@ -2555,6 +2567,10 @@ async function send(e, extra) {
     $("#text").value = "";
     toast(r.message || w("sent"));
     closeCompose();
+    // the thread open beside: drawn again with my answer (or my edit) in it — it showed
+    // only after opening the thread anew (29.10)
+    const th = state.thread;
+    if (th && state.side === th.token) openThread(th.id, th.at, r.id || undefined);
   } catch (err) { toast(err.message); }
   finally { state.busy = false; $("#send").disabled = false; }
 }

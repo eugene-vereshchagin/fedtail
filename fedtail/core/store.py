@@ -222,6 +222,7 @@ class Stored(Frozen):
 class Store:
     def __init__(self, path):
         self.me_id = None  # set once connected: my own posts go in as read
+        self.path = path
         self.lock = threading.RLock()
         self.db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
         self.db.execute("PRAGMA busy_timeout=5000")
@@ -247,12 +248,21 @@ class Store:
         self._rdb.execute("PRAGMA busy_timeout=5000")
         self._rlock = threading.RLock()
         self.db.execute("PRAGMA synchronous=NORMAL")
+        # the WAL goes into the file in the background (_behind), not by whichever
+        # commit crosses SQLite's 1000 pages: that one waits for the disk's fsync, and it
+        # was the window's — 21 s frozen on a lane's place saved while the disk was busy
+        # (29.10)
+        self.db.execute("PRAGMA wal_autocheckpoint=0")
+        self._soon = {}  # kv to write, by the background (kv_set_soon)
+        self._wake = threading.Event()
+        self._behind_thread = None
         # a new file frees its pages as it goes (an old one is converted in _migrate)
         self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
         with self.lock:
             self.db.executescript(SCHEMA)
             self._migrate()
         self._private(path)
+        self.behind()  # the WAL is checkpointed only there now: from the start
 
     @staticmethod
     def _private(path):
@@ -323,10 +333,59 @@ class Store:
     closed = False  # after close(): what still comes (a late event) knows to stop
 
     def close(self):
+        t = self._behind_thread
+        self.closed = True
+        self._wake.set()
+        if t is not None and t is not threading.current_thread():
+            t.join(5)
         with self.lock, self._rlock:
-            self.closed = True
+            self._write_soon()
             self.db.close()
             self._rdb.close()
+
+    # ---- the background: kv written soon, the WAL checkpointed --------------------
+    BEHIND_S = 20  # the WAL into the file this often, at most
+
+    def _behind(self):
+        """Its own thread, started by the first kv_set_soon or the poll (behind()):
+        the pending kv written, the WAL checkpointed — on a connection of its own, so
+        the disk's fsync keeps no one else waiting."""
+        ckpt = None
+        try:
+            while not self.closed:
+                self._wake.wait(self.BEHIND_S)
+                self._wake.clear()
+                if self.closed:
+                    break
+                with self.lock:
+                    if self.closed:
+                        break
+                    self._write_soon()
+                if ckpt is None:
+                    ckpt = sqlite3.connect(str(self.path), check_same_thread=False,
+                                           isolation_level=None)
+                    ckpt.execute("PRAGMA busy_timeout=5000")
+                try:
+                    ckpt.execute("PRAGMA wal_checkpoint(PASSIVE)").fetchall()
+                except sqlite3.Error as e:  # busy: next time
+                    log.debug("store: checkpoint: %s", e)
+        finally:
+            if ckpt is not None:
+                ckpt.close()
+
+    def behind(self):
+        """The background thread running (idempotent)."""
+        if self._behind_thread is None and not self.closed:
+            self._behind_thread = threading.Thread(target=self._behind, daemon=True,
+                                                   name="fedtail-store")
+            self._behind_thread.start()
+
+    def _write_soon(self):
+        # each kept pending till it is in the file: kv_get finds it one place or the other
+        for key, value in list(self._soon.items()):
+            self.db.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (key, value))
+            if self._soon.get(key) == value:
+                self._soon.pop(key, None)
 
     def _tx(self):
         return _Tx(self)
@@ -464,13 +523,25 @@ class Store:
 
     # ---- kv -------------------------------------------------------------------
     def kv_get(self, key, default=None):
+        soon = self._soon.get(key)
+        if soon is not None:
+            return json.loads(soon)
         with self._reading() as db:
             row = db.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
 
     def kv_set(self, key, value):
         with self.lock:
+            self._soon.pop(key, None)
             self.db.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (key, json.dumps(value)))
+
+    def kv_set_soon(self, key, value):
+        """kv_set by the background, a moment later: for the interfaces' small states
+        (where a lane stands, what's open), set from their own threads — never waiting
+        for the store's lock or the disk there. kv_get sees it at once."""
+        self._soon[key] = json.dumps(value)
+        self.behind()
+        self._wake.set()
 
     # ---- statuses -------------------------------------------------------------
     def put_statuses(self, statuses):

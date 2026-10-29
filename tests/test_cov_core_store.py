@@ -146,3 +146,31 @@ class TwoProcessesTest(unittest.TestCase):
         self.a.mark_read(["y"])  # its own mark: no reload needed, none done
         self.assertFalse(self.a.others_wrote())
         self.assertEqual(self.b.read_set(["x", "y"]), {"x", "y"})
+
+
+class BehindTest(unittest.TestCase):
+    def test_states_written_by_the_background_and_the_wal_checkpointed(self):
+        """kv_set_soon: seen at once, in the file a moment later or at close, by the
+        store's own thread; SQLite checkpoints nothing in a commit (the window froze
+        21 s in one, 29.10) — the background does."""
+        import sqlite3
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "state.db"
+            st = Store(path)
+            self.assertEqual(st.db.execute("PRAGMA wal_autocheckpoint").fetchone()[0], 0)
+            st.kv_set_soon("ui.stood.home", "42")
+            self.assertEqual(st.kv_get("ui.stood.home"), "42")  # at once
+            other = sqlite3.connect(str(path))
+            for _ in range(200):
+                row = other.execute("SELECT value FROM kv WHERE key='ui.stood.home'"
+                                    ).fetchone()
+                if row:
+                    break
+                time.sleep(0.01)
+            self.assertEqual(json.loads(row[0]), "42")
+            st.kv_set_soon("ui.lane", "home")
+            st.close()  # what is pending goes in at close
+            row = other.execute("SELECT value FROM kv WHERE key='ui.lane'").fetchone()
+            self.assertEqual(json.loads(row[0]), "home")
+            other.close()

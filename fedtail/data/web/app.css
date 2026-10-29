@@ -124,6 +124,10 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
 .colbtns button.tool { padding: 2px 6px; }
 #coltools[hidden], #cols-btn[hidden] { display: none; }
 #cols-btn.on, #wide-btn.on { background: var(--ctx); }
+/* the bar's two layout buttons drawn alike, one size: ❯ and ↔ as letters came out of two
+   sizes in the font */
+button.bar-ico { display: inline-flex; align-items: center; justify-content: center;
+                 width: 32px; height: 32px; padding: 0; }
 #scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 5; }
 #scrim[hidden] { display: none; }
 
@@ -495,7 +499,9 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
    own at the top right — the windows' and GTK's look */
 body.lit .post:hover .acts button, body.lit .post:hover .acts a { color: var(--accent); }
 .post .head { position: relative; }
-.post .own-tools { position: absolute; top: 0; right: 0; visibility: hidden; display: flex; gap: 2px; }
+/* in the head's row, before the time and the code: over them, they covered both */
+.post .own-tools { visibility: hidden; display: flex; gap: 2px; flex: none; margin-left: auto; }
+.post .own-tools + .meta { margin-left: 4px; }
 body.lit .post:hover .own-tools { visibility: visible; }
 .post .own-tools button { background: none; border: 0; color: var(--muted); cursor: pointer;
   padding: 2px 6px; font-size: 1em; }

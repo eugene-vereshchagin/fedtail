@@ -384,9 +384,14 @@ class WebTest(TmpDir):
         self.assertTrue(json.loads(body)["mine"]["liked"])
         self.assertEqual(self.req("/api/act", {"action": "fav", "id": "002"})[0], 400)
         before = len(self.w.posted)
+        self.req("/api/thread?id=002")  # the thread open beside, as the page has it
         _c, _h, body = self.req("/api/post", {"text": "an answer", "reply_to": "002"})
         self.assertEqual(len(self.w.posted), before + 1)
         self.assertEqual(self.w.posted[-1][2], "002")
+        # drawn again after sending (the page does): my answer is in it at once
+        mine_id = json.loads(body)["id"]
+        _c, _h, th = self.req("/api/thread?id=002")
+        self.assertIn(mine_id, [p["sid"] for p in json.loads(th)["posts"]])
         self.assertEqual(self.req("/api/post", {"text": "  "})[0], 400)
         self.assertEqual(self.req("/api/post", {"text": "x", "visibility": "everyone"})[0], 400)
         self.req("/api/post", {"text": "to friends", "visibility": "followers"})
