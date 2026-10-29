@@ -17,8 +17,8 @@ api.en = "own"
 others.ru = "только в fedtail"
 others.en = "only in fedtail"
 clients = []
-details.ru = "`reading.order = \"oldest_first\"` — старое сверху, читаешь вниз, как RSS или Point (`\"newest_first\"` — как у всех). `reading.start_at = \"first_unread\"` — открыл ленту и стоишь на первом непрочитанном (`\"newest\"` — на самом свежем). `reading.on_new = \"keep_position\"` — пришло новое, а позиция не меняется, растёт только счётчик (`\"jump_to_newest\"` — прыгнуть к новому)."
-details.en = "`reading.order = \"oldest_first\"` — oldest on top, you read downwards, like RSS or Point (`\"newest_first\"` — as everyone does). `reading.start_at = \"first_unread\"` — open a lane and you stand at the first unread (`\"newest\"` — at the freshest). `reading.on_new = \"keep_position\"` — new posts come and the place doesn't move, only the counter grows (`\"jump_to_newest\"` — jump to the new)."
+details.ru = "`reading.order = \"oldest_first\"` — старое сверху, читаешь вниз, как RSS или Point (`\"newest_first\"` — как у всех). `reading.start_at = \"first_unread\"` — открыл ленту и стоишь там, где стоял в ней в последний раз, в любом интерфейсе (прочитал в окне — терминал, веб и телефон откроют там же), а если негде — на первом непрочитанном (`\"newest\"` — на самом свежем). `reading.on_new = \"keep_position\"` — пришло новое, а позиция не меняется, растёт только счётчик (`\"jump_to_newest\"` — прыгнуть к новому)."
+details.en = "`reading.order = \"oldest_first\"` — oldest on top, you read downwards, like RSS or Point (`\"newest_first\"` — as everyone does). `reading.start_at = \"first_unread\"` — open a lane and you stand where you stood in it last, in any interface (read in the window — the terminal, the web page and the phone open there too), else at the first unread (`\"newest\"` — at the freshest). `reading.on_new = \"keep_position\"` — new posts come and the place doesn't move, only the counter grows (`\"jump_to_newest\"` — jump to the new)."
 
 [[feature]]
 id = "catch-up"

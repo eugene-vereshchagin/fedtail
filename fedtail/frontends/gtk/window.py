@@ -24,8 +24,6 @@ from .lane import LaneView, y_in
 
 log = logging.getLogger(__name__)
 
-BADGE_KIND = {"replies": "hot", "to_me": "hot",
-              "bots": "quiet", "activity": "quiet"}  # as qt/window.py
 
 
 @dataclass
@@ -78,7 +76,7 @@ class Ctx:
 
 
 class LaneRow(Gtk.ListBoxRow):
-    def __init__(self, name, title, theme=None, icon=None):
+    def __init__(self, name, title, theme=None, icon=None, kind="normal"):
         super().__init__()
         self.name = name
         box = Gtk.Box(spacing=6)
@@ -103,8 +101,8 @@ class LaneRow(Gtk.ListBoxRow):
             tip(self, what)
         self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
-        if name in BADGE_KIND:
-            self.badge.add_css_class(BADGE_KIND[name])
+        if kind != "normal":  # common/sidebar.badge_kind: by the lane's rule
+            self.badge.add_css_class(kind)
         self.badge.set_visible(False)
         box.append(self.badge)
         self.set_child(box)
@@ -1483,7 +1481,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.append(head)
             for name in names:
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
-                row = LaneRow(name, title, self.theme, self.view.lane_icon(name))
+                row = LaneRow(name, title, self.theme, self.view.lane_icon(name),
+                              sidebar.badge_kind(self.view, name))
                 row.set_visible(group not in folded)
                 right = Gtk.GestureClick(button=3)  # a list's menu, as Qt's sidebar
                 right.connect("pressed", lambda *_a, r=row: self.lane_menu(r))

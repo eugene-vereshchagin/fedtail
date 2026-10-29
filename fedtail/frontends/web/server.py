@@ -775,7 +775,9 @@ class Web:
                   ("--line", ("card_border", "header_border")),
                   ("--accent", ("accent", "link")), ("--accent-text", ("on_accent",)),
                   ("--unread", ("card_border_unread", "accent")), ("--ctx", ("ctx",)),
-                  ("--danger", ("hot",)))
+                  ("--danger", ("hot",)), ("--on-hot", ("on_hot",)),
+                  ("--quiet", ("quiet",)), ("--on-quiet", ("on_quiet",)),
+                  ("--button-border", ("button_border",)))
 
     def theme_name(self):
         return self.theme or self.core.cfg["ui"].get("theme") or "system"
@@ -988,12 +990,13 @@ class Web:
                 tip = _("tip_" + name)
                 fresh = sidebar.fresh(core, name) if n else 0
                 out.append({"name": name, "title": label, "unread": n,
+                            "badge": sidebar.badge_kind(core, name),
                             "fresh": min(fresh, n), "fresh_words": sidebar.fresh_words(
                                 min(fresh, n)),
                             "tip": "" if tip == "tip_" + name else tip,
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})
-        first = sidebar.start_lane(core, [x["name"] for x in out], closable=False)
+        first = sidebar.start_lane(core, [x["name"] for x in out])  # None: the curtain
         for x in out:
             x["start"] = x["name"] == first
         return out
@@ -1232,6 +1235,21 @@ class Web:
             return {"n": fut.result() or 0, "asked": True} if fut is not None else \
                 {"n": None, "asked": False}
         return {"n": self.core.load_older(name).result() or 0}
+
+    def curtain(self):
+        """The curtain's words (every lane closed) and the lane Enter opens there."""
+        from ..common import sidebar
+        names = [n for _g, ns in sidebar.groups(self.core, self.core.cfg) for n in ns]
+        title, info, hint = sidebar.curtain(self.core, names)
+        return {"title": title, "info": info, "hint": hint,
+                "last": sidebar.start_lane(self.core, names, closable=False)}
+
+    def stood(self, lane, key):
+        """The card on top of the page's screen, the scroll standing (LaneModel.stood):
+        where the lane opens next time, in every interface."""
+        if lane and key:
+            self.model(self._lane_name(str(lane))).stood(str(key))
+        return {"ok": True}
 
     def full_width(self, on):
         """↔: the posts across the whole width or in a column — remembered as the
@@ -2183,6 +2201,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),
                   "/api/lanes": lambda: self.web.lanes(),
+            "/api/curtain": lambda: self.web.curtain(),
                   "/api/slow": lambda: self.web.slow(),
                   "/api/columns": lambda: self.web.columns(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
@@ -2260,6 +2279,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/save": lambda: web.save_media(body.get("url")),
             "/api/older": lambda: web.older(body.get("name"), bool(body.get("ahead"))),
             "/api/full_width": lambda: web.full_width(body.get("on")),
+            "/api/stood": lambda: web.stood(body.get("lane"), body.get("key")),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
             "/api/command": lambda: web.command(str(body.get("line", "")),

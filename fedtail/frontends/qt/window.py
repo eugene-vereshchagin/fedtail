@@ -97,9 +97,6 @@ _AVATAR_CORNERS = {"circle": -1, "square": 0, "rounded": 6}  # shape.avatar_shap
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 
-BADGE_KIND = {"replies": "hot", "to_me": "hot", "bots": "quiet", "activity": "quiet"}
-
-
 
 def _tags_key(g):
     from ...core import taggroups
@@ -123,7 +120,7 @@ def list_open(rel, inside):
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
-    def __init__(self, name, theme, number, title=None, icon=None):
+    def __init__(self, name, theme, number, title=None, icon=None, kind="normal"):
         super().__init__()
         self.name, self.theme = name, theme
         self.title = title or _("lane_" + name)
@@ -153,7 +150,7 @@ class LaneItem(QWidget):
         h.addWidget(self.label, 1)
         self.badge = QLabel()
         self.badge.setObjectName("badge")
-        self.badge.setProperty("kind", BADGE_KIND.get(name, "normal"))
+        self.badge.setProperty("kind", kind)  # common/sidebar.badge_kind
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.badge.setMinimumWidth(24)
         h.addWidget(self.badge)
@@ -1306,7 +1303,8 @@ class MainWindow(QMainWindow):
                 # a list's title, a tag lane's or a free lane's own; None — the built-in word
                 title = lst.title if lst else self.core.lane_title(name)
                 w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title,
-                             icon=self.core.lane_icon(name))
+                             icon=self.core.lane_icon(name),
+                             kind=sidebar.badge_kind(self.core, name))
                 if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())

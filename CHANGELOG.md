@@ -2,6 +2,19 @@
 
 ## 0.22.0 — in progress
 
+- The web page's lane counts are circles coloured as the windows' (it showed bare
+  numbers). The colour is the lane's rule's, `badge = "hot" | "quiet"` (feeds.md §4) — the
+  windows kept it by the lanes' names, twice; now one rule for every interface.
+- A lane opens where you stood in it last, in whatever interface: the window, GTK, the
+  terminal, the web page and the phone each say which card is on top of the screen once
+  the scroll stands (`LaneModel.stood`, the state `stood.<lane>`), and every one opens the
+  lane there (`reading.start_at = "first_unread"`; the first unread only when the place is
+  gone). Each opened it at its first unread before: a post jumped over or folded away in
+  the window, which kept its place in memory for days in the tray, sent the terminal and
+  the web page days back.
+- The terminal and the web page open on the curtain too (`window.start_lane = "none"`):
+  the opossum, what piles up, Enter opens the last lane — the words the windows' own
+  (`common/sidebar.curtain`). They opened the lane of last time instead.
 - The terminal says in its log how many posts on screen have a picture, and aloud (once)
   when a picture came but this Pillow can't read it — "no pictures" was silent then.
 - Qt: a lane whose screen stands empty with cards to show there builds them, not only

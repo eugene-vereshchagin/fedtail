@@ -477,7 +477,9 @@ refresh_minutes = 10
 #            "newest_first" — newest on top (as everyone does).
 order = "oldest_first"
 
-# Where to stand when a lane opens: "first_unread" or "newest".
+# Where to stand when a lane opens: "first_unread" — where you stood in it last, in any
+# interface (the window, the terminal, the web page, the phone), else at its first unread;
+# "newest" — at the freshest.
 start_at = "first_unread"
 
 # What to do when new posts come: "keep_position" — stay where you are;

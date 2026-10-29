@@ -513,10 +513,35 @@ class LaneModel:
         return specs
 
     # ---- where reading starts, what was read -------------------------------------------
+    STOOD = "stood."  # + a lane's name: the state key of where the reader stood in it
+
+    def stood(self, key):
+        """The card on top of the screen now, the scroll standing: where the lane opens
+        next time — in every interface, this one or another started later. Each opened
+        it at its first unread post before (29.10), and one jumped over or folded away
+        in the window left the terminal and the web page days back; the window, open in
+        the tray for days, only held its place in memory."""
+        if not key or key == SEPARATOR or key == getattr(self, "_stood", None):
+            return
+        self._stood = key
+        self.view.set_state(self.STOOD + self.name, key)
+
     def start(self, specs):
         """Where reading starts: (key, "top" | "bottom"), or (None, "end") for the
-        lane's newest end (feed.start_at)."""
+        lane's newest end (feed.start_at). With first_unread: where the reader stood
+        last (stood), in whatever interface, while that card is in the lane; else the
+        first unread."""
         unread = [s.key for s in specs if s.unread]
+        if self.cfg["feed"]["start_at"] == "first_unread":
+            place = self.view.get_state(self.STOOD + self.name) \
+                if hasattr(self.view, "get_state") else None
+            # by its key, or by the post's id (the web page says what its card shows)
+            got = next((s.key for s in specs if s.key == place), None) or next(
+                (s.key for s in specs if place and s.entry is not None and
+                 s.entry.id == place), None) if place else None
+            if got:
+                self._stood = place
+                return got, "top"
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:
             if self.newest_first:
                 return unread[-1], "bottom"

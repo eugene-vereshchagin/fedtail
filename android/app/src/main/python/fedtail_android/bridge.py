@@ -306,6 +306,12 @@ def lane(name, keep=False):
     return _answer(go)
 
 
+def stood(lane, key):
+    """The card on top of the phone's screen, the scroll standing (LaneModel.stood):
+    where the lane opens next time, here and in every other interface → {ok}."""
+    return _answer(lambda: _s["web"].stood(lane, key))
+
+
 def lane_set(body_json):
     """A lane's switches from its header (the windows' and the page's): all / posts only /
     unread only, a conversation a card, the media funnel → {ok}; reload the lane."""

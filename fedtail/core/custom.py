@@ -126,7 +126,7 @@ class Custom:
                               group="standard" if self.rule.group == "standard"
                               else "personal", events=True, open_at=self.rule.open_at,
                               start=self.rule.start,
-                          hide_empty=self.rule.hide_empty)
+                              hide_empty=self.rule.hide_empty, badge=self.rule.badge)
         if self.routed:
             keep = lanes._all  # its stream holds what the rule took
         else:
@@ -144,7 +144,7 @@ class Custom:
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, open_at=self.rule.open_at,
                           events=bool(self.event_conds), start=self.rule.start,
-                          hide_empty=self.rule.hide_empty)
+                          hide_empty=self.rule.hide_empty, badge=self.rule.badge)
 
     def takes(self, status, world, source):
         world = world or atoms.World()

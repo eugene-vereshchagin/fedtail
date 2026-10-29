@@ -66,9 +66,9 @@ def group_title(group):
 
 def start_lane(view, names, closable=True):
     """The lane every interface opens first (ui.start_lane), or None: "none" — every lane
-    closed behind the curtain, nothing read by just starting (an interface that can't
-    show that — closable=False: the terminal, the web page, the phone — and Enter on the
-    curtain take the lane of last time); "last" — the lane of last time; or a lane by
+    closed behind the curtain, nothing read by just starting (every interface draws it,
+    curtain(); closable=False — Enter on the curtain, the phone, the columns — takes the
+    lane of last time); "last" — the lane of last time; or a lane by
     name. A lane not there (the first start, a lane off) gives the set's own (its rule's
     `start = true`, presets.toml), else the sidebar's first — no lane's name assumed.
     names: the lanes the sidebar has."""
@@ -80,6 +80,17 @@ def start_lane(view, names, closable=True):
         return name
     return next((x.name for x in view.lanes if getattr(x, "start", False) and x.name in names),
                 names[0] if names else None)
+
+
+def curtain(view, names):
+    """The words of the curtain — every lane closed (ui.start_lane = "none", or Esc):
+    (title, what piles up behind it, how to open). Every interface draws these: the
+    terminal and the web page opened the lane of last time instead (29.10)."""
+    waiting = [(view.lane_title(n) or _("lane_" + n), count(view, n)) for n in names]
+    waiting = [(t, c) for t, c in waiting if c]
+    info = _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting)) \
+        if waiting else _("curtain_empty")
+    return _("curtain_title"), info, _("curtain_hint")
 
 
 def lane_label(view, name, width=22):
@@ -185,6 +196,14 @@ def icon_total(view, cfg, numbers):
     return sum(n for name, n in numbers.items()
                if view.lane_chosen(name, cfg["ui"]["icon_count"],
                                    cfg["ui"].get("icon_count_except", [])))
+
+
+def badge_kind(view, name):
+    """The colour of a lane's count, by its rule (`badge`): "hot" — to answer (replies
+    to me), "quiet" — no hurry (bots, activity), "normal". Every interface's sidebar:
+    the windows kept it by the lanes' names, twice, and the web page had none (29.10)."""
+    lane = view.lane_by_name.get(name)
+    return getattr(lane, "badge", "") or "normal"
 
 
 def badge_text(n):

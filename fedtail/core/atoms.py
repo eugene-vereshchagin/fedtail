@@ -714,7 +714,7 @@ def _author_word(word, have):
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
              "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
-             "start", "hide_empty"}
+             "start", "hide_empty", "badge"}
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
@@ -738,7 +738,10 @@ _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "d
                # (as on Point); a click opens it at the first of them
                "view": {"", "threads"},
                # where a thread opened from its card opens; "" — threads.open_at
-               "open_at": {"", "post", "first_unread"}}
+               "open_at": {"", "post", "first_unread"},
+               # the colour of its count in the sidebar: "hot" — to answer (replies to
+               # me), "quiet" — no hurry (bots, activity), "" — as any lane's
+               "badge": {"", "hot", "quiet"}}
 
 
 @dataclass
@@ -763,6 +766,7 @@ class Rule:
     open_at: str = ""              # a thread from its card: "post" / "first_unread"; ""
                                    # — as threads.open_at says
     hide_empty: bool = False       # shown only once something is in it ("Important people")
+    badge: str = ""                # its count's colour: "hot", "quiet", "" — the usual
     start: bool = False            # the set's lane to open first, when ui.start_lane names
                                    # none there (common/sidebar.start_lane)
     warnings: list = field(default_factory=list)

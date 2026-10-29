@@ -11,7 +11,7 @@ except ImportError:
 
 from fedtail import i18n
 
-from . import fakes, test_cli
+from . import fakes, test_cli, test_cov_tui_host
 from .fakes import BOB, ME, status
 from .test_core import TmpDir
 
@@ -355,3 +355,35 @@ class TuiLongLaneTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             posts.index = len(posts.children) - 1
             await pilot.pause(0.3)
             self.assertGreaterEqual(len(posts.children), before)
+
+
+@unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
+class TuiCurtainTest(test_cov_tui_host.Base):
+    async def test_the_curtain_and_where_a_lane_opens(self):
+        """ui.start_lane = "none": the terminal opens on the curtain, as the windows do
+        (it opened the lane of last time); Enter opens that lane — on the card the
+        reader stood at last, wherever that was (LaneModel.stood)."""
+        from textual.widgets import ListView, Static
+
+        from fedtail.frontends.tui.app import CURTAIN, FedtailApp
+        core, w = self.make(ui={"start_lane": "none"}, feed={"page_size": 20})
+        for i in range(1, 8):
+            w.add(status(f"00{i}", BOB, minute=i, text=f"post {i}", vis="public"), home=True)
+        core.set_state("lane", "home")
+        core.set_state("stood.home", "003")  # read up to here in the window
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(getattr(i, "key", None) == CURTAIN
+                                               for i in app.query_one("#posts").children),
+                            what="the curtain")
+            self.assertIsNone(app.lane)
+            shown = str(app.query_one("#posts").children[0].query_one(Static).render())
+            self.assertIn("Lanes closed", shown)
+            app.query_one("#posts", ListView).focus()
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: app.lane == "home", what="the lane")
+            lv = app.query_one("#posts", ListView)
+            await self.wait(pilot, lambda: getattr(lv.highlighted_child, "key", None)
+                            == "003", what="the place stood at")
+            await pilot.press("q")

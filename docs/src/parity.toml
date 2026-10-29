@@ -43,6 +43,12 @@ android_note.en = "No tabs: screens stack, \"back\" is the one before."
 keys = ["tab_pin", "tab_unpin", "tab_pinned", "tab_unpinned", "tab_pinned_stays"]
 
 [[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "«Браузер не открылся» в отчёте об ошибке говорит только Qt: он один узнаёт, что открыть не удалось (`QDesktopServices`, затем `xdg-open`). GTK отдаёт адрес рабочему столу без ответа, терминал и веб открывают свой браузер; весь текст отчёта в буфере у всех."
+why.en = "Only Qt says \"the browser didn't open\" in the bug report: it alone learns that opening failed (`QDesktopServices`, then `xdg-open`). GTK hands the address to the desktop with no answer, the terminal and the web page open their own browser; the whole report is on the clipboard in all of them."
+keys = ["issue_not_opened"]
+
+[[wording]]
 in = ["qt", "tui", "web"]
 why.ru = "GTK закрепляет вкладку правым щелчком сразу, без меню, и говорит об этом подсказкой."
 why.en = "GTK pins a tab on a right click at once, with no menu, and says so in a tooltip."
@@ -146,8 +152,8 @@ name.ru = "Шторка (Esc закрывает ленты)"
 name.en = "The curtain (Esc closes the lanes)"
 tui = "na"
 web = "na"
-note.ru = "В терминале и вебе Esc — шаг назад, закрывать нечего."
-note.en = "In the terminal and on the web page Esc steps back; there is nothing to close."
+note.ru = "В терминале и вебе Esc — шаг назад, закрывать нечего; шторка там — при запуске (`window.start_lane = \"none\"`), Enter открывает прошлую ленту."
+note.en = "In the terminal and on the web page Esc steps back; there is nothing to close. The curtain is there at start (`window.start_lane = \"none\"`), Enter opens the last lane."
 keys = ["curtain_empty", "curtain_hint", "curtain_title", "curtain_waiting"]
 
 [[capability]]

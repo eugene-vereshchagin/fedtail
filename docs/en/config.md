@@ -160,7 +160,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `reading.order` | `"oldest_first"` | The order: "oldest_first" — oldest on top, you read downwards (as in RSS/Point); "newest_first" — newest on top (as everyone does). |
-| `reading.start_at` | `"first_unread"` | Where to stand when a lane opens: "first_unread" or "newest". |
+| `reading.start_at` | `"first_unread"` | Where to stand when a lane opens: "first_unread" — where you stood in it last, in any interface (the window, the terminal, the web page, the phone), else at its first unread; "newest" — at the freshest. |
 | `reading.on_new` | `"keep_position"` | What to do when new posts come: "keep_position" — stay where you are; "jump_to_newest" — jump to the new (as everyone does); "hold" — keep the new out of the lane, "N new" in its header, Refresh (⟳, F5) shows them (as Elk does). |
 | `reading.page_size` | `40` | How many posts a request to the server. |
 | `reading.catch_up_limit` | `400` | How many new posts to catch up a poll (the rest — with the next one). |

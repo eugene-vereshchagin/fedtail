@@ -111,6 +111,7 @@ object Core {
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)
     suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
+    suspend fun stood(lane: String, key: String) = obj("stood", lane, key)
     suspend fun laneRead(name: String) = obj("lane_read", name)
     suspend fun laneClear(name: String, confirmed: Boolean) = obj("lane_clear", name, confirmed)
     suspend fun refresh() = obj("refresh")

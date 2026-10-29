@@ -29,6 +29,8 @@ class Lane:
     start: bool = False
     # shown only once something is in it (its rule's `hide_empty`; Unsorted always so)
     hide_empty: bool = False
+    # the colour of its count in the sidebar (its rule's `badge`): "hot", "quiet", ""
+    badge: str = ""
     # a lane of rules' way of reading (core/custom.py): the order — "arrival", "post_time",
     # or by "replies" / "likes" / "boosts" / "density" (the best where reading starts);
     # window — only posts of the last so many seconds (0: all; mode = "catch_up": 12 h);

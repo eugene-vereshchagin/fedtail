@@ -806,6 +806,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var stoodKey: String? = null
+
+    /** The card on top of the screen, the scroll standing: where the lane opens next
+     *  time, on the phone or anywhere else (LaneModel.stood). */
+    fun stood(key: String) {
+        val lane = current ?: return
+        if (key == stoodKey || posts.none { it.key == key }) return
+        stoodKey = key
+        viewModelScope.launch { Core.stood(lane, key) }
+    }
+
     fun markRead(keys: Collection<String>, inThread: Boolean = false) {
         val list = if (inThread) threadPosts else posts
         val ids = list.filter { it.key in keys && it.unread }.map { it.id }

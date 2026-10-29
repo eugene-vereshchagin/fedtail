@@ -142,6 +142,32 @@ class LaneModelTest(unittest.TestCase):
         cfg = dict(CFG, read={"mark_read": "manual"})
         self.assertEqual(lane.LaneModel(View([], cfg=cfg), "replies").read(["x"]), [])
 
+    def test_it_opens_where_the_reader_stood(self):
+        """Where the reader stood (any interface: LaneModel.stood) is where the lane
+        opens, before its first unread — while that card is in the lane; by the card's
+        key or its post's id (the web page says what its card shows)."""
+        v = View([("i1", post("1")), ("i2", post("2")), ("i3", post("3"))],
+                 unread={"1", "3"}, name="home")
+        state = {}
+        v.get_state = lambda k, d=None: state.get(k, d)
+        v.set_state = state.__setitem__
+        m = lane.LaneModel(v, "home")
+        specs = m.build(positioned=True).specs
+        self.assertEqual(m.start(specs), ("i1", "top"))  # never stood: the first unread
+        m.stood("i2")
+        m.stood(lane.SEPARATOR)  # the divider is no place
+        self.assertEqual(state, {"stood.home": "i2"})
+        again = lane.LaneModel(v, "home")  # another interface, a later start
+        self.assertEqual(again.start(specs), ("i2", "top"))
+        state["stood.home"] = "3"  # a post's id
+        self.assertEqual(again.start(specs), ("i3", "top"))
+        state["stood.home"] = "gone"  # no longer in the lane: the first unread again
+        self.assertEqual(again.start(specs), ("i1", "top"))
+        newest = dict(CFG, feed=dict(CFG["feed"], start_at="newest"))
+        v.cfg = newest
+        state["stood.home"] = "i2"
+        self.assertEqual(lane.LaneModel(v, "home").start(specs), (None, "end"))
+
     def test_conversations(self):
         top, r1, r2 = post("1"), post("2", reply_to="1"), post("3", reply_to="2")
         groups = [{"key": "1", "top": top, "members": ["1", "2", "3"], "unread": 2,

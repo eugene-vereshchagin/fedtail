@@ -8,7 +8,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 |---|---|---|---|---|---|---|
 | Pinned tabs | ✓ | ✓ | · | · | · | ui.pin_tabs: right-click a thread's or a profile's tab. The terminal, the web page and the phone have no such tabs — a thread and a profile open over the lane and go with "back". Android: No tabs: screens stack, "back" is the one before. |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
-| The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
+| The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. The curtain is there at start (`window.start_lane = "none"`), Enter opens the last lane. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
 | The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
 

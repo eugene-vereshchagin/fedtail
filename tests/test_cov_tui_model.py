@@ -138,6 +138,7 @@ class TuiModelCornersTest(TmpDir):
         lane can't be closed, the last); last; a lane by name; a lane not there — the
         set's own start lane (its rule's `start`), not one by its name."""
         cfg = self.view.cfg["ui"]
+        cfg["start_lane"] = "none"
         self.assertIsNone(sidebar.start_lane(self.view, ["local", "home"]))  # none
         self.assertIsNone(sidebar.start_lane(self.view, [], closable=False))
         first = next(x.name for x in self.view.lanes if x.start)  # the set's: Home

@@ -55,6 +55,7 @@ class _Watch(QObject):
 
 class FeedView(QScrollArea):
     seen = Signal(list)  # status ids the reader has actually seen
+    stood = Signal(str)  # the card on top of the screen, read there (the scroll standing)
 
     MARGIN = 10   # around the column
     GAP = 8       # between cards
@@ -849,6 +850,9 @@ class FeedView(QScrollArea):
             return  # still on its way somewhere: what's on screen is not what's read
         # (an anchor only holds the post on top in place while pictures come in: the
         # reader sees exactly that, so it doesn't stop anything)
+        anchor = self._anchor()
+        if anchor is not None:
+            self.stood.emit(str(anchor[0]))  # where it opens next time (LaneModel.stood)
         sb = self.verticalScrollBar()
         vtop, vh = sb.value(), self.viewport().height()
         vbot = vtop + vh

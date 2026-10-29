@@ -274,7 +274,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 <details><summary>In detail</summary>
 
-**Oldest on top, nothing jumps.** `reading.order = "oldest_first"` — oldest on top, you read downwards, like RSS or Point (`"newest_first"` — as everyone does). `reading.start_at = "first_unread"` — open a lane and you stand at the first unread (`"newest"` — at the freshest). `reading.on_new = "keep_position"` — new posts come and the place doesn't move, only the counter grows (`"jump_to_newest"` — jump to the new).
+**Oldest on top, nothing jumps.** `reading.order = "oldest_first"` — oldest on top, you read downwards, like RSS or Point (`"newest_first"` — as everyone does). `reading.start_at = "first_unread"` — open a lane and you stand where you stood in it last, in any interface (read in the window — the terminal, the web page and the phone open there too), else at the first unread (`"newest"` — at the freshest). `reading.on_new = "keep_position"` — new posts come and the place doesn't move, only the counter grows (`"jump_to_newest"` — jump to the new).
 
 **Catching up with no holes.** Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here.
 
@@ -838,7 +838,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 |---|---|---|---|---|---|---|
 | Pinned tabs | ✓ | ✓ | · | · | · | ui.pin_tabs: right-click a thread's or a profile's tab. The terminal, the web page and the phone have no such tabs — a thread and a profile open over the lane and go with "back". Android: No tabs: screens stack, "back" is the one before. |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
-| The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
+| The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. The curtain is there at start (`window.start_lane = "none"`), Enter opens the last lane. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
 | The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
 

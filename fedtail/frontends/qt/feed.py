@@ -354,6 +354,7 @@ class LaneWidget(QWidget):
         self.view = FeedView(win.ctx)
         self.view.windowed = True
         self.view.seen.connect(self._seen)
+        self.view.stood.connect(lambda key: self.positioned and self.lm.stood(key))
         lay.addWidget(self.view, 1)
         # "loading…" over the lane while it's being drawn: the click switches at once,
         # the drawing comes after (a lane of a few hundred cards takes a moment)

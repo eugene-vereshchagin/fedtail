@@ -857,7 +857,7 @@ async function loadLanes() {
     if (l.tip) a.title = l.tip;
     a.append(el("span", "lt", l.title));
     if (l.unread) {
-      const n = el("span", "n", String(l.unread));
+      const n = el("span", "n " + (l.badge || "normal"), String(l.unread));
       // "of them new": what the last update brought — a smaller "+56", the words on hover
       if (l.fresh) {
         n.append(el("small", "fresh", "+" + l.fresh));
@@ -876,6 +876,7 @@ async function loadLanes() {
   }
   for (const h of nav.querySelectorAll("button.group.folded"))
     if (h._n) h.append(el("span", "n", String(h._n)));
+  if (!state.lane && $("#posts .curtain")) showCurtain();  // what piles up, as it comes
   return lanes;
 }
 
@@ -1390,6 +1391,26 @@ function emptyBox(text) {
   return box;
 }
 
+// every lane closed (ui.start_lane = "none"): the curtain — the opossum, what piles up
+// behind it, how to open (common/sidebar.curtain, the windows' and the terminal's words);
+// Enter opens the lane of last time
+async function showCurtain() {
+  let c;
+  try { c = await api("/api/curtain"); } catch (e) { toast(e.message); return; }
+  if (state.lane) return;  // a lane was picked meanwhile
+  state.curtainLast = c.last;
+  state.posts = [];
+  $("#title").textContent = c.title;
+  document.title = "FedTail";
+  $("#lanebar").textContent = "";
+  const box = $("#posts");
+  box.textContent = "";
+  const plate = emptyBox(c.title);
+  plate.classList.add("curtain");
+  plate.append(el("div", "", c.info), el("div", "muted", c.hint));
+  box.append(plate);
+}
+
 // "loading…" and the opossum swinging, whatever the poll does (a thread, a place)
 function loadingBox(text) {
   const box = el("div", "empty loading");
@@ -1468,17 +1489,34 @@ const reading = { box: null, glimpsed: new Set(), timer: 0 };
 function watchRead(box) {
   if (observer) observer.disconnect();
   reading.glimpsed = new Set();
-  if (state.me.mark_read !== "on_scroll") return;
   if (reading.box !== box) {
     reading.box = box;
     reading.last = box.scrollTop;
     box.addEventListener("scroll", () => {
       sweptRead(box);
       clearTimeout(reading.timer);
-      reading.timer = setTimeout(() => lookRead(box), 250);
+      reading.timer = setTimeout(() => { stoodAt(box); lookRead(box); }, 250);
     }, { passive: true });
   }
   setTimeout(() => lookRead(box), 400);  // what the lane opened on
+}
+
+// the card on top of the screen, the scroll standing: where the lane opens next time,
+// here or in any other interface (LaneModel.stood: the windows and the terminal say the
+// same) — each opened it at its first unread before, and that was days back (29.10)
+function stoodAt(box) {
+  if (document.hidden || !state.lane) return;
+  const view = box.getBoundingClientRect();
+  for (const c of box.querySelectorAll(".post, .event")) {
+    const r = c.getBoundingClientRect();
+    if (!r.height || r.bottom <= view.top + 2) continue;
+    const key = c.dataset.key || c.dataset.id;
+    if (key && key !== stoodAt.last) {
+      stoodAt.last = key;
+      api("/api/stood", { lane: state.lane, key }).catch(() => {});
+    }
+    return;
+  }
 }
 
 // what the screen went over on its way (the windows' rule, qt/feedview.py _scrolled):
@@ -2769,6 +2807,12 @@ document.addEventListener("click", async (e) => {
 
 // ---- keys --------------------------------------------------------------------------------
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !state.lane && state.curtainLast && $("#posts .curtain") &&
+      !["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(document.activeElement?.tagName)) {
+    e.preventDefault();
+    goLane(state.curtainLast);
+    return;
+  }
   if (!$("#viewer").hidden) {
     if (e.key === "Escape") closeViewer();
     else if (e.key === "ArrowLeft") stepViewer(-1);
@@ -3164,6 +3208,7 @@ async function start() {
   const first = lanes.find((l) => l.start);
   if (names.includes(want)) await selectLane(want);
   else if (first) await selectLane(first.name);
+  else await showCurtain();  // ui.start_lane = "none": every lane closed, as the windows
   await columnsStart();
   follow();
   window.addEventListener("hashchange", () => {

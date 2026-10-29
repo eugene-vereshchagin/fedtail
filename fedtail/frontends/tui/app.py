@@ -106,6 +106,9 @@ def render_event(lines):
     return t
 
 
+CURTAIN = "__curtain__"  # the key of the curtain's one row (every lane closed)
+
+
 class PostItem(ListItem):
     def __init__(self, entry, text, key=None, open_at=None):
         self.body = Static(text, classes="post")  # kept: a picture comes in later
@@ -998,10 +1001,37 @@ class FedtailApp(App, PostsMixin):
         self.set_interval(30, self._slow_title)  # slow mode: when the next batch comes
         await self.fill_lanes()
         self.core.start_polling()
-        first = sidebar.start_lane(self.core, self._lane_names(), closable=False)
+        first = sidebar.start_lane(self.core, self._lane_names())
         if first:
             await self.select_lane(first)
+        else:  # ui.start_lane = "none": the curtain, as the windows open on
+            await self.show_curtain()
         self._main("#posts", ListView).focus()
+
+    async def show_curtain(self):
+        """Every lane closed: the opossum's words where the posts go — what piles up,
+        how to open (common/sidebar.curtain); Enter opens the lane of last time."""
+        lv = self._main("#posts", ListView)
+        await lv.clear()
+        item = ListItem(Static(self._curtain_text()))
+        item.key = CURTAIN
+        await lv.append(item)
+        lv.index = 0  # Enter on it opens the lane of last time
+        self._rows, self._lo, self._hi = [], 0, 0
+        self._main("#title", Static).update(Text(_("curtain_title"), style="bold"))
+
+    def _curtain_text(self):
+        title, info, hint = sidebar.curtain(self.core, self._lane_names())
+        return Text.assemble(("\n   (\\_/)\n   (o.o)  ~\n   (> <)\n\n", "dim"),
+                             (title + "\n\n", "bold"), (info + "\n\n", ""), (hint, "dim"))
+
+    def _curtain_shown(self):
+        try:
+            items = self._main("#posts", ListView).children
+        except NoMatches:
+            return None
+        return next((i for i in items if getattr(i, "key", None) == CURTAIN), None) \
+            if self.lane is None else None
 
     async def fill_lanes(self):
         """The lanes in the windows' sections (ui.sidebar_groups): a heading each, Enter
@@ -1067,6 +1097,9 @@ class FedtailApp(App, PostsMixin):
     def update_lane_counts(self):
 
         self._slow_title()
+        shown = self._curtain_shown()
+        if shown is not None:  # what piles up behind the curtain, as it comes
+            shown.query_one(Static).update(self._curtain_text())
         for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
                 title, n = sidebar.lane_label(self.core, item.lane, self.lanes_width - 2)
@@ -1464,8 +1497,7 @@ class FedtailApp(App, PostsMixin):
         self._seen_timer = None
         if not self.screen_stack:  # the app closing
             return
-        if not self.lane or self.screen is not self.screen_stack[0] or \
-                self.core.cfg["read"]["mark_read"] != "on_scroll":
+        if not self.lane or self.screen is not self.screen_stack[0]:
             return
         try:
             lv = self._main("#posts", ListView)
@@ -1473,6 +1505,13 @@ class FedtailApp(App, PostsMixin):
             return
         view = lv.content_region
         vtop, vbot = view.y, view.y + view.height
+        top = next((it for it in lv.children if isinstance(it, (PostItem, EventItem))
+                    and it.region.height > 0 and it.region.y + it.region.height > vtop),
+                   None)
+        if top is not None and getattr(top, "key", None):
+            self.lane_model(self.lane).stood(top.key)  # where it opens next, anywhere
+        if self.core.cfg["read"]["mark_read"] != "on_scroll":
+            return
         at_end = lv.scroll_y >= lv.max_scroll_y
         ids, glimpsed = [], set()
         for it in lv.children:
@@ -1626,6 +1665,10 @@ class FedtailApp(App, PostsMixin):
         elif e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
             await self.select_lane(e.item.lane)
             self.query_one("#posts", ListView).focus()
+        elif e.list_view.id == "posts" and getattr(e.item, "key", None) == CURTAIN:
+            last = sidebar.start_lane(self.core, self._lane_names(), closable=False)
+            if last:
+                await self.select_lane(last)
         elif e.list_view.id == "posts" and isinstance(e.item, EventItem):
             link = e.item.first_link()  # the post it is about, or who did it
             if link:

@@ -18,7 +18,9 @@ from .test_core import TmpDir
 class CliTest(TmpDir):
     def make(self, **over):
         FakeApi.world = fakes.World()
-        user = {"feed": {"first_run_mark_read": False, "page_size": 3}, "ui": {"language": "en"},
+        # the terminal's tests open on a lane (the one of last time), not the curtain
+        user = {"feed": {"first_run_mark_read": False, "page_size": 3},
+                "ui": {"language": "en", "start_lane": "last"},
                 "lanes": {"enabled": fakes.CLASSIC_LANES}}
         for k, v in over.items():
             user.setdefault(k, {}).update(v)

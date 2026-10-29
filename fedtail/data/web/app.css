@@ -44,7 +44,13 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
 #lanes .lt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lanes .group { color: var(--muted); font-size: 12px; text-transform: uppercase;
                 letter-spacing: .05em; padding: 14px 14px 4px; }
-#lanes .n { color: var(--unread); font-weight: 700; }
+/* the count in a circle, as the windows' badge: by the lane's rule (common/sidebar.badge_kind) */
+#lanes .n { background: var(--accent); color: var(--accent-text); font-weight: 700;
+  border-radius: 999px; padding: 0 7px; min-width: 1.6em; line-height: 1.6em;
+  text-align: center; font-size: .85em; box-sizing: border-box; }
+#lanes .n.hot { background: var(--danger, #c4501b); color: var(--on-hot, #fff); }
+#lanes .n.quiet { background: var(--quiet, #eef0f3); color: var(--on-quiet, #6d7684);
+  font-weight: 600; border: 1px solid var(--button-border, #d5dae1); }
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 #bar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 48px;
        border-bottom: 1px solid var(--line); background: var(--card); }
@@ -483,3 +489,4 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 #format-bar .fmt-code { font-family: monospace; }
 .qr { text-align: center; }
 .qr svg { max-width: 100%; height: auto; }
+.empty.curtain > div:nth-of-type(1) { color: var(--text); font-weight: bold; font-size: 1.2em; margin-bottom: 8px; }

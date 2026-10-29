@@ -150,3 +150,34 @@ class LaneHoleTest(unittest.TestCase):
             view._check_holes()
         self.assertIn("hole in a lane", said.output[0])
         self.assertTrue(view.rows)
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+class LaneStoodTest(unittest.TestCase):
+    setUpClass = smoke.QtSmokeTest.__dict__["setUpClass"]
+    setUp = smoke.QtSmokeTest.setUp
+    tearDown = smoke.QtSmokeTest.tearDown
+    pump = smoke.QtSmokeTest.pump
+    _pictures = LanePlacesTest._pictures
+
+    def test_opens_where_the_reader_stood_and_says_where_it_stands(self):
+        """The lane opens on the card the reader stood at last, in whatever interface
+        (LaneModel.stood) — not at its first unread; read on, the card on top goes back
+        to the core."""
+        self._pictures(20, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.core.set_state("stood.home", "110")
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: "110" in view.rows and not view._pending)
+        self.pump(0.5)
+        top = view.verticalScrollBar().value()
+        self.assertLessEqual(abs(view._ys["110"] - 6 - top), 2)
+        view._touched_at = __import__("time").monotonic()  # read by hand, as a reader
+        view._target = None
+        view.verticalScrollBar().setValue(view._ys["115"] + 2)
+        self.pump(0.1)
+        view._emit_seen()
+        self.assertEqual(self.core.get_state("stood.home"), "115")
