@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The terminal shows real pictures (sixel in Konsole, WezTerm, foot; kitty's protocol) out
+  of the box: fedtail carries textual-image (LGPL-3, not in Debian) in `fedtail/_vendor/`,
+  the PyPI wheel as it is, its checksum checked (`_vendor/VENDORED.toml`); a copy
+  installed in the system or by pip wins. `tools/vendor.py --check` says when PyPI has a
+  newer one — every night in CI (`vendor.yml`, job `vendored`); `--update` brings it in.
+- Qt: FFmpeg's errors are quiet too — "[h264] Failed setup for format vdpau…" at every
+  video, though it plays; a video that won't play is Qt's error, in the log.
 - Qt: FFmpeg (behind the video player and the looping gifs) says only its errors: a gif of an
   old pixel format flooded the terminal with "[swscaler] deprecated pixel format used",
   a line every frame. Every player is made by one function that quiets it (Qt resets the

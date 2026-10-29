@@ -304,6 +304,6 @@ class QuietFfmpegTest(unittest.TestCase):
         said = []
         with mock.patch.object(player, "_avutils", lambda: (said.append,)):
             player.new_player(QObject())
-        self.assertEqual(said, [player.AV_LOG_ERROR])
+        self.assertEqual(said, [player.AV_LOG_FATAL])
         with mock.patch.dict("os.environ", {"FEDTAIL_FFMPEG_LOG": "1"}):
             self.assertFalse(player.quiet_ffmpeg())

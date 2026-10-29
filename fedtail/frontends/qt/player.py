@@ -87,7 +87,10 @@ def choose_decoding(how):
         log.info("video: software decoding (ui.video_decode)")
 
 
-AV_LOG_ERROR = 16  # libavutil's log levels: what FFmpeg says goes to stderr from here up
+AV_LOG_FATAL = 8  # libavutil's log levels: what FFmpeg says goes to stderr from here up —
+# not its errors either: a decoder trying the hardware first says "[h264] Failed setup for
+# format vdpau…" at every video though it plays; a video that won't play is Qt's error
+# (errorOccurred), in the log
 
 
 @functools.cache
@@ -125,7 +128,7 @@ def new_player(parent):
 
 
 def quiet_ffmpeg():
-    """FFmpeg (Qt Multimedia's backend) says only its errors. By default it prints its
+    """FFmpeg (Qt Multimedia's backend) says only what is fatal. By default it prints its
     warnings to stderr — for a looping gif with an old pixel format "[swscaler @ …]
     deprecated pixel format used" at every frame, the terminal flooded (29.10). Set in
     the libavutil this process loads (Qt's own, or the system's); FEDTAIL_FFMPEG_LOG=1
@@ -134,7 +137,7 @@ def quiet_ffmpeg():
     if os.environ.get("FEDTAIL_FFMPEG_LOG"):  # asked for by hand: FFmpeg says it all
         return False
     for set_level in _avutils():
-        set_level(AV_LOG_ERROR)
+        set_level(AV_LOG_FATAL)
     return bool(_avutils())
 
 

@@ -1,7 +1,8 @@
 """Pictures in the terminal.
 
-Real ones where the terminal can show them: with the optional package textual-image
-(`pip install textual-image`) a picture goes out as sixel (Konsole, WezTerm, foot,
+Real ones where the terminal can show them: through textual-image — the system's or pip's
+copy if there is one, else the one fedtail carries (fedtail/_vendor, tools/vendor.py:
+Debian has none) — a picture goes out as sixel (Konsole, WezTerm, foot,
 xterm in vt340 mode…) or the kitty graphics protocol (kitty). textual-image asks the
 terminal what it can do — before Textual takes the screen, so `prepare()` runs at the
 start of the terminal interface — and gives a Textual widget to mount
@@ -61,6 +62,8 @@ def prepare(want="auto", stdout=None):
     stdout = sys.__stdout__ if stdout is None else stdout
     if want not in ("auto", "inline") or Image is None or not (stdout and stdout.isatty()):
         return None
+    from ... import _vendor
+    _vendor.use()  # the copy fedtail carries, when the system has none (Debian doesn't)
     try:
         from textual_image import widget as tiw
     except Exception as e:  # noqa: BLE001 — not installed, or failed asking: blocks
@@ -76,7 +79,10 @@ def prepare(want="auto", stdout=None):
         log.info("textual-image: no graphics in this terminal")
         return None
     _graphics.update(cls=tiw.Image, kind=kind)
-    log.info("pictures: %s through textual-image", kind)
+    import textual_image
+    where = str(getattr(textual_image, "__file__", "") or "")
+    log.info("pictures: %s through textual-image (%s)", kind,
+             "fedtail's own copy" if str(_vendor.HERE) in where else where or "?")
     return kind
 
 
@@ -181,8 +187,8 @@ def how(want="auto"):
         return f"{kind} through textual-image"
     path = _chafa()
     if path:
-        return f"chafa's symbols ({path}); real pixels need textual-image"
-    return "half blocks (no chafa, no textual-image)"
+        return f"chafa's symbols ({path}); this terminal shows no sixel or kitty pictures"
+    return "half blocks (no chafa; this terminal shows no sixel or kitty pictures)"
 
 
 def _failed(what):

@@ -30,7 +30,7 @@ def skeleton(text):
 
 def ci_jobs():
     jobs = set()
-    for wf in ("ci.yml", "site.yml"):
+    for wf in ("ci.yml", "site.yml", "vendor.yml"):
         text = (ROOT / ".github" / "workflows" / wf).read_text("utf-8")
         jobs |= set(re.findall(r"^  ([\w-]+):$", text.split("\njobs:\n", 1)[1], re.M))
     return jobs

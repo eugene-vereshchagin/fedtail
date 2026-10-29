@@ -1,7 +1,7 @@
 # CI and releases
 
 Everything that runs on GitHub Actions, and how a release is made. A test checks that every job
-of `.github/workflows/ci.yml` and `site.yml` is in these tables, in both languages.
+of `.github/workflows/ci.yml`, `site.yml` and `vendor.yml` is in these tables, in both languages.
 
 ## `ci.yml`: on every push
 
@@ -46,6 +46,15 @@ the developer docs from `main`, the release files' links. A release rebuilds it 
 checks itself (`tools/check_site.py` there): a broken page fails the build and the old site stays
 online, which `rebuild` turns into a red run. The docs taken from here only warn there: their
 RU/EN twins are checked here, by the tests.
+
+## `vendor.yml`: the packages fedtail carries
+
+| job | when | what it does |
+|---|---|---|
+| `vendored` | every night at 06:17 Tbilisi time and by hand | `tools/vendor.py --check`: is a newer version of a package in `fedtail/_vendor/` (textual-image) on PyPI? Then red, and the annotation names the command that brings it in (`tools/vendor.py --update`) |
+
+What Debian doesn't have and fedtail needs is carried inside it: the PyPI wheel as it is, its
+checksum checked, listed in `fedtail/_vendor/VENDORED.toml`; a copy in the system or from pip wins.
 
 ## Making a release
 

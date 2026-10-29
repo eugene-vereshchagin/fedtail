@@ -1502,8 +1502,8 @@ show_context = true
 
 # Pictures in the terminal (need Pillow, python3-pil). "auto" — real pictures where the
 # terminal can show them: sixel (Konsole, WezTerm, foot, xterm in vt340 mode) or the kitty
-# protocol (kitty), with the textual-image package installed (pip install textual-image);
-# elsewhere drawn with half blocks (any true colour terminal). A post's first picture small
+# protocol (kitty), through textual-image (fedtail carries it; a copy installed by pip wins);
+# elsewhere drawn by chafa when it is there, else with half blocks (any true colour terminal). A post's first picture small
 # right in the lane, v — all of them big. "blocks" — half blocks always; "key" — on v only;
 # "off" — none (o — open the post in the browser).
 pictures = "auto"

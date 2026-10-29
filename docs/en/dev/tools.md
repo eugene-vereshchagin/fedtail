@@ -21,6 +21,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | `gtk_screenshots.py` | the GTK window with made-up data: every theme light and dark, HiDPI, real screen sizes | `xvfb-run -a python3 tools/gtk_screenshots.py OUT system point` |
 | `tui_check.py` | the terminal interface (Textual), headless: every lane, screen and key; SVG shots | `python3 tools/tui_check.py OUT` |
 | `web_check.py` | the web page in Chromium (Playwright): lanes, menus, the editor, the viewer, a phone's width, JS errors | `python3 tools/web_check.py OUT` |
+| `vendor.py` | the packages fedtail carries (`fedtail/_vendor/`, textual-image): a newer version on PyPI? (`--check`, CI's `vendored`); brought in, its checksum checked (`--update`) | `python3 tools/vendor.py --check` |
 | `screenshots.py` | the real Qt window with made-up data, a PNG per theme (CI publishes them on the `screenshots` branch) | `QT_QPA_PLATFORM=offscreen python3 tools/screenshots.py OUT` |
 | `tabs_stress.py` | dozens of threads, profiles and tags opened and closed round after round in Qt, GTK and the terminal: what stays alive is a leak | `python3 tools/tabs_stress.py OUT --ui qt` |
 

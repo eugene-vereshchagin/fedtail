@@ -1,0 +1,11 @@
+# What fedtail carries inside itself (tools/vendor.py): a package Debian lacks,
+# the PyPI wheel as it is (sha256 checked), the files listed in `dropped` left
+# out. A copy in the system or from pip wins over ours (_vendor/__init__.py).
+
+["textual-image"]
+version = "0.14.2"
+package = "textual_image"
+license = "LGPL-3.0-or-later"
+sha256 = "f698d883959637515ab6c7086ffbc17fffc204a90010562b4f3bd1fba963ade4"
+why = "the terminal's real pictures (sixel, kitty); not in Debian"
+dropped = ["demo", "__main__.py", "*.jpg"]

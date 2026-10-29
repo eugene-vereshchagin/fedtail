@@ -21,6 +21,7 @@
 | `gtk_screenshots.py` | окно GTK с выдуманными данными: каждая тема светлая и тёмная, HiDPI, размеры настоящих экранов | `xvfb-run -a python3 tools/gtk_screenshots.py OUT system point` |
 | `tui_check.py` | интерфейс в терминале (Textual) без экрана: каждая лента, экран и клавиша; снимки в SVG | `python3 tools/tui_check.py OUT` |
 | `web_check.py` | веб-страница в Chromium (Playwright): ленты, меню, редактор, просмотрщик, ширина телефона, ошибки JS | `python3 tools/web_check.py OUT` |
+| `vendor.py` | пакеты в комплекте fedtail (`fedtail/_vendor/`, textual-image): нет ли новее на PyPI (`--check`, задача CI `vendored`); принести новую, сверив контрольную сумму (`--update`) | `python3 tools/vendor.py --check` |
 | `screenshots.py` | настоящее окно Qt с выдуманными данными, PNG на тему (CI публикует их в ветке `screenshots`) | `QT_QPA_PLATFORM=offscreen python3 tools/screenshots.py OUT` |
 | `tabs_stress.py` | десятки тредов, профилей и тегов открываются и закрываются раунд за раундом в Qt, GTK и терминале: что остаётся живым — утечка | `python3 tools/tabs_stress.py OUT --ui qt` |
 

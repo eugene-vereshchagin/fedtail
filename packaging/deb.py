@@ -67,6 +67,10 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
         "License: other\n A sticker from the official Telegram sticker pack fluffyloafer\n"
         " (https://t.me/addstickers/fluffyloafer),\n"
         " used as Telegram's stickers are shared everywhere; not under the GPL.\n\n"
+        "Files: */fedtail/_vendor/textual_image/*\n"
+        "Copyright: Simon Hayessen and the textual-image authors\n"
+        "License: LGPL-3+\n Carried as PyPI has it (tools/vendor.py, _vendor/VENDORED.toml);\n"
+        " the full text is LICENSE.txt there and /usr/share/common-licenses/LGPL-3.\n\n"
         "Files: */fedtail/data/themes/psi/icons/*.png\n"
         "Copyright: the Psi and Psi+ authors (Jason Kim, "
         "Everaldo Coelho)\nLicense: GPL-2+\n From Psi+'s iconsets: see LICENSE.txt there.\n",

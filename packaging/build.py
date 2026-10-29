@@ -40,7 +40,10 @@ if os.name != "nt":
             extra += [(os.path.join(folder, f), os.path.join("PySide6", "Qt", "plugins", sub))
                       for f in os.listdir(folder) if f.endswith(".so")]
 
-a = Analysis([{main!r}], pathex=[{root!r}], datas=[({data!r}, "fedtail/data")],
+# fedtail/_vendor as files too: its packages are imported by their own names from there
+# (fedtail/_vendor/__init__.py), not as fedtail's submodules
+a = Analysis([{main!r}], pathex=[{root!r}],
+             datas=[({data!r}, "fedtail/data"), ({vendor!r}, "fedtail/_vendor")],
              binaries=extra, hiddenimports=collect_submodules("fedtail"))
 if os.name != "nt":
     a.binaries = [b for b in a.binaries
@@ -70,6 +73,7 @@ def main():
     spec.parent.mkdir(exist_ok=True)
     spec.write_text(SPEC.format(main=str(ROOT / "packaging" / "fedtail_main.py"),
                                 root=str(ROOT), data=str(ROOT / "fedtail" / "data"),
+                                vendor=str(ROOT / "fedtail" / "_vendor"),
                                 console=not WINDOWS, icon=repr(str(icon)) if icon else None,
                                 system=SYSTEM_LIBS), "utf-8")
     try:

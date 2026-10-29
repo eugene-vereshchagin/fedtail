@@ -1,0 +1,19 @@
+# The packages fedtail carries inside itself (fedtail/_vendor/, tools/vendor.py): every
+# night, is a newer version on PyPI? Then the run goes red — GitHub mails it — and its
+# annotation says the command that brings it in (`python3 tools/vendor.py --update`).
+# Not in ci.yml: a release elsewhere mustn't turn every push red.
+name: vendored
+on:
+  schedule:
+    - cron: "17 2 * * *"   # 06:17 in Tbilisi
+  workflow_dispatch:
+permissions: {}
+jobs:
+  vendored:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python3 tools/vendor.py --check

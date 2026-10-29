@@ -52,11 +52,12 @@ version = { attr = "fedtail.__version__" }
 include = ["fedtail*"]
 
 [tool.setuptools.package-data]
-fedtail = ["data/*", "data/themes/*", "data/themes/fonts/*", "data/icons/*", "data/icons/fallback/*", "data/themes/*/icons/*", "data/themes/*/sounds/*", "data/sounds/*/*", "data/web/*", "data/help/*/*", "data/help/*/ref/*"]
+fedtail = ["_vendor/VENDORED.toml", "_vendor/*/LICENSE.txt", "_vendor/*/py.typed", "data/*", "data/themes/*", "data/themes/fonts/*", "data/icons/*", "data/icons/fallback/*", "data/themes/*/icons/*", "data/themes/*/sounds/*", "data/sounds/*/*", "data/web/*", "data/help/*/*", "data/help/*/ref/*"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["fedtail/_vendor/*/"]  # carried as PyPI has it (tools/vendor.py)
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I", "UP"]
