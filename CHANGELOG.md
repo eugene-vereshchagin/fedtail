@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Qt: a lane whose screen stands empty with cards to show there builds them, not only
+  says so in the log (the log line now tells the scroll's maximum, the hidden cards and
+  the target too).
 - "Report a bug on GitHub" opens the page again: the address held up to 7500 characters of
   the report, too long for KDE's opener, which then opened nothing. Now it holds the start,
   the whole text goes on the clipboard (the page says to paste it where it was cut), and

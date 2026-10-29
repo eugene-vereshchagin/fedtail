@@ -124,3 +124,29 @@ class LanePlacesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+class LaneHoleTest(unittest.TestCase):
+    setUpClass = smoke.QtSmokeTest.__dict__["setUpClass"]
+    setUp = smoke.QtSmokeTest.setUp
+    tearDown = smoke.QtSmokeTest.tearDown
+    pump = smoke.QtSmokeTest.pump
+    _pictures = LanePlacesTest._pictures
+
+    def test_a_hole_is_mended(self):
+        """The screen empty with cards to show there (a lane opened blank at its end, the
+        read posts above, 29.10): the lane says so in the log and builds them."""
+        self._pictures(30, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        for key in list(view.rows):  # lost, as if never built
+            view._let_go(key)
+        with self.assertLogs("fedtail", "WARNING") as said:
+            view._check_holes()
+        self.assertIn("hole in a lane", said.output[0])
+        self.assertTrue(view.rows)

@@ -793,14 +793,21 @@ class FeedView(QScrollArea):
         if shown >= vh * 0.5:
             return
         now = time.monotonic()
-        if now - getattr(self, "_hole_said", 0) < 60:
-            return
-        self._hole_said = now
-        want = self._wanted()
-        log.warning("hole in a lane: %d of %d px on screen covered at %d (total %d, "
-                    "width %d); wanted %s; built %s; places %s", shown, vh, top,
-                    self._total, self._width, want[:12], self.order[:12],
-                    [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
+        if now - getattr(self, "_hole_said", 0) >= 60:
+            self._hole_said = now
+            want = self._wanted()
+            log.warning("hole in a lane: %d of %d px on screen covered at %d (max %d, "
+                        "total %d, width %d, hidden %d, target %s); wanted %s; built %s; "
+                        "places %s", shown, vh, top, sb.maximum(), self._total,
+                        self._width, len(self._hidden), self._target, want[:12],
+                        self.order[:12],
+                        [(k, self._ys.get(k), self._h.get(k)) for k in want[:12]])
+        # mended, not only said: every place again from the heights known now and the
+        # cards near the screen built (a lane opened empty at its end, the read posts
+        # above it, 29.10); once per hole — a lane that is short at its end stays so
+        if getattr(self, "_mended_at", None) != (top, self._total):
+            self._mended_at = (top, self._total)
+            self._lay_out()
 
     def _check_places(self):
         """The cards on screen measured again once the screen stands still: a card whose
