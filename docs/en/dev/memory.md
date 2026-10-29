@@ -206,6 +206,10 @@ So the order of the plan holds for the core, but the window's weight is in the c
   `deleteLater()`, so the cards let go while polling and scrolling stayed counted (305
   cards held, 48 shown: 6299 widgets, 393 MB at 4000 posts); `membench.pump()` now does
   what a running loop does, everywhere the bench lets the window run (1077 widgets).
+  `qt_bench.py` had the same hole till 30.10: after its scrolls 57 000 widgets waited to
+  be deleted, and the first theme tried paid for all of them — 30–170 s, which looked like
+  a slow theme (nord) and bisected to the near-the-screen cards (f2a579a3). Its turns
+  flush the deletions now: a theme 1.1 s, the worst scroll frame 80 → 34 ms.
 * **Steps 2–4, measured before doing**: the core alone at 2000 posts is 61 MB, of which
   33 MB are the imports — steps 2–4 can win at most some 25 MB of it; the window is the
   bulk (220 MB: widgets, fonts, pictures). Left until a profile of a real, long-running

@@ -46,11 +46,16 @@ class Meter:
         self.turns += 1
 
     def run(self, seconds=0.0, until=None, limit=30.0):
+        from PySide6.QtCore import QCoreApplication, QEvent
         t0 = time.monotonic()
         end = t0 + (seconds if until is None else limit)
         while time.monotonic() < end:
             a = time.monotonic()
             self.app.processEvents()
+            # and what deleteLater() let go, as a running loop deletes it at once:
+            # processEvents() never does, so the cards a scroll let go piled up (57 000
+            # widgets) and the first theme tried paid for them all — 30–170 s (30.10)
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
             self._turn(time.monotonic() - a)
             if until is not None and until():
                 break
