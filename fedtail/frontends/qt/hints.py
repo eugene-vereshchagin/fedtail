@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QApplication, QFrame, QLabel, QMenu, QVBoxLayout, 
 
 from ...i18n import _
 from .. import helpdocs
+from .gone import drop
 
 log = logging.getLogger(__name__)
 
@@ -128,8 +129,7 @@ class HintMode(QObject):
             self.badge.setToolTip(_("whats_this_tip"))
             bar.addPermanentWidget(self.badge)
         elif not on and self.badge is not None:
-            bar.removeWidget(self.badge)
-            self.badge.deleteLater()
+            drop(self.badge)
             self.badge = None
 
     def _what(self, obj, e):

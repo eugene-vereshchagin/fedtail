@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Qt: a lane no longer smears on a refresh. A card made again kept its old body on screen
+  till the event loop deleted it — two rows of buttons, an old picture over the next card;
+  every widget that goes is now hidden at once (`qt/gone.py`). New counts of likes and
+  boosts make only the row of buttons again, not the whole card: no pictures loading anew,
+  no 0.5 s freeze on each refresh of a lane of pictures.
 - The terminal says how its pictures are drawn (textual-image, chafa, half blocks or none, and
   why): in the log at start and in `tools/tui_check.py`'s notes, with a sample drawn; chafa
   failing is a warning once in the log, not a silent fall back to half blocks.

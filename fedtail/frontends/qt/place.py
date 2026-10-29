@@ -29,16 +29,7 @@ from PySide6.QtWidgets import (
 from ...i18n import _
 from ...model import real
 from ..common.places import PLACES, Places
-
-
-def _clear(layout):
-    while layout.count():
-        item = layout.takeAt(0)
-        w = item.widget()
-        if w is not None:
-            w.deleteLater()
-        elif item.layout() is not None:
-            _clear(item.layout())
+from .gone import clear
 
 
 class PlaceDialog(QDialog):
@@ -101,7 +92,7 @@ class PlaceDialog(QDialog):
         self.setWindowTitle(page.title)
         self.hint.setText(page.hint)
         self.hint.setVisible(bool(page.hint))
-        _clear(self.tabs)
+        clear(self.tabs)
         for key, words in page.tabs:
             b = QPushButton(words)
             b.setObjectName("primary" if key == page.tab else "tool")
@@ -110,14 +101,14 @@ class PlaceDialog(QDialog):
         if page.tabs:
             self.tabs.addStretch(1)
         if not self.cursor:
-            _clear(self.rows)
+            clear(self.rows)
         for row in page.rows:
             self.rows.addWidget(self.row(row))
         if not page.rows and not self.cursor:
             empty = QLabel(page.empty or "—")
             empty.setObjectName("muted")
             self.rows.addWidget(empty)
-        _clear(self.form)
+        clear(self.form)
         self.fields = {}
         for f in page.form:
             self.field(f)

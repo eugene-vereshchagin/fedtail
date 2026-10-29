@@ -302,3 +302,26 @@ class CommandsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OnlyCountsTest(unittest.TestCase):
+    """A refresh with new likes and boosts: only the row of buttons is made again."""
+
+    def test_only_counts_differ(self):
+        from fedtail.model import Counts
+        from tests.fakes import BOB, status
+        p = to_post(status("1", BOB, text="hi"))
+        liked = dataclasses.replace(p, counts=Counts(likes=3),
+                                    mine=dataclasses.replace(p.mine, liked=True))
+        edited = dataclasses.replace(p, text="<p>other</p>")
+        self.assertTrue(cardtext.only_counts_differ(p, liked))
+        self.assertFalse(cardtext.only_counts_differ(p, p))
+        self.assertFalse(cardtext.only_counts_differ(p, edited))
+        self.assertFalse(cardtext.only_counts_differ(
+            p, dataclasses.replace(edited, counts=Counts(likes=3))))
+        share = Share(Ref("mastodon", "t", "s1"), p.author, p, None, "1")
+        self.assertTrue(cardtext.only_counts_differ(share, dataclasses.replace(share,
+                                                                               post=liked)))
+        self.assertFalse(cardtext.only_counts_differ(share, liked))
+        self.assertFalse(cardtext.only_counts_differ(
+            share, Share(Ref("mastodon", "t", "s2"), p.author, liked, None, "1")))

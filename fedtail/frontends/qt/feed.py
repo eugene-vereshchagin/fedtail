@@ -34,6 +34,7 @@ from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
 from .card import CardSpec, make_spec
 from .feedview import READING_S, FeedView  # noqa: F401 — the list of cards, for all
+from .gone import clear
 from .text import display_name, esc
 
 log = logging.getLogger(__name__)
@@ -1258,7 +1259,7 @@ class AccountWidget(_PagedTab):
         acc, lay, theme = self.acc, self._info_layout, self.win.theme
         rel = self.relation
         in_app = self.core.cfg["ui"]["links_in_app"]
-        _clear(lay)
+        clear(lay)
         header = acc.header_static
         if header and not header.endswith("/missing.png"):
             banner = QLabel()
@@ -1527,17 +1528,6 @@ class TagWidget(_PagedTab):
         return self.core.tag_timeline(self.tag, max_id)
 
 
-def _clear(layout):
-    """Empty a layout. Its widgets are hidden at once — deleteLater() waits for the event
-    loop, and till then the old ones stood there visible where they were, over the new
-    (a profile rebuilt in a narrower window: last time's buttons sticking out)."""
-    while layout.count():
-        item = layout.takeAt(0)
-        if item.widget():
-            item.widget().hide()
-            item.widget().deleteLater()
-        elif item.layout():
-            _clear(item.layout())
 
 
 def _flash(w):
@@ -1755,7 +1745,7 @@ class SearchWidget(QWidget):
         if spec:  # several tags: a lane of them, not a search
             self.win.open_tag_group(spec)
             return
-        _clear(self.box_lay)
+        clear(self.box_lay)
         self.view.set_specs([], keep_position=False)
         if not query:
             self.header.info.setText(_("search_hint"))

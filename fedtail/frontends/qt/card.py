@@ -34,7 +34,7 @@ from ...model.text import (
     without_quote_fallback,
 )
 from ..common import actions
-from ..common.cardtext import newcomer_bit, thread_news_bit
+from ..common.cardtext import newcomer_bit, only_counts_differ, thread_news_bit
 from ..common.lane import (  # noqa: F401  (Qt's names)
     VIDEO_EXT,
     CardSpec,
@@ -45,6 +45,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
 )
 from ..common.lane import true_kind as _true_kind
 from ..richtext import plain_tip
+from .gone import drop
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
 RAIL_W = 20
@@ -187,8 +188,7 @@ class EventRow(QWidget):
         from ..common.activity import ANSWER_WORDS, event_parts
         self.spec = spec
         if self.card is not None:
-            self.lay.removeWidget(self.card)
-            self.card.deleteLater()
+            drop(self.card, self.lay)
         theme, link = self.ctx.theme, self.ctx.on_link
         dismiss_one = bool(self.ctx.supports("dismiss_one")) if self.ctx.supports else True
         parts = event_parts(spec.extra["row"], theme.date, dismiss_one)
@@ -367,7 +367,8 @@ class PostRow(QWidget):
     def update_spec(self, spec):
         old = self.spec
         self.spec = spec
-        if (old.entry is not spec.entry and old.entry != spec.entry) \
+        counts_only = only_counts_differ(old.entry, spec.entry)
+        if (old.entry is not spec.entry and old.entry != spec.entry and not counts_only) \
                 or _parent_key(old.parent) != _parent_key(spec.parent) \
                 or old.number != spec.number or old.focus != spec.focus \
                 or old.extra.get("short_id") != spec.extra.get("short_id") \
@@ -376,7 +377,22 @@ class PostRow(QWidget):
                 or old.extra.get("thread_news") != spec.extra.get("thread_news") \
                 or old.extra.get("deleted") != spec.extra.get("deleted"):
             self._build()
+        elif counts_only:
+            self._new_actions()
         self._flags()
+
+    def _new_actions(self):
+        """Only the row of buttons made again (new counts, a like of mine): the rest of
+        the card, its pictures with it, stays as it is."""
+        old = getattr(self, "actions_box", None)
+        lay = old.parentWidget().layout() if old is not None and old.parentWidget() else None
+        if lay is None:
+            self._build()
+            return
+        new = self._actions(self.spec.post)
+        lay.replaceWidget(old, new)
+        drop(old)
+        self.actions_box = new
 
     def set_unread(self, unread):
         self.spec.unread = unread
@@ -439,8 +455,7 @@ class PostRow(QWidget):
 
     def _build_body(self):
         if self.body is not None:
-            self.lay.removeWidget(self.body)
-            self.body.deleteLater()
+            drop(self.body, self.lay)
         self.body = QWidget()
         v = QVBoxLayout(self.body)
         v.setContentsMargins(0, 0, 0, 0)
@@ -571,7 +586,8 @@ class PostRow(QWidget):
                 sync()
             self.set_cw = set_cw
         v.addWidget(content)
-        v.addWidget(self._actions(p))
+        self.actions_box = self._actions(p)
+        v.addWidget(self.actions_box)
         answers = spec.extra.get("my_replies") or []
         if answers:
             last = answers[-1]

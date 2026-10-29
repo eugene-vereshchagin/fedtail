@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLay
 from ...i18n import _
 from ...model import Reaction
 from ..common.announce import react
+from .gone import clear
 from .text import clean
 
 log = logging.getLogger(__name__)
@@ -82,10 +83,7 @@ class AnnounceBar(QFrame):
         self.show()
 
     def _reactions(self, a):
-        while self.reactions.count():
-            item = self.reactions.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        clear(self.reactions)
         if not self.win.core.supports("announcement_reactions"):
             return
         have = {r.name: r for r in a.reactions}

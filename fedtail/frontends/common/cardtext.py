@@ -13,7 +13,7 @@ link handler opens it: a thread, a profile, the versions of an edit).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ...i18n import _
 from ...model import Post, Share, real
@@ -174,3 +174,22 @@ def card_words(spec, cfg, date, in_thread=None):
 
 __all__ = ["Bit", "CardWords", "card_words", "name_of", "newcomer_bit", "newcomers",
            "quote_bit", "thread_news_bit"]
+
+
+def only_counts_differ(old, new):
+    """Whether two versions of a lane's entry differ only in what the row of buttons
+    under a post shows — the counts of replies, boosts, likes, and whether I liked,
+    boosted, bookmarked it. A refresh brings such changes for most posts on screen;
+    a whole card rebuilt for each froze the window (551 ms, 29.10) and made its
+    pictures load again."""
+    if old is new or old == new:
+        return False
+    if isinstance(old, Share) != isinstance(new, Share):
+        return False
+    if isinstance(old, Share):
+        if replace(old, post=new.post) != new:
+            return False
+        old, new = old.post, new.post
+    if not isinstance(old, Post) or not isinstance(new, Post):
+        return False
+    return replace(old, counts=new.counts, mine=new.mine) == new

@@ -28,6 +28,7 @@ from ..common import compose as rules
 from ..common import split
 from ..richtext import plain_tip
 from .card import VIS_KEY
+from .gone import drop
 
 log = logging.getLogger(__name__)
 
@@ -788,8 +789,7 @@ class MessageTabs(QWidget):
         if not 0 <= i < len(self.chips):
             return
         chip = self.chips.pop(i)
-        self.lay.removeWidget(chip)
-        chip.deleteLater()
+        drop(chip, self.lay)
         if not self.chips:
             self._current = -1
             self.currentChanged.emit(-1)
