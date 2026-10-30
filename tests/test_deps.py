@@ -63,14 +63,33 @@ class DepsTest(unittest.TestCase):
             self.assertTrue(deps.at_start("qt", again))
             self.assertEqual(again.getvalue(), "")  # the same set: not again
 
-    def test_the_package_takes_the_same_list(self):
-        depends, recommends, suggests = deps.deb_fields()
+    def test_the_packages_take_the_same_list(self):
+        """Each piece in one package, once: the program's own in fedtail-common, each
+        toolkit's in its interface's package — none pulls another's toolkit."""
+        got = {pkg: deps.deb_fields(pkg) for pkg in deps.DEB_PACKAGES}
+        depends, recommends, suggests = got["common"]
         self.assertIn("python3-requests", depends)
-        self.assertIn("python3-pyside6.qtwidgets", depends)
         self.assertIn("python3-cryptography", recommends)
-        self.assertIn("python3-textual", suggests)
-        both = (depends + ", " + recommends + ", " + suggests).split(", ")
-        self.assertEqual(len(both), len(set(both)))  # none twice
+        self.assertIn("libnotify-bin", suggests)
+        self.assertIn("python3-pyside6.qtwidgets", got["qt"][0])
+        self.assertIn("python3-pyside6.qtmultimedia", got["qt"][1])
+        self.assertIn("gir1.2-gtk-4.0", got["gtk"][0])
+        self.assertIn("python3-textual", got["tui"][0])
+        every = [p for fields in got.values() for f in fields for p in f.split(", ") if p]
+        self.assertEqual(len(every), len(set(every)))  # none twice
+        pkgs = {p for n in deps.NEEDS for p in n.deb.split()} - {"python3", "libsqlite3-0"}
+        self.assertEqual(pkgs, set(every) - {"python3 (>= 3.11)"})  # none left out
+        for toolkit in ("PySide6", "pyside6", "gtk", "textual"):
+            self.assertNotIn(toolkit, ", ".join(got["common"]))
+
+    def test_auto_takes_the_window_installed(self):
+        with mock.patch.object(deps, "can_run", lambda g: g == "gtk"):
+            self.assertEqual(deps.auto_frontend(), "gtk")
+        with mock.patch.object(deps, "can_run", lambda g: g in ("qt", "gtk")):
+            self.assertEqual(deps.auto_frontend(), "qt")
+        with mock.patch.object(deps, "can_run", lambda g: g == "tui"):
+            self.assertEqual(deps.auto_frontend(terminal=True), "tui")
+            self.assertEqual(deps.auto_frontend(terminal=False), "web")
 
     def test_every_word_is_there(self):
         for n in deps.NEEDS:

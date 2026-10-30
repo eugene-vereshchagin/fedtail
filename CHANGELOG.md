@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Debian packages one per interface: `fedtail-common` (the program, no toolkit),
+  `fedtail-qt`, `fedtail-gtk`, `fedtail-tui`, and `fedtail` (common and a window, Qt or
+  GTK) — GNOME no longer pulls Qt, KDE no GTK, a server only requests. An old `fedtail`
+  is replaced cleanly. `ui.frontend = "auto"`, the new default: the window installed —
+  Qt, else GTK, else the terminal (started in one) or the browser.
 - The READMEs say fedtail in numbers: lines of each part, tests, coverage
   (`tools/stats.py`, written by the night's self-check).
 - The network gone: a round stops at the first "no way to the server" instead of asking

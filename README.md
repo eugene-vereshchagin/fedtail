@@ -16,7 +16,7 @@ being discussed. So the whole point is giving that context back: every reply sho
 answers; under someone's comment you see what you said back; a thread opens as a tree right
 where you came from; a lane remembers where you stopped and never jumps.
 
-**Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)); for Debian 13 and the like, `fedtail_…_all.deb` — `sudo apt install ./fedtail_…_all.deb` brings Qt from Debian and puts fedtail in the menu. Or [run it from the source](#running-from-source).
+**Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)); for Debian 13 and the like, the `.deb`s: `sudo apt install ./fedtail_…_all.deb ./fedtail-common_…_all.deb ./fedtail-qt_…_all.deb` brings Qt from Debian and puts fedtail in the menu; on GNOME, without Qt — `./fedtail-common_…_all.deb ./fedtail-gtk_…_all.deb`; `fedtail-tui` adds the terminal. Or [run it from the source](#running-from-source).
 
 [Русскоязычная версия](README.ru.md)
 
@@ -354,8 +354,8 @@ new post, `p` — the author's profile (`F` there follows), `x` — the lane rea
 For GNOME and the other GTK desktops: `fedtail --ui gtk` (or `window.frontend = "gtk"`) — the same
 lanes, threads, profiles, editor and menus as the Qt window, in GTK 4, with libadwaita where it
 is (`appearance.adwaita`); the "system" theme looks like Adwaita. It needs `sudo apt install python3-gi
-gir1.2-gtk-4.0 gir1.2-adw-1` on Debian 13 (the deb package recommends them, and puts
-"fedtail (GTK)" on a right click on fedtail in the menu); the video player wants
+gir1.2-gtk-4.0 gir1.2-adw-1` on Debian 13 (the `fedtail-gtk` package brings them; with Qt there
+too, "fedtail (GTK)" is on a right click on fedtail in the menu); the video player wants
 `libgtk-4-media-gstreamer`. Linux only — on Windows there's Qt.
 
 ## In a browser

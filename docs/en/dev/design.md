@@ -86,14 +86,19 @@ find. Next, roughly in order:
 8. **Frontends:** ~~CLI~~ (0.9) → ~~TUI~~ (0.10) → GTK4 → ~~web~~ (0.10) → Toga.
 9. ~~A one-file build~~ — done: PyInstaller in CI, `fedtail-X.Y.Z-linux-x86_64` (built on
    Debian 12) and `fedtail-X.Y.Z-windows.exe` in every release; `packaging/build.py`.
-10. **A deb package** with a build number — at the very end. Built in CI (a Debian 13 container),
-   attached to the release, later — an apt repository of its own.
-   Dependencies (Debian 13): `python3 (>= 3.11)`, `python3-pyside6.qtwidgets`,
-   `python3-requests`; Recommends: `python3-pyside6.qtdbus` (the number on the taskbar
-   button), `qt6-image-formats-plugins` (webp/avif/tiff in the viewer — without it such
-   originals aren't shown), `libnotify-bin` (notify-send, notifications),
-   `python3-cryptography` (sync between devices, docs/en/sync.md), `python3-langdetect`
-   (telling the language of a Latin-script post, `lanes.detect_language`).
+10. **Deb packages** — one per interface since 0.22, so each toolkit comes only with the
+   package that wants it. Built in CI (a Debian 13 container), each way of installing them
+   tried in a clean one (`deb-install`), attached to the release and put into the apt
+   repository. `fedtail-common` — the program (all the code, the web page, the menu
+   entry): `python3 (>= 3.11)`, `python3-requests`; Recommends `python3-cryptography`
+   (sync, docs/en/sync.md), `python3-langdetect` (`lanes.detect_language`); the other
+   extras Suggested. `fedtail-qt` — `python3-pyside6.qtwidgets`; Recommends QtSvg,
+   QtMultimedia, QtDBus (the number on the taskbar button), `qt6-image-formats-plugins`
+   (webp/avif/tiff in the viewer). `fedtail-gtk` — `python3-gi`, `gir1.2-gtk-4.0`;
+   Recommends `gir1.2-adw-1`. `fedtail-tui` — `python3-textual`; Recommends Pillow, mpv,
+   chafa. `fedtail` — common and a window: `fedtail-qt | fedtail-gtk`. The lists come from
+   `fedtail/deps.py` (the same table `fedtail --check` reads); `fedtail` opens the window
+   installed (`ui.frontend = "auto"`).
 
 11. ~~**Cleaning the database.**~~ — done (0.17.0): `Store.gc`, `[storage]`, the `max_mb` budget.
 

@@ -16,7 +16,7 @@
 что он отвечает; под чужим комментом — что ты сам на него сказал; тред открывается деревом на
 том месте, откуда ты пришёл; лента помнит, где ты остановился, и не прыгает.
 
-**Скачать:** один файл, ничего не надо ставить — [последний релиз](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` для Linux, `fedtail-…-windows.exe` для Windows ([как запустить](#одним-файлом-без-установки)); для Debian 13 и родни — `fedtail_…_all.deb`: `sudo apt install ./fedtail_…_all.deb` поставит Qt из Debian и добавит fedtail в меню. Или [из исходников](#запуск-из-исходников).
+**Скачать:** один файл, ничего не надо ставить — [последний релиз](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` для Linux, `fedtail-…-windows.exe` для Windows ([как запустить](#одним-файлом-без-установки)); для Debian 13 и родни — `.deb`: `sudo apt install ./fedtail_…_all.deb ./fedtail-common_…_all.deb ./fedtail-qt_…_all.deb` поставит Qt из Debian и добавит fedtail в меню; в GNOME, без Qt — `./fedtail-common_…_all.deb ./fedtail-gtk_…_all.deb`; `fedtail-tui` добавит терминал. Или [из исходников](#запуск-из-исходников).
 
 [English version](README.md)
 
@@ -361,8 +361,8 @@ fedtail -p work show home             # другой профиль
 Для GNOME и прочих GTK-столов: `fedtail --ui gtk` (или `window.frontend = "gtk"`) — те же ленты,
 треды, профили, редактор и меню, что в окне Qt, на GTK 4, с libadwaita, где она есть
 (`appearance.adwaita`); тема «system» — как Adwaita. Нужно `sudo apt install python3-gi gir1.2-gtk-4.0
-gir1.2-adw-1` в Debian 13 (deb-пакет их рекомендует и кладёт «fedtail (GTK)» в правый клик по
-fedtail в меню); видеоплееру — `libgtk-4-media-gstreamer`. Только Linux — в Windows есть Qt.
+gir1.2-adw-1` в Debian 13 (их приносит пакет `fedtail-gtk`; если рядом и Qt — «fedtail (GTK)»
+в правом клике по fedtail в меню); видеоплееру — `libgtk-4-media-gstreamer`. Только Linux — в Windows есть Qt.
 
 ## В браузере
 

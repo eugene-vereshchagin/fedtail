@@ -291,6 +291,8 @@ def main(argv=None):
 
     from . import diag
     ui = args.ui or cfg["ui"]["frontend"]
+    if ui == "auto":
+        ui = deps.auto_frontend()
     diag.running(ui)  # what runs, not what the config wished: the log, reports, the issue
     folder = diag.setup(where, cfg, console_debug=args.debug)
     diag.session_header(where.profile, {"logs": str(folder)})

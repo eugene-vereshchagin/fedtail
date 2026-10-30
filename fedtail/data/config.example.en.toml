@@ -169,11 +169,12 @@ text_markup = true
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [window]
-# The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or
+# The interface: "auto" — the window that is installed: Qt, else GTK, else the terminal
+# (when started in one), else the browser; "qt" — a Qt window; "tui" — in a terminal (needs Textual: python3-textual or
 # pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`);
 # "gtk" — a GTK 4 window for GNOME and other GTK desktops (python3-gi gir1.2-gtk-4.0;
 # `--ui gtk`).
-frontend = "qt"
+frontend = "auto"
 
 # How the window opens:
 #   "single" — one window: the lanes on the left, one lane on the right (or several side by

@@ -84,14 +84,19 @@
 8. **Фронтенды:** ~~CLI~~ (0.9) → ~~TUI~~ (0.10) → GTK4 → ~~веб~~ (0.10) → Toga.
 9. ~~Сборка одним файлом~~ — сделано: PyInstaller в CI, `fedtail-X.Y.Z-linux-x86_64` (собран на
    Debian 12) и `fedtail-X.Y.Z-windows.exe` в каждом релизе; `packaging/build.py`.
-10. **deb-пакет** с номером сборки — в самом конце. Собирается в CI (контейнер Debian 13),
-   прикладывается к релизу, позже — свой apt-репозиторий.
-   Зависимости (Debian 13): `python3 (>= 3.11)`, `python3-pyside6.qtwidgets`,
-   `python3-requests`; Recommends: `python3-pyside6.qtdbus` (число на кнопке в панели
-   задач), `qt6-image-formats-plugins` (webp/avif/tiff в просмотрщике — без него такие
-   оригиналы не показываются), `libnotify-bin` (notify-send, уведомления),
-   `python3-cryptography` (синхронизация между устройствами, docs/ru/sync.md), `python3-langdetect`
-   (язык поста на латинице, `lanes.detect_language`).
+10. **Deb-пакеты** — с 0.22 по пакету на интерфейс, чтобы каждый тулкит приходил только с
+   тем пакетом, которому он нужен. Собираются в CI (контейнер Debian 13), каждый способ
+   установки проверяется в чистом (`deb-install`), прикладываются к релизу и кладутся в
+   apt-репозиторий. `fedtail-common` — сама программа (весь код, веб-страница, пункт меню):
+   `python3 (>= 3.11)`, `python3-requests`; Recommends `python3-cryptography`
+   (синхронизация, docs/ru/sync.md), `python3-langdetect` (`lanes.detect_language`);
+   остальное необязательное — Suggests. `fedtail-qt` — `python3-pyside6.qtwidgets`;
+   Recommends QtSvg, QtMultimedia, QtDBus (число на кнопке в панели задач),
+   `qt6-image-formats-plugins` (webp/avif/tiff в просмотрщике). `fedtail-gtk` —
+   `python3-gi`, `gir1.2-gtk-4.0`; Recommends `gir1.2-adw-1`. `fedtail-tui` —
+   `python3-textual`; Recommends Pillow, mpv, chafa. `fedtail` — программа и окно:
+   `fedtail-qt | fedtail-gtk`. Списки берутся из `fedtail/deps.py` (та же таблица, что у
+   `fedtail --check`); `fedtail` открывает то окно, что установлено (`ui.frontend = "auto"`).
 
 11. ~~**Чистка базы.**~~ — сделано (0.17.0): `Store.gc`, `[storage]`, бюджет `max_mb`.
 

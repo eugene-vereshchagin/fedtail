@@ -788,7 +788,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 ## Interfaces
 
-The core knows nothing about a GUI; interfaces are plugins. Which one to start — `window.frontend`, or `--ui` for one run.
+The core knows nothing about a GUI; interfaces are plugins. Which one to start — `window.frontend` (by default `"auto"` — the window installed: Qt, else GTK), or `--ui` for one run.
 
 | What | Status | Since | Config | Others |
 |---|---|---|---|---|
@@ -830,7 +830,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 |---|---|---|---|
 | From the source: `python3 -m fedtail` | has | 0.1.0 | PySide6 and requests |
 | Linux: one file | has | 0.5.0 | `fedtail-X.Y.Z-linux-x86_64`, built on Debian 12 |
-| A deb package | has | 0.10.0 | built in CI on Debian 13; since 0.18 GTK 4 in Recommends, the GTK window an action of the menu entry (“FedTail (GTK)”, right click) |
+| Deb packages, one per interface | has | 0.10.0 | built in CI on Debian 13; since 0.22 `fedtail-common` (the program, no toolkit), `fedtail-qt`, `fedtail-gtk`, `fedtail-tui` and `fedtail` (the program and a window: Qt or GTK) — GNOME pulls no Qt, KDE no GTK; each way of installing tried in a clean Debian; with Qt and GTK both, the GTK window is an action of the menu entry (“FedTail (GTK)”, right click) |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
 | A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`window.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
 | An apt repository of its own | partly — CI builds and signs it after every release — once the repository has the key (APT_GPG_KEY) and GitHub Pages is on for the `apt` branch | 0.20.0 | from the releases' deb packages (`packaging/apt_repo.py`) |
@@ -957,7 +957,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | From the source: `python3 -m fedtail` | · | not a phone thing |
 | Linux: one file | · | not a phone thing |
-| A deb package | · | not a phone thing |
+| Deb packages, one per interface | · | not a phone thing |
 | Windows: one .exe | · | not a phone thing |
 | A menu entry with the icon | · | not a phone thing |
 | An apt repository of its own | · | not a phone thing |

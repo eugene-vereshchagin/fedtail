@@ -70,7 +70,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | From the source: `python3 -m fedtail` | · | not a phone thing |
 | Linux: one file | · | not a phone thing |
-| A deb package | · | not a phone thing |
+| Deb packages, one per interface | · | not a phone thing |
 | Windows: one .exe | · | not a phone thing |
 | A menu entry with the icon | · | not a phone thing |
 | An apt repository of its own | · | not a phone thing |

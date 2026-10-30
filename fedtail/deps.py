@@ -245,6 +245,23 @@ def report(out=None):
     return 0 if can["core"] else 3
 
 
+def can_run(group):
+    """Has this interface all it can't run without (and the core its own)?"""
+    return not missing(("core", group), levels=("need",))
+
+
+def auto_frontend(terminal=None):
+    """ui.frontend = "auto": the window that is installed — Qt, else GTK (a package of
+    one of them, packaging/deb.py) — else the terminal when started in one, else the
+    browser, which needs nothing."""
+    for ui in ("qt", "gtk"):
+        if can_run(ui):
+            return ui
+    if terminal is None:
+        terminal = bool(sys.stdin is not None and sys.stdin.isatty())
+    return "tui" if terminal and can_run("tui") else "web"
+
+
 def at_start(frontend, err=None, quiet=False):
     """At every start, before the heavy imports: the must-haves and `frontend`'s own
     pieces. Something it can't run without → said with the command, and False (the
@@ -297,15 +314,27 @@ def _say_soft_once(soft):
     return True
 
 
-def deb_fields():
-    """packaging/deb.py: (Depends, Recommends, Suggests) from the table — Qt's own
-    must-haves are the package's Depends (the window is what it opens)."""
+# the Debian packages (packaging/deb.py): fedtail-common holds the program, the core's
+# must-haves and the extras; each interface's package only its toolkit (Depends: its
+# must-haves, Recommends: its nice-to-haves)
+DEB_PACKAGES = {"common": "fedtail-common", "qt": "fedtail-qt", "gtk": "fedtail-gtk",
+                "tui": "fedtail-tui"}
+DEB_RECOMMENDED = ("cryptography", "langdetect")  # of the extras: the common package's
+
+
+def deb_fields(package="common"):
+    """packaging/deb.py: (Depends, Recommends, Suggests) of one package from the table:
+    "common" — python, requests, the extras (sync and languages recommended, the rest
+    suggested); "qt", "gtk", "tui" — that toolkit's pieces."""
     def pkgs(pick):
         return list(dict.fromkeys(p for n in NEEDS if pick(n) for p in n.deb.split()
                                   if p and p not in ("python3", "libsqlite3-0")))
-    depends = ["python3 (>= 3.11)"] + pkgs(lambda n: n.group in ("core", "qt") and
-                                           n.level == "need")
-    recommends = pkgs(lambda n: (n.group == "qt" and n.level == "want") or
-                      n.group == "gtk" or n.key in ("cryptography", "langdetect"))
-    suggests = [p for p in pkgs(lambda n: True) if p not in depends + recommends]
+    if package == "common":
+        depends = ["python3 (>= 3.11)"] + pkgs(lambda n: n.group == "core")
+        recommends = pkgs(lambda n: n.key in DEB_RECOMMENDED)
+        suggests = pkgs(lambda n: n.group == "extra" and n.key not in DEB_RECOMMENDED)
+    else:
+        depends = pkgs(lambda n: n.group == package and n.level == "need")
+        recommends = pkgs(lambda n: n.group == package and n.level == "want")
+        suggests = []
     return ", ".join(depends), ", ".join(recommends), ", ".join(suggests)

@@ -4,9 +4,9 @@ id = "frontends"
 title.ru = "Интерфейсы"
 title.en = "Interfaces"
 intro.ru = """
-Ядро не знает про GUI; интерфейсы — плагины. Какой запускать — `window.frontend` или `--ui` на
-один раз."""
-intro.en = "The core knows nothing about a GUI; interfaces are plugins. Which one to start — `window.frontend`, or `--ui` for one run."
+Ядро не знает про GUI; интерфейсы — плагины. Какой запускать — `window.frontend` (по умолчанию
+`"auto"` — то окно, что установлено: Qt, иначе GTK) или `--ui` на один раз."""
+intro.en = "The core knows nothing about a GUI; interfaces are plugins. Which one to start — `window.frontend` (by default `\"auto\"` — the window installed: Qt, else GTK), or `--ui` for one run."
 
 [[feature]]
 id = "qt"

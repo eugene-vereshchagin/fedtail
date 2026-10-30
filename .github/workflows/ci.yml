@@ -261,30 +261,62 @@ jobs:
         if: failure()
         run: python3 .github/annotate.py test-output.txt
 
-  # the .deb for Debian 13: built, installed with apt (so its dependencies resolve),
-  # started; attached to a release next to the one-file builds
+  # the .debs for Debian 13 (one per interface, packaging/deb.py): built, each way of
+  # installing them tried in a clean Debian of its own with apt (so the dependencies
+  # resolve) and started; attached to a release next to the one-file builds
   deb:
     runs-on: ubuntu-latest
     container: debian:trixie
-    env:
-      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v5
       - run: apt-get update && apt-get install -y --no-install-recommends python3 dpkg-dev
       - run: python3 packaging/deb.py
-      - name: Installs with apt, starts
-        run: |
-          apt-get install -y ./dist/fedtail_*_all.deb
-          cd /tmp
-          fedtail --version
-          python3 -c "import fedtail.frontends.qt, fedtail.frontends.web.server"
-          test -f /usr/share/applications/online.dmesg.fedtail.desktop
-          test -f /usr/share/icons/hicolor/512x512/apps/fedtail.png
-          apt-get install -y python3-textual && python3 -c "import fedtail.frontends.tui.app" || echo "::warning::no python3-textual in this Debian"
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-deb
-          path: dist/fedtail_*_all.deb
+          path: dist/fedtail*_all.deb
+
+  # each package alone in a clean Debian: what it pulls in, and that fedtail starts the
+  # window it brought (ui.frontend = "auto") — GTK's never pulls Qt, the program alone
+  # no toolkit at all
+  deb-install:
+    needs: deb
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    strategy:
+      fail-fast: false
+      matrix:
+        way: [usual, gtk, tui, bare]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fedtail-deb
+          path: dist
+      - name: Installs with apt, starts
+        run: |
+          apt-get update
+          cd dist
+          case "${{ matrix.way }}" in
+            usual) apt-get install -y ./fedtail_*_all.deb ./fedtail-common_*_all.deb ./fedtail-qt_*_all.deb; want=qt ;;
+            gtk)   apt-get install -y ./fedtail-common_*_all.deb ./fedtail-gtk_*_all.deb; want=gtk ;;
+            tui)   apt-get install -y --no-install-recommends ./fedtail-common_*_all.deb ./fedtail-tui_*_all.deb; want=web ;;
+            bare)  apt-get install -y --no-install-recommends ./fedtail-common_*_all.deb; want=web ;;
+          esac
+          cd /tmp
+          fedtail --version
+          test -f /usr/share/applications/online.dmesg.fedtail.desktop
+          test -f /usr/share/icons/hicolor/512x512/apps/fedtail.png
+          python3 -c "import fedtail.frontends.web.server"
+          got=$(python3 -c "from fedtail import deps; print(deps.auto_frontend(terminal=False))")
+          echo "auto: $got"; test "$got" = "$want"
+          case "${{ matrix.way }}" in
+            usual) python3 -c "import fedtail.frontends.qt" ;;
+            gtk)   ! dpkg -l 'python3-pyside6*' 2>/dev/null | grep -q '^ii' ;;
+            tui)   python3 -c "import fedtail.frontends.tui.app" ;;
+            bare)  ! dpkg -l 'python3-pyside6*' 'python3-gi' 'python3-textual' 2>/dev/null | grep -q '^ii' ;;
+          esac
 
   # real screenshots of the window with made-up data, published to the
   # `screenshots` branch so the look can be reviewed without running the app.
@@ -393,7 +425,7 @@ jobs:
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, security, test, budgets, web-check, debian, windows-build, linux-build, deb,
-            apk]
+            deb-install, apk]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -429,9 +461,9 @@ jobs:
           cp built/fedtail-windows/fedtail.exe "fedtail-$VER-windows.exe"
           cp built/fedtail-windows/fedtail-setup.exe "fedtail-$VER-windows-setup.exe"
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
-          cp built/fedtail-deb/fedtail_*_all.deb .
+          cp built/fedtail-deb/fedtail*_all.deb .
           files=("fedtail-$VER-windows.exe" "fedtail-$VER-windows-setup.exe"
-                 "fedtail-$VER-linux-x86_64" fedtail_*_all.deb)
+                 "fedtail-$VER-linux-x86_64" fedtail*_all.deb)
           # the phone's, when the release key was there to sign it (the apk job)
           apk=$(ls built/fedtail-android/*.apk 2>/dev/null | head -1)
           if [ -n "$apk" ]; then cp "$apk" "fedtail-$VER-android.apk"; files+=("fedtail-$VER-android.apk"); fi

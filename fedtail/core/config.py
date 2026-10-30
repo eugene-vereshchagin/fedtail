@@ -14,7 +14,7 @@ from . import presets, taggroups
 DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
-        "frontend": "qt",
+        "frontend": "auto",
         "adwaita": "auto",
         "accessibility": "auto",
         "gtk_headerbar": "auto",
@@ -388,7 +388,7 @@ CHOICES = {
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
-    ("ui", "frontend"): {"qt", "tui", "web", "gtk"},
+    ("ui", "frontend"): {"auto", "qt", "tui", "web", "gtk"},
     ("ui", "adwaita"): {"auto", "on", "off"},
     ("ui", "accessibility"): {"auto", "on", "off"},
     ("ui", "gtk_headerbar"): {"auto", "on", "off"},
