@@ -48,7 +48,8 @@ built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
   `budgets` job has no GTK (pip's Python): it runs where python3-gi is — the night's
   self-check.
 - A card is ~7 ms to build in Qt (dozens of widgets): cheaper only by building it of
-  fewer — a work of its own.
+  fewer — a work of its own, no longer needed for memory (the window 227 MB on the
+  synthetic day since langdetect loads only when asked, 30.10; the goal 150–250).
 
 ## Not in 0.22
 

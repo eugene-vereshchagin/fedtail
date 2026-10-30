@@ -30,7 +30,8 @@ CORE = {"memory": {"after.uss_mb": 65},
 # 6000 / 25 000 ms and 3000 widgets
 # the bench deleting what a running loop deletes, and the core above: 280 / 270 → 250 / 240,
 # 1600 → 1300 widgets
-QT = {"memory": {"after.uss_mb": 250, "after_malloc_trim.uss_mb": 240},
+# langdetect only when asked (30.10: 162 / 147 MB): 250 / 240 → 200 / 185
+QT = {"memory": {"after.uss_mb": 200, "after_malloc_trim.uss_mb": 185},
       "time": {"Qt window up, Home drawn": 2500, "open every lane (19)": 8000,
                "Home scrolled through 1000 posts": 1500},
       "counts": {"qt.widgets": 1300, "qt.images_mb": 66}}

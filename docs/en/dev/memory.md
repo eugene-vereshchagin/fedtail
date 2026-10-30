@@ -1,6 +1,9 @@
 # Making fedtail lighter
 
-Status: **step 0 (the bench) done**, the baseline below; 28 Oct 2026. The plan is the author's.
+Status: **the goal reached on the bench** (30 Oct 2026): the Qt window on the synthetic day
+(10 000 posts, 24 h) USS 227 MB, 220 after the trim — 453 at the baseline below (28 Oct).
+The rest of the plan stays as written; a real, long-running window is the next measure.
+The plan is the author's.
 
 ## Why
 

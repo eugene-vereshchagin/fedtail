@@ -626,6 +626,11 @@ class ThreadProfileTest(Base):
             cmd.value = f"#{alias} from the thread"
             await t.on_input_submitted(Input.Submitted(cmd, cmd.value))
             await self.wait(pilot, lambda: len(w.posted) == before + 1)
+            # my answer comes into the thread on screen (thread_grew: it loads anew) —
+            # wait for it, and for the cursor back on a post, before the next keys
+            await self.wait(pilot, lambda: len(t.query_one("#posts").children) == 4 and
+                            t.query_one("#posts", ListView).highlighted_child is not None,
+                            what="my answer in the thread")
             t.status_changed(None)
             t.action_reply()
             self.assertTrue(cmd.value.startswith("#"))
