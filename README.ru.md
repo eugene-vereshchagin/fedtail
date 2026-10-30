@@ -481,6 +481,8 @@ ruff check .
   каждое включается в конфиге; [docs/ru/comparison.md](docs/ru/comparison.md) — рядом с
   другими клиентами, матрицей.
 * [docs/ru/config.md](docs/ru/config.md) — все настройки таблицами по главам, с умолчаниями.
+* [docs/ru/lanes.md](docs/ru/lanes.md) — как написать свою ленту: все ключи и все слова, с
+  примерами.
 * Всё это есть и по-английски (`docs/en/`) и собирается командой `python3 tools/docs_build.py`
   из `docs/src/` и примеров конфига — править там, тест следит, чтобы не отставало.
 * [docs/ru/dev/design.md](docs/ru/dev/design.md) — ТЗ и очередь планов; всё для разработчиков —

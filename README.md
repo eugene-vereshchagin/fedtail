@@ -475,6 +475,8 @@ ruff check .
   next to other clients, as a matrix.
 * [docs/en/config.md](docs/en/config.md) — every config option in tables by chapter, with its
   default.
+* [docs/en/lanes.md](docs/en/lanes.md) — how to write a lane of your own: every key and every
+  word it takes, with examples.
 * All of these exist in Russian too (`docs/ru/`) and are built by `python3 tools/docs_build.py`
   from `docs/src/` and the example configs — edit there, a test keeps them in step.
 * [docs/en/dev/design.md](docs/en/dev/design.md) — the spec and the queue of planned work; everything

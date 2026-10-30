@@ -61,6 +61,6 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 
 | tool | what it does | how to run |
 |---|---|---|
-| `docs_build.py` | builds every generated document (features, comparison, config, parts, the help) and refills every include | `python3 tools/docs_build.py`, `--check` |
+| `docs_build.py` | builds every generated document (features, comparison, config, the lanes guide, parts, the help) and refills every include | `python3 tools/docs_build.py`, `--check` |
 | `config_doc.py` | the config reference from the example configs (docs_build calls it) | `python3 tools/config_doc.py` |
 | `lane_pictures.py` | draws the lanes' library of pictures (`fedtail/data/icons/lanes`, 16×16, the theme's {c} {l} {d} {o}) | `python3 tools/lane_pictures.py` |

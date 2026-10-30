@@ -18,7 +18,8 @@ On the left, the lanes in groups:
   leaves the general lanes and is read there only.
 
 Which lanes, in what order, and what each one takes: ≡ → "Lanes…" (or a right click on a
-lane → "Edit the lane…") — the lane editor, written into the config at once.
+lane → "Edit the lane…") — the lane editor, written into the config at once; how to write a
+lane of your own — [Writing lanes](lanes.md).
 
 Over a lane, two switches: "All / Posts only / New" and "Feed / Conversations"
 ("Conversations" — each thread as one card). The funnel next to Refresh leaves only pictures,

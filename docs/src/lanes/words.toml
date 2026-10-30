@@ -1,0 +1,747 @@
+# What every key and word of a lane rule means (feeds the generated lanes guide;
+# tests/test_lanes_doc.py checks it against core/atoms.py). ru and en say the same thing.
+
+# ---- keys of a lane -------------------------------------------------------------------
+
+[rule.name]
+ru = "Имя ленты. Не меняется: окно, синк и плитки помнят ленту по нему."
+en = "The lane's name. It never changes: the window, sync and tiles remember the lane by it."
+takes = { ru = "слово: `home_plus`", en = "a word: `home_plus`" }
+
+[rule.title]
+ru = "Что показывает боковая панель. Без него показывается имя."
+en = "What the sidebar shows. Without it the name is shown."
+takes = { ru = "текст или по языкам: `{ ru = \"Посты\", en = \"Posts\" }`", en = "text, or one per language: `{ ru = \"Посты\", en = \"Posts\" }`" }
+
+[rule.any]
+ru = "Список условий: пост входит в ленту, если подходит под любое из них."
+en = "A list of conditions: a post is in the lane if it matches any of them."
+takes = { ru = "список таблиц: `[{ author = \"me\" }, { me = \"reply\" }]`", en = "a list of tables: `[{ author = \"me\" }, { me = \"reply\" }]`" }
+
+[rule.none]
+ru = "Условия-запреты: подходящий под любое из них пост не входит, даже если `any` его пустил."
+en = "Conditions that keep a post out: one matching any of them is left out even if `any` let it in."
+takes = { ru = "список таблиц, как в `any`", en = "a list of tables, as in `any`" }
+
+[rule.source]
+ru = "Сужает все условия до этих источников. Без него fedtail сам берёт источники, которые могут принести нужное."
+en = "Narrows every condition to these sources. Without it the app picks the sources that can bring what the conditions ask for."
+takes = { ru = "источник или список: `\"home\"`, `[\"home\", \"subs\"]`", en = "a source or a list: `\"home\"`, `[\"home\", \"subs\"]`" }
+
+[rule.sort]
+ru = "Порядок постов: по приходу, по времени поста или по счётчикам (в час возраста). Лучшее лежит там, где начинается чтение."
+en = "Post order: by arrival, by the post's time, or by a counter (per hour of age). The best sit where reading starts."
+
+[rule.mode]
+ru = "`lane` — обычная лента; `catch_up` — только пришедшее за `window`: «что я пропустил»."
+en = "`lane` is an ordinary lane; `catch_up` shows only what came within `window`: “what I missed”."
+
+[rule.window]
+ru = "Лента показывает только посты моложе этого срока. В `catch_up` по умолчанию 12 часов."
+en = "The lane shows only posts younger than this. In `catch_up` the default is 12 hours."
+takes = "`\"12h\"`, `\"2d\"`"
+
+[rule.filter_context]
+ru = "Серверные фильтры этого контекста скрывают или сворачивают посты ленты, из какого бы источника те ни пришли."
+en = "The server's filters of this context hide or fold the lane's posts, whatever source they came from."
+
+[rule.per_author]
+ru = "Не больше стольких постов одного автора, самых свежих: шумный не забьёт ленту. 0 — сколько есть."
+en = "At most this many posts of one author, the newest, so a noisy one doesn't fill the lane. 0 means no limit."
+takes = { ru = "число: `3`", en = "a number: `3`" }
+
+[rule.bundle]
+ru = "Посты каждого автора вместе, самый активный первым: «что я пропустил» по людям."
+en = "Each author's posts together, the busiest first: catching up by people."
+
+[rule.view]
+ru = "`threads` — по карточке на тред: его пост и число новых комментариев; только треды, где есть новое."
+en = "`threads` shows one card per thread: its post and the number of new comments; only threads with something new."
+
+[rule.open_at]
+ru = "Где откроется тред с карточки ленты: на посте или на первом непрочитанном комментарии (нет такого — на посте). Без ключа — по общей настройке тредов."
+en = "Where a thread opens from the lane's card: at the post or at the first unread comment (none: at the post). Without the key the general thread setting applies."
+
+[rule.start]
+ru = "`true` — эта лента набора открывается первой, если стартовая лента из настроек не называет ни одной из его лент."
+en = "`true` makes this lane of a set open first when the start lane in the settings names none of its lanes."
+takes = "`true`"
+
+[rule.hide_empty]
+ru = "`true` — лента видна в боковой панели, только когда в ней что-то есть."
+en = "`true` shows the lane in the sidebar only when something is in it."
+takes = "`true`"
+
+[rule.switches]
+ru = "Быстрые фильтры над лентой: «только посты», «только новое». `[]` — никаких. Без ключа — как в ленте до 0.22."
+en = "Quick filters above the lane: “posts only”, “unread only”. `[]` means none. Without the key, as in lanes before 0.22."
+
+[rule.badge]
+ru = "Цвет счётчика ленты в боковой панели: «горячий» — на что ответить, «тихий» — не к спеху. Пусто — обычный."
+en = "The colour of the lane's counter in the sidebar: “hot” is something to answer, “quiet” is no hurry. Empty means the usual one."
+
+[rule.read]
+ru = "Как лента читается: с метками непрочитанного и счётчиками, или как свежая страница без них."
+en = "How the lane is read: with unread marks and counters, or as a fresh page without them."
+
+[rule.group]
+ru = "Раздел боковой панели, где лежит лента: `standard`, `personal`, `lists`, `tags` или своё имя."
+en = "The sidebar section the lane sits in: `standard`, `personal`, `lists`, `tags`, or a name of your own."
+takes = { ru = "слово: `standard` или своё имя", en = "a word: `standard` or a name of your own" }
+
+[rule.icon]
+ru = "Картинка ленты: из значков встроенных лент или из библиотеки (`fire`, `book`, `globe`…). Без неё — по имени ленты, у своей — как у списка."
+en = "The lane's picture: one of the built-in lanes' icons or the library's (`fire`, `book`, `globe`…). Without it, by the lane's name; a custom lane gets the list icon."
+takes = { ru = "слово картинки, см. ниже", en = "a picture's word, see below" }
+
+# ---- keys of a condition --------------------------------------------------------------
+
+[condition.source]
+ru = "Откуда пришёл пост: из какой ленты сервера, списка, поиска и т. д."
+en = "Where the post came from: which server timeline, list, search and so on."
+
+[condition.author]
+ru = "Кто автор поста (у буста — кто бустнул) и как он связан со мной."
+en = "Who wrote the post (for a boost, who boosted) and how they relate to me."
+
+[condition.visibility]
+ru = "Кому виден пост."
+en = "Who can see the post."
+
+[condition.kind]
+ru = "Вид поста: обычный, ответ, буст, цитата и так далее."
+en = "The kind of post: plain, reply, boost, quote and so on."
+
+[condition.me]
+ru = "Как пост связан со мной: ответ мне, упоминание, буст моего поста…"
+en = "How the post relates to me: a reply to me, a mention, a boost of my post…"
+
+[condition.parent]
+ru = "Чей пост, на который отвечают, если он известен."
+en = "Whose post is being replied to, when that is known."
+
+[condition.has]
+ru = "Что есть в посте: вложения, предупреждение, ссылки, теги, слова."
+en = "What the post contains: attachments, a warning, links, tags, words."
+
+[condition.lang]
+ru = "Язык поста — как его выставил клиент автора, а он часто ошибается. `unknown` — язык не указан."
+en = "The post's language as the author's client set it, which is often wrong. `unknown` means no language given."
+takes = "`\"ru\"`, `\"en\"`, `\"unknown\"`"
+
+[condition.state]
+ru = "Что с постом у меня: прочитан, в закладках, лайкнут, в удалённых и так далее."
+en = "What state the post is in for me: read, bookmarked, liked, deleted and so on."
+
+[condition.via]
+ru = "Почему пост попал в мою Ленту."
+en = "Why the post is in my Home."
+
+[condition.target]
+ru = "На что направлен буст, лайк или другое событие: на пост или комментарий, мой или чужой."
+en = "What a boost, like or other event is about: a post or a comment, mine or someone else's."
+
+[condition.event]
+ru = "Событие, не пост: лайк, подписка, отписка и подобное. Такое условие подходит строкам Активности."
+en = "An event that isn't a post: a like, a follow, an unfollow and so on. Such a condition matches Activity rows."
+
+[condition.likes]
+ru = "Число лайков на момент получения поста (потом устаревает)."
+en = "The number of likes when the post was fetched (it goes stale afterwards)."
+takes = { ru = "`\">10\"`, `\"<=3\"`, `\"5\"` (не меньше)", en = "`\">10\"`, `\"<=3\"`, `\"5\"` (at least)" }
+[condition.boosts]
+ru = "Число бустов на момент получения поста (потом устаревает)."
+en = "The number of boosts when the post was fetched (it goes stale afterwards)."
+takes = { ru = "`\">10\"`, `\"<=3\"`, `\"5\"` (не меньше)", en = "`\">10\"`, `\"<=3\"`, `\"5\"` (at least)" }
+[condition.replies]
+ru = "Число ответов на момент получения поста (потом устаревает)."
+en = "The number of replies when the post was fetched (it goes stale afterwards)."
+takes = { ru = "`\">10\"`, `\"<=3\"`, `\"5\"` (не меньше)", en = "`\">10\"`, `\"<=3\"`, `\"5\"` (at least)" }
+
+[condition.text]
+ru = "Слова в тексте поста и предупреждении (CW). Внешний список — ИЛИ, внутренний — И."
+en = "Words in the post's text and its warning (CW). The outer list is OR, the inner one AND."
+takes = { ru = "`[[\"a\", \"b\"], [\"c\"]]` — (a и b) или c", en = "`[[\"a\", \"b\"], [\"c\"]]`: (a and b) or c" }
+
+[condition.text_in]
+ru = "Где искать `text`: в тексте, предупреждении (CW), описании медиа, вариантах опроса, имени автора. По умолчанию — текст и CW."
+en = "Where `text` looks: the text, the warning (CW), media descriptions, poll options, the author's name. The default is text and CW."
+
+[condition.text_case]
+ru = "`true` — различать заглавные и строчные буквы в `text`."
+en = "`true` makes `text` tell capital and small letters apart."
+takes = "`true`"
+
+[condition.text_regex]
+ru = "`true` — слова в `text` читаются как регулярные выражения."
+en = "`true` reads the words in `text` as regular expressions."
+takes = "`true`"
+
+[condition.age]
+ru = "Возраст поста: младше (`<`) или старше (`>`) срока."
+en = "The post's age: younger (`<`) or older (`>`) than a span."
+takes = "`\"<1d\"`, `\">2d\"`"
+
+[condition.age_of]
+ru = "Чей возраст считает `age` у буста: самого буста или оригинала."
+en = "Whose age `age` counts for a boost: the boost's or the original's."
+
+[condition.id]
+ru = "Конкретный пост по его номеру на сервере (у буста подходит и номер оригинала)."
+en = "One particular post by its id on the server (for a boost, the original's id matches too)."
+takes = { ru = "номер или список номеров: `\"1122334455\"`", en = "an id or a list of ids: `\"1122334455\"`" }
+
+[condition.until]
+ru = "Условие действует до этого времени; потом как будто его нет: заглушка на неделю, лента на поездку."
+en = "The condition holds until then and afterwards is as if absent: a mute for a week, a lane for a trip."
+takes = { ru = "дата или момент: `\"2026-11-01\"`", en = "a date or a moment: `\"2026-11-01\"`" }
+
+[condition.priority]
+ru = "Какое из условий `any` назвать причиной, когда подходят несколько: у кого число больше, то первое. На выбор постов не влияет."
+en = "Which of the `any` conditions to name as the reason when several match: the larger number goes first. It doesn't change which posts get in."
+takes = { ru = "число: `1`", en = "a number: `1`" }
+
+[condition.apart]
+ru = "Условие из `none`, которое работает, только пока показывается названная лента: личные читаются в «Личных» — там, где она включена, здесь их нет."
+en = "A `none` condition that counts only while the named lane is shown: the private posts are read in Direct when it is on, and stay here otherwise."
+takes = { ru = "имя ленты: `\"direct\"`", en = "a lane's name: `\"direct\"`" }
+
+[condition.switch]
+ru = "Делает условие переключателем: над лентой появляется чип с этим словом."
+en = "Makes the condition a switch: a chip with this word appears above the lane."
+takes = { ru = "слово на чипе: `\"Комменты\"`", en = "the chip's word: `\"Comments\"`" }
+
+[condition.shown]
+ru = "`false` — переключатель по умолчанию выключен, посты под ним скрыты, пока не нажмёшь."
+en = "`false` leaves the switch off by default: posts under it stay hidden until you click it."
+takes = "`false`"
+
+[condition.any]
+ru = "Внутреннее ИЛИ: должна подойти одна из этих таблиц, а остальные ключи условия — тоже (И из ИЛИ)."
+en = "An inner OR: one of these tables must match too, along with the condition's other keys (an AND of ORs)."
+takes = { ru = "список таблиц: `[{ has = \"image\" }, { kind = \"reply\" }]`", en = "a list of tables: `[{ has = \"image\" }, { kind = \"reply\" }]`" }
+
+# ---- words: source --------------------------------------------------------------------
+
+[word.source.home]
+ru = "Моя Лента: те, на кого я подписан, их бусты, мои посты и подписанные теги."
+en = "My Home: people I follow, their boosts, my own posts and followed tags."
+[word.source.local]
+ru = "Все посты моего сервера."
+en = "Every post of my server."
+[word.source.federated]
+ru = "Всё, что знает мой сервер о других серверах (не весь федиверс)."
+en = "Everything my server knows of other servers (not the whole fediverse)."
+[word.source.mentions]
+ru = "Посты, где меня упомянули, включая ответы мне."
+en = "Posts that mention me, including replies to me."
+[word.source.watched]
+ru = "Новые посты тех, кому я включил колокольчик."
+en = "New posts of people whose bell I rang."
+[word.source.direct]
+ru = "Личные диалоги (последний пост каждого)."
+en = "Direct conversations (the last post of each)."
+[word.source.bookmarks]
+ru = "Мои закладки."
+en = "My bookmarks."
+[word.source.favourites]
+ru = "Посты, которые я лайкнул."
+en = "Posts I liked."
+[word.source.mine]
+ru = "Мои посты и ответы."
+en = "My posts and replies."
+[word.source.subs]
+ru = "Новые комментарии в тредах, на которые я подписан."
+en = "New comments in the threads I follow."
+[word.source.context]
+ru = "Тред целиком, когда его открыли."
+en = "A whole thread, once it is opened."
+[word.source.trends]
+ru = "Тренды моего сервера (только просмотр)."
+en = "My server's trending posts (view only)."
+[word.source.bubble]
+ru = "Серверы, выбранные админом или мной (пузырь)."
+en = "Servers picked by the admin or by me (the bubble)."
+[word.source."list:"]
+ru = "Участники списка: `list:<номер>`."
+en = "A list's members: `list:<id>`."
+[word.source."tags:"]
+ru = "Посты с тегами: `tags:<теги>` (любой, все или без)."
+en = "Posts with tags: `tags:<tags>` (any, all or none of them)."
+[word.source."account:"]
+ru = "Стена одного аккаунта: `account:<номер>`."
+en = "One account's wall: `account:<id>`."
+[word.source."remote:"]
+ru = "Публичная лента чужого сервера без учётки там: `remote:<сервер>`. Токен туда не уходит."
+en = "Another server's public timeline without an account there: `remote:<host>`. The token never goes there."
+[word.source."link:"]
+ru = "Посты с одной ссылкой: `link:<адрес>` (Mastodon 4.3+)."
+en = "Posts sharing one link: `link:<url>` (Mastodon 4.3+)."
+[word.source."quotes:"]
+ru = "Цитаты одного поста: `quotes:<номер>`."
+en = "Quotes of one post: `quotes:<id>`."
+[word.source."search:"]
+ru = "Посты, найденные по словам: `search:<слова>`."
+en = "Posts found by words: `search:<words>`."
+[word.source."rss:"]
+ru = "Лента сайта как посты только для чтения: `rss:<адрес>`."
+en = "A site's feed as read-only posts: `rss:<url>`."
+
+# ---- words: author --------------------------------------------------------------------
+
+[word.author.me]
+ru = "Я сам."
+en = "Me."
+[word.author.followed]
+ru = "Тот, на кого я подписан."
+en = "Someone I follow."
+[word.author.follower]
+ru = "Тот, кто подписан на меня."
+en = "Someone who follows me."
+[word.author.mutual]
+ru = "Подписаны друг на друга."
+en = "We follow each other."
+[word.author.stranger]
+ru = "Не подписан ни я на него, ни он на меня."
+en = "Neither of us follows the other."
+[word.author.bot]
+ru = "Бот: по флажку аккаунта или по моему списку ботов."
+en = "A bot: by the account's flag or by my own list of bots."
+[word.author.local]
+ru = "С моего сервера."
+en = "From my server."
+[word.author.remote]
+ru = "С другого сервера."
+en = "From another server."
+[word.author.new]
+ru = "Аккаунту меньше 30 дней."
+en = "The account is under 30 days old."
+[word.author.not_follower]
+ru = "Я подписан, а он на меня нет."
+en = "I follow them, they don't follow me."
+[word.author.new_follower]
+ru = "Подписался на меня меньше 3 дней назад."
+en = "Started following me under 3 days ago."
+[word.author.limited]
+ru = "Аккаунт под ограничением модераторов."
+en = "The account is limited by moderators."
+[word.author.bell]
+ru = "Тот, кому я включил колокольчик."
+en = "Someone whose bell I rang."
+[word.author.boosts_off]
+ru = "Тот, чьи бусты я скрыл."
+en = "Someone whose boosts I hid."
+[word.author.in_list]
+ru = "Состоит в одном из моих списков."
+en = "A member of one of my lists."
+[word.author.hidden_home]
+ru = "Убран из Ленты вручную («Убрать из Ленты» в профиле); подписка остаётся."
+en = "Taken out of Home by hand (“Not in Home” on the profile); still followed."
+[word.author."@nick@host"]
+ru = "Один конкретный человек: `\"@nick@host\"`."
+en = "One particular person: `\"@nick@host\"`."
+[word.author."domain:"]
+ru = "Все с одного сервера: `\"domain:x.org\"` или несколько — `\"domain:{a.org,b.org}\"`."
+en = "Everyone from one server: `\"domain:x.org\"`, or several: `\"domain:{a.org,b.org}\"`."
+
+# ---- words: visibility ----------------------------------------------------------------
+
+[word.visibility.public]
+ru = "Виден всем."
+en = "Visible to everyone."
+[word.visibility.unlisted]
+ru = "Не показывается в публичных лентах, но открывается по ссылке."
+en = "Left out of public timelines, but open to anyone with the link."
+[word.visibility.followers]
+ru = "Только для подписчиков."
+en = "Followers only."
+[word.visibility.direct]
+ru = "Только упомянутым."
+en = "Only the people mentioned."
+[word.visibility.mutuals]
+ru = "Только для тех, с кем подписаны друг на друга (GoToSocial)."
+en = "Only for people who follow each other (GoToSocial)."
+[word.visibility.local_only]
+ru = "Остаётся на сервере автора."
+en = "Stays on the author's server."
+
+# ---- words: kind ----------------------------------------------------------------------
+
+[word.kind.post]
+ru = "Обычный пост: не ответ и не буст."
+en = "A plain post: not a reply, not a boost."
+[word.kind.reply]
+ru = "Ответ (комментарий)."
+en = "A reply (comment)."
+[word.kind.self_reply]
+ru = "Ответ самому себе: продолжение треда."
+en = "A reply to oneself: a thread continued."
+[word.kind.boost]
+ru = "Буст чужого поста."
+en = "A boost of a post."
+[word.kind.self_boost]
+ru = "Буст автором своего же поста."
+en = "An author boosting their own post."
+[word.kind.quote]
+ru = "Цитата другого поста."
+en = "A quote of another post."
+[word.kind.poll]
+ru = "Пост с опросом."
+en = "A post with a poll."
+[word.kind.edited]
+ru = "Пост, который отредактировали."
+en = "A post that was edited."
+
+# ---- words: me ------------------------------------------------------------------------
+
+[word.me.reply]
+ru = "Ответ мне, любой."
+en = "Any reply to me."
+[word.me.reply_to_post]
+ru = "Ответ на мой пост."
+en = "A reply to my post."
+[word.me.reply_to_comment]
+ru = "Ответ на мой комментарий."
+en = "A reply to my comment."
+[word.me.mention]
+ru = "Меня упомянули, но это не ответ мне."
+en = "I'm mentioned, but it is not a reply to me."
+[word.me.direct]
+ru = "Личное сообщение мне."
+en = "A direct message to me."
+[word.me.in_my_thread]
+ru = "Пост в треде, где писал я."
+en = "A post in a thread where I wrote."
+[word.me.boost_of_mine]
+ru = "Буст моего поста."
+en = "A boost of my post."
+[word.me.quote_of_mine]
+ru = "Цитата моего поста."
+en = "A quote of my post."
+[word.me.my_boost]
+ru = "Буст, сделанный мной."
+en = "A boost made by me."
+
+# ---- words: parent --------------------------------------------------------------------
+
+[word.parent.mine]
+ru = "Отвечают на мой пост."
+en = "Replying to my post."
+[word.parent.followed]
+ru = "Отвечают на пост того, на кого я подписан."
+en = "Replying to a post of someone I follow."
+[word.parent.stranger]
+ru = "Отвечают на пост незнакомца."
+en = "Replying to a stranger's post."
+[word.parent.unknown]
+ru = "Пост, на который отвечают, мне неизвестен."
+en = "The post being replied to is not known to me."
+
+# ---- words: has -----------------------------------------------------------------------
+
+[word.has.media]
+ru = "Есть вложение: картинка, видео или звук."
+en = "Has an attachment: image, video or audio."
+[word.has.image]
+ru = "Есть картинка."
+en = "Has an image."
+[word.has.video]
+ru = "Есть видео."
+en = "Has a video."
+[word.has.audio]
+ru = "Есть звук."
+en = "Has audio."
+[word.has.cw]
+ru = "Есть предупреждение о содержании (CW)."
+en = "Has a content warning (CW)."
+[word.has.sensitive]
+ru = "Помечен как чувствительный."
+en = "Marked sensitive."
+[word.has.link]
+ru = "Есть ссылка или карточка ссылки."
+en = "Has a link or a link card."
+[word.has.poll]
+ru = "Есть опрос."
+en = "Has a poll."
+[word.has.alt_missing]
+ru = "Есть медиа без описания."
+en = "Has media without a description."
+[word.has.followed_tag]
+ru = "Есть тег, на который я подписан."
+en = "Has a tag I follow."
+[word.has."tag:"]
+ru = "Есть такой тег: `\"tag:x\"`."
+en = "Has this tag: `\"tag:x\"`."
+[word.has."link:"]
+ru = "Есть ссылка на такой сайт: `\"link:domain\"`."
+en = "Links to this site: `\"link:domain\"`."
+[word.has."word:"]
+ru = "В тексте есть такое слово: `\"word:x\"` (то же, что `text`)."
+en = "The text has this word: `\"word:x\"` (same as `text`)."
+
+# ---- words: state ---------------------------------------------------------------------
+
+[word.state.unread]
+ru = "Ещё не прочитан."
+en = "Not read yet."
+[word.state.read]
+ru = "Прочитан."
+en = "Read."
+[word.state.subscribed]
+ru = "Я подписан на тред."
+en = "I follow the thread."
+[word.state.bookmarked]
+ru = "В закладках."
+en = "Bookmarked."
+[word.state.liked]
+ru = "Я лайкнул."
+en = "I liked it."
+[word.state.boosted]
+ru = "Я бустнул."
+en = "I boosted it."
+[word.state.replied]
+ru = "Я ответил (из любого клиента)."
+en = "I replied (from any client)."
+[word.state.in_list]
+ru = "Автор состоит в одном из моих списков."
+en = "The author is in one of my lists."
+[word.state.muted_thread]
+ru = "Тред заглушён."
+en = "The thread is muted."
+[word.state.filtered_warn]
+ru = "Серверный фильтр с предупреждением сработал на этот пост."
+en = "A server filter set to “warn” matched this post."
+[word.state.new_replies]
+ru = "В треде, на который я подписан, есть непрочитанные ответы."
+en = "In a thread I follow, there are unread replies."
+[word.state.unbookmarked]
+ru = "Сервер говорит, что закладки нет (снял; нет ответа — не считается)."
+en = "The server says it is not bookmarked (taken back; no answer doesn't count)."
+[word.state.unliked]
+ru = "Сервер говорит, что лайка нет (снял; нет ответа — не считается)."
+en = "The server says it is not liked (taken back; no answer doesn't count)."
+[word.state.deleted]
+ru = "Удалён на своём сервере: при повторном запросе он ответил, что поста нет. У нас остаётся с пометкой."
+en = "Deleted on its own server: it answered that the post is gone when asked again. We keep it, marked."
+
+# ---- words: via -----------------------------------------------------------------------
+
+[word.via.followed]
+ru = "Автор из тех, на кого я подписан."
+en = "The author is someone I follow."
+[word.via.list]
+ru = "Автор состоит в одном из моих списков."
+en = "The author is in one of my lists."
+[word.via.tag]
+ru = "Принёс подписанный тег."
+en = "Brought by a tag I follow."
+[word.via.boost]
+ru = "Бустнул тот, на кого я подписан."
+en = "Boosted by someone I follow."
+[word.via.mine]
+ru = "Это мой пост."
+en = "It is my own post."
+
+# ---- words: target --------------------------------------------------------------------
+
+[word.target.my_post]
+ru = "Мой пост."
+en = "My post."
+[word.target.my_comment]
+ru = "Мой комментарий."
+en = "My comment."
+[word.target.post]
+ru = "Чужой пост."
+en = "Someone else's post."
+[word.target.comment]
+ru = "Чужой комментарий."
+en = "Someone else's comment."
+[word.target.seen]
+ru = "Оригинал уже был у меня в базе."
+en = "The original was already in my database."
+[word.target.read]
+ru = "Оригинал уже прочитан."
+en = "The original is already read."
+
+# ---- words: event ---------------------------------------------------------------------
+
+[word.event.favourite]
+ru = "Мой пост лайкнули."
+en = "My post was liked."
+[word.event.reblog]
+ru = "Мой пост бустнули."
+en = "My post was boosted."
+[word.event.follow]
+ru = "На меня подписались."
+en = "Someone followed me."
+[word.event.follow_request]
+ru = "Заявка на подписку, ждёт моего решения."
+en = "A follow request waiting for my decision."
+[word.event.poll]
+ru = "Закончился опрос, где я голосовал или который создал."
+en = "A poll I voted in or created has ended."
+[word.event.update]
+ru = "Отредактирован пост, который я бустил."
+en = "A post I boosted was edited."
+[word.event.status]
+ru = "Новый пост от аккаунта под колокольчиком."
+en = "A new post from an account whose bell I rang."
+[word.event.quote]
+ru = "Мой пост процитировали (Mastodon 4.5+)."
+en = "My post was quoted (Mastodon 4.5+)."
+[word.event.quoted_update]
+ru = "Отредактирован пост, который я цитировал (Mastodon 4.5+)."
+en = "A post I quoted was edited (Mastodon 4.5+)."
+[word.event.pending]
+ru = "Ответ, лайк или буст ждёт моего «да» (GoToSocial)."
+en = "A reply, like or boost waits for my approval (GoToSocial)."
+[word.event.admin]
+ru = "Событие для админов: регистрация, жалоба."
+en = "An admin event: a sign-up, a report."
+[word.event.severed]
+ru = "Связи порваны блокировкой сервера (Mastodon 4.3+)."
+en = "Connections were cut by a server block (Mastodon 4.3+)."
+[word.event.warning]
+ru = "Предупреждение от модерации мне (Mastodon 4.3+)."
+en = "A moderation warning to me (Mastodon 4.3+)."
+[word.event.annual_report]
+ru = "Годовой отчёт сервера (Mastodon 4.3+)."
+en = "The server's annual report (Mastodon 4.3+)."
+[word.event.i_followed]
+ru = "Я подписался на кого-то."
+en = "I followed someone."
+[word.event.unfollow]
+ru = "От меня отписались (fedtail замечает это сам, сравнивая списки)."
+en = "Someone unfollowed me (fedtail notices it by comparing lists)."
+[word.event.removed_follower]
+ru = "Я сам убрал или заблокировал подписчика."
+en = "I removed or blocked a follower myself."
+[word.event.moved]
+ru = "Подписчик переехал на новый аккаунт; это не отписка."
+en = "A follower moved to a new account; this isn't an unfollow."
+[word.event.gone]
+ru = "Аккаунт подписчика удалён или заблокирован сервером."
+en = "A follower's account was deleted or blocked by the server."
+[word.event.unfollowed_back]
+ru = "Я подписан на него, а он на меня больше нет."
+en = "I follow them, but they no longer follow me."
+[word.event.unliked]
+ru = "С моего поста сняли лайк (по умолчанию выключено)."
+en = "A like was taken off my post (off by default)."
+[word.event.deleted]
+ru = "Удалён пост, который есть у меня в базе."
+en = "A post I have stored was deleted."
+[word.event.lost]
+ru = "Подписчики одного сервера пропали разом: связи с этим сервером потеряны."
+en = "Followers of one server vanished at once: contact with that server was lost."
+
+# ---- words: text_in -------------------------------------------------------------------
+
+[word.text_in.text]
+ru = "Текст поста."
+en = "The post's text."
+[word.text_in.cw]
+ru = "Предупреждение о содержании (CW)."
+en = "The content warning (CW)."
+[word.text_in.alt]
+ru = "Описания картинок и другого медиа."
+en = "Descriptions of images and other media."
+[word.text_in.poll]
+ru = "Варианты ответа в опросе."
+en = "The poll's options."
+[word.text_in.name]
+ru = "Имя автора и его @ник."
+en = "The author's name and @nick."
+
+# ---- words: age_of --------------------------------------------------------------------
+
+[word.age_of.post]
+ru = "Время самого поста; у буста — время буста."
+en = "The post's own time; for a boost, the boost's time."
+[word.age_of.original]
+ru = "Время оригинала: так старьё, поднятое бустом, остаётся старым."
+en = "The original's time, so an old post lifted by a boost still counts as old."
+
+# ---- words: sort ----------------------------------------------------------------------
+
+[word.sort.arrival]
+ru = "Когда пост дошёл до нас."
+en = "When the post reached us."
+[word.sort.post_time]
+ru = "Время самого поста."
+en = "The post's own time."
+[word.sort.replies]
+ru = "По числу ответов в час возраста."
+en = "By replies per hour of age."
+[word.sort.likes]
+ru = "По числу лайков в час возраста."
+en = "By likes per hour of age."
+[word.sort.boosts]
+ru = "По числу бустов в час возраста."
+en = "By boosts per hour of age."
+[word.sort.density]
+ru = "По ответам, лайкам и бустам вместе, в час возраста."
+en = "By replies, likes and boosts together, per hour of age."
+
+# ---- words: read ----------------------------------------------------------------------
+
+[word.read.through]
+ru = "Читать подряд: метки непрочитанного, счётчики, без прыжков."
+en = "Read through: unread marks and counters, no jumps."
+[word.read.browse]
+ru = "Просматривать: свежая страница, без счётчиков, как Федеративная."
+en = "Browse: a fresh page without counters, like Federated."
+
+# ---- words: mode ----------------------------------------------------------------------
+
+[word.mode.lane]
+ru = "Обычная лента."
+en = "An ordinary lane."
+[word.mode.catch_up]
+ru = "Только пришедшее за `window` (по умолчанию 12 часов): «что я пропустил»."
+en = "Only what came within `window` (12 hours by default): “what I missed”."
+
+# ---- words: filter_context ------------------------------------------------------------
+
+[word.filter_context.home]
+ru = "Фильтры, заданные для Ленты."
+en = "Filters set for Home."
+[word.filter_context.public]
+ru = "Фильтры, заданные для публичных лент."
+en = "Filters set for public timelines."
+[word.filter_context.notifications]
+ru = "Фильтры, заданные для уведомлений."
+en = "Filters set for notifications."
+[word.filter_context.thread]
+ru = "Фильтры, заданные для тредов."
+en = "Filters set for threads."
+[word.filter_context.account]
+ru = "Фильтры, заданные для профилей."
+en = "Filters set for profiles."
+
+# ---- words: bundle, view, open_at, badge, switches ------------------------------------
+
+[word.bundle.author]
+ru = "Посты каждого автора вместе, самый активный первым."
+en = "Each author's posts together, the busiest first."
+[word.view.threads]
+ru = "По карточке на тред, с числом новых комментариев."
+en = "One card per thread, with the number of new comments."
+[word.open_at.first_unread]
+ru = "Тред открывается на первом непрочитанном комментарии (нет такого — на посте)."
+en = "The thread opens at the first unread comment (none: at the post)."
+[word.open_at.post]
+ru = "Тред открывается на посте."
+en = "The thread opens at the post."
+[word.badge.hot]
+ru = "Горячий счётчик: на это надо ответить («Мне»)."
+en = "A hot counter: something to answer (“To me”)."
+[word.badge.quiet]
+ru = "Тихий счётчик: не к спеху (боты, Активность)."
+en = "A quiet counter: no hurry (bots, Activity)."
+[word.switches.posts_only]
+ru = "Чип «только посты»: скрывает комментарии."
+en = "The “posts only” chip: hides comments."
+[word.switches.unread_only]
+ru = "Чип «только новое»: оставляет непрочитанное."
+en = "The “unread only” chip: keeps what is unread."

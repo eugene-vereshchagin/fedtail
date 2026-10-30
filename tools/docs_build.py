@@ -13,8 +13,12 @@ What it builds, for each language in LANGS (Russian and English):
   ``fedtail/data/config.example.<lang>.toml`` (see ``tools/config_doc.py``);
 * generated parts in ``docs/<lang>/parts/``: ``features-short``, ``only-in-fedtail``,
   ``whats-new``, ``roadmap``;
+* ``docs/<lang>/lanes.md`` — how to write a lane: ``docs/src/lanes/head.<lang>.md``, then
+  every key of a lane and of a condition with every word it takes, the words from the core
+  (``fedtail/core/atoms.py``), what each means from ``docs/src/lanes/words.toml``;
 * the deep dive of the in-app help, ``fedtail/data/help/<lang>/ref/`` — copies of
-  ``features.md``, ``config.md`` and ``comparison.md``, so the help works offline.
+  ``features.md``, ``config.md``, ``comparison.md`` and ``lanes.md``, so the help works
+  offline.
 
 Then it expands includes. Any Markdown file in the repository's documentation (the
 READMEs, ``docs/``, the in-app help in ``fedtail/data/help/``) may hold::
@@ -53,7 +57,7 @@ CLIENTS = ("Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "Tokodon", "Ice Cu
            "Fedilab", "Sengi", "Megalodon", "tut", "Tuba", "Whalebird")
 TEXT_FIELDS = ("name", "status_note", "config", "api", "others", "note", "size", "why",
                "details")
-REF_PAGES = ("features.md", "config.md", "comparison.md")  # copied into the help's ref/
+REF_PAGES = ("features.md", "config.md", "comparison.md", "lanes.md")  # copied into the help's ref/
 CYRILLIC = re.compile(r"[а-яёА-ЯЁ]")
 VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -387,6 +391,94 @@ def render_parity(lang):
     return "\n".join(out).rstrip() + "\n"
 
 
+# ---- docs/<lang>/lanes.md ----------------------------------------------------------
+
+LANES = ROOT / "docs" / "src" / "lanes"
+LANE_WORDS = {
+    "ru": {"rule_keys": "Ключи ленты", "cond_keys": "Ключи условия", "words": "Слова",
+           "key": "Ключ", "word": "Слово", "takes": "Что пишется", "means": "Что значит",
+           "of": "Слова ключа `{k}`", "icons": "Картинки (`icon`)",
+           "icons_intro": "Своя картинка темы с тем же именем берёт верх; без `icon` — "
+                          "картинка ленты набора по её имени, у своей — как у списка.",
+           "any_word": "любое слово", "see": "см. ниже"},
+    "en": {"rule_keys": "A lane's keys", "cond_keys": "A condition's keys", "words": "Words",
+           "key": "Key", "word": "Word", "takes": "What goes there", "means": "What it means",
+           "of": "The words of `{k}`", "icons": "Pictures (`icon`)",
+           "icons_intro": "A theme's own picture of that name wins; no `icon` — a set's lane "
+                          "wears the one of its name, one's own a list's.",
+           "any_word": "any word", "see": "see below"},
+}
+
+
+def lane_words():
+    """{axis: [words]} — every word a lane's or a condition's key takes, from the core;
+    a prefix ("list:", "tag:") stands for the words that start with it."""
+    from fedtail.core import atoms
+    out = {}
+    for key, known in atoms._SET_KEYS.items():
+        if known:
+            out[key] = sorted(known)
+    out["source"] += list(atoms.SOURCE_PREFIXES)
+    out["has"] += list(atoms.HAS_PREFIXES)
+    out["author"] += ["@nick@host", "domain:"]
+    out["text_in"] = sorted(atoms.TEXT_IN)
+    out["age_of"] = ["post", "original"]
+    for key, words in atoms._RULE_WORDS.items():
+        out[key] = [w for w in sorted(words) if w]
+    out["switches"] = list(atoms.SWITCHES)
+    return out
+
+
+def lane_keys():
+    """(the keys of a lane, the keys of a condition), from the core."""
+    from fedtail.core import atoms
+    return sorted(atoms.RULE_KEYS), sorted(atoms.CONDITION_KEYS)
+
+
+def load_lane_words():
+    with open(LANES / "words.toml", "rb") as f:
+        return tomllib.load(f)
+
+
+def _ticks(words):
+    return ", ".join(f"`{w}`" for w in words)
+
+
+def render_lanes(lang):
+    """docs/<lang>/lanes.md: the guide's head, then every key and word."""
+    from fedtail.core import atoms
+    t, d = LANE_WORDS[lang], load_lane_words()
+    words = lane_words()
+    rule_keys, cond_keys = lane_keys()
+
+    def takes(key):
+        if key == "icon":
+            return t["see"]
+        if key in words:
+            return _ticks(words[key]) if len(words[key]) <= 6 else t["see"]
+        return _t(entry(key).get("takes"), lang) or ""
+
+    def entry(key):
+        return d["rule"].get(key) or d["condition"].get(key) or {}
+
+    out = [(LANES / f"head.{lang}.md").read_text("utf-8").rstrip(), ""]
+    for title, keys, where in ((t["rule_keys"], rule_keys, "rule"),
+                               (t["cond_keys"], cond_keys, "condition")):
+        out += [f"## {title}", ""]
+        out += _table([t["key"], t["takes"], t["means"]],
+                      [[f"`{k}`", takes(k), _t(d[where][k], lang)] for k in keys])
+        out.append("")
+    out += [f"## {t['words']}", ""]
+    for key, ws in words.items():
+        out += [f"### {t['of'].format(k=key)}", ""]
+        out += _table([t["word"], t["means"]],
+                      [[f"`{w}…`" if w.endswith(":") else f"`{w}`",
+                        _t(d["word"][key][w], lang)] for w in ws])
+        out.append("")
+    out += [f"### {t['icons']}", "", t["icons_intro"], "", _ticks(atoms.LANE_ICONS), ""]
+    return "\n".join(out).rstrip() + "\n"
+
+
 # ---- docs/<lang>/comparison.md ------------------------------------------------------
 
 MARK = {"has": "✓", "partly": "◐", "no": "—", "planned": "⏳"}
@@ -533,6 +625,7 @@ def build():
         out[d / "parts" / "roadmap.md"] = render_roadmap(chapters, lang)
         out[d / "parts" / "parity.md"] = render_parity(lang)
         out[d / "parts" / "android.md"] = render_android(chapters, lang)
+        out[d / "lanes.md"] = render_lanes(lang)
         example = config_doc.example_path(lang)
         out[d / "config.md"] = config_doc.build(example.read_text("utf-8"), lang)
     # parts first (they include nothing), then the generated pages, then the rest — so

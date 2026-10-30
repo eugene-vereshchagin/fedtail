@@ -7,6 +7,7 @@ the settings reference, which are here too, at the end of the contents.
 
 - [Getting started](start.md) — What fedtail is, how to log in and where things are.
 - [Reading](reading.md) — Lanes, threads, read marks — how reading works here.
+- [Writing lanes](lanes.md) — A lane of your own: the rule, its keys and words.
 - [Finding things](search.md) — Find in a lane, in every lane and on the server.
 - [The command line](command-line.md) — As on Point: Ctrl+L and the commands.
 - [Writing](writing.md) — The compose panel and everything in it.
@@ -21,4 +22,4 @@ the settings reference, which are here too, at the end of the contents.
 - [About](about.md) — Principles, who wrote it, the licence.
 
 In detail: [every feature](ref/features.md) · [every setting](ref/config.md) ·
-[fedtail and other clients](ref/comparison.md)
+[fedtail and other clients](ref/comparison.md) · [the words of lanes](ref/lanes.md)

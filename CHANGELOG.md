@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- "Writing lanes" (`docs/<lang>/lanes.md`, in the help too): how a lane's rule is built,
+  every key of a lane and of a condition, every word each takes, examples — the words
+  generated from the program's own, a test fails on one left unexplained.
 - A lane says which quick filters stand over it: `switches = ["posts_only", "unread_only"]`
   in `[[lanes.custom]]` and the presets (the editor's "Switches"); none said — as
   before. The built-in sets name theirs.
