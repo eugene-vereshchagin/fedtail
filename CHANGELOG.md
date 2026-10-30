@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- A dismissed announcement no longer comes back when a round asked the server before the
+  dismissal reached it.
 - A hung first copy no longer keeps fedtail from starting: its window silent for
   `window.hung_copy_seconds` (20), it answers the new start "hung", is ended (asked, then
   made to) and the new one takes its place.

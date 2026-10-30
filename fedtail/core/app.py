@@ -1053,7 +1053,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         except ApiError as e:
             log.debug("announcements: %s", e)
             return []
-        return sorted((a for a in got if not a.get("read")),
+        gone = self.__dict__.get("_dismissed_ann", set())
+        return sorted((a for a in got if not a.get("read") and a.get("id") not in gone),
                       key=lambda a: a.get("published_at") or "")
 
     def _check_announcements(self):
@@ -1069,6 +1070,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self.emit("announcements_updated", len(fresh))
 
     def dismiss_announcement(self, aid):
+        """Read: gone here at once — a round asking the server before the dismissal got
+        there brought it back (the banner came again: CI on Windows, 30.10)."""
+        self.__dict__.setdefault("_dismissed_ann", set()).add(aid)
         return self.call_api("dismiss_announcement", aid)
 
     def scheduled(self):

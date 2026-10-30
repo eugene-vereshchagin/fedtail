@@ -117,6 +117,15 @@ class ParentsTest(CoreCase):
         self.assertIsNone(c.target(alias, 9).result(timeout=T))
 
 
+class DismissedTest(CoreCase):
+    def test_a_dismissed_announcement_stays_gone_while_the_server_catches_up(self):
+        c = self.connect()
+        c.api.announcements = lambda: [{"id": "a1", "read": False}, {"id": "a2", "read": False}]
+        c.api.dismiss_announcement = lambda aid: None  # the server hasn't marked it yet
+        c.dismiss_announcement("a1").result(timeout=T)
+        self.assertEqual([a["id"] for a in c.announcements().result(timeout=T)], ["a2"])
+
+
 class CommentIdsTest(CoreCase):
     """30.10: a woman answering herself under her post — each comment got a #id of its
     own, as if a post, and a card in Home read "#yzi8j", its thread nowhere. A comment
