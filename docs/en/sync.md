@@ -65,6 +65,15 @@ login, no accounts, your fediverse server isn't asked anything. A journal is mad
 an **invite code** the server's admin gives (one per person, and taken back when they
 want — the journals made with it go with it). Only the first device needs it.
 
+**For the first minutes of a new device the lanes' counts may be off.** Every device
+counts read from a starting point of its own: the new one begins with its own (on the
+first run everything there is is read), and the others' journals come in neither at once
+nor in one piece. Until they have settled, the unread counts jump — a few dozen too many
+here, zero there, and then what you read on another device comes "back to life", or the
+other way round. Nothing is broken: in a few minutes (a couple of rounds of polling and
+syncing) the marks agree and the counts are those of your other devices. Nothing to do;
+just don't hurry to "mark all read" meanwhile.
+
 ## Turning it on
 
 All of it is in the window: **≡ → Sync** (or a click on "⇅" in the status bar). On top —

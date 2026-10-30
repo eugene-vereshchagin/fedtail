@@ -8,6 +8,8 @@
   server is said under the button — not a snackbar hidden by the keyboard — and a site
   that isn't a fediverse server is said so, not "HTTP 404". The button says it opens the
   browser; the keyboard's "Go" logs in; "logging in…" while the token comes.
+- Docs (sync): the lanes' counts may be off for the first minutes of a newly joined
+  device, until the other devices' read marks have come in — and why.
 
 ## 0.22.0 — 2026-10-30
 
