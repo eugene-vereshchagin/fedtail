@@ -60,9 +60,28 @@ class PollMixin:
 
     def refresh_by_hand(self):
         """The interface's Refresh (⟳, F5): a round at once, and feed.on_new = "hold"
-        lets the new posts it held into the lanes."""
+        lets the new posts it held into the lanes. → a future of how it went (and the
+        event "refreshed", the same): {"new": n} | {"error": words} | {"wait_until": t}
+        — a press that brought nothing looked like a button that does nothing (30.10);
+        common/results.refresh_text says it."""
+        from concurrent.futures import Future
         self.hand_refreshes += 1
+        fut = Future()
+        until = getattr(self, "_quiet_until", 0) or 0
+        if until > time.time():  # the server's budget waited out: the round comes then
+            self._refreshed([fut], {"wait_until": until})
+        else:
+            with self._hand_lock:
+                self._hand_waiting.append(fut)
         self.poll_now()
+        return fut
+
+    def _refreshed(self, futs, result):
+        for f in futs:
+            if not f.done():
+                f.set_result(result)
+        if futs:
+            self.emit("refreshed", result)
 
     def _poll_soon(self):
         """The live stream says something came: a poll, but not more often than
@@ -181,6 +200,7 @@ class PollMixin:
                 self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
                 self.emit("error", str(e))
             quiet = self._pace()
+            self._quiet_until = time.time() + quiet if quiet > 0 else 0
             if quiet > 0:
                 # the server's budget is nearly spent: nothing until its window starts
                 # anew — a Refresh doesn't cut it short (it would only earn a 429)
@@ -248,13 +268,27 @@ class PollMixin:
     BACKOFF_MAX = 15 * 60  # s: the longest wait between failing rounds
 
     def _loop_round(self):
-        """A round of the loop: the server out of reach is said once an outage."""
+        """A round of the loop: the server out of reach is said once an outage; the
+        Refresh presses made before it began are told how it went."""
+        with self._hand_lock:
+            asked, self._hand_waiting = self._hand_waiting, []
+        self._round_new = 0
         try:
             self.poll_once()  # counts the rounds failing in a row itself
         except Offline as e:
             self._went_offline(e.__cause__ or e)
+            self._refreshed(asked, {"error": neterr.words(e.__cause__ or e,
+                                                          getattr(self.api, "host", "?"))})
             return
+        except RateLimited:
+            budget = getattr(self.api, "budget", None)
+            self._refreshed(asked, {"wait_until": getattr(budget, "reset", 0) or time.time()})
+            raise
+        except Exception as e:
+            self._refreshed(asked, {"error": str(e)[:200]})
+            raise
         self._back_online()
+        self._refreshed(asked, {"new": int(getattr(self, "_round_new", 0) or 0)})
 
     def _cut_off(self, e):
         """Is e the own server out of reach (not one source's other server: an RSS
@@ -645,6 +679,7 @@ class PollMixin:
             if _due(self._gc_done, max(1, self.cfg["storage"]["gc_hours"]) * 3600):
                 self.collect_garbage()
                 self._step("gc")
+            self._round_new = len(new_statuses) + len(new_activity) + len(new_requests)
             got = {k: len(v) for k, v in new_by_source.items() if v}
             if got or new_activity or new_requests:
                 log.info("new: %s%s%s", got or "-",

@@ -639,8 +639,9 @@ class MergedCore:
         """Refresh in the merged window: every account's round, and the held new posts
         (feed.on_new = "hold") let in."""
         self.hand_refreshes += 1
-        for core in [self.primary, *self.others.values()]:
+        for core in self.others.values():
             core.refresh_by_hand()
+        return self.primary.refresh_by_hand()  # how it went: the main account's round
 
     def shutdown(self):
         for core in [*self.others.values(), self.primary]:

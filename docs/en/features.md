@@ -856,6 +856,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| Refresh says how it went | ✓ | ✓ | ✓ | ✓ | ◐ | After Refresh (⟳, F5) — "Updated: 3 new", "nothing new", "Not updated: no connection…" or "The server asks to wait — updating at 14:20": in the windows' status bar, a pop-up line in the terminal and on the web page. Android: A bar while the round goes; how it went isn't said in words — the new posts just come. |
 | Servers' emoji as pictures | ✓ | ✓ | · | ✓ | ✓ | The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text. |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
 

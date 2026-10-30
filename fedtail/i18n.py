@@ -1248,6 +1248,10 @@ _STRINGS = {
         "dock_send": "Отправить",
         "dock_reply": "в тред, ответом {name}",
         "dock_new": "новый пост",
+        "refreshed_new": ["Обновлено: {n} новое", "Обновлено: {n} новых", "Обновлено: {n} новых"],
+        "refreshed_none": "Обновлено: нового нет",
+        "refreshed_failed": "Не обновилось: {why}",
+        "refreshed_wait": "Сервер просит подождать — обновлю в {until}",
         "rate_limited": "Сервер просит не частить: новые посты — с {until}, когда он разрешит "
                         "снова (лайки и ответы тоже подождут)",
         "info_head": "Сервер и федерация",
@@ -3065,6 +3069,10 @@ _STRINGS = {
         "dock_send": "Send",
         "dock_reply": "into the thread, a reply to {name}",
         "dock_new": "new post",
+        "refreshed_new": ["Updated: {n} new", "Updated: {n} new"],
+        "refreshed_none": "Updated: nothing new",
+        "refreshed_failed": "Not updated: {why}",
+        "refreshed_wait": "The server asks to wait — updating at {until}",
         "rate_limited": "The server asks to slow down: new posts from {until}, when it allows "
                         "again (likes and replies wait too)",
         "info_head": "Server and federation",

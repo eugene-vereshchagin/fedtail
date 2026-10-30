@@ -303,6 +303,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._active_lanes = set()  # all of them on screen, side by side (ui.layout)
         self._last_poll_s = None
         self._poll_failures = 0     # for the federation status
+        self._hand_waiting = []     # Refresh presses waiting for their round (poll.py)
+        self._hand_lock = threading.Lock()
         self._last_poll_ok = None   # time.time()
         self._last_poll_error = ""
         proto.PROTO.tune(slow_seconds=cfg["debug"]["slow_request_seconds"])

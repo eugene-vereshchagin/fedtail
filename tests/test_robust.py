@@ -431,3 +431,43 @@ class OfflineTest(unittest.TestCase):
         core.emit("error", "home: Failed (NameResolutionError at 0x7f9a42c35950)")
         core.emit("error", "home: Failed (NameResolutionError at 0x7f9a42c356d0)")
         self.assertEqual(len(self.errors), 1)
+
+
+class RefreshAnswerTest(unittest.TestCase):
+    """30.10: "Refresh does nothing" — the round ran, nothing new came, and nothing was
+    said. A press now gets how its round went, in every interface's words."""
+
+    def setUp(self):
+        OfflineTest.setUp(self)
+
+    _cut = OfflineTest._cut
+
+    def test_new_none_cut_off_and_waiting(self):
+        from fedtail.frontends.common import results
+
+        from .fakes import BOB, status
+        core = self.core
+        said = []
+        core.events.on("refreshed", lambda _n, r: said.append(r))
+        fut = core.refresh_by_hand()
+        self.assertFalse(fut.done())  # its round hasn't run yet
+        from .fakes import FakeApi
+        FakeApi.world.add(status("777", BOB, minute=59, vis="public"), home=True)
+        core._loop_round()
+        self.assertEqual(fut.result(timeout=1), {"new": 1})
+        self.assertEqual(results.refresh_text(fut.result()), "Updated: 1 new")
+        fut = core.refresh_by_hand()
+        core._loop_round()
+        self.assertEqual(results.refresh_text(fut.result(timeout=1)), "Updated: nothing new")
+        real, _asked = self._cut()
+        fut = core.refresh_by_hand()
+        core._loop_round()
+        self.assertTrue(results.refresh_text(fut.result(timeout=1)).startswith(
+            "Not updated: cannot find the server"))
+        core.api = real
+        core._quiet_until = time.time() + 300  # the server's budget waited out
+        fut = core.refresh_by_hand()
+        self.assertIn("wait_until", fut.result(timeout=1))  # said at once
+        self.assertTrue(results.refresh_text(fut.result()).startswith(
+            "The server asks to wait"))
+        self.assertEqual(len(said), 4)  # the event, the same, each time

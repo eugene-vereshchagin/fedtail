@@ -1841,9 +1841,16 @@ class Web:
                 "stage": (step or {}).get("stage", "")}
 
     def refresh(self):
-        """The page's ⟳: a round now, and the lanes holding new posts let them in."""
-        self.core.refresh_by_hand()
-        return {"ok": True}
+        """The page's ⟳: a round now, and the lanes holding new posts let them in;
+        answered once the round is over — the page reads its lanes after it, and says
+        how it went (common/results.refresh_text)."""
+        from ..common import results
+        fut = self.core.refresh_by_hand()
+        try:
+            got = fut.result(timeout=60) if fut is not None else None
+        except Exception:  # noqa: BLE001 — a round slower than a minute: said so later
+            got = None
+        return {"ok": True, "message": results.refresh_text(got) if got else ""}
 
     def poll_refresh(self, sid):
         """Fresh counts for a post's poll (the "refresh" in its footer)."""

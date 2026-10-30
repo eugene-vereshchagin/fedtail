@@ -55,3 +55,20 @@ def rate_text(payload):
     until = (payload or {}).get("until") if isinstance(payload, dict) else None
     when = time.strftime("%H:%M", time.localtime(until or time.time()))
     return _("rate_limited", until=when)
+
+
+def refresh_text(result):
+    """How a Refresh went (Core.refresh_by_hand, the "refreshed" event), for the status
+    bar: "Updated: 3 new" / "Updated: nothing new" / "Not updated: …" / "The server asks
+    to wait till 14:20"."""
+    import time
+
+    from ...i18n import _
+    r = result if isinstance(result, dict) else {}
+    if r.get("wait_until"):
+        return _("refreshed_wait",
+                 until=time.strftime("%H:%M", time.localtime(r["wait_until"])))
+    if r.get("error"):
+        return _("refreshed_failed", why=r["error"])
+    n = int(r.get("new") or 0)
+    return _("refreshed_new", n=n) if n else _("refreshed_none")

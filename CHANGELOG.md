@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- Refresh says how it went: "Updated: 3 new", "nothing new", "Not updated: …" or "the
+  server asks to wait — updating at 14:20" — a press that brought nothing looked like a
+  button doing nothing. The web page reads its lanes once the round is over (it read
+  them before it began). The phone keeps its bar.
 - A clip its server called a picture is no longer downloaded whole (36 MB) to be told
   "can't show this format": the answer's type says video, nothing is read.
 - Marking read no longer makes the window count every lane itself (330 ms): the core

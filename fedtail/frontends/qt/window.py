@@ -1787,6 +1787,8 @@ class MainWindow(QMainWindow):
         elif name == "first_poll_done":
             if self.statusBar().currentMessage() == getattr(self, "_waiting_text", None):
                 self.statusBar().showMessage(self._hello, 5000)
+        elif name == "refreshed":  # how a Refresh went: never a press without an answer
+            self.statusBar().showMessage(results.refresh_text(payload), 6000)
         elif name == "rate_limited":
             # the server asks to wait: once, with when, not an error per lane
             self.statusBar().showMessage(results.rate_text(payload), 20_000)

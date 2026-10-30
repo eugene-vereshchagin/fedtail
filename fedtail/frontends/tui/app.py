@@ -980,6 +980,8 @@ class FedtailApp(App, PostsMixin):
         # the rows on screen lose their ● in place, as the windows' apply_read
         self.core.on("read_changed", lambda _n, p: self.in_ui(self.read_changed, p))
         self.core.on("counts_ready", lambda _n, _p: self.in_ui(self.update_lane_counts))
+        # how a Refresh went: never a press without an answer
+        self.core.on("refreshed", lambda _n, p: self.in_ui(self._refreshed, p))
         # a post changed — liked, boosted, edited, here or anywhere else: shown anew
         self.core.on("status_updated", lambda _n, p: self.in_ui(self.post_changed, p))
         # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
@@ -2427,6 +2429,10 @@ class FedtailApp(App, PostsMixin):
             self.notify(_("no_older"))
         else:
             await self.refresh_posts()
+
+    def _refreshed(self, result):
+        from ..common import results
+        self.notify(results.refresh_text(result), timeout=5)
 
     def action_refresh(self):
         self.core.refresh_by_hand()

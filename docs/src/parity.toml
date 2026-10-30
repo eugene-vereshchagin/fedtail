@@ -29,6 +29,18 @@ keys = ["login_browser_opened", "login_hint", "login_other_account", "login_serv
         "relogin", "relogin_q"]
 
 [[capability]]
+id = "refresh-answer"
+area = "reading"
+android = "partly"
+android_note.ru = "Пока идёт круг, видна полоска; чем он кончился, словами не сказано — новые посты просто приходят."
+android_note.en = "A bar while the round goes; how it went isn't said in words — the new posts just come."
+name.ru = "«Обновить» отвечает, чем кончилось"
+name.en = "Refresh says how it went"
+note.ru = "После «Обновить» (⟳, F5) — «Обновлено: 3 новых», «нового нет», «Не обновилось: нет связи…» или «Сервер просит подождать — обновлю в 14:20»: в строке состояния окон, всплывающей строкой в терминале и на веб-странице."
+note.en = "After Refresh (⟳, F5) — \"Updated: 3 new\", \"nothing new\", \"Not updated: no connection…\" or \"The server asks to wait — updating at 14:20\": in the windows' status bar, a pop-up line in the terminal and on the web page."
+keys = ["refreshed_new", "refreshed_none", "refreshed_failed", "refreshed_wait"]
+
+[[capability]]
 id = "custom-emoji"
 area = "reading"
 tui = "na"

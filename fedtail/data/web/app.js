@@ -3044,7 +3044,9 @@ function closeNav() { $("#nav").classList.remove("open"); $("#scrim").hidden = t
 
 async function refresh() {
   await flushRead();
-  await api("/api/refresh", {}).catch(() => null);  // a round now; held new posts come in
+  // a round now (answered when it's over); held new posts come in; how it went, said
+  const r = await api("/api/refresh", {}).catch(() => null);
+  if (r && r.message) toast(r.message);
   await loadLanes().catch((e) => toast(e.message));
   if (state.lane) await selectLane(state.lane, true);
   if (cols.on) await Promise.all([...cols.panes.values()].map((p) => loadPane(p, true)));
