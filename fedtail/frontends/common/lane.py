@@ -534,7 +534,7 @@ class LaneModel:
                 extra={"my_replies": answers.get(pid, []),
                        "short_id": more_short.get(pid) or short.get(pid),
                        "conversation": {"members": g["members"], "unread": g["unread"],
-                                        "last": g["last"]}}))
+                                        "last": g["last"], "total": g.get("total", 0)}}))
         return specs
 
     # ---- where reading starts, what was read -------------------------------------------
@@ -762,12 +762,15 @@ def seen(top, bottom, vtop, vbottom, at_end=False, glimpsed=False, slack=2):
 
 def conversation_line(spec):
     """The line under a conversation card: ("N in the conversation, new: M · the last —
-    who: «…»", id of the last post) — or None (a conversation of the one post)."""
+    who: «…»", id of the last post) — or None (a conversation of the one post). N: the
+    whole thread's comments when its check knows more than the lane holds (followed
+    late: the comments before that aren't the lane's)."""
     conv = spec.extra.get("conversation")
     p = spec.post
     if not conv or p is None or (len(conv["members"]) <= 1 and conv["last"].id == p.id):
         return None
     last = conv["last"]
     who = last.author.name or last.author.username
-    return (_("conv_line", n=len(conv["members"]), new=conv["unread"]) + " · " +
+    n = max(len(conv["members"]), int(conv.get("total") or 0))
+    return (_("conv_line", n=n, new=conv["unread"]) + " · " +
             _("conv_last", who=who, text=snippet(last, 90)), last.id)

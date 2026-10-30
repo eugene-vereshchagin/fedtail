@@ -1087,6 +1087,14 @@ class Store:
             return {r[0] for r in db.execute(
                 "SELECT status_id FROM sub_members WHERE root_id=?", (root_id,))}
 
+    def sub_size(self, root_id):
+        """How many comments a followed thread has under its root, as its last check found
+        (the whole thread's /context, not only what came after following it); 0 — not
+        followed, or not checked yet."""
+        with self._reading() as db:
+            return db.execute("SELECT COUNT(*) FROM sub_members WHERE root_id=? "
+                              "AND status_id<>?", (root_id, root_id)).fetchone()[0]
+
     def sub_add_members(self, root_id, members):
         """Posts known to belong to a followed thread (found up their parents)."""
         with self._tx() as db:

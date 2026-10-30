@@ -419,14 +419,17 @@ class View:
     def conversations(self, entries, unread):
         """One group per conversation among lane entries, as the lanes' conversation
         view shows them: [{"key", "top": Post | Share, "members": [ids], "unread": n,
-        "last": Post}], the newest conversation last."""
+        "last": Post, "total": n}], the newest conversation last. total: the whole
+        thread's comments, as its last check found (a followed one; 0 otherwise) — more
+        than the members when it was followed late."""
         from .threads import conversations
         raw = [(item, self._raw(e)) for item, e in entries]
         out = []
         for g in conversations(raw, self._core.store.get_status, unread):
             out.append({"key": g["key"], "top": self.entry(g["top"]),
                         "members": [m["id"] for m in g["members"]],
-                        "unread": g["unread"], "last": real(self.entry(g["last"]))})
+                        "unread": g["unread"], "last": real(self.entry(g["last"])),
+                        "total": self._core.store.sub_size(g["key"])})
         return out
 
     def short_ids(self, entries):

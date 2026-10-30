@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- A thread's card says how many comments the whole thread has, as fedtail's own check of
+  it found — not only those that came after you followed it.
 - "Commented posts" is "Comments" now. In fedtail's set it shows every thread you took
   part in (your post, your comment, one you follow), those with new comments together
   where reading starts, past the "new below" line — "read below" when the newest come
