@@ -2264,6 +2264,8 @@ class MainWindow(Gtk.ApplicationWindow):
     # ---- misc --------------------------------------------------------------------------
     def status(self, text, seconds=10):
         """A line at the bottom for a while (as Qt's status bar), then gone."""
+        from ..common.lane import message_seconds
+        seconds = message_seconds(self.cfg, seconds)
         self.status_line.set_text(text or "")
         if getattr(self, "_status_timer", 0):
             GLib.source_remove(self._status_timer)

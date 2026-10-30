@@ -520,6 +520,12 @@ class MainWindow(QMainWindow):
         self.profile_label.setObjectName("statusText")
         self.profile_label.setToolTip(_("footer_profile_tip"))
         self.statusBar().addWidget(self.profile_label)
+        # every message's time, times ui.message_percent (common/lane.message_seconds):
+        # some forty showMessage calls with times of their own, one setting for them all
+        from ..common.lane import message_seconds
+        bar, show = self.statusBar(), self.statusBar().showMessage
+        bar.showMessage = lambda text, ms=0: show(
+            text, int(message_seconds(self.cfg, ms / 1000) * 1000) if ms else 0)
         # a message comes over the left of the bar: the profile's name steps aside for it
         # and back (QStatusBar is meant to do that itself, but a label shown again — a
         # theme tried, the window restyled — stayed under the message, both unreadable)

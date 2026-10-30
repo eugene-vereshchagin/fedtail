@@ -667,6 +667,12 @@ def age_days(p, cfg):
     return days if days > limit else 0
 
 
+def message_seconds(cfg, seconds):
+    """How long a passing message (a status line, a toast) stays: its own time, times
+    ui.message_percent — one setting for every interface's ~40 messages."""
+    return seconds * max(20, int((cfg.get("ui") or {}).get("message_percent", 100))) / 100
+
+
 def dwell_ms(cfg):
     """read.dwell_ms: how long the feed must stand still before what is on it counts —
     one number for the windows and the web page (they had 350, 400 and 250 ms)."""

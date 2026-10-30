@@ -19,7 +19,6 @@ from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
 WRAP_MIN_CHARS = 20  # the narrowest a wrapped text asks to be
-QUOTE_DEPTH = 1     # a quoted post shows its own quote no deeper than this
 
 
 def _label(text="", css=(), markup=False, wrap=False, xalign=0.0, selectable=False):

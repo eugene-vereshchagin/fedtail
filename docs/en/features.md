@@ -728,7 +728,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Federation status: how my server is doing and what fails | has | 0.16.0 | ≡ → “Debugging” → “Federation status” | own (from what this run saw) | — |
 | Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” → “A full snapshot into an archive” | own (gc, tracemalloc) | — |
 | The database doesn't grow for ever: cleanup and a size budget | has | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
-| Screen readers | partly | 0.9.0 | `media.alt_text`, `appearance.accessibility` | — | Mastodon web, Tusky, Ivory |
+| Screen readers | partly | 0.9.0 | `media.alt_text`, `appearance.accessibility`, `window.message_percent` | — | Mastodon web, Tusky, Ivory |
 | Interface language | has | 0.1.0 | `appearance.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `window.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |

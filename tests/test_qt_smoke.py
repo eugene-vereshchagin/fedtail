@@ -3495,6 +3495,17 @@ class QtSmokeTest(unittest.TestCase):
             if old is not None:
                 os.environ[player.HW_ENV] = old
 
+    def test_status_messages_stay_message_percent_longer(self):
+        """ui.message_percent: every showMessage's time, scaled in one place."""
+        self.core.cfg["ui"]["message_percent"] = 300
+        bar = self.win.statusBar()
+        bar.showMessage("hello", 100)
+        self.pump(0.2)
+        self.assertEqual(bar.currentMessage(), "hello")  # 100 ms × 3: still there
+        self.pump(until=lambda: bar.currentMessage() == "", timeout=2)
+        self.assertEqual(bar.currentMessage(), "")
+        self.core.cfg["ui"]["message_percent"] = 100
+
     def test_a_notification_names_the_desktop_entry(self):
         """notify-send's desktop-entry hint is the entry's own name (desktop_id): "fedtail"
         named no entry, so the desktop knew neither the icon nor the settings' group."""

@@ -777,6 +777,7 @@ class Web:
                 "picture_later": list(_picture_later()),
                 # the reading rule's numbers, as the windows read them (common/lane)
                 "dwell_ms": int(c["read"].get("dwell_ms", 350)),
+                "message_percent": int(c["ui"].get("message_percent", 100)),
                 "unfocused_seconds": float(c["read"].get("unfocused_seconds", 5)),
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),

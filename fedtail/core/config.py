@@ -57,6 +57,7 @@ DEFAULTS = {
         "columns": [],
         "column_width": 460,
         "default_columns": 4,
+        "message_percent": 100,
         "image_height": 360,
         "image_viewer": "internal",
         "video_player": "internal",
@@ -433,6 +434,7 @@ SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("ui", "message_percent"): 20,
     ("poll", "announcements_minutes"): 0,
     ("ui", "gifv_fps"): 1,
     ("ui", "gifv_max"): 1,
@@ -522,6 +524,7 @@ FILE_LAYOUT = (
                                "accessibility")
      + _keys("feed", "emoji custom_emoji text_markup")),
     ("window", _keys("ui", "frontend layout open_columns columns column_width default_columns "
+                           "message_percent "
                            "themes_by_layout roster_on_top roster_threads split_tabs "
                            "dock_commands sidebar_groups sidebar_width sidebar_footer "
                            "start_lane tray close_to_tray esc post_keys number_keys pin_tabs "

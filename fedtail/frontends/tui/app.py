@@ -867,6 +867,13 @@ class FedtailApp(App, PostsMixin):
                 Binding("colon", "command", ":", show=False),
                 Binding("escape", "escape", _("find_close"), show=False)]
 
+    def notify(self, message, *, timeout=None, **kw):
+        """Textual's notify, its time times ui.message_percent (common/lane.message_seconds),
+        as the windows' messages."""
+        from ..common.lane import message_seconds
+        seconds = timeout if timeout is not None else self.NOTIFICATION_TIMEOUT
+        super().notify(message, timeout=message_seconds(self.core.cfg, seconds), **kw)
+
     def __init__(self, core, instance=None):
         super().__init__()
         self.core = core if isinstance(core, View) else View(core)

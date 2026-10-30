@@ -259,7 +259,7 @@ android = "has"
 since = "0.9.0"
 name.ru = "Экранные дикторы"
 name.en = "Screen readers"
-config = "`media.alt_text`, `appearance.accessibility`"
+config = "`media.alt_text`, `appearance.accessibility`, `window.message_percent`"
 others = "Mastodon web, Tusky, Ivory"
 clients = ["Mastodon web", "Tusky", "Ivory"]
 details.ru = "Подписи к картинкам и имена кнопок для дикторов есть, но вживую с Orca интерфейс не проверяли. GTK-окно говорит с шиной доступности, только пока диктор включён (`appearance.accessibility = \"auto\"`; `\"on\"` — всегда): в KDE шина работает всегда, и без диктора меню открывалось по две секунды."

@@ -98,6 +98,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `window.columns` | `[]` | Which lanes stand as columns, left to right, until you change them in the window (a click on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is remembered). Names — as in lanes.enabled; "list:Friends" — a list by its title. [] — Home, Replies to me and Activity. |
 | `window.column_width` | `460` | The width of one column in pixels (at least 280). They don't fit the window — sideways scrolling. |
 | `window.default_columns` | `4` | Columns when columns is empty (the set the lanes' rules make): at most this many. |
+| `window.message_percent` | `100` | How long passing messages (the status line, pop-ups) stay, in per cent of the usual: 200 — twice as long, 50 — half. In every interface. |
 | `window.themes_by_layout` | `"auto"` | Themes for this window layout: "Try a theme" offers only those made for it (a theme says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for both). "auto" — so in releases, every theme in development versions; "on"; "off". |
 | `window.roster_on_top` | `false` | With layout = "split": the roster stays above other windows. |
 | `window.roster_threads` | `15` | With layout = "split": how many followed threads and private talks stand in the roster as items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only. |

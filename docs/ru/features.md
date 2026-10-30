@@ -730,7 +730,7 @@
 | Состояние федерации: как живёт моя нода и что не получается | есть | 0.16.0 | ≡ → «Отладка» → «Состояние федерации» | своё (из того, что видел запуск) | — |
 | Поиск утечек: тренды, перепись объектов, снимки памяти | есть | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → «Отладка» → «Собрать полный слепок в архив» | своё (gc, tracemalloc) | — |
 | База не растёт без конца: чистка и бюджет места | есть | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
-| Экранные дикторы | частично | 0.9.0 | `media.alt_text`, `appearance.accessibility` | — | Mastodon web, Tusky, Ivory |
+| Экранные дикторы | частично | 0.9.0 | `media.alt_text`, `appearance.accessibility`, `window.message_percent` | — | Mastodon web, Tusky, Ivory |
 | Язык интерфейса | есть | 0.1.0 | `appearance.language` | — | у всех |
 | Справка внутри, на двух языках | есть | 0.17.0 | ≡ → «Справка» | своё: `fedtail/data/help/<язык>/` | — |
 | «Что это?»: подробная подсказка о любой кнопке | есть | 0.17.0 | ≡ → «Что это?» на время; `window.whats_this` — с запуска | своё: `hints.toml` | KDE-приложения (What's This) |

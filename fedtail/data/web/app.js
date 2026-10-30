@@ -51,7 +51,9 @@ function toast(text) {
   t.textContent = text;
   t.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 5000);
+  // ui.message_percent: the windows' messages' time, as theirs (common/lane.message_seconds)
+  toast.timer = setTimeout(() => (t.hidden = true),
+                           5000 * Math.max(20, Number((state.me || {}).message_percent || 100)) / 100);
 }
 
 function el(tag, cls, text) {

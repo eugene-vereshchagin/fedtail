@@ -171,3 +171,11 @@ class AnnouncementsTest(TmpDir):
         w.announcements = [{"id": "a2", "content": "", "published_at": "2026-10-30"}]
         core.poll_once()
         self.assertEqual(heard, [1, 0])
+
+
+class MessageTimeTest(unittest.TestCase):
+    def test_every_message_times_message_percent(self):
+        from fedtail.frontends.common.lane import message_seconds
+        self.assertEqual(message_seconds({}, 8), 8)
+        self.assertEqual(message_seconds({"ui": {"message_percent": 200}}, 8), 16)
+        self.assertEqual(message_seconds({"ui": {"message_percent": 1}}, 10), 2)  # 20 % least

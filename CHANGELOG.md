@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- `window.message_percent`: how long passing messages stay (the status line, pop-ups), in
+  per cent of the usual — one setting for some forty of them in every interface (200 —
+  twice as long).
 - A profile's fields: as many as the server takes (GoToSocial and Akkoma say how many;
   Mastodon keeps 4), in every interface. The terminal's, the web page's and the phone's
   editor cut them at 4, and a fifth one was gone once the profile was saved.

@@ -201,6 +201,10 @@ column_width = 460
 # Columns when columns is empty (the set the lanes' rules make): at most this many.
 default_columns = 4
 
+# How long passing messages (the status line, pop-ups) stay, in per cent of the usual:
+# 200 — twice as long, 50 — half. In every interface.
+message_percent = 100
+
 # Themes for this window layout: "Try a theme" offers only those made for it (a theme
 # says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for
 # both). "auto" — so in releases, every theme in development versions; "on"; "off".
