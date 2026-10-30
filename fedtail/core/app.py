@@ -19,6 +19,7 @@ worker threads (see events.py):
   auth_failed      str                      token no longer accepted
 """
 
+import json
 import logging
 import re
 import threading
@@ -429,15 +430,41 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 raise ValueError(_("login_unreachable", host=host)) from None
             except requests.Timeout:
                 raise ValueError(_("login_timeout", host=host)) from None
+            except ApiError as e:
+                # a site, but no fediverse server there: no such page, or not JSON (a
+                # typo's parked domain); a refusal of the app (422: the redirect) stays
+                if e.status < 400 or e.status in (404, 405, 410, 501):
+                    log.info("login: %s is no server: %s", host, e)
+                    raise ValueError(_("login_not_server", host=host)) from None
+                raise
             self._pending_login = (api, app, back)
+            auth.save(self.paths.login_file, {"server": api.base, "app": app, "back": back,
+                                              "at": time.time()})
             return api.authorize_url(app["client_id"], **back)
         return self.submit(job)
+
+    def _login_under_way(self):
+        """(api, app, back) of the login begun — this run's, or one an earlier run began
+        (a phone kills the app while the browser is out) within the hour; None."""
+        if self._pending_login is not None:
+            return self._pending_login
+        try:
+            data = json.loads(self.paths.login_file.read_text("utf-8"))
+            if time.time() - float(data["at"]) < 3600:
+                return (self.api_class(data["server"]), data["app"], data["back"])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        return None
 
     def finish_login(self, code, expect=None):
         """expect: (server, acct) this profile already is — logging in anew must not
         put another account into its data (read marks, drafts, lists are that one's)."""
         def job():
-            api, app, where = self._pending_login
+            begun = self._login_under_way()
+            if begun is None:
+                from ..i18n import _
+                raise ValueError(_("login_not_begun"))
+            api, app, where = begun
             token = api.get_token(app["client_id"], app["client_secret"], code, **where)
             me = self.api_class(api.base, token).me()
             if expect and (api.base.rstrip("/"), me["acct"]) != \
@@ -449,6 +476,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             old = self.auth
             auth.save(self.paths.auth_file, data)
             self.auth = data
+            self._pending_login = None
+            auth.forget(self.paths.login_file)  # done: its secret has no more use
             if old and old.get("token") != token and \
                     old.get("server", "").rstrip("/") == api.base.rstrip("/"):
                 self._revoke(old, wait=True)  # logged in anew: the old token is let go

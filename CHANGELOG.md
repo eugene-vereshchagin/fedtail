@@ -2,6 +2,13 @@
 
 ## 0.22.1 — in progress
 
+- **Logging in on the phone, in one go.** The code the browser brings back is no longer
+  lost when the phone closed the app meanwhile (or when it comes before the app is up):
+  the login begun waits on disk (`login.json`, an hour, never in a bug report). A wrong
+  server is said under the button — not a snackbar hidden by the keyboard — and a site
+  that isn't a fediverse server is said so, not "HTTP 404". The button says it opens the
+  browser; the keyboard's "Go" logs in; "logging in…" while the token comes.
+
 ## 0.22.0 — 2026-10-30
 
 **In short.**

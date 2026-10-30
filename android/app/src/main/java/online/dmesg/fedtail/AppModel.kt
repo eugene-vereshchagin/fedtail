@@ -315,6 +315,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var loginWaiting by mutableStateOf(false)
     var loginNeedsCode by mutableStateOf(false)
     var loginBusy by mutableStateOf(false)
+    var loginFinishing by mutableStateOf(false)    // the code is in: the token being asked
+    var loginError by mutableStateOf<String?>(null)  // under the button, till the next try
+    private var loginReady = false    // the core is up: a code coming back can go to it
+    private var loginCode: String? = null  // a code that came back before that
 
     private var started = false
     private var version = -1
@@ -361,6 +365,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 loginProxyField = st.optBoolean("proxy_at_login")
                 loginProxy = st.optString("proxy")
                 screen = Screen.Login
+                loginReady = true
+                // the browser brought the code back to an app started anew (the phone
+                // had closed it meanwhile): the core keeps the login begun, it goes on
+                loginCode?.let { loginCode = null; loginWaiting = true; finishLogin(it) }
             }
         }
     }
@@ -369,26 +377,39 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun beginLogin(openBrowser: (String) -> Unit) {
         if (loginBusy || loginServer.isBlank()) return
         loginBusy = true
+        loginError = null
         viewModelScope.launch {
             val got = Core.loginBegin(loginServer, if (loginProxyField) loginProxy else null)
             loginBusy = false
-            Core.failed(got)?.let { message = it; return@launch }
+            Core.failed(got)?.let { loginError = it; return@launch }
             loginNeedsCode = !got.optBoolean("redirect")
             loginWaiting = true
             openBrowser(got.optString("url"))
         }
     }
 
+    /** The code: back from the browser (fedtail://oauth) or pasted. One that comes back
+     *  before the core is up (the app started anew by it) waits for it: never lost. */
     fun finishLogin(code: String) {
-        if (code.isBlank() || loginBusy) return
+        if (code.isBlank()) return
+        if (!loginReady) { loginCode = code; return }
+        if (loginBusy) return
         loginBusy = true
+        loginFinishing = true
+        loginError = null
         viewModelScope.launch {
             val got = Core.loginFinish(code)
             loginBusy = false
-            Core.failed(got)?.let { message = it; return@launch }
+            loginFinishing = false
+            Core.failed(got)?.let { loginError = it; return@launch }
             loginWaiting = false
             openMain()
         }
+    }
+
+    /** The server's page said no ("deny", or its error): said under the button. */
+    fun loginRefused(text: String) {
+        loginError = text
     }
 
     // ---- the overview and the lanes ------------------------------------------------------

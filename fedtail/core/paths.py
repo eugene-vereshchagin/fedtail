@@ -54,6 +54,12 @@ class Paths:
         return self.data_dir / "auth.json"
 
     @property
+    def login_file(self):
+        """A login under way: the app the server registered (its secret too) while the
+        browser is out — a phone may kill the app meanwhile, the code still finds it."""
+        return self.data_dir / "login.json"
+
+    @property
     def db_file(self):
         return self.data_dir / "state.db"
 

@@ -13,13 +13,14 @@
     <string name="yes">да</string>
     <string name="no">нет</string>
     <string name="none">пока нет</string>
-    <string name="login_intro">Твой сервер федиверса — GoToSocial, Mastodon, Akkoma. Его страница откроется в браузере: разреши там fedtail, и оно вернёт тебя сюда.</string>
+    <string name="login_intro">Твой сервер федиверса — GoToSocial, Mastodon, Akkoma. Вход — на его странице в браузере: «Войти» откроет её, там разреши fedtail, и браузер сам вернёт тебя сюда.</string>
     <string name="login_server">Сервер</string>
     <string name="login_proxy">Прокси (пусто — без него)</string>
-    <string name="login_go">Войти</string>
+    <string name="login_go">Войти — откроется браузер</string>
     <string name="login_waiting">Разреши fedtail на странице сервера — сюда вернёт само. Не вернуло? Вставь код, который показала страница.</string>
     <string name="login_paste">Этот сервер показывает код, а не возвращает сюда: скопируй его со страницы и вставь.</string>
     <string name="login_code">Код</string>
+    <string name="login_finishing">Сервер разрешил — вхожу…</string>
     <string name="login_code_go">Готово</string>
     <string name="lanes">Ленты</string>
     <string name="refresh">Обновить</string>

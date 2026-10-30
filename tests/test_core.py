@@ -1,5 +1,6 @@
 """Core tests. No network, no display:  python3 -m unittest -v"""
 
+import json
 import os
 import sqlite3
 import stat
@@ -7,6 +8,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from fedtail.core import auth, config, model, paths, threads
 from fedtail.core.app import Core
@@ -2511,6 +2513,43 @@ class CoreTest(TmpDir):
                 break
             time.sleep(0.02)
         self.assertEqual(w.revoked, ["tok"])
+
+    def test_login_outlives_the_app(self):
+        """A phone kills the app while the browser is out: the code that comes back to
+        the app started anew still finds the login begun (login.json), within the hour."""
+        from fedtail.core.app import Core
+        core, w = self.make()
+        auth.forget(core.paths.auth_file)
+        core.auth = None
+        with self.assertRaises(ValueError):  # nothing begun yet: said, not a TypeError
+            core.finish_login("good").result()
+        core.begin_login("example.test").result()
+        self.assertTrue(core.paths.login_file.exists())
+        again = Core(core.cfg, core.paths, api_class=FakeApi)
+        self.addCleanup(again.shutdown)
+        again.finish_login("good").result()
+        self.assertEqual(auth.load(core.paths.auth_file)["acct"], "mira")
+        self.assertFalse(core.paths.login_file.exists())  # done: its secret goes
+        core.begin_login("example.test").result()
+        data = json.loads(core.paths.login_file.read_text("utf-8"))
+        auth.save(core.paths.login_file, dict(data, at=data["at"] - 7200))
+        stale = Core(core.cfg, core.paths, api_class=FakeApi)
+        self.addCleanup(stale.shutdown)
+        with self.assertRaises(ValueError):  # two hours on: begin anew
+            stale.finish_login("good").result()
+
+    def test_login_to_no_server_says_so(self):
+        """A typo's domain answers, but not as a server: said in words, not "HTTP 404"."""
+        core, w = self.make()
+        with mock.patch.object(FakeApi, "register_app",
+                               side_effect=ApiError(404, "Not Found")):
+            with self.assertRaises(ValueError) as e:
+                core.begin_login("exampel.test").result()
+        self.assertIn("exampel.test", str(e.exception))
+        with mock.patch.object(FakeApi, "register_app",
+                               side_effect=ApiError(422, "redirect_uri invalid")):
+            with self.assertRaises(ApiError):  # the app refused: the phone tries a code
+                core.begin_login("example.test").result()
 
     def test_login_anew_keeps_to_this_account(self):
         from fedtail.core.app import OtherAccount

@@ -55,8 +55,8 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   each other line for line, comments aside.
 * Strings go to both `ru` and `en` in `fedtail/i18n.py` (a test checks).
 * Never log or send the token; requests to other servers go without it; the bug
-  report excludes `auth.json` and `state.db` (and sync's `sync.key`, `sync_invite.json`,
-  `sync_webdav.json`). No token of the account goes to a sync server: there the journal
+  report excludes `auth.json`, `login.json` and `state.db` (and sync's `sync.key`,
+  `sync_invite.json`, `sync_webdav.json`). No token of the account goes to a sync server: there the journal
   is the key's (an id and a secret derived from it, protocol 2, `core/sync`,
   docs/en/sync.md).
 * The repository never names the author's own server; nothing is hardcoded. Two

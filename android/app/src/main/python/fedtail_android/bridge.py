@@ -238,14 +238,25 @@ def login_begin(server, proxy=None):
                                                       REDIRECT, e)
             url = core.begin_login(server_).result(60)
             return {"url": url, "redirect": False}
-    return _answer(go)
+    return _answer(_plain(go))
 
 
 def login_finish(code):
     def go():
         me = _s["web"].core.acc(_core().finish_login((code or "").strip()).result(60))
         return {"acct": me.handle if me is not None else ""}  # ours: the phone's word for it
-    return _answer(go)
+    return _answer(_plain(go))
+
+
+def _plain(fn):
+    """The login screen shows the error under the button: the core's ValueError is
+    already a sentence for a person ("can't reach …"), not "ValueError: …"."""
+    def run():
+        try:
+            return fn()
+        except ValueError as e:
+            return {"error": str(e)}
+    return run
 
 
 # ---- reading ----------------------------------------------------------------------------

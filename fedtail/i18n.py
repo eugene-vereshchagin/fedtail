@@ -318,6 +318,8 @@ _STRINGS = {
         "login_unreachable": "Не достучался до {host}: такого адреса нет или сервер не "
                              "отвечает. Проверь адрес (и прокси, если он нужен)",
         "login_timeout": "{host} не ответил вовремя — попробуй ещё раз чуть позже",
+        "login_not_server": "{host} отвечает, но сервера федиверса там нет — проверь адрес",
+        "login_not_begun": "Вход не начат (или начат больше часа назад) — нажми «Войти» ещё раз",
         "deps_python": "сам Python",
         "deps_requests": "всё сетевое: сервер, картинки, вход",
         "deps_sqlite": "база профиля (с JSON1)",
@@ -2156,6 +2158,10 @@ _STRINGS = {
         "login_unreachable": "Couldn't reach {host}: no such address, or the server doesn't "
                              "answer. Check the address (and the proxy, if one is needed)",
         "login_timeout": "{host} didn't answer in time — try again a bit later",
+        "login_not_server": "{host} answers, but there's no fediverse server there — check the "
+                            "address",
+        "login_not_begun": "No login under way (or it began over an hour ago) — press "
+                           "\"Log in\" again",
         "deps_python": "Python itself",
         "deps_requests": "everything online: the server, pictures, login",
         "deps_sqlite": "the profile's database (with JSON1)",

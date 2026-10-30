@@ -118,6 +118,10 @@ class BridgeTest(_Base):
         self.assertEqual(self.call("login_finish", "good\n")["acct"], "mira")
         self.assertTrue(self.call("state")["logged_in"])
         self.assertIn("error", json.loads(self.bridge.login_begin("  ")))
+        # the screen shows it under the button: words for a person, not "ValueError: …"
+        said = json.loads(self.bridge.login_begin("http://example.test"))["error"]
+        self.assertTrue(said)
+        self.assertNotIn("ValueError", said)
 
     def test_a_link_to_a_clip_goes_to_the_player(self):
         """A link in a post to a .mp4 (a server that didn't take the attachment): the

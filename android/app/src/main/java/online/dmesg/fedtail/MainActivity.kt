@@ -95,7 +95,8 @@ class MainActivity : ComponentActivity() {
         if (data.scheme != "fedtail" || data.host != "oauth") return
         val code = data.getQueryParameter("code")
         if (code != null) model.finishLogin(code)
-        else data.getQueryParameter("error_description")?.let { model.message = it }
+        else (data.getQueryParameter("error_description") ?: data.getQueryParameter("error"))
+            ?.let { model.loginRefused(it) }
     }
 
     override fun onStart() {

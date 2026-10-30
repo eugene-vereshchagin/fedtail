@@ -50,6 +50,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -317,6 +318,7 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
             placeholder = { Text("social.example") }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri,
                 imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { model.beginLogin(openBrowser) }),
             modifier = Modifier.fillMaxWidth())
         if (model.loginProxyField) {  // net.proxy_at_login: before the first request
             OutlinedTextField(
@@ -326,11 +328,19 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth())
         }
-        Button(onClick = { model.beginLogin(openBrowser) }, enabled = !model.loginBusy,
+        Button(onClick = { model.beginLogin(openBrowser) },
+            enabled = !model.loginBusy && model.loginServer.isNotBlank(),
             modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.login_go))
         }
-        if (model.loginWaiting) {
+        // here, not a snackbar: that one hides under the keyboard and goes by itself
+        model.loginError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium)
+        }
+        if (model.loginFinishing) {
+            Text(stringResource(R.string.login_finishing), style = MaterialTheme.typography.bodyMedium)
+        } else if (model.loginWaiting) {
             HorizontalDivider()
             Text(stringResource(if (model.loginNeedsCode) R.string.login_paste
                                 else R.string.login_waiting),

@@ -1118,7 +1118,7 @@ def debug_context(paths, cfg, ui):
 
 # ---- bug report ----------------------------------------------------------------------------------
 # sync_auth.json: 0.21's sync login (a token) — gone since, but a profile may still hold one
-REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm", "sync.key",
+REPORT_SKIP = {"auth.json", "login.json", "state.db", "state.db-wal", "state.db-shm", "sync.key",
                "sync_auth.json", "sync_invite.json", "sync_webdav.json"}
 
 
