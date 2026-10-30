@@ -30,7 +30,6 @@ built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
 
 ## Before the release (the author)
 
-- A night in the tray on the newest build, `smem` before and after reading through lanes.
 - The secrets: `APT_GPG_KEY` and GitHub Pages for the `apt` branch, `WINDOWS_CERT_PFX`.
 - The tray icon that stayed after quitting from the roster in KDE (split layout).
 - Sync on three devices through a fedtail-sync server with an invite code (protocol 2).

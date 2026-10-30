@@ -184,10 +184,11 @@ class PollMixin:
 
     def _poll_loop(self):
         while not self._stop.is_set():
-            if getattr(self, "_paused", False):
+            if getattr(self, "_paused", False) and not self._hand_waiting:
                 self._wake.wait(60)
                 self._wake.clear()
-                continue
+                if not self._hand_waiting:  # a Refresh pressed: its round all the same
+                    continue
             try:
                 self._loop_round()
             except RateLimited as e:  # the server says wait: _pace() waits, said once
@@ -289,6 +290,7 @@ class PollMixin:
             raise
         self._back_online()
         self._refreshed(asked, {"new": int(getattr(self, "_round_new", 0) or 0)})
+        self._reading_moment()  # marks stopped a while: "reading ended" (diag.moment)
 
     def _cut_off(self, e):
         """Is e the own server out of reach (not one source's other server: an RSS

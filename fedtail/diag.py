@@ -679,6 +679,81 @@ def log_stats(rss_warn_mb=1500):
     return s
 
 
+def moment(name, **extra):
+    """A snapshot of the memory at a moment worth comparing — "reading began" (the first
+    read mark after an hour's quiet: the night's in it), "reading ended" — into the log,
+    for the night's summary (night_summary, in every bug report). smem's numbers: USS,
+    PSS, RSS."""
+    st = _proc_status()
+    snap = {"rss_mb": round((st.get("VmRSS") or 0) / 1024, 1), **smaps(), **extra}
+    log.info("moment %s %s", name, json.dumps(snap, ensure_ascii=False))
+    return snap
+
+
+_LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\.\d+ (\w+)\s+\[[^\]]*\] [\w.]+: (.*)$")
+
+
+def night_summary(texts):
+    """The logs of a night (or any stretch) in a few lines, for the morning's bug
+    report (summary.md): how long it ran, the memory at its start, lowest, highest and
+    last (USS / PSS / RSS, as smem), the moments (reading began / ended) with theirs, the
+    freezes, the rounds, the warnings and errors. texts: the log files' texts, oldest
+    first."""
+    stats_, moments, frozen, warn, err, rounds = [], [], [], 0, 0, 0
+    first = last = None
+    for text in texts:
+        for line in text.splitlines():
+            m = _LINE.match(line)
+            if not m:
+                continue
+            when, level, msg = m.groups()
+            first = first or when
+            last = when
+            if level == "WARNING":
+                warn += 1
+            elif level in ("ERROR", "CRITICAL"):
+                err += 1
+            if msg.startswith("stats {"):
+                try:
+                    stats_.append((when, json.loads(msg[6:])))
+                except ValueError:
+                    pass
+            elif msg.startswith("moment "):
+                name, _, data = msg[7:].partition(" {")
+                try:
+                    moments.append((when, name, json.loads("{" + data)))
+                except ValueError:
+                    pass
+            elif msg.startswith("GUI froze "):
+                frozen.append((when, msg[10:].split(":")[0]))
+            elif msg.startswith("poll #"):
+                rounds += 1
+    out = ["# The night in short", ""]
+    if not first:
+        return "\n".join(out + ["Nothing in the logs.", ""])
+    out.append(f"From {first} to {last}.")
+    if stats_:
+        def row(key):
+            vals = [s.get(key) for _w, s in stats_ if isinstance(s.get(key), (int, float))]
+            if not vals:
+                return None
+            return f"| {key} | {vals[0]} | {min(vals)} | {max(vals)} | {vals[-1]} |"
+        rows = [r for r in (row("uss_mb"), row("pss_mb"), row("rss_mb")) if r]
+        out += ["", "| MB | at start | lowest | highest | last |", "|---|---|---|---|---|", *rows]
+        polls = [s.get("core.polls") for _w, s in stats_ if s.get("core.polls") is not None]
+        if polls:
+            rounds = max(rounds, polls[-1] if isinstance(polls[-1], int) else rounds)
+    if moments:
+        out += ["", "| when | moment | USS | PSS | RSS |", "|---|---|---|---|---|"]
+        out += [f"| {w} | {n} | {d.get('uss_mb', '—')} | {d.get('pss_mb', '—')} | "
+                f"{d.get('rss_mb', '—')} |" for w, n, d in moments]
+    out += ["", f"Freezes: {len(frozen)}" + (", the worst " + max(
+        (f for _w, f in frozen), key=lambda f: int(f.split()[0]) if f.split()[0].isdigit()
+        else 0) if frozen else ""), f"Rounds: {rounds}",
+        f"Warnings: {warn}, errors: {err}", ""]
+    return "\n".join(out)
+
+
 def census(name, counts):
     """Counts by kind (see leaks.Census): logged against the last and the first count
     of that name. The window feeds its widget classes here from the GUI thread."""
@@ -1089,6 +1164,17 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
                         and f.name != "latest.log" \
                         and (not f.name[:1].isdigit() or f.stat().st_mtime >= since):
                     tar.add(f, arcname=f"logs/{f.name}")
+        # the night in short (night_summary): what a morning's report is read for first
+        texts = []
+        if folder.exists():
+            for f in sorted(folder.iterdir()):
+                if f.is_file() and f.suffix == ".log" and f.name[:1].isdigit() \
+                        and f.stat().st_mtime >= since:
+                    try:
+                        texts.append(f.read_text("utf-8", "replace"))
+                    except OSError:
+                        pass
+        _add_text(tar, "summary.md", night_summary(texts))
         if paths.config_file.exists():  # its secrets redacted (an API key, a proxy's password)
             _add_text(tar, "config.toml", redact_config(paths.config_file.read_text("utf-8")))
         _add_text(tar, "system.txt", summary)

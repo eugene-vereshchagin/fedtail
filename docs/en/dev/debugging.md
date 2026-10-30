@@ -106,7 +106,16 @@ starts again.
 
 ## An overnight run: hunting leaks
 
-Leave the window overnight (or for a day) and find out in the morning what grew, and what exactly.
+The plain way, nothing to set up: leave the client on for the night as it is (in the
+tray), read your lanes in the morning, then ≡ → "Report a bug" — the archive. Its
+`summary.md` is the night in short: from when to when, the memory as `smem` says it
+(USS / PSS / RSS) at the start, lowest, highest and last, the moments "reading began"
+(the first read marks after an hour's quiet: the night before them) and "reading ended"
+(no marks for ten minutes) with theirs, the freezes, the rounds, warnings and errors
+(`diag.night_summary`, from the `stats` and `moment` lines of the logs).
+
+For a deeper look, leave the window overnight (or for a day) and find out in the morning
+what grew, and what exactly.
 
 1. A development version (from git) — the debugging mode is on by itself. A release — `debug.mode = "on"`.
 2. For a serious hunt — `debug.tracemalloc = true` in the config. Slower and up to twice the memory: only

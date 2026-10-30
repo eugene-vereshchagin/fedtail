@@ -119,6 +119,14 @@ class BridgeTest(_Base):
         self.assertTrue(self.call("state")["logged_in"])
         self.assertIn("error", json.loads(self.bridge.login_begin("  ")))
 
+    def test_a_link_to_a_clip_goes_to_the_player(self):
+        """A link in a post to a .mp4 (a server that didn't take the attachment): the
+        phone's own player, as the windows' (media.links_in_player)."""
+        self.demo()
+        got = self.call("resolve", "https://files.example/x/0ba3a335ab822c8c.mp4")
+        self.assertEqual(got, {"found": "media", "kind": "video",
+                               "url": "https://files.example/x/0ba3a335ab822c8c.mp4"})
+
     def test_demo_world_lanes_and_marks(self):
         got = json.loads(self.bridge.start(str(self.files), str(self.cache), "ru", True))
         self.assertNotIn("error", got, got.get("trace"))
@@ -146,7 +154,9 @@ class BridgeTest(_Base):
         self.assertFalse([p for p in self.call("lane", "home", True)["posts"] if p["unread"]])
         self.assertEqual(self.call("pause", True), {"ok": True})
         self.assertEqual(self.call("pause", False), {"ok": True})
-        self.assertEqual(self.call("refresh"), {"ok": True})
+        got = self.call("refresh")  # answered when its round is over: how it went
+        self.assertTrue(got["ok"])
+        self.assertTrue(got["message"].startswith(("Updated", "Обновлено")), got)
         self.assertTrue((self.files / "data" / "fedtail" / "demo" / "state.db").exists())
 
     def demo(self):

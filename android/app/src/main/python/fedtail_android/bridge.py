@@ -712,9 +712,11 @@ def lane_clear(name, confirmed=False):
 
 
 def refresh():
+    """⟳ / the pull: a round now, answered when it is over (a minute at most) with how
+    it went — {"ok", "message": "Updated: 3 new"…} (common/results.refresh_text, the
+    windows' words)."""
     def go():
-        _core().refresh_by_hand()
-        return {"ok": True}
+        return _s["web"].refresh()
     return _answer(go)
 
 
@@ -1023,8 +1025,14 @@ def thread_act(action, post_id):
 
 def resolve(url):
     """A link tapped in a post: {"found": "thread", "id"} when my server knows it as a
-    post, else {"found": "account"|None} — the screen opens the browser then."""
+    post, {"found": "media", "kind", "url"} for a video or sound file (the own player,
+    media.links_in_player — common/links.py decides, as for the windows), else
+    {"found": "account"|None} — the screen opens the browser then."""
     def go():
+        from fedtail.frontends.common.links import media_link
+        kind = media_link(url)
+        if kind and _core().cfg["ui"].get("links_in_player", True):
+            return {"found": "media", "kind": kind, "url": url}
         try:
             return _s["web"].resolve(url)
         except Exception:  # noqa: BLE001 — unknown or slow: the browser

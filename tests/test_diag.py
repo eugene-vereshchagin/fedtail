@@ -85,8 +85,56 @@ class DiagTest(unittest.TestCase):
         self.assertTrue(any(n.startswith("logs/20") and n.endswith(".log") for n in names))
         self.assertNotIn("logs/latest.log", names)  # the link, not a second copy
         self.assertIn("system.txt", names)
+        self.assertIn("summary.md", names)  # the night in short, read first
         self.assertIn("config.toml", names)
         self.assertNotIn(b"SECRET", everything)  # the token never goes in
+
+    def test_the_night_in_short(self):
+        """30.10, the author: "I leave it on for the night, in the morning I give the
+        archive" — the report's summary.md: the memory as smem says it at the start,
+        lowest, highest and last, before and after reading, freezes, rounds, errors."""
+        lines = [
+            '2026-10-30 23:00:00.000 INFO    [s] fedtail.diag: stats {"rss_mb": 300.0, '
+            '"uss_mb": 190.0, "pss_mb": 210.0, "core.polls": 1}',
+            '2026-10-31 03:00:00.000 WARNING [m] fedtail.diag: GUI froze 464 ms: [-] x',
+            '2026-10-31 07:00:00.000 INFO    [s] fedtail.diag: stats {"rss_mb": 320.0, '
+            '"uss_mb": 200.0, "pss_mb": 220.0, "core.polls": 300}',
+            '2026-10-31 07:05:00.000 INFO    [m] fedtail.diag: moment reading began '
+            '{"rss_mb": 321.0, "uss_mb": 201.0, "pss_mb": 221.0, "quiet_hours": 8.1}',
+            '2026-10-31 07:40:00.000 INFO    [p] fedtail.diag: moment reading ended '
+            '{"rss_mb": 340.0, "uss_mb": 215.0, "pss_mb": 236.0, "marked": 412}',
+            '2026-10-31 07:41:00.000 ERROR   [p] fedtail.core.app: boom']
+        got = diag.night_summary(["\n".join(lines[:3]), "\n".join(lines[3:])])
+        self.assertIn("From 2026-10-30 23:00:00 to 2026-10-31 07:41:00.", got)
+        self.assertIn("| uss_mb | 190.0 | 190.0 | 200.0 | 200.0 |", got)
+        self.assertIn("| 2026-10-31 07:05:00 | reading began | 201.0 | 221.0 | 321.0 |", got)
+        self.assertIn("| 2026-10-31 07:40:00 | reading ended | 215.0 | 236.0 | 340.0 |", got)
+        self.assertIn("Freezes: 1, the worst 464 ms", got)
+        self.assertIn("Rounds: 300", got)
+        self.assertIn("Warnings: 1, errors: 1", got)
+        self.assertIn("Nothing in the logs", diag.night_summary([]))
+
+    def test_reading_began_and_ended(self):
+        from unittest import mock
+
+        from fedtail.core.app import Core
+        core = Core.__new__(Core)
+        said = []
+        clock = [10000.0]
+        with mock.patch("fedtail.diag.moment", lambda name, **kw: said.append((name, kw))), \
+                mock.patch("time.monotonic", lambda: clock[0]):
+            core._reading_moment(3)       # the first marks: began
+            clock[0] += 60
+            core._reading_moment(2)
+            clock[0] += 300
+            core._reading_moment()        # a round, 5 min on: still reading
+            clock[0] += 400
+            core._reading_moment()        # 11 min without marks: ended
+            clock[0] += 3700
+            core._reading_moment(1)       # an hour's quiet and more: began again
+        self.assertEqual([n for n, _kw in said],
+                         ["reading began", "reading ended", "reading began"])
+        self.assertEqual(said[1][1], {"minutes": 1.0, "marked": 5})
 
     def test_the_full_snapshot(self):
         """Debug ▸ "a full snapshot into an archive": the stacks, the stats and the census

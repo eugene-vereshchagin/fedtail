@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- A bug report carries `summary.md`, the night in short — leave the client on, read in
+  the morning, send the report: the memory as smem says it (USS / PSS / RSS) at the
+  start, lowest, highest and last, and at "reading began" / "reading ended" (the core
+  notes them by the read marks), the freezes, the rounds, warnings and errors.
 - A dismissed announcement no longer comes back when a round asked the server before the
   dismissal reached it.
 - A hung first copy no longer keeps fedtail from starting: its window silent for
@@ -15,7 +19,7 @@
   each new post's as the round brings it — who answers a bot of yours.
 - A link in a post to a video or sound file (…/clip.mp4 — what a server leaves when it
   didn't take a big attachment) plays in the own player, as an attachment: Qt, GTK, the
-  terminal's mpv (`media.links_in_player`); it went to the browser.
+  terminal's mpv, the phone's player (`media.links_in_player`); it went to the browser.
 - `threads.auto` takes my acts on someone's post too: `"boosts"`, `"likes"`, `"bookmarks"`,
   `"quotes"`, `"votes"` — its thread followed, news from then on. Off by default.
 - A thread card's line is short and draws in any font: "14 comments · 1 new · bob: “…”"
@@ -29,7 +33,7 @@
 - Refresh says how it went: "Updated: 3 new", "nothing new", "Not updated: …" or "the
   server asks to wait — updating at 14:20" — a press that brought nothing looked like a
   button doing nothing. The web page reads its lanes once the round is over (it read
-  them before it began). The phone keeps its bar.
+  them before it began); the phone too.
 - A clip its server called a picture is no longer downloaded whole (36 MB) to be told
   "can't show this format": the answer's type says video, nothing is read.
 - Marking read no longer makes the window count every lane itself (330 ms): the core

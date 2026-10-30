@@ -784,20 +784,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refresh(pulled: Boolean = false) {
         if (pulled) pulling = true else refreshing = true
         viewModelScope.launch {
-            Core.refresh()
-            // the bar is the round's: it goes when the round is over, news or none (it
-            // waited for news, and a round bringing nothing kept it 8 s, the lane pushed
-            // down by it); the news themselves come through watch()
-            val began = System.currentTimeMillis()
-            var seenBusy = false
-            while (System.currentTimeMillis() - began < 8000) {
-                delay(250)
-                val st = Core.status()
-                val on = Core.failed(st) == null && st.optBoolean("busy")
-                seenBusy = seenBusy || on
-                val waited = System.currentTimeMillis() - began
-                if (!on && (seenBusy || waited >= if (pulled) 1500 else 1000)) break
-            }
+            // answered when the round is over (a minute at most): the bar goes then, and
+            // how it went is said — "Updated: 3 new", "nothing new", "Not updated: …"
+            // (the windows' words); the news themselves come through watch()
+            val got = Core.refresh()
+            (Core.failed(got) ?: got.optString("message").ifBlank { null })?.let { message = it }
             pulling = false
             refreshing = false
         }
@@ -1306,6 +1297,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             when {
                 got.optString("found") == "thread" && id.isNotBlank() -> openThread(id)
                 got.optString("found") == "account" && id.isNotBlank() -> openProfile(id)
+                // a video or sound file: the own player, as an attachment (links_in_player)
+                got.optString("found") == "media" ->
+                    openMedia(listOf(MediaItem(got.optString("kind"), "", url, "", 0, 0)), 0)
                 else -> openBrowser(url)
             }
         }

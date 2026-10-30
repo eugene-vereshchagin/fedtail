@@ -1491,6 +1491,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             status_ids += sorted(i for i in posts - set(status_ids) if i)
             self.store.mark_read(status_ids)
             self.emit("read_changed", status_ids)  # the cards: at once
+            self._reading_moment(len(status_ids))
 
             def counted():  # every lane's count anew here, then "counts_ready": the
                 self._warm_lanes()  # window made them itself after each mark (330 ms)
@@ -1502,6 +1503,29 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             if self.sync:
                 self.sync.record_read(status_ids)
             self._read_conversations(status_ids)
+
+    READ_QUIET_S = 3600  # read marks after this much quiet: "reading began" (the night's)
+    READ_DONE_S = 600    # …and none for this long since: "reading ended"
+
+    def _reading_moment(self, n=0):
+        """The memory before and after reading, for the night's summary (diag.moment):
+        the first marks after an hour's quiet — the night left behind — and, once marks
+        have stopped for ten minutes (a round looks: n = 0), the end of it."""
+        now = time.monotonic()
+        run = self.__dict__.get("_reading_run")
+        last = self.__dict__.get("_last_mark")
+        if n:
+            if last is None or now - last > self.READ_QUIET_S:
+                quiet = round((now - last) / 3600, 1) if last is not None else None
+                diag.moment("reading began", quiet_hours=quiet)
+                run = self._reading_run = [now, 0]
+            if run is not None:
+                run[1] += n
+            self._last_mark = now
+        elif run is not None and last is not None and now - last > self.READ_DONE_S:
+            diag.moment("reading ended", minutes=round((last - run[0]) / 60, 1),
+                        marked=run[1])
+            self._reading_run = None
 
     def older_ahead(self, name):
         """The end of lane `name` came in sight (a frontend says so as one scrolls):
