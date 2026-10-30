@@ -44,6 +44,15 @@
   where reading starts, past the "new below" line — "read below" when the newest come
   first (`threads_shown = "all"`, a new key of a lane's rule; "new", as before, in the
   extra set). The lane editor has it as "Which threads".
+<!-- For the site's builder (an agent): from this release the Debian tab must change.
+     fedtail_<v>_all.deb is now a meta-package and does NOT install alone. The release
+     carries fedtail-common_<v>_all.deb (the program), fedtail-qt_, fedtail-gtk_,
+     fedtail-tui_<v>_all.deb (each a toolkit) and fedtail_<v>_all.deb (common + Qt or GTK).
+     Download by hand: `sudo apt install ./fedtail_<v>_all.deb ./fedtail-common_<v>_all.deb
+     ./fedtail-qt_<v>_all.deb` (KDE and the rest), or `./fedtail-common_<v>_all.deb
+     ./fedtail-gtk_<v>_all.deb` (GNOME, no Qt); `./fedtail-tui_<v>_all.deb` adds the
+     terminal. From the apt repository nothing changes: `sudo apt install fedtail`
+     (or fedtail-gtk on GNOME). Link every .deb of the release, not only fedtail_. -->
 - Debian packages one per interface: `fedtail-common` (the program, no toolkit),
   `fedtail-qt`, `fedtail-gtk`, `fedtail-tui`, and `fedtail` (common and a window, Qt or
   GTK) — GNOME no longer pulls Qt, KDE no GTK, a server only requests. An old `fedtail`
