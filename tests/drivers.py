@@ -12,6 +12,9 @@ Every driver answers:
     thread(post)             the thread: [(id, depth)] in the order shown
     link(action, post)       a ⋯ menu item, saying yes to "sure?"
     reply(post, text)        write a reply and send it
+    quote(post, text)        quote a post with a text and send it
+    vote(post, choices)      vote in the post's poll (option numbers)
+    list_add(account, title) put the account into my list of that title
     profile(account)         the profile's buttons, as keys (common/profile.py)
     profile_act(account, k)  press one
     command(line)            the Point command line
@@ -141,6 +144,21 @@ class RecordingHost:
     def redrafted(self, d):
         self.composing = {"redraft": d}
 
+    def open_lists(self, acc):
+        self.opened.append(("lists", acc.id))
+
+
+def list_button(rows, title):
+    """The button of the "Add to list" place's row for the list called title (the place
+    shows "☐ title"): its act, [place, key, data]. Rows are a place's (common/places.Row)
+    or the page's JSON of them."""
+    for r in rows:
+        row = r if isinstance(r, dict) else {"title": r.title, "buttons": [
+            {"act": b.act} for b in r.buttons]}
+        if row["title"][2:] == title and row["buttons"]:
+            return list(row["buttons"][0]["act"])
+    raise Cant(f"no list {title!r} in the place")
+
 
 def full_ctx(view, entry_in_thread=False):
     """The ⋯ menu's context a whole window gives (GTK's: lists, the long form,
@@ -190,6 +208,26 @@ class Reference(Driver):
         parent = self.host.composing["reply_to"]
         start = cc.start(self.view, cc.draft_key(self.view, parent), parent)
         self.view.post(start.text + text, start.visibility, parent).result(timeout=10)
+
+    def quote(self, sid, text):
+        from fedtail.frontends.common import compose as cc
+        self.links.open(f"fedtail:quote/{sid}")
+        quoted = self.host.composing["quote"]
+        start = cc.start(self.view, cc.draft_key(self.view, None, quoted), None)
+        self.view.post(start.text + text, start.visibility, None, quote=quoted).result(timeout=10)
+
+    def vote(self, sid, choices):
+        self.view.vote(self.view.by_id(sid), choices).result(timeout=10)
+
+    def list_add(self, acc_id, title):
+        from fedtail.frontends.common.places import Places
+        prof.do("lists", self.view.account(acc_id).result(timeout=10), None, self.view,
+                self.host, lambda _r: None)
+        if ("lists", acc_id) not in self.host.opened:
+            raise Cant("the lists button didn't open the place")
+        places = Places(self.view, lambda _w: "")
+        page = places.page("list_of", acc_id, "", "")
+        places.act(*list_button(page.rows, title))
 
     def profile(self, acc_id):
         acc = self.view.account(acc_id).result(timeout=10)
@@ -352,6 +390,24 @@ class Web(Driver):
         self.req("/api/post", {"text": (post.get("reply_prefix") or "") + text,
                                "reply_to": sid, "visibility": start["visibility"]})
 
+    def quote(self, sid, text):
+        got = self.req("/api/link", {"url": f"fedtail:quote/{sid}"})
+        if (got.get("compose") or {}).get("quote") != sid:
+            raise Cant("the quote editor didn't open")
+        # app.js asks /api/draft_start for a reply only: a quote starts empty, the
+        # visibility is the page's own default
+        self.req("/api/post", {"text": text, "quote": sid})
+
+    def vote(self, sid, choices):
+        self.req("/api/vote", {"id": sid, "choices": choices})
+
+    def list_add(self, acc_id, title):
+        got = self.req("/api/profile_act", {"id": acc_id, "key": "lists"})
+        if (got.get("open") or {}).get("page") != "list_of":
+            raise Cant("the lists button didn't open the place")
+        page = self.req(f"/api/page?name=list_of&arg={acc_id}")
+        self.req("/api/place", {"act": list_button(page["rows"], title)})
+
     def profile(self, acc_id):
         # "details" opens what the windows show in the profile tab's head itself
         return [a["key"] for a in self.req(f"/api/account?id={acc_id}")["actions"]
@@ -443,6 +499,24 @@ class Phone(Driver):
         start = self.call("draft_start", sid)
         self.call("post", json.dumps({"text": start["text"] + text, "reply_to": sid,
                                       "visibility": start["visibility"]}))
+
+    def quote(self, sid, text):
+        got = self.call("link", f"fedtail:quote/{sid}")
+        if (got.get("compose") or {}).get("quote") != sid:
+            raise Cant("the quote editor didn't open")
+        start = self.call("draft_start", "", sid)
+        self.call("post", json.dumps({"text": start["text"] + text, "quote": sid,
+                                      "visibility": start["visibility"]}))
+
+    def vote(self, sid, choices):
+        self.call("vote", sid, json.dumps(choices))
+
+    def list_add(self, acc_id, title):
+        got = self.call("profile_act", acc_id, "lists")
+        if (got.get("open") or {}).get("page") != "list_of":
+            raise Cant("the lists button didn't open the place")
+        page = self.call("page", "list_of", acc_id)
+        self.call("place_act", json.dumps(list_button(page["rows"], title)))
 
     def profile(self, acc_id):
         return [a["key"] for a in self.call("account", acc_id)["actions"]
@@ -750,6 +824,65 @@ class Tui(Driver):
             await self.until(lambda: len(self.w.posted) > before)
         self.run(go())
 
+    def quote(self, sid, text):
+        screen = self._menu(sid)
+        found = [v for x in screen.items if x != "-" for v in [x[1]]
+                 if v.kind == "link" and v.url == f"fedtail:quote/{sid}"]
+        if not found:
+            self.run(self._dismiss(screen, None))
+            raise Cant("no quote in the ⋯ menu")
+
+        async def go():
+            from fedtail.frontends.tui.screens import ComposeScreen
+            before = len(self.w.posted)
+            await self._dismiss(screen, found[0])
+            await self.until(lambda: isinstance(self.app.screen, ComposeScreen))
+            await self.pilot.pause(0.2)
+            await self.pilot.press(*text)
+            await self.pilot.press("ctrl+s")  # the full editor sends with Ctrl+S
+            await self.until(lambda: len(self.w.posted) > before)
+        self.run(go())
+
+    def vote(self, sid, choices):
+        async def go():
+            from fedtail.frontends.tui.more import PollScreen
+            await self._home_at(sid)
+            await self.pilot.press("u")
+            await self.until(lambda: isinstance(self.app.screen, PollScreen))
+            screen = self.app.screen
+            for i in choices:  # the cursor to the option, space ticks it, Enter votes
+                screen.query_one("#options").index = i
+                await self.pilot.press("space")
+            await self.pilot.press("enter")
+            await self.until(lambda: self.w.statuses[sid]["poll"].get("voted"))
+            await self.pilot.pause(0.3)
+            self.app.pop_screen()
+        self.run(go())
+
+    def list_add(self, acc_id, title):
+        screen = self._profile(acc_id)
+        keys = [a.key for a in screen.buttons()]
+        if "lists" not in keys or keys.index("lists") >= 9:
+            self.run(self._pop())
+            raise Cant("no lists among the profile's 1…9")
+
+        async def go():
+            from fedtail.frontends.tui.screens import PlaceScreen
+            await self.pilot.press(str(keys.index("lists") + 1))
+            await self.until(lambda: isinstance(self.app.screen, PlaceScreen) and
+                             self.app.screen.page is not None)
+            place = self.app.screen
+            lv = place.query_one("#posts")
+            rows = [getattr(i, "row", None) for i in lv.children]
+            want = list_button([r for r in rows if r is not None], title)
+            lv.index = next(i for i, r in enumerate(rows)
+                            if r is not None and r.buttons and list(r.buttons[0].act) == want)
+            await self.pilot.press("1")  # the row's first button
+            await self.pilot.pause(0.5)
+            self.app.pop_screen()  # the place
+            self.app.pop_screen()  # the profile
+        self.run(go())
+
     def _profile(self, acc_id):
         async def go():
             from fedtail.frontends.tui.app import ProfileScreen
@@ -887,6 +1020,8 @@ class Qt(_Window):
         self.bridge = Bridge(core)
         self.win = MainWindow(core, self.bridge, themes.apply(self.qapp, core.cfg))
         self.win.images.get = lambda *a, **k: None  # no network
+        # tall: a lane draws only the rows in view, and the steps compare whole lanes
+        self.win.resize(1000, 3000)
         self.win.show()
         self.win.start()
         # the lanes come with the connection; a lane's widget only when it is chosen
@@ -1002,6 +1137,53 @@ class Qt(_Window):
         before = len(self.w.posted)
         dlg.send()
         self.pump(until=lambda: len(self.w.posted) > before)
+
+    def quote(self, sid, text):
+        self.win.on_link(f"fedtail:quote/{sid}")
+        self.pump(until=lambda: getattr(self.win, "open_composes", []))
+        dlg = self.win.open_composes[-1]
+        dlg.text.setPlainText(dlg.text.toPlainText() + text)
+        before, tabs = len(self.w.posted), self.win.tabs.count()
+        dlg.send()
+        self.pump(until=lambda: len(self.w.posted) > before)
+        # a new post that answers nothing opens its own thread in a tab (window.after_post;
+        # the other windows stay where they are): shut it, as a person goes on from here
+        self.pump(0.5)
+        while self.win.tabs.count() > tabs:
+            self.win.tabs.removeTab(self.win.tabs.count() - 1)
+
+    def vote(self, sid, choices):
+        from PySide6.QtWidgets import QAbstractButton, QPushButton
+
+        from fedtail.i18n import _
+        row = self._row(sid)
+        options = [b for b in row.findChildren(QAbstractButton)
+                   if b.isCheckable() and b.text() in ("yes", "no")]
+        if not options:
+            raise Cant("no poll options on the card")
+        for i in choices:
+            options[i].click()
+        send = next(b for b in row.findChildren(QPushButton) if b.text() == _("poll_vote"))
+        send.click()
+        self.pump(until=lambda: self.w.statuses[sid]["poll"].get("voted"))
+        self.pump(0.3)
+
+    def list_add(self, acc_id, title):
+        from PySide6.QtWidgets import QPushButton
+
+        from fedtail.i18n import _
+        w = self._profile(acc_id)
+        btn = next((b for b in w.findChildren(QPushButton) if b.text() == _("add_to_list")),
+                   None)
+        if btn is None or btn.menu() is None:
+            raise Cant("no lists button with a menu")
+        menu = btn.menu()
+        menu.aboutToShow.emit()  # as the click would: the menu is filled when it opens
+        act = lambda: next((a for a in menu.actions() if a.text() == title), None)  # noqa: E731
+        self.pump(until=lambda: act() is not None and act().isEnabled())
+        act().toggle()
+        self.pump(until=lambda: self.core.lists_of(acc_id) is not None and
+                  any(acc_id in x["members"] for x in self.w.lists.values()))
 
     def _profile(self, acc_id):
         from fedtail.frontends.qt.feed import AccountWidget
@@ -1175,6 +1357,59 @@ class Gtk(_Window):
         before = len(self.w.posted)
         c.send()
         self.pump(until=lambda: len(self.w.posted) > before)
+
+    def quote(self, sid, text):
+        self.win.on_link(f"fedtail:quote/{sid}")
+        self.pump(until=lambda: self.win.composer is not None)
+        c = self.win.composer
+        c.buffer.set_text(c._text() + text)
+        before = len(self.w.posted)
+        c.send()
+        self.pump(until=lambda: len(self.w.posted) > before)
+
+    def vote(self, sid, choices):
+        from fedtail.frontends.gtk.gi_setup import Gtk
+        from fedtail.i18n import _
+        lv = self._lane("home")
+        card = next((lv.rows.get(k) for k in lv.keys if lv.specs[k].entry is not None
+                     and lv.specs[k].entry.id == sid), None)
+        if card is None:
+            raise Cant(f"{sid} isn't drawn in home")
+
+        def walk(widget):
+            child = widget.get_first_child()
+            while child is not None:
+                yield child
+                yield from walk(child)
+                child = child.get_next_sibling()
+        picks = [b for b in walk(card) if isinstance(b, Gtk.CheckButton)]
+        send = next((b for b in walk(card) if isinstance(b, Gtk.Button)
+                     and b.get_label() == _("poll_vote")), None)
+        if not picks or send is None:
+            raise Cant("no poll options on the card")
+        for i in choices:
+            picks[i].set_active(True)
+        send.emit("clicked")
+        self.pump(until=lambda: self.w.statuses[sid]["poll"].get("voted"))
+        self.pump(0.3)
+
+    def list_add(self, acc_id, title):
+        from fedtail.frontends.gtk.gi_setup import Gtk
+        acc = self.view.account(acc_id).result(10)
+        pop = self.win.lists_popover(acc, self.win.get_focus() or self.win.status_line)
+
+        def walk(widget):
+            child = widget.get_first_child()
+            while child is not None:
+                yield child
+                yield from walk(child)
+                child = child.get_next_sibling()
+        tick = lambda: next((c for c in walk(pop) if isinstance(c, Gtk.CheckButton)  # noqa: E731
+                             and c.get_label() == title), None)
+        self.pump(until=lambda: tick() is not None and tick().get_sensitive())
+        tick().set_active(True)
+        self.pump(until=lambda: any(acc_id in x["members"] for x in self.w.lists.values()))
+        pop.popdown()
 
     def profile(self, acc_id):
         from fedtail.frontends.common import profile as prof

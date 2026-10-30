@@ -110,7 +110,11 @@ class BehaviourTest(unittest.TestCase):
         self.assertEqual(r.done["gone"], ["030"])
         self.assertEqual(r.done["posted"],
                          [("my late answer", "public", "022"),  # mine_seen: from another place
-                      ("@alice@other.example scenario: a reply", "private", "011")])
+                          ("@alice@other.example scenario: a reply", "private", "011"),
+                          ("scenario: a quote", "private", None)])
+        self.assertEqual(r.done["quoted"], [("scenario: a quote", "011")])
+        self.assertEqual(r.done["voted"], {"040": [1]})
+        self.assertEqual(r.done["listed"], {"L1": ["B"]})
         self.assertEqual(r.done["following"], ["B"])
         self.assertEqual(r.done["subscribed"], ["020"])
         self.assertEqual(r.done["quiet_threads"], ["012"])

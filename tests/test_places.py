@@ -25,6 +25,8 @@ class PlacesTest(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         self.core, self.w = scenario.make_core(self._tmp.name)
         self.addCleanup(self.core.shutdown)
+        self.w.lists.clear()  # the scenario's list ("friends", its last step): none here
+        self.core._refresh_lists()
         self.view = View(self.core)
         self.pl = Places(self.view)
 

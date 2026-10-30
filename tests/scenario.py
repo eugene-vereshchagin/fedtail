@@ -42,6 +42,7 @@ STEPS = [
     ("like", "button", "fav", "010"),
     ("boost", "button", "boost", "011"),
     ("bookmark", "button", "bookmark", "010"),
+    ("vote", "vote", "040", [1]),
     ("thread", "thread", "022"),
     ("follow_thread", "link", "sub", "020"),
     ("mute_thread", "link", "mutethread", "012"),
@@ -51,6 +52,7 @@ STEPS = [
     ("mine_seen", "watch_thread", "022", "mine"),
     ("edit_seen", "watch_thread_text", "022", "edit_elsewhere"),
     ("reply", "reply", "011", "scenario: a reply"),
+    ("quote", "quote", "011", "scenario: a quote"),
     ("profile", "profile", "B"),
     ("follow_bob", "profile_act", "B", "follow"),
     ("delete_mine", "link", "delete", "030"),
@@ -60,13 +62,19 @@ STEPS = [
     ("all_read", "read_all", "replies"),
     # last: silence changes what every lane holds from then on
     ("muted_seen", "watch_lane", "home", "mute_elsewhere"),
+    # at the very end, after following him (a server takes into lists only people one
+    # follows): a list's people leave Home, and the steps before look at Home
+    ("list_add", "list_add", "B", "friends"),
 ]
 
 
 def make_world():
     w = fakes.World()
     w.add(status("010", BOB, minute=10, vis="public", text="bob writes"), home=True)
-    w.add(status("011", ALICE, minute=11, vis="public", text="alice writes"), home=True)
+    # my server lets me quote it (the ⋯ menu offers "quote" only then)
+    w.add(dict(status("011", ALICE, minute=11, vis="public", text="alice writes"),
+               quote_approval={"automatic": ["public"], "manual": [], "current_user": "automatic"}),
+          home=True)
     w.add(status("012", BOB, minute=12, vis="public", text="bob again"), home=True)
     w.add(status("020", BOB, minute=20, vis="public", text="a thread starts"), home=True)
     w.add(status("021", ALICE, "020", "B", minute=21, vis="public", text="alice answers"))
@@ -74,6 +82,15 @@ def make_world():
     w.add(status("023", BOB, "022", "ME", minute=23, vis="public", text="bob answers me"),
           home=True, mention=True)
     w.add(status("030", ME, minute=30, vis="public", text="mine, to be deleted"), home=True)
+    # a poll of two options, open, nobody has voted yet
+    poll = {"id": "P40", "expired": False, "multiple": False, "voted": False, "own_votes": [],
+            "votes_count": 0, "voters_count": 0, "expires_at": "2099-12-31T00:00:00.000Z",
+            "options": [{"title": "yes", "votes_count": 0}, {"title": "no", "votes_count": 0}]}
+    w.add(dict(status("040", BOB, minute=40, vis="public", text="bob asks"), poll=poll),
+          home=True)
+    # a list of mine, empty (the list_add step puts Bob in it)
+    w.lists["L1"] = {"title": "friends", "exclusive": False, "members": set(),
+                     "replies_policy": "list"}
     return w
 
 
@@ -111,6 +128,12 @@ def summary(core, w):
         "following": sorted(w.following),
         "subscribed": sorted(r for r in ("020",) if core.subscribed(st.get(r) or {"id": r})),
         "quiet_threads": sorted(r for r in ("012",) if core.thread_quiet(st.get(r) or {"id": r})),
+        # quote posts: (text, id of the post quoted), the fake keeps both in step
+        "quoted": [(p[0], x["quote"]) for p, x in zip(w.posted, w.extras, strict=True)
+                   if x["quote"]],
+        "voted": {i: list(s["poll"].get("own_votes") or ()) for i, s in sorted(st.items())
+                  if s.get("poll")},
+        "listed": {i: sorted(x["members"]) for i, x in sorted(w.lists.items())},
         "unread_home": sorted(core.unread_ids(core.lane_entries("home"))),
         "unread_replies": core.unread_count("replies"),
     }
