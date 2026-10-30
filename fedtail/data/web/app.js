@@ -1812,7 +1812,7 @@ async function findStep(d) {
 }
 
 // a column's card it opened on, held where it stands while pictures come in (the lane
-// alone has holdPlace above, its observer of every card): a server doesn't always say a
+// alone has holdPlace, its observer of every card): a server doesn't always say a
 // picture's size, and emoji, link cards and avatars grow too. Till the reader moves
 // (wheel, touch, a click, a key) or HOLD_MS pass; gap: its margin.
 const HOLD_MS = 6000;
