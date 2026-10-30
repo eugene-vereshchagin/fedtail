@@ -640,8 +640,12 @@ class PostRow(QWidget):
         line = conversation_line(spec)
         if line:
             text, last_id = line
-            v.addWidget(self._label(link("thread", last_id, "💬 " + esc(text),
-                                         self.theme.css("link")), "ctx"))
+            from . import icons as pictures
+            lab = self._label("", "ctx")
+            lab.ensurePolished()
+            pic = pictures.inline("thread", self.theme, max(12, lab.fontMetrics().height() - 2))
+            lab.setText(pic + link("thread", last_id, esc(text), self.theme.css("link")))
+            v.addWidget(lab)
         news = thread_news_bit(spec)  # a followed thread with new replies
         if news is not None:
             lab = self._label(link("thread", p.id, esc(news.text), self.theme.css("accent"),

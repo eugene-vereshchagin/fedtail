@@ -119,6 +119,32 @@ def icon(name, theme, size=16):
     return out
 
 
+def inline(name, theme, px):
+    """An <img> of this picture as the theme has it, for a label's rich text — its own
+    drawing in its colour, not an emoji a font may lack (💬 stood as a box, 30.10); ""
+    when the theme goes without. The picture is written once into fedtail's cache (a
+    label's <img> reads a file)."""
+    ic = icon(name, theme, px)
+    if ic.isNull():
+        return ""
+    import hashlib
+
+    from ...core.paths import cache_base
+    ratio = 2  # sharp on a HiDPI screen too
+    key = hashlib.sha1(f"{name}|{theme.c['accent'].name()}|{theme.c['card'].name()}|"
+                       f"{how(theme)}|{px}".encode()).hexdigest()[:16]
+    folder = cache_base() / "inline"
+    path = folder / f"{name}-{key}.png"
+    if not path.exists():
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            ic.pixmap(px * ratio, px * ratio).save(str(path), "PNG")
+        except OSError as e:
+            log.debug("inline picture %s: %s", name, e)
+            return ""
+    return f'<img src="{path.as_posix()}" width="{px}" height="{px}" align="middle">&nbsp;'
+
+
 def nobody(theme, size):
     """A face for nobody (no one under the cursor, no picture of theirs yet): the theme's
     grey silhouette. A QPixmap, or None without one."""

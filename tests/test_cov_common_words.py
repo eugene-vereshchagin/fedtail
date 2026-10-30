@@ -175,7 +175,7 @@ class CardWordsTest(unittest.TestCase):
         top, last = post("1"), post("3")
         w = self.words(top, extra={"conversation": {"members": ["1", "2", "3"], "unread": 1,
                                                      "last": last}})
-        self.assertTrue(w.conversation.text.startswith("💬 "))
+        self.assertNotIn("💬", w.conversation.text)  # a font may lack it: a box (30.10)
         self.assertEqual(w.conversation.link, "fedtail:thread/3")
 
     def test_quotes(self):

@@ -761,8 +761,8 @@ def seen(top, bottom, vtop, vbottom, at_end=False, glimpsed=False, slack=2):
 
 
 def conversation_line(spec):
-    """The line under a conversation card: ("N in the conversation, new: M · the last —
-    who: «…»", id of the last post) — or None (a conversation of the one post). N: the
+    """The line under a conversation card: ("14 comments · 1 new · who: «…»", id of
+    the last post) — or None (a conversation of the one post). N: the
     whole thread's comments when its check knows more than the lane holds (followed
     late: the comments before that aren't the lane's)."""
     conv = spec.extra.get("conversation")
@@ -772,5 +772,9 @@ def conversation_line(spec):
     last = conv["last"]
     who = last.author.name or last.author.username
     n = max(len(conv["members"]), int(conv.get("total") or 0))
-    return (_("conv_line", n=n, new=conv["unread"]) + " · " +
-            _("conv_last", who=who, text=snippet(last, 90)), last.id)
+    # short: "14 comments · 1 new · bob: “…”" — no glyph a font may lack (a box, 30.10)
+    parts = [_("conv_line", n=n)]
+    if conv["unread"]:
+        parts.append(_("conv_new", n=conv["unread"]))
+    parts.append(_("conv_last", who=who, text=snippet(last, 90)))
+    return " · ".join(parts), last.id

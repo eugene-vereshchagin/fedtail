@@ -508,10 +508,24 @@ class Card(Gtk.Box):
 
     def add_conversation(self, text, last_id):
         """A conversation card (common/lane.py conversation_line): the rest of it."""
-        lab = _label(link_markup(thread_url(last_id, self.open_at), "💬 " + text), ("ft-ctx",),
+        lab = _label(link_markup(thread_url(last_id, self.open_at), text), ("ft-ctx",),
                      markup=True, wrap=True)
         lab.connect("activate-link", self._link)
-        self.column.insert_child_after(lab, self.mine_box)
+        # the theme's own "thread" picture before it, not an emoji a font may lack (💬
+        # stood as a box, 30.10)
+        from . import icons
+        pic = icons.image("thread", self.ctx.theme, 14)
+        if pic is None:
+            self.column.insert_child_after(lab, self.mine_box)
+            return
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        row.add_css_class("ft-ctx")
+        pic.set_valign(Gtk.Align.START)
+        lab.remove_css_class("ft-ctx")
+        lab.set_hexpand(True)
+        row.append(pic)
+        row.append(lab)
+        self.column.insert_child_after(row, self.mine_box)
 
     def _body(self, p):
         cfg = self.ctx.cfg

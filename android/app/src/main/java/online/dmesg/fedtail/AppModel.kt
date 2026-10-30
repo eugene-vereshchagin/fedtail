@@ -153,7 +153,7 @@ data class PostItem(
     val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
     val quoteLine: Pair<String, String>? = null,  // the quote as one line; null — none shown
     val quoteInner: Pair<String, String>? = null, // the quote quotes too: "❝ quotes …", its link
-    val conversation: Pair<String, String>? = null,  // "💬 N in the conversation, new: M…"
+    val conversation: Pair<String, String>? = null,  // "14 comments · 1 new · bob: “…”"
     val boosted: Pair<String, String>? = null,  // "♻ boosted by X · 14:02" → their profile
     val boostedHtml: String = "",               // the same with X's :emoji: (boosted_html)
     val contextLine: Pair<String, String>? = null,  // the parent's line when it isn't here yet

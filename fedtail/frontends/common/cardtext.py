@@ -61,7 +61,7 @@ class CardWords:
     warning: str = ""                 # "Folded by filter «x» · ⚠ spoilers"; "" — none
     folded: bool = False              # closed whatever ui.expand_cw (a filter's "warn")
     my_replies: list = field(default_factory=list)  # [Bit] "↳ you replied …", newest few
-    conversation: Bit | None = None   # "💬 3 in the conversation…"
+    conversation: Bit | None = None   # "14 comments · 1 new · bob: “…”"
     reactions: str = ""               # "👍 3 :blobcat: 2"
     quote: Bit | None = None          # a quote as a line (or why it can't be shown)
     quote_inner: Bit | None = None    # "❝ quotes Bob's post" under a quote that quotes too
@@ -203,7 +203,7 @@ def card_words(spec, cfg, date, in_thread=None):
                                 f"fedtail:thread/{mine.id}"))
     conv = conversation_line(spec)
     if conv is not None:
-        w.conversation = Bit("💬 " + conv[0], thread_url(conv[1], spec.open_at))
+        w.conversation = Bit(conv[0], thread_url(conv[1], spec.open_at))
     if cfg["feed"].get("emoji", True):
         reacted = sorted(((r.name, r.count) for r in p.reactions if r.count > 0),
                          key=lambda x: -x[1])

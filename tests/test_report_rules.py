@@ -231,13 +231,15 @@ class AllThreadsTest(unittest.TestCase):
         # follow: two older comments, before it was followed, under 200 too
         from fedtail.frontends.common.lane import conversation_line
         card = next(s for s in built if s.entry is not None and s.entry.id == "200")
-        self.assertIn("1 ", conversation_line(card)[0])
+        self.assertTrue(conversation_line(card)[0].startswith("1 comment · 1 new · "),
+                        conversation_line(card))
         core.store.sub_add_members("200", ["198", "199"])
         view._cache.clear()
         card = next(s for s in LaneModel(view, "commented").build(False).specs
                     if s.entry is not None and s.entry.id == "200")
         self.assertEqual(card.extra["conversation"]["total"], 3)
-        self.assertTrue(conversation_line(card)[0].startswith("3 "), conversation_line(card))
+        self.assertTrue(conversation_line(card)[0].startswith("3 comments · 1 new · "),
+                        conversation_line(card))  # short, no glyph a font may lack
         # the extra set's lane of the same name: only the threads with news, as before
         core.lane_by_name["commented"].threads_shown = ""
         built = LaneModel(view, "commented").build(False).specs

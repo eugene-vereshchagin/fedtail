@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- A thread card's line is short and draws in any font: "14 comments · 1 new · bob: “…”"
+  (it was "💬 14 messages in the conversation, new: 1 · the last — …", the 💬 a box where
+  the font lacked it); it opens with the theme's own "thread" picture in Qt, GTK and on
+  the web page.
 - A comment is `#post/N`, as on Point: on every card (Home, To me, the thread) its post's
   #id and its number, given once and kept — not a #id of its own, as if it were a post.
   The thread's /N no longer move when a reply comes in between (they were the places in
