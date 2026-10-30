@@ -17,7 +17,7 @@ from ...i18n import _, current_language
 from ...model import Share, real
 from .links import make, thread_url
 
-MUTE_TAGS_SHOWN = 3  # a post's hashtags offered for muting in its menu, at most
+MUTE_TAGS_SHOWN = 3  # feed.mute_tags_shown's default: a post's hashtags offered for muting
 
 # words for a visibility in i18n: vis_public, vis_private (followers), vis_direct…
 VIS_KEY = {"followers": "private"}
@@ -230,7 +230,8 @@ def menu(entry, ctx, short_id=None, unread=False):
         out.append(SEP)
         out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))
         # its hashtags, each muted in one click (into the filter of muted hashtags)
-        for tag in list(dict.fromkeys(t.lower() for t in p.tags or ()))[:MUTE_TAGS_SHOWN]:
+        most = int((ctx.cfg.get("feed") or {}).get("mute_tags_shown", MUTE_TAGS_SHOWN))
+        for tag in list(dict.fromkeys(t.lower() for t in p.tags or ()))[:most]:
             out.append(Item("link", _("tag_mute", tag=tag), url=make("mutetag", urlquote(tag))))
         out.append(Item("link", _("block_acct", acct=author.handle), url=make("block", sid)))
         domain = author.handle.partition("@")[2]

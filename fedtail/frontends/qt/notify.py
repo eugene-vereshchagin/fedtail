@@ -136,7 +136,9 @@ class Notifier(QObject):
                              daemon=True).start()
         elif self.win.tray:
             self._tray_note = note
-            self.win.tray.showMessage(note.title, note.body, self.win.windowIcon(), 8000)
+            # notify.seconds: how long the balloon stays (0 — Qt's usual 8 s)
+            ms = int(float(self.cfg.get("seconds", 0) or 8) * 1000)
+            self.win.tray.showMessage(note.title, note.body, self.win.windowIcon(), ms)
         else:
             # once: the settings already say it (self.problem); each further one — info
             # the settings and the status bar say it already (self.problem): info then
@@ -154,14 +156,16 @@ class Notifier(QObject):
         try:
             # with --wait, notify-send prints the chosen action when "Open" is pressed
             wait = base + [f"--action=open={_('open_action')}", "--wait"]
-            r = subprocess.run(notifytext.desktop_argv(wait, note),
+            seconds = float(self.cfg.get("seconds", 0) or 0)
+            r = subprocess.run(notifytext.desktop_argv(wait, note, seconds),
                                capture_output=True, text=True, timeout=600,
                                env=sysenv.child_env())
             log.debug("notify-send exit %s, out %r, err %r", r.returncode,
                       r.stdout.strip()[:80], r.stderr.strip()[:200])
             if r.returncode != 0:
                 # an old notify-send without --action/--wait: show it plainly
-                r2 = subprocess.run(notifytext.desktop_argv(base, note), capture_output=True,
+                r2 = subprocess.run(notifytext.desktop_argv(base, note, seconds),
+                                    capture_output=True,
                                     text=True, timeout=30, env=sysenv.child_env())
                 if r2.returncode != 0:
                     log.warning("notify-send failed (%s): %s", r2.returncode,

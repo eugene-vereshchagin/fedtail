@@ -97,15 +97,15 @@
 | Поиск по ленте | есть | 0.2.0 | — | своё, по локальной базе | только в fedtail |
 | Отправка на медленный сервер без дублей | есть | 0.16.0 | `post.send_timeout` | `Idempotency-Key`, `accounts/:id/statuses` | только в fedtail |
 | Поиск во всех лентах сразу | есть | 0.16.0 | галочка в строке `Ctrl+F` | своё, по локальной базе | только в fedtail |
-| Поиск людей, тегов и постов | есть | 0.2.0 | — | `/api/v2/search` | у всех |
+| Поиск людей, тегов и постов | есть | 0.2.0 | `people.search_limit` | `/api/v2/search` | у всех |
 | Лента из нескольких тегов | есть | 0.14.0 | `[[lanes.tag_groups]]`; из поиска — «＋ в ленты» | `timelines/tag/:name` по каждому тегу, склейка у себя | Phanpy, Ice Cubes («группы тегов»), tut (`:tag a b`) |
-| Колонки рядом | есть | 0.14.0 | `window.open_columns`, `window.columns`, `window.column_width`; кнопка ❯ вверху слева | своё | Sengi, Phanpy, tut, Whalebird, Mastodon web (продвинутый режим) |
+| Колонки рядом | есть | 0.14.0 | `window.open_columns`, `window.columns`, `window.column_width`, `window.default_columns`; кнопка ❯ вверху слева | своё | Sengi, Phanpy, tut, Whalebird, Mastodon web (продвинутый режим) |
 | Раскладка как в аське: ростер и окно сообщений | есть | 0.17.0 | `window.layout = "split"` или на один запуск `fedtail --layout split`; `window.roster_on_top`, `window.roster_threads`, `appearance.faces`, `window.dock_commands`, `window.split_tabs`, `appearance.icons` | своё | — |
 | Подборки людей (Mastodon 4.6) | есть | 0.20.0 | ≡ → «Мои подборки»; в профиле — «В подборку…», «Подборки» | `/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections` | Mastodon 4.6, Fedilab |
 | Публичная лента чужого сервера | есть | 0.20.0 | — | `timelines/public?local=true` того сервера без токена, `search?resolve=true` своего | Ice Cubes |
 | Лента по ссылке (Mastodon 4.3+) | есть | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
-| Свободные ленты: собери ленту сам | есть | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | своё | — |
-| Федерация и теги шире своего сервера | есть | 0.21.0 | `lanes.federated_extra`, `lanes.tags_extra`, `lanes.extra_minutes` | публичные ленты чужих серверов без токена; `search?resolve=true` на своём | — |
+| Свободные ленты: собери ленту сам | есть | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted`, `people.following_max` | своё | — |
+| Федерация и теги шире своего сервера | есть | 0.21.0 | `lanes.federated_extra`, `lanes.tags_extra`, `lanes.extra_minutes`, `lanes.extra_posts` | публичные ленты чужих серверов без токена; `search?resolve=true` на своём | — |
 | Редактор лент | есть | 0.21.0 | `lanes.enabled`, `[[lanes.custom]]` (пишет их) | своё | — |
 | «Неразобранное»: ни один пост не теряется | есть | 0.21.0 | `lanes.unsorted` | своё | — |
 | Свежесть лент в строке состояния | есть | 0.20.1 | — | своё | — |
@@ -115,7 +115,7 @@
 | Быстрые фильтры Ленты: теги, бусты, треды с новым | есть | 0.21.0 | — | своё; подписки на треды (`/context`) | — |
 | Важные люди | есть | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (колокольчик на профиле) | — |
 | Ленты правил: порядок по счётчикам, «что пропустил», «Почему он здесь?» | есть | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | своё; серверные фильтры (`filters`), источники `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, чужие публичные ленты | — |
-| Ленты из стены человека, поиска и RSS | есть | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request` | `accounts/<id>/statuses` с `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS и Atom без токена | Fedicat, Subway Tooter, Phanpy, Fread |
+| Ленты из стены человека, поиска и RSS | есть | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` с `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS и Atom без токена | Fedicat, Subway Tooter, Phanpy, Fread |
 | Правила: на время, по имени, не больше N от автора, по авторам, «Убрать из Ленты» | есть | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | своё | feather, Ivory, Subway Tooter (регэкспы, временные), Raccoon for Friendica (лимит на автора), Phanpy (по авторам), Fedilab (убрать из Home) |
 | Библиотека картинок для своих лент | есть | 0.21.0 | `icon = "…"` у `[[lanes.custom]]`, «Картинка» в редакторе лент | своё | только в fedtail |
 
@@ -219,15 +219,15 @@
 
 | Что | Статус | С версии | Конфиг | API / протокол | У других |
 |---|---|---|---|---|---|
-| Тред деревом, комменты с номерами | есть | 0.1.0 | — | `statuses/:id/context` | Phanpy — отступами; номера только в fedtail |
-| Над ответом — на что он отвечает | есть | 0.1.0 | `card.show_reply_context` | `in_reply_to_id` | Sengi и Megalodon — похоже |
+| Тред деревом, комменты с номерами | есть | 0.1.0 | `card.thread_indent_max` | `statuses/:id/context` | Phanpy — отступами; номера только в fedtail |
+| Над ответом — на что он отвечает | есть | 0.1.0 | `card.show_reply_context`, `card.reply_context_chars` | `in_reply_to_id` | Sengi и Megalodon — похоже |
 | Тред целиком: ответы с сервера автора | есть | 0.3.0 | `threads.complete_threads` | коллекция `replies` по ActivityPub, `search?resolve=true` | только в fedtail (Mastodon 4.5+ умеет это на сервере) |
 | Тред дорастает, когда Mastodon дособрал ответы | есть | 0.8.0 | `threads.complete_threads` | заголовок `Mastodon-Async-Refresh` | Mastodon web |
 | Подписки на треды, как на Point | есть | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | своё | только в fedtail |
 | Заглушить тред | есть | 0.11.0 | — | `statuses/:id/mute` и своё | Mastodon web, Tusky, Ivory |
 | Длинные тексты и события | есть | 0.14.0 | `card.long_form` | ⋯ → «📄 Читать целиком»: `Article`, `Page`, `Event` с сервера автора | — |
 | Тред с новыми ответами виден на карточке | есть | 0.21.0 | `card.thread_news` | своё (подписки на треды) | — |
-| Треды: откуда ответы, сам дорастает, только подписки, по веткам, «Вокруг поста» | есть | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; ActivityPub-коллекция ответов на сервере автора; `timelines/home` с `max_id`/`min_id` | Fedilab, Ivory, Mona (режимы треда), Tuba (сам проверяет), Pipilo (только подписки), Voyager, Thunder (ветки), Subway Tooter (вокруг поста) |
+| Треды: откуда ответы, сам дорастает, только подписки, по веткам, «Вокруг поста» | есть | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; ActivityPub-коллекция ответов на сервере автора; `timelines/home` с `max_id`/`min_id` | Fedilab, Ivory, Mona (режимы треда), Tuba (сам проверяет), Pipilo (только подписки), Voyager, Thunder (ветки), Subway Tooter (вокруг поста) |
 | Посты с комментами: тред — одна карточка, открывается на первом новом | есть | 0.21.0 | лента `commented` в наборе fedtail (остальным — из набора extra); `view = "threads"` у своей ленты | своё | Point (подписки), Juick |
 | Где открывается тред: на посте или на первом новом комменте | есть | 0.21.0 | `threads.open_at`; у ленты из правил — свой `open_at` | своё | Point, Juick (не клиенты федиверса) |
 
@@ -560,7 +560,7 @@
 | Подписки и заявки | есть | 0.1.0 | `"requests"` в `lanes.enabled` | `follow`, `follow_requests` | у всех |
 | Скрыть бусты человека; языки подписки | есть | 0.14.0 | `people.per_person_follow` | `follow` с `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
 | Скрыть, заблокировать, фильтры слов | есть | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | у всех |
-| Скрыть хештег одним щелчком | есть | 0.22.0 | — | `/api/v2/filters` | Fedilab — одним щелчком; Mastodon web — вручную фильтром |
+| Скрыть хештег одним щелчком | есть | 0.22.0 | `card.mute_tags_shown` | `/api/v2/filters` | Fedilab — одним щелчком; Mastodon web — вручную фильтром |
 | Заглушить на время; только посты | есть | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
 | Скрыть один пост | есть | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
 | Правка фильтра | есть | 0.20.0 | — | `PUT /api/v2/filters/:id` | Mastodon web, Ivory, Fedilab |
@@ -588,7 +588,7 @@
 
 **Скрыть, заблокировать, фильтры слов.** Фильтры слов — серверные, v2: где действуют, на сколько, прятать или сворачивать. Всё это — в меню ≡ → «Для нежных и ранимых»: фильтры по словам, заглушённые, заблокированные, заблокированные серверы и отфильтрованные уведомления; при `card.arts_mode` сверху строка о том, что фильтры сервера там не действуют.
 
-**Скрыть хештег одним щелчком.** ⋯ поста → «Скрыть #тег» (у каждого его тега, до трёх), а на странице тега — «Скрыть тег» / «Снова показывать тег». Тег уходит в один серверный фильтр «fedtail: hashtags» (прятать везде), как делает Fedilab, — так он работает и в других клиентах. Посты с тегом пропадают сразу, и уже пришедшие тоже; тег, записанный «#тег» в любой твоей фильтр-«прятать», тоже считается скрытым. Скрытый вручную тег прячется и при `ui.arts_mode`.
+**Скрыть хештег одним щелчком.** ⋯ поста → «Скрыть #тег» (у каждого его тега, до `card.mute_tags_shown`, по умолчанию трёх), а на странице тега — «Скрыть тег» / «Снова показывать тег». Тег уходит в один серверный фильтр «fedtail: hashtags» (прятать везде), как делает Fedilab, — так он работает и в других клиентах. Посты с тегом пропадают сразу, и уже пришедшие тоже; тег, записанный «#тег» в любой твоей фильтр-«прятать», тоже считается скрытым. Скрытый вручную тег прячется и при `ui.arts_mode`.
 
 **Заглушить на время; только посты.** «Заглушить» спрашивает, насколько: навсегда, на час, на сутки, на неделю, на месяц — потом сервер снимет заглушку сам. Галочка «Только посты» оставляет его уведомления. Фильтры слов тоже ставятся на срок.
 
@@ -622,8 +622,8 @@
 
 | Что | Статус | С версии | Конфиг | API / протокол | У других | Заметка |
 |---|---|---|---|---|---|---|
-| Уведомления рабочего стола с уровнями приватности | есть | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `when_focused`, `backend` | своё | только в fedtail (Tokodon — без приватности) | — |
-| Активность: лайки, бусты, подписки | есть | 0.2.0 | `activity.types` | `/api/v1/notifications` | у всех | — |
+| Уведомления рабочего стола с уровнями приватности | есть | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `max_lines`, `seconds`, `when_focused`, `backend` | своё | только в fedtail (Tokodon — без приватности) | — |
+| Активность: лайки, бусты, подписки | есть | 0.2.0 | `activity.types`, `activity.names_shown` | `/api/v1/notifications` | у всех | — |
 | Группировка уведомлений | есть | 0.2.0 | `activity.types`, `activity.server_groups` | своя группировка; с 0.18 — и серверная, `/api/v2/notifications` (Mastodon 4.3+) | Mastodon web, Ivory, Phanpy, Ice Cubes | — |
 | Одобрить ответ, лайк, буст (GoToSocial) | есть | 0.13.0 | `activity.approvals` | `/api/v1/interaction_requests` | только в fedtail | — |
 | Уведомления от незнакомцев отдельно | есть | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |

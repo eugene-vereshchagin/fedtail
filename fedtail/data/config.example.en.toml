@@ -198,6 +198,9 @@ columns = []
 # The width of one column in pixels (at least 280). They don't fit the window — sideways scrolling.
 column_width = 460
 
+# Columns when columns is empty (the set the lanes' rules make): at most this many.
+default_columns = 4
+
 # Themes for this window layout: "Try a theme" offers only those made for it (a theme
 # says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for
 # both). "auto" — so in releases, every theme in development versions; "on"; "off".
@@ -448,6 +451,17 @@ tags_extra = []
 bubble = []
 extra_minutes = 10
 
+# How many posts at a time are fetched into your server from another server's lane
+# (federated_extra, tags_extra, bubble).
+extra_posts = 20
+
+# How many entries are taken from an RSS feed, and how many characters of each summary
+# (rss_summary_chars).
+rss_items = 60
+
+# An RSS entry's summary: this many characters.
+rss_summary_chars = 1200
+
 # Ask a lane of tags (several tags in one) in one request, not one per tag — where the
 # server can (Mastodon: any[], all[], none[]). false — a tag at a time.
 tags_one_request = false
@@ -541,6 +555,16 @@ read_button = false
 [card]
 # The "↪ in reply to…" strip over replies.
 show_reply_context = true
+
+# How deep a thread indents: deeper, a branch goes on without more indent. A narrow screen —
+# fewer.
+thread_indent_max = 8
+
+# How many characters of the post answered stand over a reply ("↑ Bob: …").
+reply_context_chars = 160
+
+# How many of a post's hashtags the ⋯ menu offers to mute in one click.
+mute_tags_shown = 3
 
 # A post whose thread you follow and that has new replies there: "🔔 3 new in the thread"
 # under it, the line opening the thread.
@@ -687,9 +711,13 @@ complete_threads = true
 # (slower).
 thread_from = "mixed"
 
-# An open thread (opened in the last half hour) asks the server about new replies every
+# An open thread (opened within thread_recheck_for_minutes) asks the server about new replies every
 # so many minutes and grows when there are some. 0 — no, only when it opens.
 thread_recheck_minutes = 0
+
+# For how many minutes after it opens a thread is still asked again
+# (thread_recheck_minutes): a live discussion can be followed longer.
+thread_recheck_for_minutes = 30
 
 # In a thread — only the replies of people you follow and yours (and what they answer,
 # so the tree holds together). false — every reply.
@@ -778,6 +806,13 @@ follow_date_note = true
 # server's Home — at once when you unfollow here, and within a few hours when you do it
 # elsewhere (another client, the server's web page). false — what came stays.
 forget_unfollowed = true
+
+# How many of whom you follow fedtail reads (for the mutuals and the rules' "followed").
+# Follow more — raise it.
+following_max = 1000
+
+# Search: this many results of each kind (people, posts, tags).
+search_limit = 20
 
 # On the profile of someone you follow — "Not in Home": their posts stay out of Home while
 # the follow, lists and the bell stay. In this program only.
@@ -1081,6 +1116,13 @@ except = []
 #   "count"  — only how many, without names and text.
 privacy = "full"
 
+# How many posts one notification lists; the rest — "and N more".
+max_lines = 3
+
+# How many seconds a notification stays on screen. 0 — as long as the desktop keeps it (in
+# the tray — 8 s). The GTK window and the browser decide themselves.
+seconds = 0
+
 # Notify about the lane open in front of your eyes too (by default it keeps quiet about it;
 # about the other lanes notifications come even when the fedtail window is active).
 when_focused = false
@@ -1170,6 +1212,9 @@ requests = true
 # own: what you did, beside what others did. Not news: no number for it. A lane of rules
 # takes it as event = "i_followed".
 my_follows = true
+
+# How many names an Activity row says ("A, B, C and 12 more liked"); the rest — a number.
+names_shown = 3
 
 # Who stopped following you: no server says it, so fedtail compares the whole list of your
 # followers every unfollows_minutes; one gone from two lists in a row, and still not following

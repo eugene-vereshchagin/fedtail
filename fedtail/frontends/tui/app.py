@@ -36,6 +36,7 @@ from ...model import real
 from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
+from ..common.cardtext import indent_of
 from ..richtext import openable
 from . import pictures, termcaps
 from .model import (
@@ -559,7 +560,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
         for i, n in enumerate(items_in):
-            pad = "  " * n.indent
+            pad = "  " * indent_of(core.cfg, n.depth)
             shown = show_post(core, n.post, short.get(n.post.id), n.post.id in unread,
                               n.number, width - len(pad), open_cw=self.cw_open)
             if n.post.id == self.status_id and i:  # where the reader came from

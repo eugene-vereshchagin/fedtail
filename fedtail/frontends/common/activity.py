@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from ...i18n import _
 
-MAX_NAMES = 3
+MAX_NAMES = 3  # activity.names_shown's default
 
 # the i18n words a row of activity can say (act_<key>); a row's "kind" is the key
 ACT_KINDS = tuple(k[4:] for k in (
@@ -93,7 +93,7 @@ class Row:
     request: bool      # waiting for my yes (an interaction to approve)
 
 
-def event_bit(entries, date):
+def event_bit(entries, date, names=MAX_NAMES):
     """An event (or several of one kind about one post) as one line in a lane of posts
     (a lane of rules with `event`, feeds.md §2.3): who — what · when: about which post.
     A Bit of common/cardtext: the line, where a click goes, a tip."""
@@ -102,8 +102,8 @@ def event_bit(entries, date):
     first = entries[0]
     kind = act_key(first)
     people, total = who_of(entries)
-    more = total - min(len(people), MAX_NAMES)
-    who = ", ".join(name_of(p) for p in people[:MAX_NAMES]) + \
+    more = total - min(len(people), names)
+    who = ", ".join(name_of(p) for p in people[:names]) + \
         (" " + _("act_more", n=more) if more > 0 else "")
     if first.kind == "notice" and first.details is not None:
         who = "⚠ " + notice_text(first.details)
@@ -120,9 +120,10 @@ def event_bit(entries, date):
     return Bit(text, link, tip, kind="event:" + kind)
 
 
-def rows(entries, seen, date, oldest_first=True):
+def rows(entries, seen, date, oldest_first=True, names=MAX_NAMES):
     """The lane's rows: entries newest first (as View.activity gives them), seen — the
-    mark up to which they're seen, date(datetime) — the theme's way of writing a time."""
+    mark up to which they're seen, date(datetime) — the theme's way of writing a time;
+    names — how many people a row names (activity.names_shown), the rest counted."""
     out = []
     for g in groups(entries):
         es = g["entries"]
@@ -136,7 +137,7 @@ def rows(entries, seen, date, oldest_first=True):
         notice = notice_text(first.details) if first.kind == "notice" and \
             first.details is not None else ""
         out.append(Row(kind, _("act_" + kind) if kind in ACT_KINDS else kind,
-                       people[:MAX_NAMES], max(0, total - min(len(people), MAX_NAMES)), when,
+                       people[:names], max(0, total - min(len(people), names)), when,
                        notice,
                        first.post, es, max(a.sort for a in es),
                        # a follow request waiting: new till answered, whenever it came

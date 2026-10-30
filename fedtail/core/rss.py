@@ -23,8 +23,8 @@ log = logging.getLogger(__name__)
 
 PREFIX = "rss-"          # the id of a post that came from a feed
 FEED_MAX = 4 * 1024 * 1024
-ITEMS_MAX = 60
-SUMMARY_MAX = 1200
+ITEMS_MAX = 60       # lanes.rss_items' default
+SUMMARY_MAX = 1200   # lanes.rss_summary_chars' default
 
 _TAGS = re.compile(r"<[^>]+>")
 
@@ -70,20 +70,21 @@ def _iso(d):
     return d.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def _summary(raw):
+def _summary(raw, most=SUMMARY_MAX):
     """A feed's HTML summary as safe short HTML: tags out, the text escaped, paragraphs
     kept as line breaks."""
     text = html.unescape(_TAGS.sub(" ", raw or ""))
     text = re.sub(r"[ \t\r\f\v]+", " ", text)
     text = re.sub(r"\s*\n\s*", "\n", text).strip()
-    if len(text) > SUMMARY_MAX:
-        text = text[:SUMMARY_MAX].rsplit(" ", 1)[0] + "…"
+    if len(text) > most:
+        text = text[:most].rsplit(" ", 1)[0] + "…"
     return "<br>".join(html.escape(line) for line in text.split("\n") if line)
 
 
-def parse(body, feed_url, now=None):
+def parse(body, feed_url, now=None, items_max=ITEMS_MAX, summary_max=SUMMARY_MAX):
     """The feed's items as posts (Mastodon-shaped dicts), newest first; [] when it
-    doesn't read as RSS or Atom."""
+    doesn't read as RSS or Atom. items_max, summary_max: lanes.rss_items,
+    lanes.rss_summary_chars."""
     try:
         root = ET.fromstring(body)
     except ET.ParseError as e:
@@ -115,7 +116,7 @@ def parse(body, feed_url, now=None):
                "avatar": "", "bot": True, "note": "", "fields": []}
     now = now or datetime.now(UTC)
     out = []
-    for it in items[:ITEMS_MAX]:
+    for it in items[:items_max]:
         if kind == "feed":
             ln = next((c for c in it if _local(c.tag) == "link"
                        and c.get("rel", "alternate") == "alternate"), None)
@@ -133,7 +134,7 @@ def parse(body, feed_url, now=None):
             continue
         sid = PREFIX + hashlib.sha1((feed_url + "\n" + (guid or head)).encode()).hexdigest()[:16]
         content = (f"<p><b>{html.escape(head)}</b></p>" if head else "") + \
-            (f"<p>{_summary(body_html)}</p>" if body_html else "")
+            (f"<p>{_summary(body_html, summary_max)}</p>" if body_html else "")
         st = {"id": sid, "account": account, "in_reply_to_id": None,
               "in_reply_to_account_id": None,
               "created_at": _iso(min(when or now, now)), "visibility": "public",
@@ -150,7 +151,7 @@ def parse(body, feed_url, now=None):
     return out
 
 
-def fetch(url, own_hosts=(), timeout=12):
+def fetch(url, own_hosts=(), timeout=12, items_max=ITEMS_MAX, summary_max=SUMMARY_MAX):
     """The feed at url, its items as posts; [] when it can't be had."""
     import requests
 
@@ -170,4 +171,4 @@ def fetch(url, own_hosts=(), timeout=12):
     except (requests.RequestException, OSError) as e:
         log.info("rss %s: %s", host, e)
         return []
-    return parse(body, url)
+    return parse(body, url, items_max=items_max, summary_max=summary_max)

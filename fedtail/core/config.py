@@ -56,6 +56,7 @@ DEFAULTS = {
         "icons": "theme",
         "columns": [],
         "column_width": 460,
+        "default_columns": 4,
         "image_height": 360,
         "image_viewer": "internal",
         "video_player": "internal",
@@ -88,6 +89,9 @@ DEFAULTS = {
         "start_at": "first_unread",
         "on_new": "keep_position",
         "show_reply_context": True,
+        "thread_indent_max": 8,
+        "reply_context_chars": 160,
+        "mute_tags_shown": 3,
         "thread_news": True,
         "page_size": 40,
         "catch_up_limit": 400,
@@ -103,6 +107,7 @@ DEFAULTS = {
         "complete_threads": True,
         "thread_from": "mixed",
         "thread_recheck_minutes": 0,
+        "thread_recheck_for_minutes": 30,
         "thread_followed_only": False,
         "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
         "open_at": "post",         # a thread opened from a card: at it, or "first_unread"
@@ -124,6 +129,8 @@ DEFAULTS = {
         "text_markup": True,
         "follow_date_note": True,
         "forget_unfollowed": True,
+        "following_max": 1000,
+        "search_limit": 20,
         "home_hide": False,
         "aliases": False,
         "nick_colors": False,      # "Name colour…" on a profile: their name in my colour
@@ -163,6 +170,9 @@ DEFAULTS = {
         "federated_extra": [],
         "tags_extra": [],
         "extra_minutes": 10,
+        "extra_posts": 20,
+        "rss_items": 60,
+        "rss_summary_chars": 1200,
         "tags_one_request": False,
     },
     "post": {
@@ -209,6 +219,8 @@ DEFAULTS = {
                   "activity", "requests"],
         "except": [],
         "privacy": "full",
+        "max_lines": 3,
+        "seconds": 0,
         "when_focused": False,
         "backend": "auto",
         "filtered": 'remind',
@@ -231,6 +243,7 @@ DEFAULTS = {
         "approvals": True,
         "requests": True,
         "my_follows": True,
+        "names_shown": 3,
         "unfollows": True,
         "unfollows_minutes": 60,
         "unfollows_max": 5000,
@@ -413,6 +426,19 @@ SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("ui", "default_columns"): 1,
+    ("feed", "mute_tags_shown"): 0,
+    ("feed", "reply_context_chars"): 20,
+    ("feed", "thread_indent_max"): 0,
+    ("notify", "seconds"): 0,
+    ("notify", "max_lines"): 1,
+    ("activity", "names_shown"): 1,
+    ("feed", "search_limit"): 1,
+    ("feed", "following_max"): 40,
+    ("lanes", "rss_summary_chars"): 100,
+    ("lanes", "rss_items"): 1,
+    ("lanes", "extra_posts"): 1,
+    ("feed", "thread_recheck_for_minutes"): 1,
     ("feed", "thread_recheck_minutes"): 0,
     ("feed", "counts_minutes"): 0,
     ("sound", "min_gap_seconds"): 0,
@@ -481,7 +507,7 @@ FILE_LAYOUT = (
                                "faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
      + _keys("feed", "emoji custom_emoji text_markup")),
-    ("window", _keys("ui", "frontend layout open_columns columns column_width "
+    ("window", _keys("ui", "frontend layout open_columns columns column_width default_columns "
                            "themes_by_layout roster_on_top roster_threads split_tabs "
                            "dock_commands sidebar_groups sidebar_width sidebar_footer "
                            "start_lane tray close_to_tray esc post_keys number_keys pin_tabs "
@@ -491,13 +517,15 @@ FILE_LAYOUT = (
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
                              "custom tag_groups languages languages_in detect_language "
                              "detect_min_words detect_among federated_extra tags_extra bubble "
-                             "extra_minutes tags_one_request")),
+                             "extra_minutes extra_posts rss_items rss_summary_chars "
+                             "tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button")),
-    ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
+    ("card", _keys("feed", "show_reply_context thread_indent_max reply_context_chars "
+                           "mute_tags_shown thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
@@ -508,11 +536,13 @@ FILE_LAYOUT = (
                      "translate_all translate_auto translate_backend translate_url "
                      "translate_key")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
+                              "thread_recheck_for_minutes "
                               "thread_followed_only thread_progress open_at")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "
-                             "follow_date_note forget_unfollowed home_hide aliases "
+                             "follow_date_note forget_unfollowed following_max search_limit "
+                             "home_hide aliases "
                              "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
                           "video_decode gifv image_upscale save_dir")
@@ -528,11 +558,12 @@ FILE_LAYOUT = (
                            "redraft resize_images focus_point chain preview format_bar lang_check "
                            "link_quote send_in_background scheduled_to_draft drafts_place")
      + _keys("account", "markdown")),
-    ("notify", _keys("notify", "enabled lanes except privacy when_focused backend filtered")
+    ("notify", _keys("notify", "enabled lanes except privacy max_lines seconds when_focused "
+                               "backend filtered")
      + _keys("ui", "announcements")),
     ("sound", _keys("sound", "enabled lanes except online sent when_focused scheme volume "
                              "player min_gap_seconds")),
-    ("activity", _keys("activity", "types approvals requests my_follows unfollows "
+    ("activity", _keys("activity", "types approvals requests my_follows names_shown unfollows "
                                    "unfollows_minutes unfollows_max unfollows_mass unlikes "
                                    "unlikes_days unlikes_posts server_notices "
                                    "server_groups")),

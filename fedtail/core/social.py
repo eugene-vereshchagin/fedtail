@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 UNSUPPORTED_STATUS = (404, 405, 410, 501)
 MUTUALS_KV = "mutuals"
-MUTUALS_MAX = 1000       # whom I follow, read at most this many
+MUTUALS_MAX = 1000       # feed.following_max's default: whom I follow, read at most
 MUTUALS_EVERY = 86400    # s: asked again once a day
 
 
@@ -102,7 +102,8 @@ class SocialMixin:
                     time.time() - got.get("at", 0) < MUTUALS_EVERY:
                 return got.get("accounts") or []
             following, max_id = [], None
-            while len(following) < MUTUALS_MAX:
+            most = int(self.cfg["feed"].get("following_max", MUTUALS_MAX))
+            while len(following) < most:
                 page, max_id = self.api.following(me, max_id)
                 following += page or []
                 if not page or not max_id:

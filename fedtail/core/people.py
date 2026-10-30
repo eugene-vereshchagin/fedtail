@@ -16,7 +16,6 @@ class PeopleMixin:
 
     FOLLOWING_EVERY_S = 6 * 3600
 
-    FOLLOWING_PAGES = 25
 
     def _refresh_following(self):
         """Whom I follow and which tags, for atoms like author = "followed" (every 6 hours;
@@ -33,7 +32,9 @@ class PeopleMixin:
         self._following_at = time.time()
         ids, max_id, accounts = set(), None, {}
         try:
-            for _ in range(self.FOLLOWING_PAGES):
+            # feed.following_max people, 40 a page (the server's most)
+            pages = max(1, -(-int(self.cfg["feed"].get("following_max", 1000)) // 40))
+            for _ in range(pages):
                 page, max_id = self.api.following(self.me["id"], max_id)
                 ids |= {a["id"] for a in page or ()}
                 accounts.update({a["id"]: a for a in page or ()})

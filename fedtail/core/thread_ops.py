@@ -266,8 +266,9 @@ class ThreadsMixin:
         return [st for st in rest if st["id"] in keep]
 
     def recheck_threads(self):
-        """feed.thread_recheck_minutes: threads opened lately (the last half hour) asked
-        again for new replies every so many minutes; what came — the open thread grows
+        """feed.thread_recheck_minutes: threads opened lately (within
+        feed.thread_recheck_for_minutes) asked again for new replies every so many
+        minutes; what came — the open thread grows
         (thread_grew), as with replies from other servers."""
         every = int(self.cfg["feed"].get("thread_recheck_minutes", 0) or 0) * 60
         if every <= 0 or self.api is None:
@@ -275,7 +276,7 @@ class ThreadsMixin:
         now = time.monotonic()
         grew = []
         for root_id, opened in list(self._opened_threads.items()):
-            if now - opened > 1800:
+            if now - opened > 60 * int(self.cfg["feed"].get("thread_recheck_for_minutes", 30)):
                 self._opened_threads.pop(root_id, None)
                 continue
             if now - self._rechecked.get(root_id, opened) < every:

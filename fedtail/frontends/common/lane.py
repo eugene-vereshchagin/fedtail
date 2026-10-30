@@ -460,7 +460,8 @@ class LaneModel:
         from .activity import rows as act_rows
         seen_at = getattr(self.view, "activity_seen", None)
         seen_at = seen_at() if seen_at else ""
-        rows = act_rows(events, seen_at, lambda _d: "", oldest_first=False)  # when: drawn
+        rows = act_rows(events, seen_at, lambda _d: "", oldest_first=False,  # when: drawn
+                        names=int(self.view.cfg["activity"].get("names_shown", 3)))
         only = self.events_only()
 
         def when_post(s):

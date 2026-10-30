@@ -21,7 +21,7 @@ from .proto import urls as _urls
 
 log = logging.getLogger(__name__)
 
-PER_ROUND = 20      # posts fetched into my server from one server's lane, a round
+PER_ROUND = 20      # lanes.extra_posts' default: posts fetched from one server's lane, a round
 SEEN_KEEP = 5000    # addresses already fetched, remembered
 CLOSED_S = 6 * 3600  # a lane closed to strangers: asked again after this
 
@@ -134,7 +134,7 @@ class Wider:
         known = set(seen)
         uris = [s["uri"] for s in page if isinstance(s, dict) and s.get("uri")
                 and s.get("visibility") in ("public", None) and s["uri"] not in known]
-        uris = uris[:PER_ROUND]
+        uris = uris[:max(1, int(self.cfg.get("extra_posts", PER_ROUND)))]
         if not uris:
             return []
         got = self.core._resolve_statuses(uris)
@@ -148,7 +148,9 @@ class Wider:
             return []
         self._done(f"rss:{url}")
         from . import rss
-        return rss.fetch(url, own_hosts=self.core._own_hosts())
+        return rss.fetch(url, own_hosts=self.core._own_hosts(),
+                         items_max=int(self.cfg.get("rss_items", rss.ITEMS_MAX)),
+                         summary_max=int(self.cfg.get("rss_summary_chars", rss.SUMMARY_MAX)))
 
     def _one(self, kind, host, lane, tag):
         url = _urls.tag(host, tag) if kind == "tag" else public_url(host)
@@ -159,7 +161,7 @@ class Wider:
         known = set(seen)
         uris = [s["uri"] for s in page if isinstance(s, dict) and s.get("uri")
                 and s.get("visibility") in ("public", None) and s["uri"] not in known]
-        uris = uris[:PER_ROUND]
+        uris = uris[:max(1, int(self.cfg.get("extra_posts", PER_ROUND)))]
         if not uris:
             return []
         statuses = self.core._resolve_statuses(uris)

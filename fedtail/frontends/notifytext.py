@@ -19,7 +19,7 @@ ACTIVITY_ORDER = ["follow", "like", "share"]
 # the words for a kind of activity: notify_act_<…>_n
 ACT_WORDS = {"follow": "notify_act_follow_n", "like": "notify_act_favourite_n",
              "share": "notify_act_reblog_n"}
-MAX_LINES = 3
+MAX_LINES = 3  # notify.max_lines' default
 log = logging.getLogger(__name__)
 
 
@@ -53,25 +53,29 @@ def _who(obj):
 
 
 _titles = None
+_lines = MAX_LINES  # build()'s, for the note it makes
 
 
-def desktop_argv(base, note):
+def desktop_argv(base, note, seconds=0):
     """notify-send's arguments for a note. Its body is markup to the desktop (links,
     bold, on some desktops pictures), and a post's text may say "<a href=…>" in plain
     letters: escaped, so it shows as written. "--" first: a name that begins with "--"
     is a name, not an option."""
-    return base + ["--", note.title, html.escape(note.body, quote=False)]
+    # notify.seconds: how long it stays (0 — as the desktop keeps it)
+    timeout = [f"--expire-time={int(seconds * 1000)}"] if seconds else []
+    return base + timeout + ["--", note.title, html.escape(note.body, quote=False)]
 
 
 def _lane_title(lane):
     return (_titles and _titles(lane)) or _("lane_" + lane)
 
 
-def build(items, privacy="full", titles=None):
+def build(items, privacy="full", titles=None, lines=MAX_LINES):
     """items: [(lane, Post, Share, Account or Activity)] → one Note per lane.
-    titles(lane) names lanes that aren't built in (lists)."""
-    global _titles
-    _titles = titles
+    titles(lane) names lanes that aren't built in (lists); lines — the posts a note
+    lists at most (notify.max_lines)."""
+    global _titles, _lines
+    _titles, _lines = titles, lines
     groups, acts = {}, {}
     for lane, obj in items:
         if isinstance(obj, Activity) and not _is_request(obj):  # a like, a follow…
@@ -96,7 +100,8 @@ def due(view, items, cfg, on_screen, titles=None):
         log.debug("notify: %d new, notifications are off", len(items))
         return []
     notes = []
-    for note in build(view.model_of(list(items)), cfg["privacy"], titles):
+    for note in build(view.model_of(list(items)), cfg["privacy"], titles,
+                      cfg.get("max_lines", MAX_LINES)):
         if not cfg["when_focused"] and on_screen(note.lane):
             log.info("notify: %s skipped, that lane is on screen (notify.when_focused)",
                      note.lane)
@@ -143,7 +148,8 @@ def _note(lane, objs, privacy):
     if privacy == "sender" or requests:
         shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
         return Note(count_title, _("notify_from", names=shown), lane)
-    lines = [f"{_who(o)}: {snippet(real(o), 90)}" for o in objs[:MAX_LINES]]
-    if n > MAX_LINES:
-        lines.append(_("notify_more", n=n - MAX_LINES).strip())
-    return Note(count_title, "\n".join(lines), lane)
+    most = max(1, int(_lines))
+    shown = [f"{_who(o)}: {snippet(real(o), 90)}" for o in objs[:most]]
+    if n > most:
+        shown.append(_("notify_more", n=n - most).strip())
+    return Note(count_title, "\n".join(shown), lane)

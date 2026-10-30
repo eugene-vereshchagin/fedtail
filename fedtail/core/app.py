@@ -1730,7 +1730,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         """People, tags and posts for a query; addresses (@user@server, a profile
         or post URL) are fetched from their home server by mine."""
         def job():
-            got = self.api.search(q.strip(), resolve=True, limit=20)
+            got = self.api.search(q.strip(), resolve=True,
+                                  limit=int(self.cfg["feed"].get("search_limit", 20)))
             self.store.put_statuses(got.get("statuses") or [])
             accounts = got.get("accounts") or []
             rel = {r["id"]: r for r in self.api.relationships([a["id"] for a in accounts])} \

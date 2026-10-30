@@ -29,10 +29,10 @@ from ... import __version__, i18n, version
 from ...core import config
 from ...core.view import View
 from ...i18n import _
-from ...model import Account, Share, indent, real
+from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
 from ..common import timed
-from ..common.cardtext import CONTEXT_CHARS
+from ..common.cardtext import context_chars, indent_of
 from ..common.commands import Commands
 from ..richtext import clean
 
@@ -353,13 +353,13 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         out["item"] = spec.key
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
-        out["indent"] = indent(depth)  # how far in it is drawn: the model's, as the windows
+        out["indent"] = indent_of(view.cfg, depth)  # how far in it is drawn, as the windows
     if p.reply_to and number is None:
         if parent == "missing":
             out["context"] = {"missing": True}
         elif parent is not None:
             out["context"] = {"handle": parent.author.handle,
-                              "text": snippet(parent, CONTEXT_CHARS), "id": parent.id}
+                              "text": snippet(parent, context_chars(view.cfg)), "id": parent.id}
     return out
 
 
@@ -665,7 +665,7 @@ class Web:
             return
         try:
             notes = notifytext.build(self.core.model_of(list(items)), cfg["privacy"],
-                                     self.core.lane_title)
+                                     self.core.lane_title, cfg.get("max_lines", 3))
         except Exception:  # noqa: BLE001 — a note is never worth a failed poll
             log.exception("web notify")
             return

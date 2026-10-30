@@ -108,6 +108,9 @@ class RowsTest(unittest.TestCase):
         r = rows[0]
         self.assertEqual(len(r.people), min(5, act.MAX_NAMES))
         self.assertEqual(len(r.people) + r.more, 300)
+        # activity.names_shown: how many it names, the rest counted
+        [r] = act.rows([a], "", lambda d: "", names=1)
+        self.assertEqual((len(r.people), r.more), (1, 299))
 
     def test_one_by_one_as_before(self):
         es = [adapter.activity({"id": f"n{i}", "type": "favourite", "account": acc(i),

@@ -78,6 +78,11 @@ class TagMuteTest(unittest.TestCase):
         items = [i for i in actions.menu(post, ctx) if i.kind == "link"]
         mute = [i for i in items if i.url.startswith("fedtail:mutetag/")]
         self.assertEqual([i.label for i in mute], ["Mute #nft", "Mute #art"])
+        self.core.cfg["feed"]["mute_tags_shown"] = 1  # feed.mute_tags_shown: the first only
+        self.assertEqual([i.label for i in actions.menu(post, ctx)
+                          if i.kind == "link" and i.url.startswith("fedtail:mutetag/")],
+                         ["Mute #nft"])
+        self.core.cfg["feed"]["mute_tags_shown"] = 3
         host = Host()
         links.Links(view, host).open(mute[0].url)
         self.assertEqual(host.errors, [])

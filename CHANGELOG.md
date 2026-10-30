@@ -2,6 +2,14 @@
 
 ## 0.22.0 — in progress
 
+- Numbers that were nailed into the code are options now, each read in one place for every
+  interface: `threads.thread_recheck_for_minutes` (30), `lanes.extra_posts` (20),
+  `lanes.rss_items` (60) and `rss_summary_chars` (1200), `people.following_max` (1000:
+  the mutuals and the rules' "followed" — wrong for those following more),
+  `people.search_limit` (20), `activity.names_shown` (3), `notify.max_lines` (3),
+  `notify.seconds` (the desktop's), `card.thread_indent_max` (8),
+  `card.reply_context_chars` (160), `card.mute_tags_shown` (3), `window.default_columns`
+  (4).
 - How deep a thread's posts indent is one number for every interface (the model's): the
   phone stopped at 6 levels, the others at 8; the reply's context line is as long in Qt
   as elsewhere (140 → 160 characters).

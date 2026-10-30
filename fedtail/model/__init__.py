@@ -541,9 +541,10 @@ class Relationship:
 INDENT_MAX = 8
 
 
-def indent(depth):
-    """How many steps in a post of this depth is drawn: depth, no deeper than INDENT_MAX."""
-    return min(max(int(depth or 0), 0), INDENT_MAX)
+def indent(depth, most=INDENT_MAX):
+    """How many steps in a post of this depth is drawn: depth, no deeper than most
+    (feed.thread_indent_max: common/cardtext.indent_of)."""
+    return min(max(int(depth or 0), 0), max(0, int(most)))
 
 
 @dataclass(frozen=True, slots=True)

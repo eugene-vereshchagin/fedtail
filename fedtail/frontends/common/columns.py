@@ -3,7 +3,7 @@ which lanes are the columns at start."""
 
 from __future__ import annotations
 
-MOST = 4  # columns the default has at most
+MOST = 4  # ui.default_columns' default: columns the default set has at most
 
 
 def default_names(view, known):
@@ -22,7 +22,8 @@ def default_names(view, known):
     by_name = getattr(view, "lane_by_name", {}) or {}
     out += [n for n in known if getattr(by_name.get(n), "events", False)
             and not getattr(by_name.get(n), "source", None)][:1]
-    return list(dict.fromkeys(out))[:MOST]
+    most = int((getattr(view, "cfg", None) or {}).get("ui", {}).get("default_columns", MOST))
+    return list(dict.fromkeys(out))[:max(1, most)]
 
 
 def start_names(cfg, remembered, known, list_titles=None, view=None):

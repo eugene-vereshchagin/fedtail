@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from ...core import config
 from ...i18n import _
-from ...model import Share, indent
+from ...model import Share
 from ...model.text import (
     collapse_tag_stuffing,
     html_to_text,
@@ -35,7 +35,8 @@ from ...model.text import (
 )
 from ..common import actions
 from ..common.cardtext import (
-    CONTEXT_CHARS,
+    context_chars,
+    indent_of,
     newcomer_bit,
     only_counts_differ,
     thread_news_bit,
@@ -271,7 +272,7 @@ class PostRow(QWidget):
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        for _i in range(indent(spec.depth)):
+        for _i in range(indent_of(ctx.cfg, spec.depth)):
             rail_box = QWidget()
             rail_box.setFixedWidth(RAIL_W)
             rb = QHBoxLayout(rail_box)
@@ -924,7 +925,7 @@ class PostRow(QWidget):
             body = _("ctx_missing")
         else:
             body = _("ctx_reply", name="<b>" + display_name(parent.author) + "</b>",
-                     text=esc(snippet(parent, CONTEXT_CHARS)))
+                     text=esc(snippet(parent, context_chars(self.ctx.cfg))))
         return link("thread", p.id, f"↑ {body}", self.theme.css("muted"))
 
     # ---- actions ------------------------------------------------------------------

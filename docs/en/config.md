@@ -97,6 +97,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `window.open_columns` | `false` | With layout = "single": open with the lanes side by side, in columns, as in TweetDeck (the ❯ button at the top left switches it any time). |
 | `window.columns` | `[]` | Which lanes stand as columns, left to right, until you change them in the window (a click on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is remembered). Names — as in lanes.enabled; "list:Friends" — a list by its title. [] — Home, Replies to me and Activity. |
 | `window.column_width` | `460` | The width of one column in pixels (at least 280). They don't fit the window — sideways scrolling. |
+| `window.default_columns` | `4` | Columns when columns is empty (the set the lanes' rules make): at most this many. |
 | `window.themes_by_layout` | `"auto"` | Themes for this window layout: "Try a theme" offers only those made for it (a theme says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for both). "auto" — so in releases, every theme in development versions; "on"; "off". |
 | `window.roster_on_top` | `false` | With layout = "split": the roster stays above other windows. |
 | `window.roster_threads` | `15` | With layout = "split": how many followed threads and private talks stand in the roster as items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only. |
@@ -143,6 +144,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `lanes.tags_extra` | `[]` |  |
 | `lanes.bubble` | `[]` | The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"]. |
 | `lanes.extra_minutes` | `10` |  |
+| `lanes.extra_posts` | `20` | How many posts at a time are fetched into your server from another server's lane (federated_extra, tags_extra, bubble). |
+| `lanes.rss_items` | `60` | How many entries are taken from an RSS feed, and how many characters of each summary (rss_summary_chars). |
+| `lanes.rss_summary_chars` | `1200` | An RSS entry's summary: this many characters. |
 | `lanes.tags_one_request` | `false` | Ask a lane of tags (several tags in one) in one request, not one per tag — where the server can (Mastodon: any[], all[], none[]). false — a tag at a time. |
 
 ### `[lists]`
@@ -180,6 +184,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `card.show_reply_context` | `true` | The "↪ in reply to…" strip over replies. |
+| `card.thread_indent_max` | `8` | How deep a thread indents: deeper, a branch goes on without more indent. A narrow screen — fewer. |
+| `card.reply_context_chars` | `160` | How many characters of the post answered stand over a reply ("↑ Bob: …"). |
+| `card.mute_tags_shown` | `3` | How many of a post's hashtags the ⋯ menu offers to mute in one click. |
 | `card.thread_news` | `true` | A post whose thread you follow and that has new replies there: "🔔 3 new in the thread" under it, the line opening the thread. |
 | `card.repeat_boosts` | `false` | A boost of a post that was in this lane already (itself or with someone's boost) or was read, — a repeat: false — don't show it, the post stays where it first came; true — every boost brings the post up again (as everyone does). A post that came as a post is always seen. |
 | `card.quotes` | `"card"` | Quotes (a post inside a post: Mastodon 4.5+, Akkoma, Misskey and others):<br>"card" — the quoted post framed inside; "link" — one line with a link; "off" — as<br>the server sent it (usually a line "RE: link"). |
@@ -216,7 +223,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 |---|---|---|
 | `threads.complete_threads` | `true` | Whole threads. Your server knows only the replies that reached it (from people followed on your server, or addressed to you), — that's why other people's threads have holes. Open a thread — fedtail asks the author's server for the list of replies and asks your server to fetch what's missing; the thread grows by itself a couple of seconds later. These are requests to other servers without your token (they see only the IP). false — make do with your own server. Mastodon 4.5+ gathers replies itself too — then the thread grows when the server says it's done. |
 | `threads.thread_from` | `"mixed"` | Where a thread's replies come from: "local" — only what your server knows; "mixed" — yours at once, and your server fetches the missing ones from the author's, the thread growing by itself; "remote" — ask the author's server first, the thread opens whole (slower). |
-| `threads.thread_recheck_minutes` | `0` | An open thread (opened in the last half hour) asks the server about new replies every so many minutes and grows when there are some. 0 — no, only when it opens. |
+| `threads.thread_recheck_minutes` | `0` | An open thread (opened within thread_recheck_for_minutes) asks the server about new replies every so many minutes and grows when there are some. 0 — no, only when it opens. |
+| `threads.thread_recheck_for_minutes` | `30` | For how many minutes after it opens a thread is still asked again (thread_recheck_minutes): a live discussion can be followed longer. |
 | `threads.thread_followed_only` | `false` | In a thread — only the replies of people you follow and yours (and what they answer, so the tree holds together). false — every reply. |
 | `threads.thread_progress` | `false` | While replies come from the author's server — "⇣ fetching replies: 3 of 12" in the thread's head, then "replies fetched: N" (for a few seconds). Every interface and the phone. |
 | `threads.open_at` | `"post"` | Where a thread opened from a card opens: "post" — at that post, "first_unread" — at the first unread comment (none — at the post). A lane of rules may decide for itself: open_at = "…" in its table ("Commented posts" — "first_unread"); the line "🔔 N new in the thread" always goes to the first new one. Every interface and the phone. |
@@ -242,6 +250,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `people.per_person_follow` | `true` | On the profile of someone you follow — two buttons: "♻ without their boosts" (their boosts don't come to Home) and "🌐 languages" (only their posts in these languages). The server keeps it, so it works in every client. false — no buttons. |
 | `people.follow_date_note` | `true` | Servers don't keep the day you followed someone. When you follow through fedtail, I write the date as the last line of your private note on the person — "[fedtail followed 2026-10-18]": it's seen from any device and in other clients (in fedtail this line is hidden and kept when the note is edited). false — I remember it here only. |
 | `people.forget_unfollowed` | `true` | Someone you stop following: their posts and boosts leave Home, as they leave your server's Home — at once when you unfollow here, and within a few hours when you do it elsewhere (another client, the server's web page). false — what came stays. |
+| `people.following_max` | `1000` | How many of whom you follow fedtail reads (for the mutuals and the rules' "followed"). Follow more — raise it. |
+| `people.search_limit` | `20` | Search: this many results of each kind (people, posts, tags). |
 | `people.home_hide` | `false` | On the profile of someone you follow — "Not in Home": their posts stay out of Home while the follow, lists and the bell stay. In this program only. |
 | `people.aliases` | `false` | On a profile — "My name for them…": a name you see instead of theirs (yours only; with sync.people — on your other devices too). |
 | `people.nick_colors` | `false` | On a profile — "Name colour…": their name on cards in your colour (a name from the list or #rrggbb; yours only; with sync.people — on your other devices too). |
@@ -323,6 +333,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `notify.lanes` | `["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "activity", "requests"]` | What to notify about. home is quiet by default (everything comes there), lists too. Lane names — the same as on the left (a lane's word is in its tooltip too):<br>federated — Federated home — Home local — Local<br>bots — Bots my_posts — My posts direct — Direct<br>mentions — Mentions replies — Replies to me subs — Subscriptions<br>bookmarks — Bookmarks my_likes — My likes activity — Activity<br>requests — Follow requests to_me — To me important — Important people<br>unsorted — Unsorted (shown while not empty)<br>"lists" — all lists at once; one list — by its title (or id): "list:Friends".<br>"all" — every lane at once (only in the first of the pair; take the rest away in except).<br>"custom:<name>" — a lane of your own ([[lanes.custom]]). For example: ["replies", "mentions", "list:Friends"] or ["all"] + except = ["home", "bots"]. |
 | `notify.except` | `[]` | What never to notify about, even if it's in lanes (say, with lanes = ["all"]): the same names — "bots", "federated", "lists", "list:News"… |
 | `notify.privacy` | `"full"` | What to show in a notification:<br>"full" — who wrote what;<br>"sender" — only who, without the text (fine to read with others around);<br>"count" — only how many, without names and text. |
+| `notify.max_lines` | `3` | How many posts one notification lists; the rest — "and N more". |
+| `notify.seconds` | `0` | How many seconds a notification stays on screen. 0 — as long as the desktop keeps it (in the tray — 8 s). The GTK window and the browser decide themselves. |
 | `notify.when_focused` | `false` | Notify about the lane open in front of your eyes too (by default it keeps quiet about it; about the other lanes notifications come even when the fedtail window is active). |
 | `notify.backend` | `"auto"` | How to show them: "auto" (KDE notifications if there's notify-send, otherwise through the tray), "desktop" — notify-send only, "tray" — through the tray only. |
 | `notify.filtered` | `"remind"` | Filtered notifications (Mastodon 4.3+: the server holds back mentions from strangers, new accounts and the like until you allow them): ≡ → "For the tender and sensitive" → "Filtered notifications…" — who waits, "Let in" / "Dismiss", and what exactly to filter. "remind" — so, and at start a line at the bottom if someone waits; "menu" — in the menu only; "off" — neither. |
@@ -353,6 +365,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `activity.approvals` | `true` | Replies, likes and boosts waiting for your approval (GoToSocial: who may reply, like and boost is set in the post settings). They come here too, with the buttons "Approve" and "Reject". false — don't show (approve on the server's site then). |
 | `activity.requests` | `true` | Follow requests here too, on top, with "Approve" / "Reject" — so the "Follow requests" lane isn't needed (it stays for whoever wants it, in lanes.enabled: then they're there, not here). false — only in that lane. |
 | `activity.my_follows` | `true` | Whom you followed — here or in another client (seen in whom you follow) — as a row of its own: what you did, beside what others did. Not news: no number for it. A lane of rules takes it as event = "i_followed". |
+| `activity.names_shown` | `3` | How many names an Activity row says ("A, B, C and 12 more liked"); the rest — a number. |
 | `activity.unfollows` | `true` | Who stopped following you: no server says it, so fedtail compares the whole list of your followers every unfollows_minutes; one gone from two lists in a row, and still not following when asked — a row "stopped following you" (an account its server no longer has — "gone"). Not a word unless the list came whole; the ones you removed or blocked yourself aren't news; more than unfollows_mass of one server at once — one row: that server is lost, not them. Over unfollows_max followers it doesn't look (a page is 80 of them). A lane of rules takes them as event = "unfollow" ("unfollowed_back": one you follow too), "gone", "lost". |
 | `activity.unfollows_minutes` | `60` |  |
 | `activity.unfollows_max` | `5000` |  |

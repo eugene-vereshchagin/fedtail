@@ -23,7 +23,19 @@ from .lane import age_days, conversation_line
 from .links import thread_url
 
 # how much of the post answered stands over a reply ("↑ Bob: …"), in every interface
-CONTEXT_CHARS = 160
+CONTEXT_CHARS = 160  # feed.reply_context_chars' default
+
+
+def context_chars(cfg):
+    """feed.reply_context_chars: the answered post's characters over a reply."""
+    return int((cfg.get("feed") or {}).get("reply_context_chars", CONTEXT_CHARS))
+
+
+def indent_of(cfg, depth):
+    """How many steps in a thread's post of this depth is drawn: feed.thread_indent_max
+    at most (the model's INDENT_MAX by default) — one number for every interface."""
+    from ...model import INDENT_MAX, indent
+    return indent(depth, int((cfg.get("feed") or {}).get("thread_indent_max", INDENT_MAX)))
 
 
 def name_of(acc):
@@ -151,7 +163,8 @@ def card_words(spec, cfg, date, in_thread=None):
             w.context = Bit(_("ctx_loading"))
         elif isinstance(parent, Post):
             w.context = Bit("↑ " + _("ctx_reply", name=name_of(parent.author),
-                                     text=snippet(parent, CONTEXT_CHARS)), f"fedtail:thread/{p.id}")
+                                     text=snippet(parent, context_chars(cfg))),
+                            f"fedtail:thread/{p.id}")
     warned = list(p.filtered) if not cfg["ui"].get("arts_mode") else []
     if p.warning or warned:
         w.warning = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else [])

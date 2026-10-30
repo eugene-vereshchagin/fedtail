@@ -94,15 +94,15 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Find in a lane | has | 0.2.0 | — | own, in the local database | only in fedtail |
 | Sending to a slow server without doubles | has | 0.16.0 | `post.send_timeout` | `Idempotency-Key`, `accounts/:id/statuses` | only in fedtail |
 | Find in every lane at once | has | 0.16.0 | a tick in the `Ctrl+F` bar | own, in the local database | only in fedtail |
-| Finding people, tags and posts | has | 0.2.0 | — | `/api/v2/search` | everyone |
+| Finding people, tags and posts | has | 0.2.0 | `people.search_limit` | `/api/v2/search` | everyone |
 | A lane of several tags | has | 0.14.0 | `[[lanes.tag_groups]]`; from the search — “＋ to lanes” | `timelines/tag/:name` for each tag, put together here | Phanpy, Ice Cubes (“tag groups”), tut (`:tag a b`) |
-| Columns side by side | has | 0.14.0 | `window.open_columns`, `window.columns`, `window.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
+| Columns side by side | has | 0.14.0 | `window.open_columns`, `window.columns`, `window.column_width`, `window.default_columns`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
 | A messenger's layout: a roster and a messages window | has | 0.17.0 | `window.layout = "split"` or for one run `fedtail --layout split`; `window.roster_on_top`, `window.roster_threads`, `appearance.faces`, `window.dock_commands`, `window.split_tabs`, `appearance.icons` | own | — |
 | Collections of people (Mastodon 4.6) | has | 0.20.0 | ≡ → “My collections”; on a profile — “Add to collection…”, “Collections” | `/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections` | Mastodon 4.6, Fedilab |
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
-| Free lanes: a lane you assemble yourself | has | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | own | — |
-| Federated and tags wider than your server | has | 0.21.0 | `lanes.federated_extra`, `lanes.tags_extra`, `lanes.extra_minutes` | other servers' public lanes without a token; `search?resolve=true` on yours | — |
+| Free lanes: a lane you assemble yourself | has | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted`, `people.following_max` | own | — |
+| Federated and tags wider than your server | has | 0.21.0 | `lanes.federated_extra`, `lanes.tags_extra`, `lanes.extra_minutes`, `lanes.extra_posts` | other servers' public lanes without a token; `search?resolve=true` on yours | — |
 | The lane editor | has | 0.21.0 | `lanes.enabled`, `[[lanes.custom]]` (writes them) | own | — |
 | “Unsorted”: no post gets lost | has | 0.21.0 | `lanes.unsorted` | own | — |
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
@@ -112,7 +112,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
 | Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | has | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes | — |
-| Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
+| Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
 | A library of pictures for your own lanes | has | 0.21.0 | `icon = "…"` in `[[lanes.custom]]`, "Picture" in the lane editor | own | only in fedtail |
 
@@ -217,15 +217,15 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| A thread as a tree, comments numbered | has | 0.1.0 | — | `statuses/:id/context` | Phanpy — indented; numbers only in fedtail |
-| Over a reply — what it answers | has | 0.1.0 | `card.show_reply_context` | `in_reply_to_id` | Sengi and Megalodon — similar |
+| A thread as a tree, comments numbered | has | 0.1.0 | `card.thread_indent_max` | `statuses/:id/context` | Phanpy — indented; numbers only in fedtail |
+| Over a reply — what it answers | has | 0.1.0 | `card.show_reply_context`, `card.reply_context_chars` | `in_reply_to_id` | Sengi and Megalodon — similar |
 | A whole thread: replies from the author's server | has | 0.3.0 | `threads.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
 | A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `threads.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
 | Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `card.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
 | A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
-| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 | Commented posts: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
 
@@ -558,7 +558,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Follows and follow requests | has | 0.1.0 | `"requests"` in `lanes.enabled` | `follow`, `follow_requests` | everyone |
 | Hide a person's boosts; the languages of a follow | has | 0.14.0 | `people.per_person_follow` | `follow` with `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
 | Mute, block, word filters | has | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | everyone |
-| Mute a hashtag in one click | has | 0.22.0 | — | `/api/v2/filters` | Fedilab — one click; Mastodon web — by hand, with a filter |
+| Mute a hashtag in one click | has | 0.22.0 | `card.mute_tags_shown` | `/api/v2/filters` | Fedilab — one click; Mastodon web — by hand, with a filter |
 | Mute for a while; posts only | has | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
 | Hide a single post | has | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
 | Editing a filter | has | 0.20.0 | — | `PUT /api/v2/filters/:id` | Mastodon web, Ivory, Fedilab |
@@ -586,7 +586,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Mute, block, word filters.** Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `card.arts_mode`, a line on top says the server's filters don't apply there.
 
-**Mute a hashtag in one click.** A post's ⋯ → “Mute #tag” (for each of its tags, up to three), and on a tag's page “Mute the tag” / “Show the tag again”. The tag goes into one server filter, “fedtail: hashtags” (hide everywhere), as Fedilab does it — so it works in other clients too. Posts with it leave at once, those already here too; a tag written “#tag” in any “hide” filter of yours counts as muted as well. A tag muted by hand hides with `ui.arts_mode` too.
+**Mute a hashtag in one click.** A post's ⋯ → “Mute #tag” (for each of its tags, up to `card.mute_tags_shown`, three by default), and on a tag's page “Mute the tag” / “Show the tag again”. The tag goes into one server filter, “fedtail: hashtags” (hide everywhere), as Fedilab does it — so it works in other clients too. Posts with it leave at once, those already here too; a tag written “#tag” in any “hide” filter of yours counts as muted as well. A tag muted by hand hides with `ui.arts_mode` too.
 
 **Mute for a while; posts only.** “Mute” asks for how long: for good, an hour, a day, a week, a month — then the server lifts it by itself. The “Posts only” tick keeps their notifications coming. Word filters get a term too.
 
@@ -620,8 +620,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 | What | Status | Since | Config | API / protocol | Others | Note |
 |---|---|---|---|---|---|---|
-| Desktop notifications with privacy levels | has | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `when_focused`, `backend` | own | only in fedtail (Tokodon — without privacy) | — |
-| Activity: likes, boosts, follows | has | 0.2.0 | `activity.types` | `/api/v1/notifications` | everyone | — |
+| Desktop notifications with privacy levels | has | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `max_lines`, `seconds`, `when_focused`, `backend` | own | only in fedtail (Tokodon — without privacy) | — |
+| Activity: likes, boosts, follows | has | 0.2.0 | `activity.types`, `activity.names_shown` | `/api/v1/notifications` | everyone | — |
 | Grouping notifications | has | 0.2.0 | `activity.types`, `activity.server_groups` | its own grouping; since 0.18 the server's too, `/api/v2/notifications` (Mastodon 4.3+) | Mastodon web, Ivory, Phanpy, Ice Cubes | — |
 | Approve a reply, like, boost (GoToSocial) | has | 0.13.0 | `activity.approvals` | `/api/v1/interaction_requests` | only in fedtail | — |
 | Notifications from strangers apart | has | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |
