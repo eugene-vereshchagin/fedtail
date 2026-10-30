@@ -118,3 +118,56 @@ class ReadingRuleTest(unittest.TestCase):
         self.assertFalse(reading_now({"read": {"unfocused_seconds": 0}}, False, 100, 100))
         self.assertEqual(dwell_ms(cfg), 500)
         self.assertEqual(dwell_ms({}), 350)
+
+
+class TextOptionsTest(unittest.TestCase):
+    def test_a_bare_link_cut_at_link_chars_or_never(self):
+        from fedtail.frontends import richtext
+        url = "https://example.com/" + "a" * 80
+        html = f'<p><a href="{url}">{url}</a></p>'
+        self.assertIn("…", richtext.clean(html))
+        self.assertIn("a" * 80, richtext.clean(html, link_chars=0))
+        self.assertIn(f'href="{url}"', richtext.clean(html, link_chars=10))  # the link: whole
+        self.assertEqual(richtext.link_chars({"feed": {"link_chars": 0}}), 0)
+
+    def test_the_draft_kept_after_autosave_ms(self):
+        from fedtail.frontends.common.compose import autosave_ms
+        self.assertEqual(autosave_ms({}), 700)
+        self.assertEqual(autosave_ms({"post": {"autosave_ms": 2000}}), 2000)
+
+    @unittest.skipUnless(__import__("importlib").util.find_spec("PySide6"), "no PySide6")
+    def test_gifvs_at_once_and_their_frames(self):
+        from fedtail.frontends.qt import player
+        keep = (player.MAX_LOOPS, player.FRAME_FPS)
+        self.addCleanup(lambda: setattr(player, "MAX_LOOPS", keep[0]) or
+                        setattr(player, "FRAME_FPS", keep[1]))
+        player.configure({"ui": {"gifv_max": 1, "gifv_fps": 30}})
+        self.assertEqual((player.MAX_LOOPS, player.FRAME_FPS), (1, 30))
+
+
+class AnnouncementsTest(TmpDir):
+    """The server's announcements are asked again by the core (poll.announcements_minutes)
+    for every interface: the windows each kept a timer, the terminal and the page none."""
+    make = test_cli.CliTest.make
+
+    def test_asked_by_the_round_said_when_they_change(self):
+        core, w = self.make()
+        core.connect().result()
+        heard = []
+        core.events.on("announcements_updated", lambda _n, p: heard.append(p))
+        w.announcements = [{"id": "a1", "content": "<p>hi</p>", "published_at": "2026-10-30"}]
+        core.poll_once()
+        self.assertEqual(heard, [1])
+        self.assertEqual([a["id"] for a in core.announcements().result()], ["a1"])
+        core._announced_at = None  # due again, nothing new: quiet
+        core.poll_once()
+        self.assertEqual(heard, [1])
+        w.announcements = []
+        core._announced_at = None
+        core.poll_once()
+        self.assertEqual(heard, [1, 0])
+        core.cfg["poll"]["announcements_minutes"] = 0  # 0: only at the start
+        core._announced_at = None
+        w.announcements = [{"id": "a2", "content": "", "published_at": "2026-10-30"}]
+        core.poll_once()
+        self.assertEqual(heard, [1, 0])

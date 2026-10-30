@@ -574,6 +574,10 @@ reply_context_chars = 160
 # How many of a post's hashtags the ⋯ menu offers to mute in one click.
 mute_tags_shown = 3
 
+# A bare link in a post longer than this many characters is shown shortened (as Mastodon
+# does); the link itself stays whole. 0 — always whole: you see where it goes.
+link_chars = 40
+
 # A post whose thread you follow and that has new replies there: "🔔 3 new in the thread"
 # under it, the line opening the thread.
 thread_news = true
@@ -873,6 +877,14 @@ video_decode = "software"
 # on screen (at most three at once), "click" — a still frame, a click plays it over the window.
 gifv = "play"
 
+# The Qt window: how many gifvs loop in cards at once, the rest show a still. A slow machine
+# — 1.
+gifv_max = 3
+
+# The Qt window: a gifv in a card draws at most this many frames a second (smoother — more,
+# the load too).
+gifv_fps = 12
+
 # How many times the viewer may enlarge a small picture so that it
 # fills the window (1 — never enlarge).
 image_upscale = 2
@@ -940,6 +952,9 @@ reply_never_wider = true
 
 # Drafts are saved as you type and survive closing the window.
 drafts_autosave = true
+
+# How many milliseconds after the last key the draft is kept (drafts_autosave).
+autosave_ms = 700
 
 # The "content warning / title under the cut" (CW) field is open at once.
 # false — it hides behind the "⚠ Warning" button.
@@ -1381,6 +1396,10 @@ stream_gap_seconds = 10
 # 0 — off (news comes as it arrives). Also on the go: ≡ → "Slow mode…" (with "notify at
 # most every…" for each lane there).
 slow_minutes = 0
+
+# How often fedtail asks the server about its announcements again (for every interface at
+# once). 0 — only at the start.
+announcements_minutes = 30
 
 # A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login:
 # "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live

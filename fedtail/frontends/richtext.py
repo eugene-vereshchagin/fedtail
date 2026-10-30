@@ -13,13 +13,15 @@ _IMG = re.compile(r'<img[^>]*?alt="([^"]*)"[^>]*>|<img[^>]*>', re.S)
 _SCRIPTY = re.compile(r"<(script|style|iframe)[^>]*>.*?</\1>", re.S | re.I)
 _TAG = re.compile(r"(<[^>]*>)")
 _LONG_WORD = re.compile(r"\S{28,}")
-LINK_TEXT = 40   # a bare URL shown longer than this is shortened, Mastodon-style
+LINK_TEXT = 40   # feed.link_chars' default: a bare URL longer than this is shortened
 ZWSP = "\u200b"  # an invisible place where Qt may wrap a line
 
 
-def _short_url(text):
+def _short_url(text, most=LINK_TEXT):
+    """A bare URL as its link text: without the scheme, cut at most characters (0 — the
+    whole of it, feed.link_chars)."""
     t = re.sub(r"^https?://(www\.)?", "", text)
-    return t if len(t) <= LINK_TEXT else t[:LINK_TEXT - 1] + "…"
+    return t if not most or len(t) <= most else t[:most - 1] + "…"
 
 
 def _breakable(text):
@@ -29,7 +31,7 @@ def _breakable(text):
                                             for i in range(0, len(m.group(0)), 20)), text)
 
 
-def _fit_text(h):
+def _fit_text(h, link_chars=LINK_TEXT):
     """Shorten URLs shown as link text, make long words wrappable. Only text
     between tags is touched; hrefs stay whole."""
     out, in_link = [], False
@@ -44,7 +46,7 @@ def _fit_text(h):
             continue
         text = html.unescape(part)
         if in_link and re.match(r"^\s*https?://", text):
-            text = _short_url(text.strip())  # short enough now; keep it unbroken
+            text = _short_url(text.strip(), link_chars)  # short enough now: keep it unbroken
         else:
             text = _breakable(text)
         out.append(esc(text).replace("&#x27;", "'"))
@@ -73,6 +75,11 @@ OUTSIDE_SCHEMES = ("http://", "https://", "mailto:", "xmpp:", "gemini://", "magn
 INSIDE_ACTIONS = ("account", "tag", "resolve", "thread")
 SAFE_SCHEMES = OUTSIDE_SCHEMES + tuple(f"fedtail:{a}/" for a in INSIDE_ACTIONS)
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def link_chars(cfg):
+    """feed.link_chars: where a bare URL's text is cut (0 — never)."""
+    return int((cfg.get("feed") or {}).get("link_chars", LINK_TEXT))
 
 
 def openable(url):
@@ -245,8 +252,9 @@ def strike_tildes(h):
     return "".join(out)
 
 
-def clean(content, link_color=None, markup=False):
-    """markup: ~~text~~ struck out too (feed.text_markup)."""
+def clean(content, link_color=None, markup=False, link_chars=LINK_TEXT):
+    """markup: ~~text~~ struck out too (feed.text_markup); link_chars: a bare URL's text
+    cut at so many characters (feed.link_chars, 0 — whole)."""
     h = _SCRIPTY.sub("", content or "")
     h = _INVISIBLE.sub("", h)
     h = _ELLIPSIS.sub(r"\1…", h)
@@ -254,7 +262,7 @@ def clean(content, link_color=None, markup=False):
     h = sanitize(h)
     if markup:
         h = strike_tildes(h)
-    h = _fit_text(h)
+    h = _fit_text(h, link_chars)
     style = "text-decoration:none;" + (f"color:{link_color};" if link_color else "")
     return h.replace("<a ", f'<a style="{style}" ')
 

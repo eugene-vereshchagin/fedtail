@@ -35,9 +35,9 @@ from ..richtext import plain_tip
 log = logging.getLogger(__name__)
 
 INFINITE = -1  # QMediaPlayer.Loops.Infinite as the int setLoops takes
-MAX_LOOPS = 3      # gifvs playing at once (the ones on screen; the rest show a still)
+MAX_LOOPS = 3      # ui.gifv_max: gifvs playing at once (on screen; the rest a still)
 VISIBLE_CHECK_MS = 600
-FRAME_FPS = 12     # a gifv in a card: at most this many frames a second drawn
+FRAME_FPS = 12     # ui.gifv_fps: a gifv in a card draws at most this many frames a second
 SEEK_MS = 5000
 
 
@@ -157,6 +157,15 @@ def install_hint():
     from ... import deps
     need = [n for n in deps.NEEDS if n.key == "PySide6 QtMultimedia"]
     return deps.install_line(need) or "PySide6-Addons"
+
+
+def configure(cfg):
+    """ui.gifv_max and ui.gifv_fps, from the window as it starts: how many gifvs loop in
+    cards at once, and at most how many frames a second each draws."""
+    global MAX_LOOPS, FRAME_FPS
+    ui = cfg.get("ui") or {}
+    MAX_LOOPS = max(1, int(ui.get("gifv_max", 3)))
+    FRAME_FPS = max(1, int(ui.get("gifv_fps", 12)))
 
 
 def inline_loop(label, m, fit):

@@ -424,7 +424,8 @@ class Compose(QDialog):
         for seq in ("Ctrl+Return", "Ctrl+Enter"):
             QShortcut(QKeySequence(seq), self).activated.connect(self.send)
 
-        self._autosave = QTimer(self, singleShot=True, interval=700)
+        from ..common.compose import autosave_ms
+        self._autosave = QTimer(self, singleShot=True, interval=autosave_ms(win.cfg))
         self._autosave.timeout.connect(self.save_draft)
         self._load()
         if self.cw.text() or self.core.cfg["post"]["cw_field"]:

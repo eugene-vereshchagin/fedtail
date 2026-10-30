@@ -395,7 +395,7 @@
 | Просмотрщик картинок | есть | 0.1.0 | `media.image_viewer`, `media.image_upscale`, `media.image_height` | — | у всех |
 | Сетка картинок | есть | 0.9.0 | `media.media_grid` | `meta.focus` | Mastodon web, Tusky, Phanpy, Elk |
 | Подписи к картинкам (alt) | есть | 0.9.0 | `media.alt_text` | `description` | у всех |
-| Видео, аудио, гифки внутри окна | есть | 0.11.0 | `media.video_player`, `media.gifv` | `media_attachments` | у всех |
+| Видео, аудио, гифки внутри окна | есть | 0.11.0 | `media.video_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | у всех |
 | Видео без аппаратного декодера (по умолчанию) | есть | 0.16.0 | `media.video_decode` | — | только в fedtail |
 | Сохранить картинку, видео, гифку | есть | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
 | Картинки и видео заранее, кэш на диске | есть | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | своё | только в fedtail |
@@ -473,7 +473,7 @@
 | Что | Статус | С версии | Конфиг | API / протокол | У других |
 |---|---|---|---|---|---|
 | Обложка видео; описание картинок в правке поста | есть | 0.20.0 | — | `/api/v2/media` `thumbnail`; `PUT /api/v1/statuses/:id` `media_attributes` | Mastodon web, Ivory, Elk |
-| Панель поста и черновики | есть | 0.1.0 | `window.compose`, `window.compose_size`, `post.drafts_autosave` | `statuses` | у всех |
+| Панель поста и черновики | есть | 0.1.0 | `window.compose`, `window.compose_size`, `post.drafts_autosave`, `post.autosave_ms` | `statuses` | у всех |
 | Видимость: приватно по умолчанию, ответ не шире исходного | есть | 0.1.0 | `post.default_visibility`, `post.reply_never_wider` | `visibility`, `/api/v1/preferences` | только в fedtail (ответ не шире) |
 | Markdown | есть | 0.1.0 | `post.markdown`, `post.plain_posts` | `content_type` | клиенты GoToSocial и Akkoma |
 | Предпросмотр перед отправкой | есть | 0.14.0 | `post.preview` | своё | Fedilab |
@@ -629,7 +629,7 @@
 | Уведомления от незнакомцев отдельно | есть | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |
 | Порванные связи и предупреждения модераторов | есть | 0.14.0 | `activity.server_notices` | уведомления `severed_relationships`, `moderation_warning` | Mastodon web | — |
 | Убрать уведомление, очистить все | есть | 0.11.0 | — | `notifications/:id/dismiss`, `notifications/clear` | у всех | — |
-| Объявления сервера | есть | 0.9.0 | `notify.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
+| Объявления сервера | есть | 0.9.0 | `notify.announcements`, `server.announcements_minutes` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | Число непрочитанного на иконке | есть | 0.3.0 | `window.icon_count`, `window.icon_count_except`, `appearance.app_icon`, `appearance.themed_icon` | своё | Tokodon | — |
 | ЛС, прочитанные здесь, прочитаны и на сервере | есть | 0.11.0 | `"direct"` в `lanes.enabled` | `/api/v1/conversations/:id/read` | только в fedtail | — |
 | Быстрые фильтры Активности | есть | 0.21.0 | `switch` in the rule of `[[lanes.custom]]` | своё | — | — |
@@ -718,7 +718,7 @@
 | Конфиг файлом по главам | есть | 0.6.1 | ключи запуска `--update-config`, `--rebuild-config` | — | tut — тоже TOML, но без сборки по главам |
 | Справочник настроек | есть | 0.13.0 | — | `tools/config_doc.py` | tut (man-страница и сайт), MediaWiki (статья на каждую настройку) |
 | Окно, трей, клавиши | есть | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | клавиши — Mastodon web, Phanpy, Elk, Ivory, tut |
-| Ссылки на посты и профили — внутри | есть | 0.2.0 | `card.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
+| Ссылки на посты и профили — внутри | есть | 0.2.0 | `card.links_in_app`, `card.link_chars` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Открыть ссылку в запущенном fedtail | есть | 0.14.0 | `fedtail open URL`; `--install-desktop` ставит обработчик `web+ap://` | своё | Megalodon (поделиться ссылкой в приложение) |
 | Всё хранится локально, читается без сети | есть | 0.1.0 | — | SQLite в папке данных профиля | Tusky — частично, Ice Cubes — кэш Home |
 | Открыт сутками без раздувания | есть | 0.11.0 | `media.unload_hidden_minutes`, `media.keep_hidden_lanes`, `media.image_cache_mb`, `debug.trim_memory` | своё | — |

@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- The server's announcements are asked again by the core, every
+  `server.announcements_minutes` (30; 0 — only at the start), for every interface — the
+  Qt and GTK windows each kept a timer of their own; `announcements_updated` tells them.
+- More options out of the code: `post.autosave_ms` (one delay for the windows: Qt kept
+  700 ms, GTK 1500), `card.link_chars` (where a bare link's text is cut; 0 — never),
+  `media.gifv_max` and `media.gifv_fps` (gifvs looping at once in the Qt window, their
+  frames a second).
 - One reading rule in every interface: what is on screen counts once the feed has stood
   `reading.dwell_ms` (350; the windows and the web page had 350, 400 and 250 ms), and a
   window out of focus counts only while scrolled by hand and `reading.unfocused_seconds`

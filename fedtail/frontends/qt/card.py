@@ -50,7 +50,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
     thumb_box,
 )
 from ..common.lane import true_kind as _true_kind
-from ..richtext import plain_tip
+from ..richtext import link_chars, plain_tip
 from .gone import drop
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
@@ -548,8 +548,8 @@ class PostRow(QWidget):
                 # @mentions, #tags, fediverse links stay inside
                 html = self.ctx.view.in_app(replace(p, text=html))
             mk = self.ctx.cfg["feed"].get("text_markup", True)
-            text = self._emoji_label(clean(html, self.theme.css("link"), mk), p.emojis,
-                                     "postText", selectable=True)
+            shown = clean(html, self.theme.css("link"), mk, link_chars(self.ctx.cfg))
+            text = self._emoji_label(shown, p.emojis, "postText", selectable=True)
             cv.addWidget(text)
         media = self._media(p)
         if media:
@@ -1314,8 +1314,8 @@ class PostRow(QWidget):
         else:
             html = self.ctx.view.in_app(q) if self.ctx.cfg["ui"]["links_in_app"] else q.text
             mk = self.ctx.cfg["feed"].get("text_markup", True)
-            v.addWidget(self._emoji_label(clean(html, self.theme.css("link"), mk),
-                                          q.emojis, "quoteText", selectable=True))
+            shown = clean(html, self.theme.css("link"), mk, link_chars(self.ctx.cfg))
+            v.addWidget(self._emoji_label(shown, q.emojis, "quoteText", selectable=True))
             if q.media:
                 v.addWidget(self._label("🖼 " + _("quote_media", n=len(q.media)), "quoteHead"))
         return box

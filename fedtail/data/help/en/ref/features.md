@@ -393,7 +393,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Picture viewer | has | 0.1.0 | `media.image_viewer`, `media.image_upscale`, `media.image_height` | — | everyone |
 | Picture grid | has | 0.9.0 | `media.media_grid` | `meta.focus` | Mastodon web, Tusky, Phanpy, Elk |
 | Picture descriptions (alt) | has | 0.9.0 | `media.alt_text` | `description` | everyone |
-| Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.gifv` | `media_attachments` | everyone |
+| Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | everyone |
 | Video without a hardware decoder (the default) | has | 0.16.0 | `media.video_decode` | — | only in fedtail |
 | Save a picture, video, gif | has | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
 | Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
@@ -471,7 +471,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | A video's cover; picture descriptions in a post's edit | has | 0.20.0 | — | `/api/v2/media` `thumbnail`; `PUT /api/v1/statuses/:id` `media_attributes` | Mastodon web, Ivory, Elk |
-| The compose panel and drafts | has | 0.1.0 | `window.compose`, `window.compose_size`, `post.drafts_autosave` | `statuses` | everyone |
+| The compose panel and drafts | has | 0.1.0 | `window.compose`, `window.compose_size`, `post.drafts_autosave`, `post.autosave_ms` | `statuses` | everyone |
 | Visibility: private by default, a reply never wider than the post | has | 0.1.0 | `post.default_visibility`, `post.reply_never_wider` | `visibility`, `/api/v1/preferences` | only in fedtail (never wider) |
 | Markdown | has | 0.1.0 | `post.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
 | Preview before sending | has | 0.14.0 | `post.preview` | own | Fedilab |
@@ -627,7 +627,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Notifications from strangers apart | has | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |
 | Severed relationships and moderators' warnings | has | 0.14.0 | `activity.server_notices` | notifications `severed_relationships`, `moderation_warning` | Mastodon web | — |
 | Dismiss a notification, clear them all | has | 0.11.0 | — | `notifications/:id/dismiss`, `notifications/clear` | everyone | — |
-| Server announcements | has | 0.9.0 | `notify.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
+| Server announcements | has | 0.9.0 | `notify.announcements`, `server.announcements_minutes` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | The unread number on the icon | has | 0.3.0 | `window.icon_count`, `window.icon_count_except`, `appearance.app_icon`, `appearance.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
 | Activity's quick filters | has | 0.21.0 | `switch` in the rule of `[[lanes.custom]]` | own | — | — |
@@ -716,7 +716,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
 | The settings reference | has | 0.13.0 | — | `tools/docs_build.py` | tut (a man page and a site), MediaWiki (an article per setting) |
 | Window, tray, keys | has | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
-| Links to posts and profiles — inside | has | 0.2.0 | `card.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
+| Links to posts and profiles — inside | has | 0.2.0 | `card.links_in_app`, `card.link_chars` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Open a link in the running fedtail | has | 0.14.0 | `fedtail open URL`; `--install-desktop` installs a `web+ap://` handler | own | Megalodon (share a link into the app) |
 | Everything is stored locally, readable offline | has | 0.1.0 | — | SQLite in the profile's data folder | Tusky — partly, Ice Cubes — a Home cache |
 | Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.keep_hidden_lanes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |

@@ -350,6 +350,14 @@ class PollMixin:
                 except Exception as e:  # an old server without mutes/blocks: never mind
                     self._silence_checked = time.monotonic()
                     log.warning("silence: %s", e)
+            ann = int(self.cfg["poll"].get("announcements_minutes", 30)) * 60
+            if ann and self.cfg["ui"]["announcements"] != "off" and \
+                    _due(self._announced_at, ann):
+                self._announced_at = time.monotonic()
+                try:
+                    self._check_announcements()
+                except Exception as e:  # noqa: BLE001 — a banner is never worth a round
+                    log.debug("announcements: %s", e)
             if self.cfg["lists"]["enabled"] and _due(self._lists_checked, every):
                 try:
                     self._refresh_lists()

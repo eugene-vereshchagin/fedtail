@@ -62,6 +62,8 @@ DEFAULTS = {
         "video_player": "internal",
         "video_decode": "software",
         "gifv": "play",
+        "gifv_max": 3,
+        "gifv_fps": 12,
         "image_upscale": 2,
         "save_dir": "",
         "links_in_app": True,
@@ -92,6 +94,7 @@ DEFAULTS = {
         "thread_indent_max": 8,
         "reply_context_chars": 160,
         "mute_tags_shown": 3,
+        "link_chars": 40,
         "thread_news": True,
         "page_size": 40,
         "catch_up_limit": 400,
@@ -182,6 +185,7 @@ DEFAULTS = {
         "send_timeout": 90,
         "reply_never_wider": True,
         "drafts_autosave": True,
+        "autosave_ms": 700,
         "cw_field": False,
         "reply_warning": "copy",   # a reply starts with the post's warning, or none
         "camelcase_hint": True,
@@ -274,6 +278,7 @@ DEFAULTS = {
         "stream_gap_seconds": 10,
         "stream": 'auto',
         "slow_minutes": 0,
+        "announcements_minutes": 30,
     },
     "sync": {
         "url": "",
@@ -428,6 +433,11 @@ SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("poll", "announcements_minutes"): 0,
+    ("ui", "gifv_fps"): 1,
+    ("ui", "gifv_max"): 1,
+    ("feed", "link_chars"): 0,
+    ("post", "autosave_ms"): 100,
     ("read", "unfocused_seconds"): 0,
     ("read", "dwell_ms"): 0,
     ("ui", "default_columns"): 1,
@@ -529,7 +539,7 @@ FILE_LAYOUT = (
                               "stats")
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
     ("card", _keys("feed", "show_reply_context thread_indent_max reply_context_chars "
-                           "mute_tags_shown thread_news repeat_boosts quotes link_cards "
+                           "mute_tags_shown link_chars thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
@@ -549,12 +559,12 @@ FILE_LAYOUT = (
                              "home_hide aliases "
                              "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
-                          "video_decode gifv image_upscale save_dir")
+                          "video_decode gifv gifv_max gifv_fps image_upscale save_dir")
      + _keys("feed", "prefetch")
      + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
                    "unload_hidden_minutes keep_hidden_lanes")),
     ("post", _keys("post", "default_visibility send_timeout reply_never_wider drafts_autosave "
-                           "cw_field reply_warning camelcase_hint plain_posts language "
+                           "autosave_ms cw_field reply_warning camelcase_hint plain_posts language "
                            "languages spellcheck "
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "report_forward quote_policy quote_action quote_prefix invite "
@@ -575,7 +585,8 @@ FILE_LAYOUT = (
     ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds read threads "
                            "lanes drafts activity tiles lane_rules people")
      + _keys("read", "sync_markers")),
-    ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes")
+    ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
+                             "announcements_minutes")
      + _keys("net", "proxy proxy_at_login")),
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "

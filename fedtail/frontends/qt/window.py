@@ -341,6 +341,7 @@ class MainWindow(QMainWindow):
             # QtMultimedia is imported when the first card needs it (player.available,
             # once), not on the way to the window's first frame
             if self.cfg["ui"].get("gifv", "play") == "play":
+                player.configure(self.cfg)  # ui.gifv_max, ui.gifv_fps
                 self.ctx.loop_gifv = player.inline_loop
             self.ctx.audio_bar = player.audio_bar
         self.ctx.save_image = self.save_image
@@ -1728,6 +1729,9 @@ class MainWindow(QMainWindow):
     def _on_event(self, name, payload):
         if name == "sync_changed":
             self._sync_text()
+        elif name == "announcements_updated":  # the core asked again: something changed
+            if self.cfg["ui"]["announcements"] != "off":
+                self.announce_bar.check()
         elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
             self._slow_text()
             self._curtain_swing()

@@ -1604,6 +1604,9 @@ class MainWindow(Gtk.ApplicationWindow):
             return  # queued before the exit, come after the database closed
         if name == "sync_changed":
             self._sync_text()
+        elif name == "announcements_updated":  # the core asked again: something changed
+            if self.cfg["ui"].get("announcements", "banner") != "off":
+                self.announce_bar.check()
         elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
             self._slow_text()
             self._curtain_swing()

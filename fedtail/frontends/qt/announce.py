@@ -5,7 +5,7 @@ the web interface and other clients stop showing it too."""
 import logging
 from dataclasses import replace
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from ...i18n import _
@@ -17,7 +17,6 @@ from .text import clean
 log = logging.getLogger(__name__)
 
 QUICK = ("👍", "❤️", "😂", "🎉")  # reactions offered under every announcement
-RECHECK_MS = 30 * 60 * 1000  # admins post rarely; twice an hour is plenty
 
 
 class AnnounceBar(QFrame):
@@ -50,16 +49,13 @@ class AnnounceBar(QFrame):
         self.ok.setToolTip(_("tip_announce_ok"))
         self.ok.clicked.connect(self.dismiss)
         lay.addWidget(self.ok, 0, Qt.AlignmentFlag.AlignTop)
-        self.hide()
-        self.timer = QTimer(self)
-        self.timer.setInterval(RECHECK_MS)
-        self.timer.timeout.connect(self.check)
+        self.hide()  # asked again by the core (poll.announcements_minutes):
+        # announcements_updated brings the window to check()
 
     def start(self):
         if self.win.cfg["ui"]["announcements"] == "off":
             return
         self.check()
-        self.timer.start()
 
     def check(self):
         self.win.bridge.call(self.win.ctx.view.announcements(), ok=self.got,

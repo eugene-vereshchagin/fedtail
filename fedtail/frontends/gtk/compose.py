@@ -22,7 +22,6 @@ from .gi_setup import GLib, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
-AUTOSAVE_MS = 1500
 BIG_PCT = 90  # ⤡: this share of the main window
 
 
@@ -761,7 +760,8 @@ class ComposeWindow(Gtk.Box):
         if self.cfg["post"]["drafts_autosave"]:
             if self._autosave:
                 GLib.source_remove(self._autosave)
-            self._autosave = GLib.timeout_add(AUTOSAVE_MS, self._autosave_now)
+            from ..common.compose import autosave_ms
+            self._autosave = GLib.timeout_add(autosave_ms(self.cfg), self._autosave_now)
 
     def _autosave_now(self):
         self._autosave = 0

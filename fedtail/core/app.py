@@ -7,6 +7,7 @@ worker threads (see events.py):
   lanes_updated    {lane: [new item ids]}   something new arrived / older loaded
   parents          None                     reply contexts became available
   arrived          [(id, in_reply_to_id)]   new posts from a poll
+  announcements_updated n                   the server's announcements changed
   thread_grew      root id                  an opened thread got replies (other servers,
                                             a round, mine sent): its tab reloads
   status_updated   status                   a status changed (fav, boost…)
@@ -245,6 +246,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self.list_members = {}    # list id -> {account ids}
         self._lists_version = 0
         self._lists_checked = None  # monotonic time of the last check; None: never
+        self._announced_at = None   # poll.announcements_minutes: asked last (monotonic)
+        self._announced_sig = None
         self.customs = custom.load(cfg)[0]  # free lanes, [[lanes.custom]]
         self._following = None    # account ids I follow, for the free lanes' atoms
         self._world_version = 0   # bumped when what the rules know around posts changes
@@ -1029,17 +1032,30 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def announcements(self):
         """The server's announcements not dismissed yet, oldest first; [] when
         ui.announcements is "off" or the server has none (GoToSocial: no such API)."""
-        def job():
-            if self.cfg["ui"]["announcements"] == "off" or not self.api:
-                return []
-            try:
-                got = self.api.announcements()
-            except ApiError as e:
-                log.debug("announcements: %s", e)
-                return []
-            fresh = [a for a in got if not a.get("read")]
-            return sorted(fresh, key=lambda a: a.get("published_at") or "")
-        return self.submit(job)
+        return self.submit(self._fetch_announcements)
+
+    def _fetch_announcements(self):
+        if self.cfg["ui"]["announcements"] == "off" or not self.api:
+            return []
+        try:
+            got = self.api.announcements()
+        except ApiError as e:
+            log.debug("announcements: %s", e)
+            return []
+        return sorted((a for a in got if not a.get("read")),
+                      key=lambda a: a.get("published_at") or "")
+
+    def _check_announcements(self):
+        """poll.announcements_minutes: the server's announcements asked again by the core
+        for every interface (the windows each kept a timer of their own, the terminal and
+        the web page none); something new, gone or reacted to — announcements_updated."""
+        fresh = self._fetch_announcements()
+        sig = [(a.get("id"), a.get("updated_at"),
+                tuple((r.get("name"), r.get("count"), r.get("me")) for r in
+                      a.get("reactions") or ())) for a in fresh]
+        if sig != self._announced_sig:
+            self._announced_sig = sig
+            self.emit("announcements_updated", len(fresh))
 
     def dismiss_announcement(self, aid):
         return self.call_api("dismiss_announcement", aid)

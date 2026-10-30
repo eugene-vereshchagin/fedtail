@@ -21,6 +21,12 @@ POLL_TIMES = [(300, "poll_5m"), (1800, "poll_30m"), (3600, "poll_1h"), (21600, "
 DEFAULT_VIS = VISIBILITIES[2]  # followers: private by default
 
 
+def autosave_ms(cfg):
+    """post.autosave_ms: how long after the last key the editor keeps its draft (the
+    windows had 700 and 1500 ms)."""
+    return max(100, int((cfg.get("post") or {}).get("autosave_ms", 700)))
+
+
 def draft_key(view, reply_to=None, quote=None, edit=None, invite=False):
     """The draft's name: my post being corrected, a call into a thread (its own, not the
     reply's), or the core's key for a reply / a quote / a new post."""

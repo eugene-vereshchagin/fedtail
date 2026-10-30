@@ -11,12 +11,11 @@ from ...i18n import _
 from ...model import Reaction
 from .. import pango, richtext
 from ..common.announce import react
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
 QUICK = ("👍", "❤️", "😂", "🎉")  # reactions offered under every announcement
-RECHECK_S = 30 * 60  # admins post rarely; twice an hour is plenty
 
 
 class AnnounceBar(Gtk.Box):
@@ -43,21 +42,11 @@ class AnnounceBar(Gtk.Box):
         self.ok.connect("clicked", lambda _b: self.dismiss())
         self.append(self.ok)
         self.set_visible(False)
-        self._timer = 0
 
     def start(self):
         if self.win.cfg["ui"].get("announcements", "banner") == "off":
             return
-        self.check()
-        if not self._timer:
-            self._timer = GLib.timeout_add_seconds(RECHECK_S, self._tick)
-
-    def _tick(self):
-        if self.get_root() is None:
-            self._timer = 0
-            return GLib.SOURCE_REMOVE
-        self.check()
-        return GLib.SOURCE_CONTINUE
+        self.check()  # then the core asks again (announcements_updated → check)
 
     def check(self):
         self.win.call(self.win.view.announcements(), self.got, lambda _e: None)

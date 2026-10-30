@@ -35,6 +35,7 @@ from ..common import timed
 from ..common.cardtext import context_chars, indent_of
 from ..common.commands import Commands
 from ..richtext import clean
+from ..richtext import link_chars as richtext_link_chars
 
 log = logging.getLogger(__name__)
 
@@ -172,10 +173,10 @@ def account_json(acc):
     return out
 
 
-def web_clean(html):
+def web_clean(html, link_chars=40):
     """Server HTML, cleaned (richtext.clean) — minus the inline styles meant for Qt,
     which the page's CSP refuses anyway."""
-    return clean(html).replace(' style="text-decoration:none;"', "")
+    return clean(html, link_chars=link_chars).replace(' style="text-decoration:none;"', "")
 
 
 _SHORTCODE = re.compile(r":([A-Za-z0-9_]{1,64}):")
@@ -326,7 +327,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         "account": account_json(p.author), "created": _iso(p.created),
         "edited": p.edited is not None, "visibility": p.visibility,
         "warning": p.warning, "sensitive": p.sensitive,
-        "html": with_emojis(web_clean(html), p.emojis),
+        "html": with_emojis(web_clean(html, richtext_link_chars(view.cfg)), p.emojis),
         "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
         "counts": {"replies": p.counts.replies, "shares": p.counts.shares,
                    "likes": p.counts.likes},

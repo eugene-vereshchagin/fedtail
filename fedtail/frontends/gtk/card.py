@@ -469,7 +469,8 @@ class Card(Gtk.Box):
     def _body(self, p):
         cfg = self.ctx.cfg
         html = self.ctx.view.in_app(p) if cfg["ui"]["links_in_app"] else p.text
-        html = richtext.clean(html, markup=cfg["feed"]["text_markup"])
+        html = richtext.clean(html, markup=cfg["feed"]["text_markup"],
+                              link_chars=richtext.link_chars(cfg))
         if not cfg["feed"]["emoji"]:
             html = richtext.strip_emoji(html, p.emojis)
         # one Pango layout, not a wrapping label: a quarter of the cost (textblock.py)

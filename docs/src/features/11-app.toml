@@ -87,7 +87,7 @@ android = "has"
 since = "0.2.0"
 name.ru = "Ссылки на посты и профили — внутри"
 name.en = "Links to posts and profiles — inside"
-config = "`card.links_in_app`"
+config = "`card.links_in_app`, `card.link_chars`"
 api = "`search?resolve=true`"
 others = "Ivory, Phanpy, Elk, Megalodon, Fedilab"
 clients = ["Ivory", "Phanpy", "Elk", "Fedilab", "Megalodon"]
