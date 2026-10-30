@@ -29,6 +29,17 @@ keys = ["login_browser_opened", "login_hint", "login_other_account", "login_serv
         "relogin", "relogin_q"]
 
 [[capability]]
+id = "custom-emoji"
+area = "reading"
+gtk = "no"
+tui = "na"
+android = "has"
+name.ru = "Эмодзи серверов картинками"
+name.en = "Servers' emoji as pictures"
+note.ru = "Окно на Qt, веб и телефон рисуют :blobcat: картинкой — в постах и в именах (в Активности тоже). Окно на GTK пока нет: его текст — один макет Pango, а Pango не ставит картинку в строку; там :blobcat: остаётся текстом. Терминал — текстом всегда: картинка в строку текста не встаёт."
+note.en = "The Qt window, the web page and the phone draw :blobcat: as its picture — in posts and in names (Activity too). The GTK window not yet: its text is one Pango layout, and Pango puts no picture into a line; :blobcat: stays text there. The terminal — text always: a picture doesn't go into a line of text."
+
+[[capability]]
 id = "pin-tabs"
 area = "window"
 tui = "na"

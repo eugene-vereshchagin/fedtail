@@ -177,6 +177,31 @@ class EventRow(QWidget):
     fedtail: link (common/links.py). Unread until seen on screen, as a post is; seen
     here is seen everywhere (its key goes to LaneModel.read)."""
 
+    def _names_emoji(self, lab, html, emojis):
+        """:blobcat: in the names: the server's pictures, as on a card (PostRow's
+        _emoji_label; feed.emoji, feed.custom_emoji) — they stood as :code: (30.10)."""
+        feed = self.ctx.cfg["feed"]
+        if not emojis:
+            return
+        if not feed.get("emoji", True):
+            lab.setText(strip_emoji(html, emojis))
+            return
+        if not feed.get("custom_emoji", True) or getattr(self.ctx, "images", None) is None:
+            return
+        lab.ensurePolished()
+        px = max(14, lab.fontMetrics().height())
+
+        def render():
+            out, missing = emojify(html, emojis, px, self.ctx.images.local)
+            try:
+                lab.setText(out)
+            except RuntimeError:  # the row was drawn anew meanwhile
+                return []
+            return missing
+        for url in set(render()):
+            self.ctx.images.get(url, lambda _pm: render(), 128, owner=lab)
+
+
     real_id = None
 
     def __init__(self, spec, ctx):
@@ -212,9 +237,11 @@ class EventRow(QWidget):
             who = ", ".join(f'<a href="{esc(u)}" style="text-decoration:none;color:{text};">'
                             f"<b>{esc(n)}</b></a>" for n, u in parts.people)
             who += (" " + esc(parts.more)) if parts.more else ""
-        top = WrapLabel(f'{who} <span style="color:{muted};">— {esc(parts.what)}'
-                     + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
+        html = (f'{who} <span style="color:{muted};">— {esc(parts.what)}'
+                + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
+        top = WrapLabel(html)
         top.setTextFormat(Qt.TextFormat.RichText)
+        self._names_emoji(top, html, [e for es in parts.emojis for e in es])
         top.setWordWrap(True)
         top.setToolTip(plain_tip(parts.tip))  # names in it: not ours
         top.linkActivated.connect(link)

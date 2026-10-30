@@ -2171,6 +2171,26 @@ class QtSmokeTest(unittest.TestCase):
         ok[0].click()
         self.pump(until=lambda: self.world.answered == [("rq", True)])
 
+    def test_an_activity_rows_names_ask_for_their_emoji(self):
+        """:blobcat: in a name in Activity: its picture asked for and put in, as on a card
+        (it stood as :code:, 30.10)."""
+        from unittest import mock
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        mine = self.world.add(status("192", ME, minute=1, vis="public"), home=True)
+        cat = dict(NEWS, id="CAT", acct="cat@x.example", display_name="Cat :blob:",
+                   emojis=[{"shortcode": "blob", "url": "https://x.example/blob.png",
+                            "static_url": "https://x.example/blob.png"}])
+        self.world.act("q3", "favourite", cat, mine, minute=3)
+        asked = []
+        real_get = self.win.ctx.images.get
+        with mock.patch.object(self.win.ctx.images, "get",
+                               lambda url, *a, **k: (asked.append(url), real_get(url, *a, **k))):
+            self.core.poll_once()
+            self.win.select_lane("activity")
+            self.pump(until=lambda: "https://x.example/blob.png" in asked, timeout=5)
+        self.assertIn("https://x.example/blob.png", asked)
+
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)

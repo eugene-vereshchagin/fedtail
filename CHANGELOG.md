@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Qt: a server's emoji in the names of Activity's rows are pictures, as on a card and
+  on the web page. The GTK window draws no server emoji as pictures yet (its text is one
+  Pango layout): said in the interfaces' table now, where it was claimed.
 - Web page: the thread open beside grows by itself — someone's answer that a round
   brings, my own answer sent from another place; it stayed as it was opened (the page
   now follows the server's thread count, as the phone does).
