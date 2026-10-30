@@ -126,8 +126,8 @@ config = "`card.quotes`"
 api = "`status.quote`"
 others = "Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
-details.ru = "Пост внутри поста (Mastodon 4.5+, Akkoma, Misskey и другие): `\"card\"` — рамкой внутри, `\"link\"` — строкой со ссылкой, `\"off\"` — как прислал сервер (обычно «RE: ссылка»)."
-details.en = "A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `\"card\"` — framed inside, `\"link\"` — a line with a link, `\"off\"` — as the server sent it (usually “RE: link”)."
+details.ru = "Пост внутри поста (Mastodon 4.5+, Akkoma, Misskey и другие): `\"card\"` — рамкой внутри, `\"link\"` — строкой со ссылкой, `\"off\"` — как прислал сервер (обычно «RE: ссылка»). Цитата, которая сама цитирует, — строкой «❝ цитирует пост …» под ней, со ссылкой на тред, как у Mastodon (с 0.22.0)."
+details.en = "A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `\"card\"` — framed inside, `\"link\"` — a line with a link, `\"off\"` — as the server sent it (usually “RE: link”). A quote that quotes too — a line “❝ quotes …'s post” under it, a link to its thread, as Mastodon shows it (since 0.22.0)."
 
 [[feature]]
 id = "polls"

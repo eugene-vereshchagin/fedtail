@@ -1094,6 +1094,13 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(len(row.findChildren(QFrame, "quoteBox")), 1)
         self.assertIn("исходная новость", texts(row))
         self.assertNotIn("RE:", texts(row))
+        # the quoted post quotes too (Mastodon: an id only): a line inside the frame, no card
+        inner["quote"] = {"state": "accepted", "quoted_status_id": "090"}
+        row = PostRow(CardSpec(key="094", entry=E(st)), self.win.ctx)
+        self.assertEqual(len(row.findChildren(QFrame, "quoteBox")), 1)
+        self.assertIn("цитирует пост", texts(row))
+        self.assertIn("fedtail:thread/090", texts(row))
+        del inner["quote"]
         st["quote"] = {"state": "pending", "quoted_status_id": "093"}
         row = PostRow(CardSpec(key="094", entry=E(st)), self.win.ctx)
         self.assertFalse(row.findChildren(QFrame, "quoteBox"))

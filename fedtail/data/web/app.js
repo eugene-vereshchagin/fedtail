@@ -216,7 +216,7 @@ function renderPost(p, inThread) {
   if (p.poll) content.append(renderPoll(p));
   if (p.media.length) content.append(renderMedia(p));
   if (p.card && !p.media.length) content.append(renderCard(p.card));
-  if (p.quote && !p.quote.note) content.append(renderQuote(p.quote));
+  if (p.quote && !p.quote.note) content.append(renderQuote(p.quote, wd && wd.quote_inner));
   else if (wd && wd.quote) content.append(bitEl(wd.quote, "quote-line"));
   else if (p.quote) content.append(renderQuote(p.quote));
   if (wd && wd.reactions) {
@@ -458,14 +458,16 @@ function nameEl(tag, cls, acc) {
   return e;
 }
 
-function renderQuote(q) {
+function renderQuote(q, inner) {
   const box = el("div", "quote");
   if (q.note) { box.append(el("span", "muted", "❝ " + q.note)); return box; }
   const head = el("div", "quote-head");
   head.append(avatar(q.account, "ava small"), nameEl("b", "", q.account),
               el("span", "acct", " @" + q.account.handle), el("span", "time", " · " + when(q.created)));
   box.append(head, el("div", "", q.text));
-  if (q.id) box.onclick = () => openThread(q.id);
+  // it quotes too: a line, as Mastodon's page (common/cardtext.inner_quote_bit)
+  if (inner) box.append(bitEl(inner, "quote-line"));
+  if (q.id) box.onclick = (e) => { if (!e.target.closest("a")) openThread(q.id); };
   return box;
 }
 

@@ -12,7 +12,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from ..common.cardtext import context_chars, indent_of, newcomer_bit
+from ..common.cardtext import context_chars, indent_of, inner_quote_bit, newcomer_bit
 from ..common.links import thread_url
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
@@ -788,6 +788,11 @@ class Card(Gtk.Box):
             frame.append(self._body(q))
             if q.media:
                 frame.append(_label("🖼 " + _("quote_media", n=len(q.media)), ("ft-muted",)))
+        inner = inner_quote_bit(q)  # it quotes too: a line, as Mastodon's page
+        if inner is not None:
+            lab = _label(link_markup(inner.link, inner.text), ("ft-muted",), markup=True)
+            lab.connect("activate-link", self._link)
+            frame.append(lab)
         return frame
 
     def _link_card(self, card):

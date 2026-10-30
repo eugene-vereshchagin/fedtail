@@ -179,3 +179,33 @@ class MessageTimeTest(unittest.TestCase):
         self.assertEqual(message_seconds({}, 8), 8)
         self.assertEqual(message_seconds({"ui": {"message_percent": 200}}, 8), 16)
         self.assertEqual(message_seconds({"ui": {"message_percent": 1}}, 10), 2)  # 20 % least
+
+
+class InnerQuoteTest(unittest.TestCase):
+    """A quoted post that quotes too: one line under the quote, as Mastodon's page shows it
+    — Mastodon gives that level as an id only (ShallowQuote), Akkoma whole."""
+
+    def post(self, inner):
+        from fedtail.protocols.mastodon import adapter
+
+        from .fakes import BOB, status
+        quoted = status("020", BOB, text="the quote")
+        quoted["quote"] = inner
+        outer = status("030", BOB, text="mine")
+        outer["quote"] = {"state": "accepted", "quoted_status": quoted}
+        return adapter.post(outer)
+
+    def test_mastodon_an_id_akkoma_the_whole_post(self):
+        from fedtail import i18n
+        from fedtail.frontends.common.cardtext import inner_quote_bit
+        i18n.setup("en")
+        shallow = self.post({"state": "accepted", "quoted_status_id": "010"})
+        b = inner_quote_bit(shallow.quote.post)
+        self.assertEqual((b.text, b.link), ("❝ quotes a post", "fedtail:thread/010"))
+        from .fakes import NEWS, status
+        whole = self.post(status("011", NEWS, text="deep"))  # Akkoma: the status itself
+        self.assertIn("quotes", inner_quote_bit(whole.quote.post).text)
+        self.assertEqual(inner_quote_bit(whole.quote.post).link, "fedtail:thread/011")
+        self.assertIsNone(inner_quote_bit(whole.quote.post, "off"))
+        pending = self.post({"state": "pending", "quoted_status_id": "012"})
+        self.assertIsNone(inner_quote_bit(pending.quote.post))

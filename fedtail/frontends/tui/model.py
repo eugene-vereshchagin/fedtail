@@ -136,6 +136,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if words is not None:
         if words.quote is not None:
             out.below.append(("quote", words.quote.text))
+        if words.quote_inner is not None:  # the quote quotes too: one more line
+            out.below.append(("quote", "  " + words.quote_inner.text))
         if words.reactions:
             out.below.append(("muted", words.reactions))
         for b in words.my_replies:

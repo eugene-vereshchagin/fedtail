@@ -1120,6 +1120,7 @@ _STRINGS = {
                        "Запусти python3 -m fedtail --update-config — "
                        "допишет их с пояснениями.",
         "quote_by": "цитата {name}", "quote_open": "цитата — открыть",
+        "quote_inner": "цитирует пост", "quote_inner_by": "цитирует пост {name}",
         "quote_media": "вложений: {n}", "quote_unavailable": "цитата недоступна",
         "quote_pending": "цитата ждёт одобрения автора",
         "quote_rejected": "автор не разрешил цитировать",
@@ -2925,6 +2926,7 @@ _STRINGS = {
         "new_options": "Your config doesn't mention {n} new option(s). "
                        "Run python3 -m fedtail --update-config to add them, with explanations.",
         "quote_by": "quoting {name}", "quote_open": "quoted post — open",
+        "quote_inner": "quotes a post", "quote_inner_by": "quotes {name}'s post",
         "quote_media": "attachments: {n}", "quote_unavailable": "quoted post unavailable",
         "quote_pending": "quote awaiting the author's approval",
         "quote_rejected": "the author didn't allow quoting",

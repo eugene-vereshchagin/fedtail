@@ -150,6 +150,7 @@ data class PostItem(
     val meta: List<Pair<String, String>> = emptyList(),  // the marks with their links (time, edits)
     val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
     val quoteLine: Pair<String, String>? = null,  // the quote as one line; null — none shown
+    val quoteInner: Pair<String, String>? = null, // the quote quotes too: "❝ quotes …", its link
     val conversation: Pair<String, String>? = null,  // "💬 N in the conversation, new: M…"
     val boosted: Pair<String, String>? = null,  // "♻ boosted by X · 14:02" → their profile
     val contextLine: Pair<String, String>? = null,  // the parent's line when it isn't here yet
@@ -2242,6 +2243,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             foldedBy = o.optJSONObject("words")?.takeIf { it.optBoolean("folded") }?.let { w ->
                 str(w, "warning").split(" · ").firstOrNull().orEmpty() } ?: "",
             quoteLine = bit(o.optJSONObject("words")?.optJSONObject("quote")),
+            quoteInner = bit(o.optJSONObject("words")?.optJSONObject("quote_inner")),
             quoteOff = o.optJSONObject("words")?.let { it.isNull("quote") } ?: false,
             conversation = bit(o.optJSONObject("words")?.optJSONObject("conversation")),
             boosted = bit(o.optJSONObject("words")?.optJSONObject("boosted")),

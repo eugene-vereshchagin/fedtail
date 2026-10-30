@@ -352,7 +352,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Servers' emoji as pictures.** `:blobcat:` and the rest — as pictures in posts and names. `false` — leave them as text and don't fetch the pictures.
 
-**Quotes: showing them.** A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `"card"` — framed inside, `"link"` — a line with a link, `"off"` — as the server sent it (usually “RE: link”).
+**Quotes: showing them.** A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `"card"` — framed inside, `"link"` — a line with a link, `"off"` — as the server sent it (usually “RE: link”). A quote that quotes too — a line “❝ quotes …'s post” under it, a link to its thread, as Mastodon shows it (since 0.22.0).
 
 **Polls: seeing and voting.** Options, percentages, the deadline; voting for one or several options, as the author set.
 

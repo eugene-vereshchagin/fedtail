@@ -37,6 +37,7 @@ from ..common import actions
 from ..common.cardtext import (
     context_chars,
     indent_of,
+    inner_quote_bit,
     newcomer_bit,
     only_counts_differ,
     thread_news_bit,
@@ -1318,6 +1319,10 @@ class PostRow(QWidget):
             v.addWidget(self._emoji_label(shown, q.emojis, "quoteText", selectable=True))
             if q.media:
                 v.addWidget(self._label("🖼 " + _("quote_media", n=len(q.media)), "quoteHead"))
+        inner = inner_quote_bit(q, mode)  # it quotes too: a line, as Mastodon's page
+        if inner is not None:
+            v.addWidget(self._label(link("thread", inner.link.rsplit("/", 1)[1], inner.text,
+                                         self.theme.css("link")), "quoteNote"))
         return box
 
     def _link_card(self, p):

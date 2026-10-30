@@ -64,6 +64,7 @@ class CardWords:
     conversation: Bit | None = None   # "💬 3 in the conversation…"
     reactions: str = ""               # "👍 3 :blobcat: 2"
     quote: Bit | None = None          # a quote as a line (or why it can't be shown)
+    quote_inner: Bit | None = None    # "❝ quotes Bob's post" under a quote that quotes too
     newcomer: Bit | None = None       # "👤 New in this private talk: @eve" — see newcomers()
     thread_news: Bit | None = None    # "🔔 3 new in the thread": a followed thread's news
 
@@ -104,6 +105,22 @@ def newcomer_bit(post, parent):
     return Bit("👤 " + _("dm_newcomer", who=", ".join("@" + h for h in who)),
                f"fedtail:account/{ids[who[0]]}" if ids.get(who[0]) else "",
                _("dm_newcomer_tip"), kind="newcomer")
+
+
+def inner_quote_bit(quoted, mode="card"):
+    """The quoted post's own quote, as Mastodon's page shows it: one line under the quote —
+    "❝ quotes Bob's post", a link to its thread — never a card in a card (Mastodon gives
+    that level as an id only, Akkoma whole; no client draws it framed). quoted: the Post
+    quoted (Quote.post); None — nothing to say, as for a quote not shown (feed.quotes off,
+    or pending, rejected…)."""
+    if quoted is None or mode == "off":
+        return None
+    inner = getattr(quoted, "quote", None)
+    if inner is None or inner.state != "accepted" or not inner.id:
+        return None
+    words = _("quote_inner_by", name=name_of(inner.post.author)) if inner.post is not None \
+        else _("quote_inner")
+    return Bit("❝ " + words, f"fedtail:thread/{inner.id}")
 
 
 def quote_bit(quote, mode="card"):
@@ -183,13 +200,15 @@ def card_words(spec, cfg, date, in_thread=None):
         w.reactions = " ".join((name if len(name) <= 4 else ":" + name.strip(":") + ":")
                                + f" {count}" for name, count in reacted[:12])
     w.quote = quote_bit(p.quote, cfg["feed"].get("quotes", "card"))
+    if p.quote is not None and p.quote.state == "accepted":
+        w.quote_inner = inner_quote_bit(p.quote.post, cfg["feed"].get("quotes", "card"))
     w.newcomer = newcomer_bit(p, parent)
     w.thread_news = thread_news_bit(spec)
     return w
 
 
-__all__ = ["Bit", "CardWords", "card_words", "name_of", "newcomer_bit", "newcomers",
-           "quote_bit", "thread_news_bit"]
+__all__ = ["Bit", "CardWords", "card_words", "inner_quote_bit", "name_of", "newcomer_bit",
+           "newcomers", "quote_bit", "thread_news_bit"]
 
 
 def only_counts_differ(old, new):

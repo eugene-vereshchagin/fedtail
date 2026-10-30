@@ -717,6 +717,11 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                 fontWeight = FontWeight.SemiBold)
             Text(p.quoteText, fontSize = 14.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // it quotes too: a line, as Mastodon's page (common/cardtext.inner_quote_bit)
+            p.quoteInner?.let { (text, url) ->
+                Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { act.link(url) })
+            }
         }
     }
     p.card?.takeIf { it.url.isNotBlank() && it.title.isNotBlank() }?.let { c -> Link(c, act) }
