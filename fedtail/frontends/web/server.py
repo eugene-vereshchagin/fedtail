@@ -187,7 +187,8 @@ def with_emojis(html, emojis):
     address are escaped, so nothing of the post becomes markup)."""
     if not emojis or ":" not in html:
         return html
-    pics = {e.shortcode: _pic(e.static_url or e.url) for e in emojis}
+    from ..richtext import emoji_urls
+    pics = {code: _pic(url) for code, url in emoji_urls(emojis).items()}
 
     def one(m):
         url = pics.get(m.group(1))

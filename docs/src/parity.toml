@@ -31,13 +31,14 @@ keys = ["login_browser_opened", "login_hint", "login_other_account", "login_serv
 [[capability]]
 id = "custom-emoji"
 area = "reading"
-gtk = "no"
 tui = "na"
-android = "has"
+android = "partly"
 name.ru = "Эмодзи серверов картинками"
 name.en = "Servers' emoji as pictures"
-note.ru = "Окно на Qt, веб и телефон рисуют :blobcat: картинкой — в постах и в именах (в Активности тоже). Окно на GTK пока нет: его текст — один макет Pango, а Pango не ставит картинку в строку; там :blobcat: остаётся текстом. Терминал — текстом всегда: картинка в строку текста не встаёт."
-note.en = "The Qt window, the web page and the phone draw :blobcat: as its picture — in posts and in names (Activity too). The GTK window not yet: its text is one Pango layout, and Pango puts no picture into a line; :blobcat: stays text there. The terminal — text always: a picture doesn't go into a line of text."
+note.ru = "Окна на Qt и GTK и веб рисуют :blobcat: картинкой — в постах, в именах, в бусте, в цитате и в Активности. Терминал — текстом: картинка в строку текста не встаёт."
+note.en = "The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text."
+android_note.ru = "В постах, именах, цитате и Активности — картинкой; в строке «бустнул(а)» пока текстом (она приходит готовыми словами)."
+android_note.en = "In posts, names, a quote and Activity — pictures; the \"boosted by\" line still text (it comes as ready words)."
 
 [[capability]]
 id = "pin-tabs"

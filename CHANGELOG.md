@@ -2,9 +2,10 @@
 
 ## 0.22.0 — in progress
 
-- Qt: a server's emoji in the names of Activity's rows are pictures, as on a card and
-  on the web page. The GTK window draws no server emoji as pictures yet (its text is one
-  Pango layout): said in the interfaces' table now, where it was claimed.
+- A server's emoji (:blobcat:) as pictures in the GTK window — in posts, names, the boost's
+  line, quotes and Activity: it showed them as text everywhere (Pango puts no picture in a
+  line; the text block keeps a square for each and draws the picture there). Qt draws
+  them in Activity's names too, the phone in Activity's names and a quote's author.
 - Web page: the thread open beside grows by itself — someone's answer that a round
   brings, my own answer sent from another place; it stayed as it was opened (the page
   now follows the server's thread count, as the phone does).

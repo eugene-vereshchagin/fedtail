@@ -1172,6 +1172,51 @@ class GtkSmokeTest(_GtkBase):
         self.assertIn("> жирно", dlg._text())
         dlg.close()
 
+    def test_server_emoji_drawn_as_pictures(self):
+        """:blob: in a post and in its author's name: a place for the picture, the picture
+        drawn when it comes (Pango has no picture in a line: TextBlock's shapes); copied,
+        it says :blob:; feed.custom_emoji off — the code stays text. As Qt's, the page's."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.frontends.gtk.gi_setup import Gdk, GLib
+        from fedtail.frontends.gtk.textblock import TextBlock
+        from fedtail.protocols.mastodon import adapter
+        blob = [{"shortcode": "blob", "url": "https://x.example/blob.png",
+                 "static_url": "https://x.example/blob.png"}]
+        st = status("095", dict(BOB, display_name="Bob :blob:", emojis=blob), minute=3,
+                    text="hello :blob: world")
+        st["emojis"] = blob
+        asked = []
+        tex = Gdk.MemoryTexture.new(2, 2, Gdk.MemoryFormat.R8G8B8A8,
+                                    GLib.Bytes.new(bytes(16)), 8)
+        real_get = self.win.ctx.images.get
+
+        def get(url, cb, *a, **k):
+            asked.append(url)
+            cb(tex)
+        self.win.ctx.images.get = get
+        try:
+            card = Card(self.win.ctx, "e", adapter.post(st))
+        finally:
+            self.win.ctx.images.get = real_get
+        blocks = [w for w in _walk(card) if isinstance(w, TextBlock)]
+        body = next(b for b in blocks if "hello" in b.text())
+        self.assertEqual(body.text(), "hello :blob: world")  # what is copied: the code
+        self.assertEqual(len(body.pictures), 1)
+        self.assertIs(body.pictures[0][3], tex)  # the picture came: drawn in its place
+        self.assertTrue(any(b.one_line and b.pictures for b in blocks), "the name's emoji")
+        self.assertIn("https://x.example/blob.png", asked)
+        body.select(0, len(b"hello ") + 3)
+        self.assertEqual(body.selected(), "hello :blob:")
+        cfg = self.win.ctx.cfg["feed"]
+        cfg["custom_emoji"] = False
+        try:
+            card = Card(self.win.ctx, "e2", adapter.post(st))
+            plain = [w for w in _walk(card) if isinstance(w, TextBlock) and "hello" in w.text()]
+            self.assertEqual(plain[0].pictures, [])
+            self.assertIn(":blob:", plain[0].text())
+        finally:
+            cfg["custom_emoji"] = True
+
     def test_quotes(self):
         """As Qt's: the quoted post framed inside; one that quotes too — a line inside the
         frame, a link to its thread (no card in a card); a pending one says so; off — as

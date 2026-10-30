@@ -105,6 +105,7 @@ data class EventItem(
     val answers: List<Pair<String, String>>,  // a request's (yes link, no link)
     val answerWords: List<Pair<String, String>>, // (words, tip) of yes, of no
     val tip: String,
+    val peopleHtml: List<String> = emptyList(),   // each name with its :emoji: (people_html)
 )
 
 data class LinkCard(
@@ -134,6 +135,7 @@ data class PostItem(
     val edited: Boolean = false,
     val quoteId: String = "",        // the post it quotes, or a note why it can't be shown
     val quoteWho: String = "",
+    val quoteWhoHtml: String = "",   // the quoted author's name with its :emoji:
     val quoteText: String = "",
     val nameHtml: String = "",       // the name with its :emoji: as pictures (if any)
     val openAt: String = "post",
@@ -2155,6 +2157,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val key = str(e, "key").takeIf { it.isNotBlank() } ?: return null
         val x = e.optJSONObject("event") ?: return null
         val ev = EventItem(kind = str(x, "kind"), people = pairs(x.optJSONArray("people")),
+            peopleHtml = x.optJSONArray("people_html")?.let { a ->
+                (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
             more = str(x, "more"), what = str(x, "what"), whenText = str(x, "when"),
             notice = str(x, "notice"), post = str(x, "post"), postLink = str(x, "post_link"),
             hide = str(x, "hide"), hideTip = str(x, "hide_tip"),
@@ -2257,6 +2261,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             quoteId = str(o.optJSONObject("quote"), "id"),
             quoteWho = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
                 str(a, "name").ifBlank { str(a, "handle") } } ?: "",
+            quoteWhoHtml = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
+                str(a, "name_html") } ?: "",
             quoteText = o.optJSONObject("quote")?.let { q ->
                 str(q, "text").ifBlank { str(q, "note") } } ?: "",
         )

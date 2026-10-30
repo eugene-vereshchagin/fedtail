@@ -39,7 +39,7 @@ from ..common.lane import (
     seen,
 )
 from ..common.strip import Strip
-from .card import Card, Separator, link_markup
+from .card import Card, Separator, link_markup, rich_line
 from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
@@ -998,14 +998,16 @@ class EventRow(Gtk.Box):
         else:
             who = ", ".join(link_markup(u, n) for n, u in parts.people)
             who += (" " + esc(parts.more)) if parts.more else ""
-        line = Gtk.Label(xalign=0, wrap=True)
-        line.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        line.set_markup(f"{who} <span alpha='70%'>— {esc(parts.what)}"
-                        + (f" · {esc(parts.when)}" if parts.when else "") + "</span>")
+        # :blobcat: in the names: their pictures (card.rich_line), as Qt's and the page's
+        line = rich_line(ctx, f"{who} <span alpha='70%'>— {esc(parts.what)}"
+                         + (f" · {esc(parts.when)}" if parts.when else "") + "</span>",
+                         [e for es in parts.emojis for e in es], wrap=True,
+                         on_link=lambda uri: follow(None, uri))
+        if isinstance(line, Gtk.Label):
+            line.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         line.set_hexpand(True)
         if parts.tip:
             tip(line, parts.tip)
-        line.connect("activate-link", follow)
         x = Gtk.Button(label="×", valign=Gtk.Align.START, halign=Gtk.Align.END)
         x.add_css_class("flat")
         tip(x, parts.hide_tip)

@@ -312,6 +312,13 @@ _EMOJI = re.compile(
 _ALONE_SHORTCODE = re.compile(r"(?:(?<=\s)|^):[A-Za-z0-9_]{2,}:(?=\s|$|[.,!?;)])")
 
 
+def emoji_urls(emojis):
+    """{shortcode: picture address} of a post's or a name's custom emoji — the still one
+    where the server gives it (an animated one moves in no interface's text)."""
+    return {e.shortcode: e.static_url or e.url for e in emojis or ()
+            if e.shortcode and (e.static_url or e.url)}
+
+
 def strip_emoji(h, emojis=()):
     """h (sanitized HTML) without emoji: Unicode ones, the server's :shortcodes: this
     post names, and a :shortcode: standing alone as a word (a remote server's emoji the

@@ -856,7 +856,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
-| Servers' emoji as pictures | ✓ | — | · | ✓ | ✓ | The Qt window, the web page and the phone draw :blobcat: as its picture — in posts and in names (Activity too). The GTK window not yet: its text is one Pango layout, and Pango puts no picture into a line; :blobcat: stays text there. The terminal — text always: a picture doesn't go into a line of text. |
+| Servers' emoji as pictures | ✓ | ✓ | · | ✓ | ◐ | The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text. Android: In posts, names, a quote and Activity — pictures; the "boosted by" line still text (it comes as ready words). |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
 
 ### Pictures and video

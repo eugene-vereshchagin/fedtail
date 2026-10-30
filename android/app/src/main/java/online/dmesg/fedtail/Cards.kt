@@ -602,8 +602,16 @@ private fun EventRow(ev: EventItem, unread: Boolean, act: CardActions) {
                         color = text)
                 } else {
                     ev.people.forEachIndexed { i, (name, link) ->
-                        Text(name + if (i < ev.people.size - 1) ", " else "", fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold, color = text,
+                        // :blobcat: in a name: its picture (people_html), as the windows'
+                        val shown = remember(name, ev.peopleHtml) {
+                            nameText(name + if (i < ev.people.size - 1) ", " else "",
+                                     ev.peopleHtml.getOrNull(i)?.let {
+                                         if (it.isBlank()) it
+                                         else it + if (i < ev.people.size - 1) ", " else ""
+                                     } ?: "")
+                        }
+                        Text(shown, inlineContent = remember(shown) { emojiContent(shown) },
+                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = text,
                             modifier = Modifier.clickable(enabled = link.isNotBlank()) { act.link(link) })
                     }
                     if (ev.more.isNotBlank()) Text(" " + ev.more, fontSize = 14.sp, color = text)
@@ -713,8 +721,14 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
             .clickable(enabled = p.quoteWho.isNotBlank()) { act.open(p.copy(sid = p.quoteId)) }
             .padding(10.dp)) {
-            if (p.quoteWho.isNotBlank()) Text("❝ " + p.quoteWho, fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold)
+            if (p.quoteWho.isNotBlank()) {
+                val who = remember(p.quoteWho, p.quoteWhoHtml) {
+                    nameText("❝ " + p.quoteWho,
+                             if (p.quoteWhoHtml.isBlank()) "" else "❝ " + p.quoteWhoHtml)
+                }
+                Text(who, inlineContent = remember(who) { emojiContent(who) }, fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold)
+            }
             Text(p.quoteText, fontSize = 14.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             // it quotes too: a line, as Mastodon's page (common/cardtext.inner_quote_bit)

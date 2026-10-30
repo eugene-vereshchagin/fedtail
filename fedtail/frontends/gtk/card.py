@@ -50,6 +50,35 @@ def name_of(account):
     return account.name or account.username or account.handle
 
 
+def emoji_urls(ctx, emojis):
+    """{code: url} of a server's emoji to draw as pictures here, or None: feed.emoji or
+    feed.custom_emoji off, or none."""
+    feed = ctx.cfg["feed"]
+    if not emojis or not feed.get("emoji", True) or not feed.get("custom_emoji", True):
+        return None
+    return richtext.emoji_urls(emojis) or None
+
+
+def picture_loader(ctx):
+    """TextBlock's load(url, callback, owner): the picture cache's, an emoji's size."""
+    return lambda url, cb, owner: ctx.images.get(url, cb, 64, owner=owner)
+
+
+def rich_line(ctx, markup, emojis, css=(), on_link=None, wrap=False):
+    """A line of markup (a name, "boosted by …") as a label — or, with a server's emoji in
+    it, a TextBlock that draws their pictures, which a label can't (one line, cut with
+    "…", unless wrap). on_link(url): a link clicked in it."""
+    urls = emoji_urls(ctx, emojis)
+    if urls and any(f":{code}:" in markup for code in urls):
+        from .textblock import TextBlock
+        return TextBlock(markup, ctx.theme.c["link"].name(), on_link, css=css, emojis=urls,
+                         load=picture_loader(ctx), one_line=not wrap)
+    lab = _label(markup, css, markup=True, wrap=wrap)
+    if on_link is not None:
+        lab.connect("activate-link", lambda _l, uri: (on_link(uri), True)[1])
+    return lab
+
+
 def link_markup(url, text):
     return f'<a href="{GLib.markup_escape_text(url)}">{GLib.markup_escape_text(text)}</a>'
 
@@ -244,9 +273,10 @@ class Card(Gtk.Box):
             name = name.replace(f'foreground="{color}"', f'foreground="{p.author.color}"', 1)
         line = line.replace("{name}", name)
         line = line.replace("{when}", part(thread_url(p.id, self.open_at), when))
-        lab = _label(line, ("ft-chat-name",), markup=True)
-        lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
-        lab.connect("activate-link", self._link)
+        lab = rich_line(ctx, line, p.author.emojis, ("ft-chat-name",),
+                        lambda uri: self._link(None, uri))
+        if isinstance(lab, Gtk.Label):
+            lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
         tip(lab, "@" + p.author.handle + " · " + actions.vis_word(p.visibility))
         head.append(lab)
         if p.edited:
@@ -274,8 +304,8 @@ class Card(Gtk.Box):
             if self.entry.created:
                 text += " · " + GLib.markup_escape_text(
                     _("boost_time", when=ctx.theme.date(self.entry.created)))
-            boost = _label("♻ " + text, ("ft-muted",), markup=True)
-            boost.connect("activate-link", self._link)
+            boost = rich_line(ctx, "♻ " + text, by.emojis, ("ft-muted",),
+                              lambda uri: self._link(None, uri))
             right = Gtk.GestureClick(button=3)  # who boosted: their own menu, as Qt's
             right.connect("pressed", lambda g, *_a, who=by, lab=boost: (
                 g.set_state(Gtk.EventSequenceState.CLAIMED), self._booster_menu(lab, who)))
@@ -290,13 +320,12 @@ class Card(Gtk.Box):
         if ctx.theme.shape.get("card_header") == "chat":
             self._chat_head(head, p)
         else:
+            shown = GLib.markup_escape_text(name_of(p.author))
             if p.author.color:  # people.nick_colors: their name in my colour
-                name = _label(f'<span foreground="{p.author.color}">'
-                              f'{GLib.markup_escape_text(name_of(p.author))}</span>',
-                              ("ft-name",), markup=True)
-            else:
-                name = _label(name_of(p.author), ("ft-name",))
-            name.set_ellipsize(Pango.EllipsizeMode.END)
+                shown = f'<span foreground="{p.author.color}">{shown}</span>'
+            name = rich_line(ctx, shown, p.author.emojis, ("ft-name",))  # :blob: drawn
+            if isinstance(name, Gtk.Label):
+                name.set_ellipsize(Pango.EllipsizeMode.END)
             head.append(name)
             handle = _label(link_markup(f"fedtail:account/{p.author.id}", "@" + p.author.handle),
                             ("ft-muted",), markup=True)
@@ -485,7 +514,9 @@ class Card(Gtk.Box):
         self.body_block = TextBlock(pango.markup(html, sanitized=True),
                                     self.ctx.theme.c["link"].name(),
                                     lambda uri: self._link(None, uri), css=("ft-body",),
-                                    on_select=self._selection_menu)
+                                    on_select=self._selection_menu,
+                                    emojis=emoji_urls(self.ctx, p.emojis),
+                                    load=picture_loader(self.ctx))
         return self.body_block
 
     def _selection_menu(self, text, _x, _y):
@@ -786,9 +817,9 @@ class Card(Gtk.Box):
     def _quote(self, q):
         frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         frame.add_css_class("ft-ctx")
-        head = _label(link_markup(f"fedtail:thread/{q.id}", name_of(q.author) + " @" +
-                                  q.author.handle), markup=True)
-        head.connect("activate-link", self._link)
+        head = rich_line(self.ctx, link_markup(f"fedtail:thread/{q.id}", name_of(q.author) +
+                                               " @" + q.author.handle), q.author.emojis,
+                         on_link=lambda uri: self._link(None, uri))
         frame.append(head)
         if q.warning:  # a warning stays a warning inside a quote too
             frame.append(_label("⚠ " + q.warning, ("ft-muted",), wrap=True))
