@@ -129,6 +129,33 @@ class ThreadsTest(CoreCase):
             c._auto_subscribe([status("050", ME, minute=50)])
 
 
+class FollowForActsTest(CoreCase):
+    """30.10, the author: threads.auto takes my acts on someone's post too — "boosts",
+    "likes", "bookmarks", "quotes", "votes": its thread followed, news from then on."""
+
+    def test_each_act_follows_when_asked(self):
+        c = self.connect()
+        for i, sid in enumerate(("060", "061", "062", "063", "064")):
+            self.w.add(status(sid, BOB, minute=60 + i, vis="public"), home=True)
+        self.w.statuses["064"]["poll"] = {"id": "P64", "options": [{"title": "a"}],
+                                          "expired": False, "voted": False}
+        c.poll_once()
+        get = c.store.get_status
+        c.favourite(get("060")).result(timeout=T)  # not asked: nothing followed
+        self.assertFalse(c.subscribed(get("060")))
+        c.cfg["subs"]["auto"] = ["posts", "comments", "boosts", "likes", "bookmarks",
+                                 "quotes", "votes"]
+        c.favourite(get("060")).result(timeout=T)  # unliked now: nothing
+        self.assertFalse(c.subscribed(get("060")))
+        c.favourite(get("060")).result(timeout=T)  # liked
+        c.boost(get("061")).result(timeout=T)
+        c.bookmark(get("062"), True).result(timeout=T)
+        c.post("look", "public", quote="063").result(timeout=T)
+        c.vote(dict(self.w.statuses["064"]), [0]).result(timeout=T)
+        for sid in ("060", "061", "062", "063", "064"):
+            self.assertTrue(c.subscribed(get(sid) or {"id": sid}), sid)
+
+
 class ChoicesTest(CoreCase):
     user = {"feed": {"remember_choices": True}}
 

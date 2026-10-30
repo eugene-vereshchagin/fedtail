@@ -124,6 +124,21 @@ class ThreadsMixin:
             except Exception as e:
                 log.warning("auto-subscribe %s: %s", st.get("id"), e)
 
+    def _follow_for(self, action, status):
+        """threads.auto: an act of mine on a post — "boosts", "likes", "bookmarks",
+        "quotes", "votes" — follows its thread, news from now on. In the act's own job
+        (a worker thread): a /context asked."""
+        if action not in set(self.cfg["subs"]["auto"]) or not self._follows_threads():
+            return
+        st = real(status) if isinstance(status, dict) else None
+        if not st or not st.get("id") or self.subscribed(st):
+            return
+        try:
+            if subs.subscribe(self.store, self.api, st, auto=True, from_now=True):
+                self.emit("subs_changed", None)
+        except Exception as e:  # noqa: BLE001 — the act is done; the follow next time
+            log.warning("auto-subscribe (%s) %s: %s", action, st.get("id"), e)
+
     def parent_of(self, status):
         """Parent status, 'missing', or None when it isn't known (yet)."""
         pid = real(status).get("in_reply_to_id")

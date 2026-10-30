@@ -437,7 +437,9 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("ui", "start_lane"),
               ("lists", "hide_in"), ("cli", "tail_lanes"), ("lanes", "languages_in")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
-SUBS_AUTO = {"posts", "comments"}
+# threads.auto: what follows a thread by itself — my post, my comment, and my acts on
+# someone's post (core/thread_ops.py _follow_for)
+SUBS_AUTO = {"posts", "comments", "boosts", "likes", "bookmarks", "quotes", "votes"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {

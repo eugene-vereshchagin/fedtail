@@ -1845,8 +1845,12 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def favourite(self, status):
         s = real(status)
         self._on_server(s)
-        return self.submit(lambda: self._update(self.api.favourite(s["id"],
-                                                                   not s.get("favourited"))))
+        def job():
+            got = self._update(self.api.favourite(s["id"], not s.get("favourited")))
+            if not s.get("favourited"):  # liked now: threads.auto = "likes"
+                self._follow_for("likes", s)
+            return got
+        return self.submit(job)
 
     def vote(self, status, choices):
         """Vote in the post's poll (choices: option indexes); the post comes back
@@ -1855,7 +1859,11 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         pid = (s.get("poll") or {}).get("id")
         if not pid or not choices:
             raise ValueError("no poll or no choice")
-        return self.submit(lambda: self._update(dict(s, poll=self.api.vote(pid, choices))))
+        def job():
+            got = self._update(dict(s, poll=self.api.vote(pid, choices)))
+            self._follow_for("votes", s)  # threads.auto = "votes"
+            return got
+        return self.submit(job)
 
     def refresh_poll(self, status):
         """Fresh counts for the post's poll."""
@@ -2021,6 +2029,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 self.store.put_items("bookmarks", [(st["id"], st, now_iso())])
             self.emit("status_updated", st)
             self.redraw("bookmarks")
+            if on and not rss.is_rss(s):
+                self._follow_for("bookmarks", s)  # threads.auto = "bookmarks"
             return st
         return self.submit(job)
 
@@ -2030,7 +2040,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
         def job():
             res = self.api.reblog(s["id"], not s.get("reblogged"))
-            return self._update((res or {}).get("reblog") or self.api.status(s["id"]))
+            got = self._update((res or {}).get("reblog") or self.api.status(s["id"]))
+            if not s.get("reblogged"):  # boosted now: threads.auto = "boosts"
+                self._follow_for("boosts", s)
+            return got
         return self.submit(job)
 
     def delete(self, status):

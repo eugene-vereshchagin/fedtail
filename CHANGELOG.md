@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- `threads.auto` takes my acts on someone's post too: `"boosts"`, `"likes"`, `"bookmarks"`,
+  `"quotes"`, `"votes"` — its thread followed, news from then on. Off by default.
 - A thread card's line is short and draws in any font: "14 comments · 1 new · bob: “…”"
   (it was "💬 14 messages in the conversation, new: 1 · the last — …", the 💬 a box where
   the font lacked it); it opens with the theme's own "thread" picture in Qt, GTK and on

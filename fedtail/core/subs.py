@@ -34,9 +34,11 @@ def _iso(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-def subscribe(store, api, status, auto=False):
+def subscribe(store, api, status, auto=False, from_now=False):
     """Follow the thread `status` is in. Returns the thread's root id, or None
-    when an automatic subscription hits a thread the user left."""
+    when an automatic subscription hits a thread the user left. from_now: news is what
+    comes after now (an automatic one for a like, a boost… of someone's post: its
+    thread's old comments aren't news)."""
     st = real(status)
     ctx = api.context(st["id"])
     anc, desc = ctx.get("ancestors", []), ctx.get("descendants", [])
@@ -45,7 +47,10 @@ def subscribe(store, api, status, auto=False):
         return None
     everything = anc + [st] + desc
     store.put_statuses(everything)
-    if auto:
+    if auto and from_now:
+        since = now_iso()
+        known = [s["id"] for s in everything]
+    elif auto:
         # from my post on: what others wrote after it (and we haven't shown) is news
         since = st.get("created_at") or now_iso()
         known = [s["id"] for s in everything if (s.get("created_at") or "") <= since]

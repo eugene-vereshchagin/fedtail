@@ -778,7 +778,10 @@ comment_ids = "post"
 # mention you; if two people answer each other under your post, you won't know.
 # fedtail itself rereads the threads you're subscribed to and puts what's new into "Subscriptions".
 # Subscribe/unsubscribe — in a post's ⋯ menu or with the button in the thread's header.
-# What to subscribe to by itself: "posts" — your own posts, "comments" — threads you comment in.
+# What to subscribe to by itself: "posts" — your own posts, "comments" — threads you comment in;
+# and the threads of posts you "boosts", "likes", "bookmarks", "quotes", "votes" (in a poll) —
+# news in them from then on. Each thread is asked again every interval_minutes while it lives,
+# up to max_threads a round: likes are many, keep them off unless you mean it.
 auto = ["posts", "comments"]
 
 # How often to reread a live thread, minutes; a quiet one is reread less often (an hour

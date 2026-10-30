@@ -255,6 +255,9 @@ class WritingMixin:
                 if self._carry_my_direct(chain):  # the dialogue: mine at once
                     self.emit("lanes_updated", {n: [] for n in self.private_lanes()})
                 self._auto_subscribe([st])
+                q = extra.get("quoted_status_id")
+                if q:  # threads.auto = "quotes": the thread of the post I quoted
+                    self._follow_for("quotes", self.store.get_status(str(q)) or {"id": q})
                 if reply_to:
                     # "you replied" under the post answered: the lanes it is in look again
                     # now (it changed no lane's list of posts, so nothing else tells them)
