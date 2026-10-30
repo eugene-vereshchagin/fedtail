@@ -3,7 +3,6 @@
 application/octet-stream and stood as :code: on the page (29.10)."""
 
 import contextlib
-import io
 import tempfile
 import unittest
 
@@ -11,10 +10,17 @@ from fedtail.frontends.common import images
 
 
 def png():
-    from PIL import Image
-    out = io.BytesIO()
-    Image.new("RGB", (4, 4), "red").save(out, "PNG")
-    return out.getvalue()
+    """A real 4×4 red PNG, made without Pillow (CI has none)."""
+    import struct
+    import zlib
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + \
+            struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    rows = b"".join(b"\0" + b"\xc8\x0a\x0a" * 4 for _ in range(4))
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 4, 8, 2, 0, 0, 0)) \
+        + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b"")
+
 
 
 class Answer:

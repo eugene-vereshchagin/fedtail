@@ -372,6 +372,10 @@ class QuietFfmpegTest(unittest.TestCase):
 
         from PySide6.QtCore import QObject
         from PySide6.QtWidgets import QApplication
+        try:
+            import PySide6.QtMultimedia  # noqa: F401
+        except ImportError:  # Debian's python3-pyside6 without its multimedia part
+            self.skipTest("no QtMultimedia")
 
         from fedtail.frontends.qt import player
         QApplication.instance() or QApplication([])

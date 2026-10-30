@@ -31,7 +31,8 @@ CORE = {"memory": {"after.uss_mb": 65},
 # the bench deleting what a running loop deletes, and the core above: 280 / 270 → 250 / 240,
 # 1600 → 1300 widgets
 # langdetect only when asked (30.10: 162 / 147 MB): 250 / 240 → 200 / 185
-QT = {"memory": {"after.uss_mb": 200, "after_malloc_trim.uss_mb": 185},
+# CI's runner measures more than a desktop: 210 / 196.5 MB there (30.10)
+QT = {"memory": {"after.uss_mb": 220, "after_malloc_trim.uss_mb": 205},
       "time": {"Qt window up, Home drawn": 2500, "open every lane (19)": 8000,
                "Home scrolled through 1000 posts": 1500},
       "counts": {"qt.widgets": 1300, "qt.images_mb": 66}}

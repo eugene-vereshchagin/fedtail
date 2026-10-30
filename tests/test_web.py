@@ -72,24 +72,20 @@ class WebTest(TmpDir):
         """The page's pictures are /pic: the windows' disk cache, fetched into it the
         checked way when missing — some servers give pictures to no other site, and the
         browser had asked them itself (grey avatars, 29.10)."""
-        import io
-
-        from PIL import Image
-
         from fedtail.frontends.common import images as pictures
+
+        from .test_fetch_picture import png
         url = "https://pics.example/avatar.png"
         self.assertEqual(web._pic(url), "/pic?u=https%3A%2F%2Fpics.example%2Favatar.png")
         self.assertEqual(web._pic("http://pics.example/a.png"), "")  # never plain http
-        buf = io.BytesIO()
-        Image.new("RGB", (4, 4), (200, 10, 10)).save(buf, "PNG")
         p = pictures.picture_path(self.core.paths.cache_dir, url)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_bytes(buf.getvalue())
+        p.write_bytes(png())
         r = urllib.request.Request(self.base + web._pic(url),
                                    headers={"Cookie": f"{web.COOKIE}={self.key}"})
         with urllib.request.urlopen(r, timeout=30) as resp:
             self.assertEqual(resp.headers["Content-Type"], "image/png")
-            self.assertEqual(resp.read(), buf.getvalue())
+            self.assertEqual(resp.read(), png())
         # not in the cache and nowhere to get it from (the tests are offline): 404
         self.assertEqual(self.req(web._pic("https://nowhere.example/x.png"))[0], 404)
         self.assertEqual(self.req("/pic?u=" + url, cookie=False)[0], 403)
