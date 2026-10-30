@@ -62,7 +62,10 @@ class AnnounceBar(QFrame):
                              fail=lambda _e: None)
 
     def got(self, items):
-        self.items = list(items)
+        # an answer asked before a dismissal may come after it: what was dismissed here
+        # stays gone (CI, 30.10: the banner came back after the last OK)
+        gone = self.__dict__.setdefault("gone", set())
+        self.items = [a for a in items if a.id not in gone]
         log.info("announcements: %d not dismissed", len(self.items))
         self.render()
 
@@ -111,6 +114,7 @@ class AnnounceBar(QFrame):
         if not self.items:
             return self.hide()
         a = self.items.pop(0)
+        self.__dict__.setdefault("gone", set()).add(a.id)
         self.win.bridge.call(self.win.core.dismiss_announcement(a.id),
                              fail=self.win.error)
         self.render()

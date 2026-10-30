@@ -52,7 +52,10 @@ class AnnounceBar(Gtk.Box):
         self.win.call(self.win.view.announcements(), self.got, lambda _e: None)
 
     def got(self, items):
-        self.items = list(items or ())
+        # an answer asked before a dismissal may come after it: what was dismissed here
+        # stays gone (as Qt's)
+        gone = self.__dict__.setdefault("gone", set())
+        self.items = [a for a in items or () if a.id not in gone]
         log.info("announcements: %d not dismissed", len(self.items))
         self.render()
 
@@ -99,5 +102,6 @@ class AnnounceBar(Gtk.Box):
             self.set_visible(False)
             return
         a = self.items.pop(0)
+        self.__dict__.setdefault("gone", set()).add(a.id)
         self.win.call(self.win.core.dismiss_announcement(a.id))
         self.render()

@@ -552,6 +552,10 @@ class ActivityRequestsTest(Base):
             home = next(x for x in lanes.children if getattr(x, "lane", "") == "home")
             await app.on_list_view_selected(mock.Mock(list_view=lanes, item=home))
             self.assertEqual(app.lane, "home")
+            from fedtail.frontends.tui.app import PostItem
+            # Home's cards drawn first (a slow machine: Enter on what Activity left there)
+            await self.wait(pilot, lambda: posts.children and isinstance(
+                posts.children[0], PostItem), what="Home's cards")
             posts.index = 0
             await app.on_list_view_selected(mock.Mock(list_view=posts,
                                                       item=posts.children[0]))
