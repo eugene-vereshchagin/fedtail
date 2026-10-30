@@ -88,7 +88,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Bookmarks | has | 0.3.0 | `"bookmarks"` in `lanes.enabled`, `card.bookmark_button` | `/api/v1/bookmarks` | everyone |
 | Trends | has | 0.11.0 | — | `/api/v1/trends` (tags, links, statuses) | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes |
 | An empty live lane says why it's empty | has | 0.11.0 | — | `timelines/public` | only in fedtail |
-| Filtering a lane by media and boosts | has | 0.11.0 | — (kept until restart) | own | only in fedtail |
+| Filtering a lane by media and boosts | has | 0.11.0 | `lanes.funnel_fill_pages` (kept until restart) | own | only in fedtail |
 | Repeated boosts don't bring an old post up again | has | 0.15.0 | `card.repeat_boosts` | own | only in fedtail (a Mastodon server drops a repeat only among the freshest posts) |
 | All / Posts only / New; Feed / Conversations | has | 0.3.0 | `lanes.posts_only`, `reading.remember_choices`, `[[lanes.custom]]`: `switches` | own | Phanpy — similar to “Conversations” |
 | Find in a lane | has | 0.2.0 | — | own, in the local database | only in fedtail |
@@ -157,7 +157,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **An empty live lane says why it's empty.** If the server turned the public timelines off (or gives them to its own users only), Federated and Local don't hang empty in silence: fedtail says the server turned them off.
 
-**Filtering a lane by media and boosts.** Over a lane you can leave only text, only pictures, gifs, video or only boosts. It's a quick look, not a setting: after a restart everything is as it was.
+**Filtering a lane by media and boosts.** Over a lane you can leave only text, only pictures, gifs, video or only boosts. It's a quick look, not a setting: after a restart everything is as it was. Something rare (video) doesn't come a post at a time: "Older" with the funnel on asks several pages at once till some ten pass it — `lanes.funnel_fill_pages`; a browse lane fills itself so too.
 
 **Repeated boosts don't bring an old post up again.** A post comes into a lane once — as itself or with its first boost. A boost of a post this lane has had already, or one already read (in a thread, in another lane), is not shown and not counted as unread; the post stays where it first came. `repeat_boosts = true` — every boost again, as everyone does. The server (Mastodon) drops a repeat only if the original was among the last ~40 posts of the feed — that's why old posts kept surfacing again and again.
 

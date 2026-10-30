@@ -65,5 +65,37 @@ class FunnelTest(unittest.TestCase):
                 self.assertEqual(asked, [1])
 
 
+    def test_from_the_server_pages_on_till_some_pass(self):
+        """30.10: "only video", the store's end — a page of forty from the server had a
+        video or two, and the lane grew by those. Pages on now, up to
+        lanes.funnel_fill_pages, till FUNNEL_WANT pass the funnel."""
+        from unittest import mock
+        core = self.core
+        model = LaneModel(View(core), "home")
+        model.media.wanted = {"video"}
+        core._lane_deep["home"] = False
+        pages = iter([[status(f"5{i:02d}", BOB, minute=0) for i in range(40)] + [video("490", 0)]
+                      for _p in range(9)])
+        asked = []
+
+        def page(*_a, **_k):
+            asked.append(1)
+            return next(pages)
+        with mock.patch("fedtail.core.sources.fetch_older", page):
+            core.load_older("home").result()
+        self.assertEqual(len(asked), 5)  # one video a page: five pages, the most
+        asked.clear()
+        core.cfg["lanes"]["funnel_fill_pages"] = 1  # as without the funnel
+        with mock.patch("fedtail.core.sources.fetch_older", page):
+            core.load_older("home").result()
+        self.assertEqual(len(asked), 1)
+        asked.clear()
+        model.media.wanted = set()  # no funnel: a page, as ever
+        core.cfg["lanes"]["funnel_fill_pages"] = 5
+        with mock.patch("fedtail.core.sources.fetch_older", page):
+            core.load_older("home").result()
+        self.assertEqual(len(asked), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

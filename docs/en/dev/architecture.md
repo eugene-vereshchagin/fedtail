@@ -616,7 +616,8 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `ready` | me | connected | — (the connect future's callback does the work) |
 | `lanes_updated` | {lane: [item ids]} | new items, older loaded, lists membership | refresh those lanes, badges |
 | `parents` | — | parents or "my replies" fetched | refresh lanes and account tabs |
-| `read_changed` | [status ids] | marks added | un-highlight cards, badges |
+| `read_changed` | [status ids] | marks added | un-highlight cards |
+| `counts_ready` | None | read marks added, every lane's count made anew (in the core's read thread) | the sidebar's numbers (made already) |
 | `status_updated` | status | favourite/boost/honest counters | rows re-read from the store |
 | `status_deleted` | id | my post deleted | rows removed |
 | `requests_updated` | [accounts] | each poll | requests lane, badge |

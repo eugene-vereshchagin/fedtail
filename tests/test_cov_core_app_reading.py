@@ -214,6 +214,18 @@ class CountersTest(CoreCase):
 
 
 class MoreTest(CoreCase):
+    def test_marks_then_the_counts_made_in_the_core(self):
+        """30.10: each read mark had the window count every lane itself (330 ms). The
+        cards hear at once (read_changed); the numbers once the core made them anew
+        in its read thread (counts_ready) — found made, then."""
+        c = self.connect()
+        c.mark_read(["010"])
+        self.assertIn(("read_changed", ["010"]), self.events)  # the cards: at once
+        c.reads.submit(lambda: None).result(timeout=T)  # its thread done
+        self.assertIn(("counts_ready", None), self.events)
+        warmed = c.__dict__.get("_unread_cache", {})
+        self.assertTrue(warmed)  # made already: the window only reads them
+
     def test_me_my_replies_found_marks_read(self):
         c = self.connect()
         mine = status("051", ME, "050", "B", minute=51, text="мой ответ")

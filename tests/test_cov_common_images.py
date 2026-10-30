@@ -203,6 +203,24 @@ class ImagesTest(unittest.TestCase):
         got, _f = self.get(url, retry=True)  # asked for again on purpose
         self.assertTrue(got)
 
+    def test_a_clip_called_a_picture_is_not_read(self):
+        """30.10: an attachment its server called a picture was a 36 MB mp4 — read whole
+        (and refused at the limit) to be told "can't show this format". The answer's
+        type says it: not a byte read, the card told at once."""
+        url = "https://a/clip"
+        read = []
+
+        class Clip(Answer):
+            def iter_content(self, n):
+                read.append(n)
+                yield b"\0" * 10
+        self.net[url] = Clip(b"", kind="video/mp4")
+        got, failed = self.get(url)
+        self.assertEqual((got, failed), ([], [url]))
+        self.assertEqual(self.c.why[url], ("format", "video/mp4"))
+        self.assertEqual(read, [])
+        self.assertFalse(file_of(self.c, url).exists())
+
     def test_network_failure_second_try_then_later_tries(self):
         url = "https://a/4.png"
         self.net[url] = Answer(status=503)

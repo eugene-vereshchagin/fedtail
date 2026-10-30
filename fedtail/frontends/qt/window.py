@@ -58,6 +58,9 @@ from ...model import real as real_entry
 from ...model.text import snippet
 from .. import iconpack, themefile
 from ..common import results, sidebar
+
+# at the start, not at the first click on a lane: a cold disk read it in 460 ms (30.10)
+from ..common.lanekeep import KeptLanes
 from ..common.links import Links
 from ..common.sound import Sounds
 from . import badge
@@ -1546,7 +1549,6 @@ class MainWindow(QMainWindow):
             return  # 0: only unload_hidden_minutes decides
         keep = getattr(self, "kept_lanes", None)
         if keep is None:
-            from ..common.lanekeep import KeptLanes
             keep = self.kept_lanes = KeptLanes(n)
         keep.shown(name, lambda other: other not in self.lane_widgets or
                    self.lane_widgets[other]._unload())
@@ -1769,6 +1771,8 @@ class MainWindow(QMainWindow):
                 apply = getattr(w, "apply_read", None)  # a tab without read marks: none
                 if apply is not None:
                     apply(payload)
+            # the sidebar's numbers: on "counts_ready", made by the core meanwhile
+        elif name == "counts_ready":
             self.update_badges()
         elif name == "status_updated":
             changed = payload  # a Post (View.event_payload), or None: every card

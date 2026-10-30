@@ -405,8 +405,9 @@ class PollMixin:
         page = self.cfg["feed"]["page_size"]
         here = [x.name for x in self.lanes if x.source == name]
         while asked < pages:
+            # the languages filter or the funnel ("only video") left it short
             short = [n for n in here if len(self.lane_entries(n)) < page
-                     and self.language_hidden(n)]
+                     and (self.language_hidden(n) or self._funnel(n))]
             if not short:
                 break
             got = sources.fetch_older(self.store, self.sources[name], page)

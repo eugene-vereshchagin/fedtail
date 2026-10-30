@@ -2,6 +2,15 @@
 
 ## 0.22.0 — in progress
 
+- A clip its server called a picture is no longer downloaded whole (36 MB) to be told
+  "can't show this format": the answer's type says video, nothing is read.
+- Marking read no longer makes the window count every lane itself (330 ms): the core
+  counts them in a thread of its own and says `counts_ready`; Qt, GTK and the terminal
+  draw the sidebar's numbers on it. A module read at the first lane click (460 ms on a
+  cold disk) is read at the start.
+- The funnel ("only video") with something rare: "Older" and the lane's end in sight asked
+  one page and the lane grew by a post or two; now pages on, up to
+  `lanes.funnel_fill_pages` (5), till some ten pass it. A browse lane fills itself so too.
 - A thread's card says how many comments the whole thread has, as fedtail's own check of
   it found — not only those that came after you followed it.
 - "Commented posts" is "Comments" now. In fedtail's set it shows every thread you took

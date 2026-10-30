@@ -218,6 +218,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # user actions never wait behind background work
         self.pool = Pool(max_workers=4, thread_name_prefix="fedtail")
         self.bg = Pool(max_workers=2, thread_name_prefix="fedtail-bg")
+        # after read marks: the lanes' counts made anew here, not in a window (mark_read)
+        self.reads = Pool(max_workers=1, thread_name_prefix="fedtail-read")
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
@@ -1478,7 +1480,15 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                      if isinstance(st, dict) and isinstance(st.get("reblog"), dict)}
             status_ids += sorted(i for i in posts - set(status_ids) if i)
             self.store.mark_read(status_ids)
-            self.emit("read_changed", status_ids)
+            self.emit("read_changed", status_ids)  # the cards: at once
+
+            def counted():  # every lane's count anew here, then "counts_ready": the
+                self._warm_lanes()  # window made them itself after each mark (330 ms)
+                self.emit("counts_ready", None)
+            try:
+                self.reads.submit(counted)
+            except RuntimeError:  # shut down: nobody to tell
+                pass
             if self.sync:
                 self.sync.record_read(status_ids)
             self._read_conversations(status_ids)
@@ -1528,8 +1538,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             return self.submit(lambda: 0)
 
         def job():
-            got = sources.fetch_older(self.store, self.sources[lane.source],
-                                      self.cfg["feed"]["page_size"])
+            got = self._older_pages(name, lambda: sources.fetch_older(
+                self.store, self.sources[lane.source], self.cfg["feed"]["page_size"]))
             limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
             self._limits[name] = limit + len(got)
             # history is not news: older posts count as read
@@ -1539,11 +1549,39 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             return len(got)
         return self.submit(job)
 
+    FUNNEL_WANT = 10  # posts through the funnel an "Older" goes on for (funnel_fill_pages)
+
+    def _older_pages(self, name, one):
+        """one() → what a page older brought into the lane. The funnel on ("only video"):
+        pages on, up to lanes.funnel_fill_pages, till FUNNEL_WANT of them pass it — a page
+        of forty left one or two posts, and the lane grew by those (30.10)."""
+        funnel = self._funnel(name)
+        pages = max(1, int(self.cfg["lanes"].get("funnel_fill_pages", 5))) if funnel else 1
+        got, passed = [], 0
+        for _n in range(pages):
+            more = one()
+            got += more
+            if not more or funnel is None:
+                break
+            passed += sum(1 for st in more if funnel(st))
+            if passed >= self.FUNNEL_WANT:
+                break
+        return got
+
     def _older_custom(self, name):
-        """A free lane's "Older": a page older from each of its feeds, through its rule."""
+        """A free lane's "Older": a page older from each of its feeds, through its rule
+        (more pages while the funnel leaves few, _older_pages)."""
         c = next((c for c in self.customs if c.name == name), None)
         if c is None:
             return 0
+        got = self._older_pages(name, lambda: self._older_custom_page(c))
+        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        self._limits[name] = limit + len(got)
+        self.emit("lanes_updated", {name: []})
+        self._fetch_parents(got)
+        return len(got)
+
+    def _older_custom_page(self, c):
         world, got = self._world(), []
         for source in sorted(c.feeds):
             if source not in self.sources:
@@ -1556,11 +1594,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 continue
             self.store.mark_read([st["id"] for st in older])  # history is not news
             got += custom.take(self.store, c, older, world, source)
-        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
-        self._limits[name] = limit + len(got)
-        self.emit("lanes_updated", {name: []})
-        self._fetch_parents(got)
-        return len(got)
+        return got
 
     def short_ids(self, statuses):
         """{status id: '#a3f'-style alias} for the posts on screen (boosts: the original)."""
@@ -2131,6 +2165,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self._stream.stop()
         self.pool.shutdown(wait=False, cancel_futures=True)
         self.bg.shutdown(wait=False, cancel_futures=True)
+        self.reads.shutdown(wait=False, cancel_futures=True)
         if self._poller:
             self._poller.join(timeout=max(0.1, deadline - time.monotonic()))
         # what is running already finishes (a little while) before the database closes

@@ -1616,6 +1616,7 @@ class MainWindow(Gtk.ApplicationWindow):
                     lv.apply_read(payload or ())
                 else:
                     lv.dirty = True
+        elif name == "counts_ready":  # the sidebar's numbers, made by the core meanwhile
             self.update_badges()
         elif name in ("lanes_updated", "parents", "arrived"):
             changed = payload if name == "lanes_updated" and isinstance(payload, dict) else None

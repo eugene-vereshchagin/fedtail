@@ -384,6 +384,11 @@ browse_keep = 200
 # 0 — no.
 browse_fill_pages = 5
 
+# The funnel over a lane ("only video", "no boosts") leaves few posts of a page: "Older" (and
+# the lane's end in sight) asks up to this many pages at once, till it has some ten that
+# pass it; a browse lane fills itself so too. 1 — a page each time, as without the funnel.
+funnel_fill_pages = 5
+
 # Where a browse lane (Federated, Local) opens: "last" — where you stood in it last time;
 # that place gone (relays bring thousands of posts a day, and the old ones go) — as "hours";
 # "hours" — at the first post of the last browse_start_hours hours; "newest" — at the

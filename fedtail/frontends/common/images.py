@@ -352,6 +352,12 @@ class Cache:
             with self._host_slot(host), self._open(url, (6, slow)) as r:
                 r.raise_for_status()
                 kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+                if kind.startswith(("video/", "audio/")):
+                    # a clip its server calls a picture: not a byte of it read — the whole
+                    # 36 MB video came down to be told "can't show this format" (30.10)
+                    self.why[url] = ("format", kind)
+                    log.info("image %s: %s, not a picture — not read", _where(url), kind)
+                    return None
                 data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
         except requests.RequestException as e:
             resp = getattr(e, "response", None)

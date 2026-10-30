@@ -173,6 +173,7 @@ DEFAULTS = {
         "unsorted": True,
         "browse_keep": 200,
         "browse_fill_pages": 5,
+        "funnel_fill_pages": 5,
         "browse_start": "last",
         "browse_start_hours": 2,
         "bubble": [],
@@ -440,6 +441,7 @@ SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
 MINIMUM = {
     ("lanes", "browse_start_hours"): 1,
     ("lanes", "browse_fill_pages"): 0,
+    ("lanes", "funnel_fill_pages"): 0,
     ("ui", "message_percent"): 20,
     ("poll", "announcements_minutes"): 0,
     ("ui", "gifv_fps"): 1,
@@ -538,7 +540,8 @@ FILE_LAYOUT = (
                            "whats_this compose compose_size icon_count icon_count_except "
                            "desktop_entry")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
-                             "browse_fill_pages browse_start browse_start_hours custom "
+                             "browse_fill_pages funnel_fill_pages browse_start "
+                             "browse_start_hours custom "
                              "tag_groups languages languages_in "
                              "detect_language "
                              "detect_min_words detect_among federated_extra tags_extra bubble "

@@ -979,6 +979,7 @@ class FedtailApp(App, PostsMixin):
         # read here or anywhere else (another window, the phone, a device through sync):
         # the rows on screen lose their ● in place, as the windows' apply_read
         self.core.on("read_changed", lambda _n, p: self.in_ui(self.read_changed, p))
+        self.core.on("counts_ready", lambda _n, _p: self.in_ui(self.update_lane_counts))
         # a post changed — liked, boosted, edited, here or anywhere else: shown anew
         self.core.on("status_updated", lambda _n, p: self.in_ui(self.post_changed, p))
         # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
@@ -1699,7 +1700,7 @@ class FedtailApp(App, PostsMixin):
                 it.text = it.redraw(False)
                 if not it.has_picture or it.graphic is not None:
                     it.body.update(it.text)  # a half-block picture redrawn with the lane
-        self.update_lane_counts()
+        # the counts on the left: on "counts_ready", made by the core meanwhile
 
     async def post_changed(self, post):
         """A post changed (status_updated: a like, a boost, an edit — here or anywhere
