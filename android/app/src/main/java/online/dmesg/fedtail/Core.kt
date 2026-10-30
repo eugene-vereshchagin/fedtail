@@ -45,6 +45,9 @@ object Core {
     suspend fun findEverywhere(q: String) = obj("find_everywhere", q)
     suspend fun findDeeper(name: String, q: String) = obj("find_deeper", name, q)
     suspend fun reveal(name: String, index: Int) = obj("reveal", name, index)
+    /** The demo world only (androidTest): someone answers a post, a round brings it. */
+    suspend fun demoHappen(what: String, target: String, text: String) =
+        obj("demo_happen", what, target, text)
     suspend fun quoteLines(text: String) = obj("quote_lines", text)
     suspend fun announcements() = obj("announcements")
     suspend fun announcementDismiss(id: String) = obj("announcement_dismiss", id)

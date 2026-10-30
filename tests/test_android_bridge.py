@@ -296,6 +296,22 @@ class BridgeTest(_Base):
         self.assertIn("look at this", p["text"])
         self.assertEqual(p["words"]["quote_inner"]["link"], "fedtail:thread/100")
 
+    def test_the_demo_brings_an_answer_and_the_open_thread_hears(self):
+        """demo_happen (the UI tests on the emulator): someone's answer comes by a round;
+        the thread open on the phone hears of it — the "threads" count its watch loop reads
+        — and has it when asked again. Not in a real profile."""
+        self.demo()
+        before = [p["sid"] for p in self.call("thread", "101")["posts"]]
+        seq = self.call("status")["threads"]
+        got = self.call("demo_happen", "answer", "101", "an answer from elsewhere")
+        self.assertGreater(self.call("status")["threads"], seq)
+        after = [p["sid"] for p in self.call("thread", "101")["posts"]]
+        self.assertNotIn(got["id"], before)
+        self.assertIn(got["id"], after)
+        self.bridge._s["demo"] = False
+        self.assertIn("error", json.loads(self.bridge.demo_happen("answer", "101", "x")))
+        self.bridge._s["demo"] = True
+
     def test_activity_is_a_lane_of_events(self):
         """Activity is a lane like any (a rule of events only): the lane brings its rows as
         events in their parts, every button a fedtail: link the phone runs through link();

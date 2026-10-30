@@ -130,6 +130,17 @@ class FlowTest {
     }
 
     @Test
+    fun anAnswerFromElsewhereGrowsTheOpenThread() {
+        // the open thread takes someone's answer in by itself, a round bringing it (the
+        // bridge's "threads" count → AppModel.watch): tests/scenario.py's watch_thread
+        launch("thread" to "101")
+        waitText("/1")
+        val words = "an answer from elsewhere " + System.currentTimeMillis()
+        kotlinx.coroutines.runBlocking { Core.demoHappen("answer", "101", words) }
+        waitText(words, 40_000)
+    }
+
+    @Test
     fun aReplyInAThreadStaysInSight() {
         launch("thread" to "101")
         waitText("/1")

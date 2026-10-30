@@ -346,6 +346,31 @@ def reveal(name, index):
     return _answer(lambda: _s["web"].reveal(name, index))
 
 
+def demo_happen(what, target, text):
+    """The demo world only (the UI tests on the emulator, androidTest): something done
+    elsewhere while a screen shows it, brought by a round as from a server — "answer":
+    someone answers target in its thread (the thread open on screen grows by itself, as
+    tests/scenario.py's watch_thread holds every interface to). → {id}."""
+    def go():
+        if not _s.get("demo"):
+            raise RuntimeError("the demo world only")
+        from datetime import UTC, datetime
+
+        from tests.fakes import FakeApi, status
+        w = FakeApi.world
+        if what != "answer" or target not in w.statuses:
+            raise ValueError(f"{what} {target}")
+        parent = w.statuses[target]
+        sid = str(max(int(i) for i in w.statuses if i.isdigit()) + 1)  # newer than any
+        st = status(sid, parent["account"], target, parent["account"]["id"], vis="public",
+                    text=text)
+        st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        w.add(st, home=True)
+        _core().poll_once()
+        return {"id": sid}
+    return _answer(go)
+
+
 def poll_refresh(post_id):
     """Fresh counts for a post's poll → the card."""
     def go():
