@@ -136,6 +136,7 @@ class Capabilities:
     max_media: int = 4
     markdown: bool = False
     max_poll_options: int = 4
+    max_profile_fields: int = 4  # GoToSocial and Akkoma say theirs; Mastodon keeps 4
     translation: bool = False
     streaming: str = ""  # wss://… of the live stream, "" — not said
     image_bytes: int = 0   # the largest picture the server takes, bytes (0 — not said)

@@ -13,7 +13,6 @@ from .gi_setup import GLib, Gtk, tip, vscroll
 
 log = logging.getLogger(__name__)
 
-FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has them
 IMAGE_EXT = ("png", "jpg", "jpeg", "gif", "webp")
 
 
@@ -104,7 +103,8 @@ class ProfileEditor:
         self.name.set_text(me.name or "")
         self.bio.get_buffer().set_text(prof.bio or "")
         fields = list(prof.fields)
-        for i in range(max(FIELDS_SHOWN, len(fields))):
+        from ..common.places import profile_fields
+        for i in range(max(profile_fields(self.win.view), len(fields))):
             n, v = fields[i] if i < len(fields) else ("", "")
             name = Gtk.Entry(text=n, placeholder_text=_("field_name"))
             value = Gtk.Entry(text=v, placeholder_text=_("field_value"), hexpand=True)

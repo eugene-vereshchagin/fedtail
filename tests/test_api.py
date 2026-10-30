@@ -215,6 +215,13 @@ class InstanceTest(unittest.TestCase):
         d = api_mod.capabilities_from_instance({"max_toot_chars": 1000}, "not a dict")
         self.assertEqual((d.max_characters, d.max_media), (1000, 4))
         self.assertFalse(d.translation)
+        # a profile's fields: Mastodon says nothing (4), GoToSocial and Akkoma say theirs
+        self.assertEqual(d.max_profile_fields, 4)
+        gts = api_mod.capabilities_from_instance(
+            {"configuration": {"accounts": {"max_profile_fields": 6}}}, {})
+        akkoma = api_mod.capabilities_from_instance(
+            {"pleroma": {"metadata": {"fields_limits": {"max_fields": 10}}}}, {})
+        self.assertEqual((gts.max_profile_fields, akkoma.max_profile_fields), (6, 10))
 
     def test_instance_v2_missing_is_none(self):
         a, _s = make(Resp(404, {"error": "nope"}))

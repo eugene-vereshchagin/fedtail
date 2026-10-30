@@ -163,6 +163,10 @@ def capabilities_from_instance(inst, v2=None):
         max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
         max_media=int(st.get("max_media_attachments") or 4),
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
+        # a profile's fields: GoToSocial's configuration.accounts, Akkoma's metadata
+        max_profile_fields=int((conf.get("accounts") or {}).get("max_profile_fields") or
+                               (((inst.get("pleroma") or {}).get("metadata") or {})
+                                .get("fields_limits") or {}).get("max_fields") or 4),
         translation=bool((conf.get("translation") or {}).get("enabled") or
                          ((v2.get("configuration") or {}).get("translation") or {})
                          .get("enabled")),

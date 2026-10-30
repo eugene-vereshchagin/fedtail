@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- A profile's fields: as many as the server takes (GoToSocial and Akkoma say how many;
+  Mastodon keeps 4), in every interface. The terminal's, the web page's and the phone's
+  editor cut them at 4, and a fifth one was gone once the profile was saved.
 - The server's announcements are asked again by the core, every
   `server.announcements_minutes` (30; 0 — only at the start), for every interface — the
   Qt and GTK windows each kept a timer of their own; `announcements_updated` tells them.

@@ -177,6 +177,13 @@ def _local_time(iso):
         return iso
     return (t.astimezone() if t.tzinfo else t).strftime("%d.%m.%Y %H:%M")
 
+
+def profile_fields(view):
+    """How many fields a profile may have on this server (its Capabilities; 4 — Mastodon's,
+    when it doesn't say)."""
+    caps = getattr(view, "caps", None)
+    return int(getattr(caps, "max_profile_fields", 4) or 4)
+
 class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
     """The places on one View.
 
@@ -1426,15 +1433,16 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         return Out(refresh=True)
 
     # ---- my profile -------------------------------------------------------------------
-    FIELDS = 4
-
     def _p_profile_edit(self, _arg, _tab, _cur):
         mp = _wait(self.view.my_profile())
         a = mp.account
-        fields = list(mp.fields) + [("", "")] * self.FIELDS
+        # as many as the server takes (Mastodon 4, GoToSocial and Akkoma say theirs) — and
+        # never fewer than there are: the fifth and sixth were cut, and gone once saved
+        n = max(profile_fields(self.view), len(mp.fields))
+        fields = list(mp.fields) + [("", "")] * n
         form = [Field("name", _("profile_name"), a.name if a else ""),
                 Field("bio", _("profile_bio"), mp.bio or "", "text")]
-        for i, (k, val) in enumerate(fields[:self.FIELDS]):
+        for i, (k, val) in enumerate(fields[:n]):
             form.append(Field(f"field{i}_name", _("field_name"), k))
             form.append(Field(f"field{i}_value", _("field_value"), val))
         # new pictures: a file's path in the terminal, a file picked on the web page
@@ -1476,7 +1484,9 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
 
     def _a_profile_edit_save(self, _d, values, _c, _ans):
         fields = []
-        for i in range(self.FIELDS):
+        i = -1
+        while f"field{i + 1}_name" in values:  # as many as the page showed
+            i += 1
             k = str(values.get(f"field{i}_name") or "").strip()
             val = str(values.get(f"field{i}_value") or "").strip()
             if k or val:

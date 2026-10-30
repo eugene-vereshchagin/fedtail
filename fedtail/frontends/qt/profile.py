@@ -21,9 +21,6 @@ from ...i18n import _
 from ..common import server
 from .card import _round
 
-FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has them
-
-
 IMAGE_FILTER = "*.png *.jpg *.jpeg *.gif *.webp"
 
 
@@ -123,7 +120,8 @@ class ProfileDialog(QDialog):
         self.name.setText(me.name)
         self.bio.setPlainText(prof.bio)
         fields = list(prof.fields)
-        for i in range(max(FIELDS_SHOWN, len(fields))):
+        from ..common.places import profile_fields
+        for i in range(max(profile_fields(self.core), len(fields))):
             n, v = fields[i] if i < len(fields) else ("", "")
             name, value = QLineEdit(n), QLineEdit(v)
             name.setPlaceholderText(_("field_name"))

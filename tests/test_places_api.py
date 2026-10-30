@@ -80,6 +80,22 @@ class PlacesApiTest(unittest.TestCase):
         self.pl.act("profile_edit", "save", "", again)
         self.assertNotIn("hide_collections", self.w.profile_updates[-1])
 
+    def test_as_many_profile_fields_as_the_server_takes(self):
+        """GoToSocial, Akkoma say how many fields a profile may have: the editor shows
+        them all — it cut them at Mastodon's 4, and the fifth was gone once saved."""
+        self.core.caps.max_profile_fields = 6
+        page = self.pl.page("profile_edit")
+        names = [x.name for x in page.form if x.name.endswith("_name")
+                 and x.name.startswith("field")]
+        self.assertEqual(len(names), 6)
+        values = {x.name: x.value for x in page.form}
+        for i in range(6):
+            values[f"field{i}_name"], values[f"field{i}_value"] = f"k{i}", f"v{i}"
+        self.pl.act("profile_edit", "save", "", values)
+        sent = self.w.profile_updates[-1]
+        self.assertEqual(len(sent.get("fields") or sent.get("fields_attributes") or []), 6,
+                         sent)
+
     def test_link_posts(self):
         st = self.w.add(status("301", BOB, text="look"))
         st["card"] = {"url": "https://news.example/a"}
