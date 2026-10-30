@@ -42,14 +42,14 @@ android = "has"
 since = "0.1.0"
 name.ru = "Когда пост считается прочитанным"
 name.en = "When a post counts as read"
-config = "`reading.mark_read`, `reading.read_button`"
+config = "`reading.mark_read`, `reading.read_button`, `reading.dwell_ms`, `reading.unfocused_seconds`"
 api.ru = "своё"
 api.en = "own"
 others.ru = "только в fedtail (ручной режим)"
 others.en = "only in fedtail (the manual mode)"
 clients = []
-details.ru = "`\"on_scroll\"` — когда прокрутил пост целиком; `\"on_open\"` — вся лента, как только открыл; `\"manual\"` — только руками: «Всё прочитано» над лентой, «Прочитано» и «Прочитано до сюда» (этот и всё старше) в меню ⋯. С ручным режимом лента всегда ждёт ровно там, где ты остановился, хоть читай по одному посту. `reading.read_button = true` — кнопка ✓ под каждым непрочитанным. Пункты меню работают при любом режиме."
-details.en = "`\"on_scroll\"` — when you've scrolled past the whole post; `\"on_open\"` — the whole lane as soon as you open it; `\"manual\"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode."
+details.ru = "`\"on_scroll\"` — когда прокрутил пост целиком и лента постояла `reading.dwell_ms`; окно без фокуса — только пока его крутят рукой и `reading.unfocused_seconds` после (одно правило во всех интерфейсах, с 0.22.0); `\"on_open\"` — вся лента, как только открыл; `\"manual\"` — только руками: «Всё прочитано» над лентой, «Прочитано» и «Прочитано до сюда» (этот и всё старше) в меню ⋯. С ручным режимом лента всегда ждёт ровно там, где ты остановился, хоть читай по одному посту. `reading.read_button = true` — кнопка ✓ под каждым непрочитанным. Пункты меню работают при любом режиме."
+details.en = "`\"on_scroll\"` — when you've scrolled past the whole post and the feed stood `reading.dwell_ms`; a window without focus — only while scrolled by hand and `reading.unfocused_seconds` after (one rule in every interface, since 0.22.0); `\"on_open\"` — the whole lane as soon as you open it; `\"manual\"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode."
 
 [[feature]]
 id = "own-posts-read"

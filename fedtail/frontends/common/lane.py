@@ -667,6 +667,24 @@ def age_days(p, cfg):
     return days if days > limit else 0
 
 
+def dwell_ms(cfg):
+    """read.dwell_ms: how long the feed must stand still before what is on it counts —
+    one number for the windows and the web page (they had 350, 400 and 250 ms)."""
+    return max(0, int((cfg.get("read") or {}).get("dwell_ms", 350)))
+
+
+def reading_now(cfg, active, touched_at, now):
+    """May what is on screen count as read now? A window in focus: yes. One out of focus
+    (behind another, or the browser's tab not in front): for read.unfocused_seconds after
+    the reader last scrolled it by hand (KDE scrolls a window without focus), else no —
+    the windows and the web page each had a rule of their own (Qt 5 s, GTK never, the web
+    page always). touched_at, now: monotonic seconds."""
+    if active:
+        return True
+    grace = float((cfg.get("read") or {}).get("unfocused_seconds", 5))
+    return grace > 0 and now - (touched_at or 0) <= grace
+
+
 def seen(top, bottom, vtop, vbottom, at_end=False, glimpsed=False, slack=2):
     """Is a card read now? Its top and bottom and the viewport's, in one coordinate;
     at_end: the view stands at the lane's end; glimpsed: the card was on screen before.

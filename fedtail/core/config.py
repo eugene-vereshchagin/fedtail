@@ -150,6 +150,8 @@ DEFAULTS = {
     "read": {
         "mark_read": "on_scroll",
         "read_button": False,
+        "dwell_ms": 350,
+        "unfocused_seconds": 5,
         "sync_markers": True,
     },
     "lanes": {
@@ -426,6 +428,8 @@ SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("read", "unfocused_seconds"): 0,
+    ("read", "dwell_ms"): 0,
     ("ui", "default_columns"): 1,
     ("feed", "mute_tags_shown"): 0,
     ("feed", "reply_context_chars"): 20,
@@ -523,7 +527,7 @@ FILE_LAYOUT = (
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
-     + _keys("read", "mark_read read_button")),
+     + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
     ("card", _keys("feed", "show_reply_context thread_indent_max reply_context_chars "
                            "mute_tags_shown thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "

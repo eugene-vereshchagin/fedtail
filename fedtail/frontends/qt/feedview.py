@@ -38,7 +38,6 @@ from .gone import drop
 
 log = logging.getLogger(__name__)
 
-READING_S = 5  # s after a scroll by hand that a window without focus still counts as read
 
 
 class _Watch(QObject):
@@ -118,7 +117,8 @@ class FeedView(QScrollArea):
         self._pending = []   # keys near the screen not built yet (_build_more)
         self._more = QTimer(self, singleShot=True, interval=0)
         self._more.timeout.connect(self._build_more)
-        self._seen_timer = QTimer(self, singleShot=True, interval=350)
+        from ..common.lane import dwell_ms
+        self._seen_timer = QTimer(self, singleShot=True, interval=dwell_ms(ctx.cfg))
         self._seen_timer.timeout.connect(self._emit_seen)
         # while the feed keeps moving the quiet moment never comes: look every so often
         # anyway, so posts that went by under the reader's eyes count too
@@ -909,7 +909,9 @@ class FeedView(QScrollArea):
         if not self.isVisible() or self.window().isMinimized():
             return
         # a window in the background isn't being read — unless the reader scrolls it
-        if not self._window_active() and time.monotonic() - self._touched_at > READING_S:
+        from ..common.lane import reading_now
+        if not reading_now(self.ctx.cfg, self._window_active(), self._touched_at,
+                           time.monotonic()):
             from PySide6.QtWidgets import QApplication
             log.debug("seen: not counted, the window is in the background (%s active)",
                       type(QApplication.activeWindow()).__name__)

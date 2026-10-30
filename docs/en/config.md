@@ -176,6 +176,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `reading.stats` | `false` | "Statistics" in the ≡ menu: how many posts came into Home, how many you wrote and how much activity there was — over the week, day by day, and who fills Home the most. |
 | `reading.mark_read` | `"on_scroll"` | When a post counts as read:<br>"on_scroll" — when you've scrolled past the whole of it;<br>"on_open" — the whole lane, as soon as you open it;<br>"manual" — by hand only: "All read", and in a post's ⋯ menu "Mark read" and "Read up to here" (this one and everything older). So a lane always waits for you exactly where you stopped, even reading one post at a time. The "Mark read" and "Read up to here" items are in a post's menu in any mode. |
 | `reading.read_button` | `false` | A ✓ "Read" button right under each unread post (handy with "manual"). |
+| `reading.dwell_ms` | `350` | With mark_read "on_scroll": how many milliseconds the feed must stand still for what is on it to count as read. A slow reader — more. One number for the windows and the web page. |
+| `reading.unfocused_seconds` | `5` | A window without focus (behind another, a browser tab not in front) counts as read only while it is scrolled by hand and this many seconds after. 0 — never, the focused one only. |
 
 ## 5. The post card
 

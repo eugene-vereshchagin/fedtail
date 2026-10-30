@@ -29,14 +29,21 @@ from ... import diag
 from ...i18n import _
 from ...model import Share, real
 from ..common.cardtext import thread_news_bit
-from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
+from ..common.lane import (
+    MEDIA_KINDS,
+    SEPARATOR,
+    LaneModel,
+    conversation_line,
+    dwell_ms,
+    reading_now,
+    seen,
+)
 from ..common.strip import Strip
 from .card import Card, Separator, link_markup
 from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
-SEEN_DELAY_MS = 400
 AHEAD = 1.0         # cards exist this many screens above and below the screen
 SLICE_MS = 12       # the cards beyond the screen are built this long at a time
 GAP = 8             # between cards
@@ -234,6 +241,13 @@ class LaneView(Gtk.Box):
             # not drag it along when rows come in above
             viewport.set_scroll_to_focus(False)
         self.adj = self.scroll.get_vadjustment()
+        # the reader's own scroll (a wheel, a touchpad): a window without focus is read
+        # for a while after it (common/lane.reading_now)
+        self._touched_at = 0.0
+        hand = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
+        hand.connect("scroll", lambda *_a: (setattr(self, "_touched_at", time.monotonic()),
+                                            False)[1])
+        self.scroll.add_controller(hand)
         self.adj.connect("value-changed", lambda _a: self._scrolled())
         # reading.older_ahead: the "older" end in sight — the core fetches a page itself
         self.adj.connect("value-changed", lambda _a: self._older_in_sight())
@@ -803,15 +817,16 @@ class LaneView(Gtk.Box):
     def _schedule_seen(self):
         if self._seen_timer or self.lazy:
             return
-        self._seen_timer = GLib.timeout_add(SEEN_DELAY_MS, self._mark_seen)
+        self._seen_timer = GLib.timeout_add(dwell_ms(self.ctx.cfg), self._mark_seen)
 
     def _mark_seen(self):
         self._seen_timer = 0
         if self.stopped:
             return GLib.SOURCE_REMOVE
         root = self.get_root()
-        if not self.positioned or root is None or not root.is_active() or \
-                not self.get_mapped():
+        if not self.positioned or root is None or not self.get_mapped() or \
+                not reading_now(self.ctx.cfg, root.is_active(), self._touched_at,
+                                time.monotonic()):
             return GLib.SOURCE_REMOVE
         vtop = self._top()
         vbot = vtop + self.adj.get_page_size()

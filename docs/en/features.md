@@ -263,7 +263,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 |---|---|---|---|---|---|
 | Oldest on top, nothing jumps | has | 0.1.0 | `reading.order`, `reading.start_at`, `reading.on_new` | own | only in fedtail |
 | Catching up with no holes | has | 0.1.0 | `reading.page_size`, `reading.catch_up_limit` | `min_id` | only in fedtail |
-| When a post counts as read | has | 0.1.0 | `reading.mark_read`, `reading.read_button` | own | only in fedtail (the manual mode) |
+| When a post counts as read | has | 0.1.0 | `reading.mark_read`, `reading.read_button`, `reading.dwell_ms`, `reading.unfocused_seconds` | own | only in fedtail (the manual mode) |
 | Your own posts are always read | has | 0.13.0 | — | own | — |
 | The first run doesn't start with a pile | has | 0.1.0 | `reading.first_run_mark_read` | own | — |
 | The reading place is shared with other clients | has | 0.8.0 | `sync.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
@@ -282,7 +282,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Catching up with no holes.** Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here.
 
-**When a post counts as read.** `"on_scroll"` — when you've scrolled past the whole post; `"on_open"` — the whole lane as soon as you open it; `"manual"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode.
+**When a post counts as read.** `"on_scroll"` — when you've scrolled past the whole post and the feed stood `reading.dwell_ms`; a window without focus — only while scrolled by hand and `reading.unfocused_seconds` after (one rule in every interface, since 0.22.0); `"on_open"` — the whole lane as soon as you open it; `"manual"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode.
 
 **Your own posts are always read.** A post you wrote is read, wherever it came from: from Tusky at night, through a thread, fetched after a restart.
 

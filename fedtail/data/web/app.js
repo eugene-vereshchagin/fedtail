@@ -1410,11 +1410,20 @@ function paneCount(p) {
   navCount(p.name, n);
 }
 
+// the window back in focus: what the columns show is looked at again (readingNow said no)
+window.addEventListener("focus", () => { for (const p of cols.panes.values()) paneRead(p); });
+
 function paneRead(p) {  // reading.mark_read = on_scroll: a card seen whole in a column is read
   if (p.obs) p.obs.disconnect();
   p.obs = null;
   if (state.me.mark_read !== "on_scroll") return;
+  if (!p.body.dataset.hand) {  // the reader's own hand on the column (readingNow)
+    p.body.dataset.hand = "1";
+    for (const k of ["wheel", "touchmove", "keydown"])
+      p.body.addEventListener(k, () => { reading.touched = Date.now(); }, { passive: true });
+  }
   p.obs = new IntersectionObserver((entries) => {
+    if (!readingNow()) return;  // out of focus: looked at again when it comes back
     for (const e of entries) {
       if (!e.isIntersecting || !e.target.classList.contains("unread")) continue;
       unmark(e.target);
@@ -1539,10 +1548,15 @@ function watchRead(box) {
   if (reading.box !== box) {
     reading.box = box;
     reading.last = box.scrollTop;
+    // the reader's own hand on it (a wheel, a finger, a key): what readingNow() counts
+    for (const k of ["wheel", "touchmove", "keydown"])
+      box.addEventListener(k, () => { reading.touched = Date.now(); }, { passive: true });
     box.addEventListener("scroll", () => {
       sweptRead(box);
       clearTimeout(reading.timer);
-      reading.timer = setTimeout(() => { stoodAt(box); lookRead(box); }, 250);
+      // read.dwell_ms: the feed stood this long — what is on it counts (the windows' too)
+      reading.timer = setTimeout(() => { stoodAt(box); lookRead(box); },
+                                 Number(state.me.dwell_ms ?? 350));
     }, { passive: true });
   }
   setTimeout(() => { stoodAt(box); lookRead(box); }, 400);  // what the lane opened on
@@ -1596,8 +1610,18 @@ function stoodAt(box) {
 // look caught it standing — scrolling on, the look only came where the wheel stopped
 // (29.10: 16 posts of Home stayed unread after reading it through); a jump (the bar
 // dragged, End) counts nothing
+// may what is on screen count as read now? (common/lane.reading_now, the windows' rule)
+// a tab in front with the focus: yes; a window out of focus: for read.unfocused_seconds
+// after the reader last scrolled it by hand; a hidden tab: never
+function readingNow() {
+  if (document.hidden) return false;
+  if (document.hasFocus()) return true;
+  const grace = Number(state.me.unfocused_seconds || 0);
+  return grace > 0 && Date.now() - (reading.touched || 0) <= grace * 1000;
+}
+
 function sweptRead(box) {
-  if (state.me.mark_read !== "on_scroll" || document.hidden) return;
+  if (state.me.mark_read !== "on_scroll" || !readingNow()) return;
   const now = box.scrollTop, old = reading.last ?? now;
   reading.last = now;
   const vh = box.clientHeight;
@@ -1615,7 +1639,7 @@ function sweptRead(box) {
 }
 
 function lookRead(box) {
-  if (state.me.mark_read !== "on_scroll" || document.hidden) return;
+  if (state.me.mark_read !== "on_scroll" || !readingNow()) return;
   const view = box.getBoundingClientRect();
   const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 2;
   const glimpsed = new Set();

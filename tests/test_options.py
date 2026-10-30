@@ -103,3 +103,18 @@ class CommonOptionsTest(unittest.TestCase):
         with mock.patch("fedtail.frontends.common.sidebar.start_lane", return_value="home"):
             got = columns.default_names(view, ["home", "replies", "mentions"])
         self.assertEqual(got, ["home"])
+
+
+class ReadingRuleTest(unittest.TestCase):
+    """One reading rule for the windows and the web page (common/lane): Qt counted a
+    window out of focus for 5 s after a hand's scroll, GTK never, the web page always."""
+
+    def test_in_focus_or_for_a_while_after_the_hand(self):
+        from fedtail.frontends.common.lane import dwell_ms, reading_now
+        cfg = {"read": {"unfocused_seconds": 5, "dwell_ms": 500}}
+        self.assertTrue(reading_now(cfg, True, 0, 100))
+        self.assertTrue(reading_now(cfg, False, 97, 100))
+        self.assertFalse(reading_now(cfg, False, 90, 100))
+        self.assertFalse(reading_now({"read": {"unfocused_seconds": 0}}, False, 100, 100))
+        self.assertEqual(dwell_ms(cfg), 500)
+        self.assertEqual(dwell_ms({}), 350)

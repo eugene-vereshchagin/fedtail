@@ -547,6 +547,14 @@ mark_read = "on_scroll"
 # A ✓ "Read" button right under each unread post (handy with "manual").
 read_button = false
 
+# With mark_read "on_scroll": how many milliseconds the feed must stand still for what is on it
+# to count as read. A slow reader — more. One number for the windows and the web page.
+dwell_ms = 350
+
+# A window without focus (behind another, a browser tab not in front) counts as read only
+# while it is scrolled by hand and this many seconds after. 0 — never, the focused one only.
+unfocused_seconds = 5
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  5. The post card

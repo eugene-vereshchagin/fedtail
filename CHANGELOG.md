@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- One reading rule in every interface: what is on screen counts once the feed has stood
+  `reading.dwell_ms` (350; the windows and the web page had 350, 400 and 250 ms), and a
+  window out of focus counts only while scrolled by hand and `reading.unfocused_seconds`
+  after (5) — Qt did so, GTK never counted one, the web page always did (its columns even
+  in a hidden tab).
 - Numbers that were nailed into the code are options now, each read in one place for every
   interface: `threads.thread_recheck_for_minutes` (30), `lanes.extra_posts` (20),
   `lanes.rss_items` (60) and `rss_summary_chars` (1200), `people.following_max` (1000:

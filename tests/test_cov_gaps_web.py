@@ -71,6 +71,10 @@ class WebGapsTest(TmpDir):
         the page — it kept a copy of its own (30.10)."""
         from fedtail.frontends.common.images import Cache
         self.assertEqual(self.web.me()["picture_later"], list(Cache.LATER_TRIES))
+        # and the reading rule's numbers (common/lane.reading_now): the windows'
+        self.core.cfg["read"].update(dwell_ms=900, unfocused_seconds=0)
+        me = self.web.me()
+        self.assertEqual((me["dwell_ms"], me["unfocused_seconds"]), (900, 0))
 
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)

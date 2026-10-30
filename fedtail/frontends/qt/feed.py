@@ -33,7 +33,7 @@ from ..common.lane import MEDIA_KINDS, LaneModel
 from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
 from .card import CardSpec, make_spec
-from .feedview import READING_S, FeedView  # noqa: F401 — the list of cards, for all
+from .feedview import FeedView  # noqa: F401 — the list of cards, for all
 from .gone import clear
 from .text import display_name, esc
 
