@@ -2,6 +2,45 @@
 
 ## 0.22.0 — in progress
 
+**In short.**
+
+- **The lane editor builds a condition from its parts** — no syntax, no service words to
+  remember — in every interface, the phone's too.
+- **"Writing lanes"**, a guide in the docs and in the help: every key and every word,
+  with examples.
+- **"In a thread I wrote in"** works for threads not followed too.
+- **Federated and Local fill themselves** with older pages when the languages filter left
+  them a few posts.
+- **The funnel** ("only video") over something rare asks several pages at once.
+- **"Comments"** (was "Commented posts"), as on Point: every thread you took part in, a
+  card a thread, those with new comments together past the "new below" line.
+- **A comment is `#post/N`**, as on Point: the number given once and kept; the command
+  line takes `#post/N text`.
+- **A thread's card**: "14 comments · 1 new · bob: “…”" — the whole thread counted, the
+  theme's own thread picture before it.
+- **Following a thread by an act**: a boost, a like, a bookmark, a quote, a vote.
+- **My answer shows in the open thread** at once, in every interface.
+- **Refresh says how it went**: "Updated: 3 new", "nothing new", "Not updated: …", "the
+  server asks to wait".
+- **A click on a tag** in a post shows that author's posts with the tag, as on Point.
+- **The post under the mouse** lights its buttons, as on point.im.
+- **Sync without logging in**: through a fedtail-sync server (an invite code) or a WebDAV
+  folder (Nextcloud, ownCloud, a NAS).
+- **The next device's key is a QR code.**
+- **fedtail-sync in a repository of its own**, released with fedtail under one number.
+- **The Qt and GTK windows build only the cards near the screen**: the window's memory on
+  a synthetic day 325 → 227 MB.
+- **No more freezes** on marking read, on opening a lane, on writing to the database.
+- **The web page**: columns, replies, pictures through fedtail itself, servers' emoji in
+  names; checked in Chromium by a CI job of its own.
+- **"Report a bug"** in every interface; the report's archive carries the night in short:
+  the memory as smem says it before and after reading, the freezes, the errors.
+- **Formatting buttons** in the editor: B, I, S, code, a link.
+- **Debian packages one per interface**: GNOME pulls no Qt, KDE no GTK; from the apt
+  repository as before, `sudo apt install fedtail`.
+
+Everything:
+
 - A bug report carries `summary.md`, the night in short — leave the client on, read in
   the morning, send the report: the memory as smem says it (USS / PSS / RSS) at the
   start, lowest, highest and last, and at "reading began" / "reading ended" (the core
