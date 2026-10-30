@@ -343,3 +343,91 @@ class SecretFileTest(unittest.TestCase):
             self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ["sync.key"])
             if os.name == "posix":
                 self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
+
+
+class OfflineTest(unittest.TestCase):
+    """30.10, a laptop's network gone: every round asked each of twenty sources in turn,
+    each failing alike, each said to the user (its words told apart by an object's
+    address), and the round counted as fine — no backoff. Now the first "no way to the
+    server" stops the round, it is said once an outage, and the rounds wait longer."""
+
+    def setUp(self):
+        from pathlib import Path
+
+        from fedtail import i18n
+        from fedtail.core import auth, config, paths
+        from fedtail.core.app import Core
+
+        from . import fakes
+        from .fakes import FakeApi
+        i18n.setup("en")
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "lanes": {"enabled": fakes.CLASSIC_LANES}})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        self.core = core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        core.connect().result(timeout=10)
+        core._loop_round()
+        self.errors = []
+        core.events.on("error", lambda _n, e: self.errors.append(e))
+
+    def _cut(self, host=None):
+        """Every request of the account's api fails as with no network."""
+        real, asked = self.core.api, []
+
+        class Down:
+            def __getattr__(self, name):
+                got = getattr(real, name)
+                if not callable(got):
+                    return got
+
+                def fail(*a, **k):
+                    asked.append(name)
+                    e = requests.ConnectionError("Failed to resolve (NameResolutionError at "
+                                                 f"0x{len(asked):x})")
+                    if host:
+                        e.request = requests.Request("GET", f"https://{host}/x").prepare()
+                    raise e
+                return fail
+        self.core.api = Down()
+        return real, asked
+
+    def test_one_failure_stops_the_round_and_is_said_once(self):
+        core = self.core
+        real, asked = self._cut()
+        core._loop_round()
+        first = len(asked)
+        self.assertLessEqual(first, 2, asked)  # not each source in turn
+        self.assertEqual(len(self.errors), 1, self.errors)
+        self.assertIn("No connection", self.errors[0])
+        self.assertEqual(core.poll_state()["failing"], 1)
+        core._loop_round()
+        core._loop_round()
+        self.assertEqual(len(self.errors), 1, "said once an outage")
+        self.assertGreater(core.backoff(), 0)  # the rounds wait longer
+        core.api = real  # back
+        core._loop_round()
+        self.assertEqual(core.poll_state()["failing"], 0)
+        self.assertEqual(core.backoff(), 0)
+        self.assertIsNone(core._offline_since)
+
+    def test_another_servers_failure_stops_nothing(self):
+        """An RSS site or another server's lane out of reach: that source fails, said,
+        the round goes on."""
+        self.assertFalse(self.core._cut_off(ValueError("x")))
+        e = requests.ConnectionError("refused")
+        e.request = requests.Request("GET", "https://elsewhere.example/feed").prepare()
+        self.assertFalse(self.core._cut_off(e))
+        e.request = requests.Request("GET", "https://example.test/api").prepare()
+        self.assertTrue(self.core._cut_off(e))
+
+    def test_the_same_failure_is_not_told_apart_by_an_address(self):
+        core = self.core
+        core.emit("error", "home: Failed (NameResolutionError at 0x7f9a42c35950)")
+        core.emit("error", "home: Failed (NameResolutionError at 0x7f9a42c356d0)")
+        self.assertEqual(len(self.errors), 1)

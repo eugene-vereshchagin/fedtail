@@ -442,6 +442,8 @@ _STRINGS = {
         "poll_busy": "⟳ обновляю ленты…", "poll_ok": "обновлено в {time}",
         "poll_failing": "⚠ сервер не отвечает с {time}",
         "poll_failing_never": "⚠ сервер не отвечает",
+        "poll_offline": "Нет связи: {why}. Ленты ждут, программа пробует снова сама — "
+                        "всё реже; ⟳ — сейчас",
         "web_copied": "Ссылка скопирована",
         "web_about": "fedtail {version} — клиент федиверса. Ты — @{handle}.",
         "web_keys_text": "/ — поиск, Ctrl+F — найти в ленте\nj / k — следующий / предыдущий пост\n"
@@ -2265,6 +2267,8 @@ _STRINGS = {
         "poll_busy": "⟳ updating the lanes…", "poll_ok": "updated at {time}",
         "poll_failing": "⚠ no answer from the server since {time}",
         "poll_failing_never": "⚠ the server doesn't answer",
+        "poll_offline": "No connection: {why}. The lanes wait; it tries again by itself, "
+                        "less and less often; ⟳ — now",
         "web_copied": "Link copied",
         "web_about": "fedtail {version}, a fediverse client. You are @{handle}.",
         "web_keys_text": "/ — search, Ctrl+F — find in the lane\nj / k — next / previous post\n"

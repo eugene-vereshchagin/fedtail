@@ -335,11 +335,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 # the server asks to wait: said once by rate_limited, not lane by lane
                 log.info("rate limited: %s", str(payload)[:200])
                 return
-            last = seen.get(str(payload))
+            # one failure each time: not told apart by an object's address in its words
+            key = re.sub(r" at 0x[0-9a-f]+", "", str(payload))
+            last = seen.get(key)
             if last is not None and now - last < self.ERROR_QUIET_S:
                 log.debug("error again (not shown): %s", str(payload)[:200])
                 return
-            seen[str(payload)] = now
+            seen[key] = now
             if len(seen) > 200:
                 seen.clear()
             log.warning("error shown to the user: %s", payload)

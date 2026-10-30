@@ -5,10 +5,15 @@ server's request budget, backing off — and the live stream that wakes it."""
 import logging
 import threading
 import time
+from urllib.parse import urlsplit
 
+import requests
+
+from ..i18n import _
 from ..version import USER_AGENT
 from . import (
     lanes,
+    neterr,
     sources,
     subs,
 )
@@ -20,6 +25,13 @@ log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all 
 
 
 PARENTS_FIRST = 20  # parents fetched before the rules sort a round's replies
+
+
+class Offline(Exception):
+    """The account's own server out of reach at all — no network, its name not resolved,
+    the connection refused: the round stops at the first such answer instead of asking
+    every source in turn (each failing alike, each said to the user), and counts as a
+    failed one, so the next waits longer (backoff)."""
 
 
 def _due(last, every):
@@ -158,7 +170,7 @@ class PollMixin:
                 self._wake.clear()
                 continue
             try:
-                self.poll_once()  # counts the rounds failing in a row itself
+                self._loop_round()
             except RateLimited as e:  # the server says wait: _pace() waits, said once
                 log.info("poll: the server's limit is spent (%s) — the round cut short", e)
             except Exception as e:  # never let the poller die silently
@@ -234,6 +246,52 @@ class PollMixin:
                 return True
 
     BACKOFF_MAX = 15 * 60  # s: the longest wait between failing rounds
+
+    def _loop_round(self):
+        """A round of the loop: the server out of reach is said once an outage."""
+        try:
+            self.poll_once()  # counts the rounds failing in a row itself
+        except Offline as e:
+            self._went_offline(e.__cause__ or e)
+            return
+        self._back_online()
+
+    def _cut_off(self, e):
+        """Is e the own server out of reach (not one source's other server: an RSS
+        site, another server's lane)?"""
+        if not isinstance(e, requests.ConnectionError):
+            return False
+        url = getattr(getattr(e, "request", None), "url", None) or ""
+        host = (urlsplit(url).hostname or "").lower()
+        return not host or host == getattr(self.api, "host", host)
+
+    def _round_error(self, where, e):
+        """A source's failure in a round: the server out of reach stops the round
+        (Offline); anything else is said and the round goes on."""
+        if self._cut_off(e):
+            raise Offline(str(e)) from e
+        self.emit("error", f"{where}: {e}")
+
+    def _went_offline(self, e):
+        """Said once an outage: the first round that couldn't reach the server; the
+        status line says "no answer since…" meanwhile (common/sidebar.poll_words)."""
+        self._poll_failures += 1
+        self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
+        if getattr(self, "_offline_since", None):
+            log.info("poll: still out of reach (%s), next in %.0f s",
+                     neterr.kind(e) or "down", self.backoff())
+            return
+        self._offline_since = time.time()
+        host = getattr(self.api, "host", "") or "?"
+        log.warning("poll: %s out of reach (%s) — the rounds wait, longer each time",
+                    host, neterr.kind(e) or "down")
+        self.emit("error", _("poll_offline", why=neterr.words(e, host)))
+
+    def _back_online(self):
+        since = getattr(self, "_offline_since", None)
+        if since:
+            self._offline_since = None
+            log.info("poll: the server answers again (out of reach %.0f s)", time.time() - since)
 
     def backoff(self):
         """Seconds to wait before the next round after rounds failed in a row (the server
@@ -371,6 +429,8 @@ class PollMixin:
                 try:
                     self._refresh_silence()
                 except Exception as e:  # an old server without mutes/blocks: never mind
+                    if self._cut_off(e):
+                        raise Offline(str(e)) from e
                     self._silence_checked = time.monotonic()
                     log.warning("silence: %s", e)
             ann = int(self.cfg["poll"].get("announcements_minutes", 30)) * 60
@@ -386,7 +446,7 @@ class PollMixin:
                     self._refresh_lists()
                 except Exception as e:  # try again next round, not every poll
                     self._lists_checked = time.monotonic()
-                    self.emit("error", f"lists: {e}")
+                    self._round_error("lists", e)
             # not in the first rounds (a start asks enough); the time kept in the store,
             # so short sessions still get to it
             if self.cfg["feed"].get("forget_unfollowed", True) and self._poll_count >= 2 \
@@ -409,7 +469,7 @@ class PollMixin:
                         self.store, self.api, self.me["id"], sc["interval_minutes"],
                         sc["active_days"], sc["max_threads"])
                 except Exception as e:
-                    self.emit("error", f"subs: {e}")
+                    self._round_error("subs", e)
                 self._step("subs")
             if self._opened_threads:  # feed.thread_recheck_minutes: open threads grow
                 self.recheck_threads()
@@ -458,7 +518,7 @@ class PollMixin:
                             (self.browse_empty.add if empty else self.browse_empty.discard)(name)
                             browse_changed.add(name)  # its lane says so (see below)
                     except Exception as e:
-                        self.emit("error", f"{name}: {e}")
+                        self._round_error(name, e)
                     if name in self._browse_waiting:  # answered (or failed): drawn anew
                         self._browse_waiting.discard(name)
                         browse_changed.add(name)
@@ -473,9 +533,9 @@ class PollMixin:
                     if e.status in (401, 403):
                         self.emit("auth_failed", str(e))
                         return
-                    self.emit("error", f"{name}: {e}")
+                    self._round_error(name, e)
                 except Exception as e:  # network down etc.
-                    self.emit("error", f"{name}: {e}")
+                    self._round_error(name, e)
 
             self._step("sources")
             # other servers' public lanes and tags (lanes.federated_extra, tags_extra)
@@ -505,7 +565,7 @@ class PollMixin:
                         if events_in:
                             self.emit("lanes_updated", events_in)
                 except Exception as e:
-                    self.emit("error", f"requests: {e}")
+                    self._round_error("requests", e)
 
             new_activity = []
             if self._event_lanes():
@@ -518,7 +578,7 @@ class PollMixin:
                         if events_in:  # lanes showing likes, follows…: they look again
                             self.emit("lanes_updated", events_in)
                 except Exception as e:
-                    self.emit("error", f"activity: {e}")
+                    self._round_error("activity", e)
 
             if self.derived.due():  # a snapshot of my followers, in the background
                 self.bg.submit(self.derived.run)

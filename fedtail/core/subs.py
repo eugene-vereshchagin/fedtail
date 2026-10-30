@@ -20,6 +20,8 @@ thread are kept in `left_members`, and every dropped mention joins them.
 import logging
 from datetime import UTC, datetime, timedelta
 
+import requests
+
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .store import now_iso
@@ -212,7 +214,9 @@ def check(store, api, me_id, interval_minutes, active_days, max_threads):
                 raise
             slow(store, root, since, e)
             continue
-        except Exception as e:  # noqa: BLE001 — a timeout, the network: this one waits
+        except requests.ConnectionError:  # no way to the server: no thread gets through
+            raise
+        except Exception as e:  # noqa: BLE001 — a timeout: this one waits
             slow(store, root, since, e)
             continue
         desc = ctx.get("descendants", [])

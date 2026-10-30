@@ -53,6 +53,7 @@ class FakeApi:
 
     def __init__(self, server="https://example.test", token=None, session=None):
         self.base = server if server.startswith("http") else "https://" + server
+        self.host = self.base.split("://", 1)[1].split("/")[0].lower()  # as the real api's
         self.token = token
         w = FakeApi.worlds.get(self.base) or FakeApi.world
         if w is None:
