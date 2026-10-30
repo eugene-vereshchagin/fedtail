@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- How deep a thread's posts indent is one number for every interface (the model's): the
+  phone stopped at 6 levels, the others at 8; the reply's context line is as long in Qt
+  as elsewhere (140 → 160 characters).
 - Lighter core: python3-langdetect is loaded only when a guess is wanted — each Activity row
   guessed its post's language for rules that never asked, loading all of it (the core
   alone 110 → 52 MB). When it is wanted, only its Latin and Cyrillic profiles, as 4-byte

@@ -162,6 +162,10 @@ class BridgeTest(_Base):
         self.assertIn("103", ids)
         self.assertTrue(all("depth" in p and "number" in p and "text" in p for p in th["posts"]))
         self.assertGreater(max(p["depth"] for p in th["posts"]), 0)
+        # how far in each is drawn is the model's, as everywhere (the phone kept a 6 of its own)
+        from fedtail.model import indent
+        self.assertEqual([p["indent"] for p in th["posts"]],
+                         [indent(p["depth"]) for p in th["posts"]])
         sent = self.call("post", json.dumps({"text": "a reply from the phone",
                                              "reply_to": "103"}))
         self.assertTrue(sent["id"])

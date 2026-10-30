@@ -484,7 +484,7 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
 /** A comment in a thread: indented by depth with a thread line, its /N, smaller face. */
 @Composable
 fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Boolean) {
-    val depth = minOf(p.depth, 6)
+    val depth = p.indent  // the model's (INDENT_MAX), as every interface draws it
     val bg = when {
         focused -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
         p.unread -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)

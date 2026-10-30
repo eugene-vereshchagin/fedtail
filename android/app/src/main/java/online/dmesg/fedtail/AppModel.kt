@@ -122,6 +122,7 @@ data class PostItem(
     val unread: Boolean, val sharedBy: String, val contextHandle: String,
     val contextText: String, val replies: Int, val shares: Int, val likes: Int,
     val liked: Boolean, val number: Int?, val depth: Int,
+    val indent: Int = 0,                         // how far in it is drawn: the model's, as everywhere
     val accountId: String = "",
     val pollOptions: List<String> = emptyList(), // a poll's options, to vote on
     val pollMultiple: Boolean = false,
@@ -2213,6 +2214,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             likes = counts.optInt("likes"), liked = mine.optBoolean("liked"),
             number = if (o.has("number") && !o.isNull("number")) o.optInt("number") else null,
             depth = o.optInt("depth"),
+            indent = o.optInt("indent"),
             accountId = str(acc, "id"),
             pollOptions = poll?.optJSONArray("options")?.let { a ->
                 (0 until a.length()).map { str(a.getJSONObject(it), "title") } } ?: emptyList(),
