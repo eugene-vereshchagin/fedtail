@@ -6,6 +6,7 @@
 - The post under the mouse lit
 - The numbers under the posts on screen kept fresh
 - Formatting buttons
+- A comment is #post/N, as on Point
 - Mute a hashtag in one click
 
 **0.21.0:**

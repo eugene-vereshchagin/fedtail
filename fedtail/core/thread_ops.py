@@ -245,9 +245,14 @@ class ThreadsMixin:
             if refresh:
                 self.bg.submit(self._await_refresh, root["id"], *refresh)
         self._opened_threads[root["id"]] = time.monotonic()
+        nums = self.store.number_comments(root["id"], everything + rest)
         if self.cfg["feed"].get("thread_followed_only"):
             rest = self._followed_only(root, rest)
-        return threads.build(root, {"ancestors": [], "descendants": rest})
+        nodes = threads.build(root, {"ancestors": [], "descendants": rest})
+        for n in nodes:  # the kept numbers, not the place in the tree: /2 is always /2
+            n.number = 0 if n.status["id"] == root["id"] else nums.get(n.status["id"],
+                                                                      n.number)
+        return nodes
 
     def _followed_only(self, root, rest):
         """feed.thread_followed_only: of the replies, those of people I follow and mine —
@@ -291,6 +296,7 @@ class ThreadsMixin:
             fresh = [st for st in desc if st["id"] not in have]
             if fresh:
                 self.store.put_statuses(fresh)
+                self.store.number_comments(root_id, fresh)
                 log.info("thread %s: %d new replies on recheck", root_id, len(fresh))
                 self.emit("thread_grew", root_id)
                 grew.append(root_id)
@@ -305,6 +311,17 @@ class ThreadsMixin:
         grew = []
         for sid, parent in pairs:
             root = roots.get(str(parent)) if parent else None
+            if root is None and parent:  # a thread numbered before: its next number
+                known = self.store.comment_numbers([str(parent)]).get(str(parent))
+                thread = known[0] if known else \
+                    (str(parent) if self.store.numbered_root(str(parent)) else None)
+                st = self.store.get_status(str(sid)) if thread else None
+                if st:
+                    self.store.number_comments(thread, [st])
+            elif root is not None:
+                st = self.store.get_status(str(sid))
+                if st:
+                    self.store.number_comments(root, [st])
             if root is not None:
                 roots[str(sid)] = root  # an answer to it is the thread's too
                 if root not in grew:

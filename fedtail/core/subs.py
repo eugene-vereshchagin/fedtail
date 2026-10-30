@@ -228,4 +228,5 @@ def check(store, api, me_id, interval_minutes, active_days, max_threads):
         new += store.put_items(SOURCE, [(s["id"], s, s.get("created_at", "")) for s in fresh])
         latest = max([s.get("created_at") or "" for s in desc] + [since])
         store.sub_checked(root, now_iso(), latest, [s["id"] for s in desc])
+        store.number_comments(root, desc)  # #post/N on the cards, as on Point
     return new

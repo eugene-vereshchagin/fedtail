@@ -2,6 +2,10 @@
 
 ## 0.22.0 — in progress
 
+- A comment is `#post/N`, as on Point: on every card (Home, To me, the thread) its post's
+  #id and its number, given once and kept — not a #id of its own, as if it were a post.
+  The thread's /N no longer move when a reply comes in between (they were the places in
+  the tree). `threads.comment_ids = "own"` — as before.
 - Refresh says how it went: "Updated: 3 new", "nothing new", "Not updated: …" or "the
   server asks to wait — updating at 14:20" — a press that brought nothing looked like a
   button doing nothing. The web page reads its lanes once the round is over (it read

@@ -358,6 +358,22 @@ details.ru = "Имя вроде `#kq3zt` выводится из id поста, 
 details.en = "A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them."
 
 [[feature]]
+id = "comment-ids"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Комментарий — #пост/N, как на Point"
+name.en = "A comment is #post/N, as on Point"
+config = "`threads.comment_ids`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Point, Juick"
+others.en = "Point, Juick"
+clients = []
+details.ru = "У комментария не свой #id, а номер его поста и его номер в треде: `#kq3zt/2` — на карточке в треде, в Ленте, в «Мне», везде. Номер даётся один раз — в порядке, в каком комментарии впервые увидены (тред, открытый впервые, — по их времени), — и больше не сдвигается, что бы ни пришло потом. Командная строка его понимает: `#kq3zt/2 текст` — ответ этому комментарию. Номера считает это устройство: на другом, увидевшем тред в другом порядке, они могут отличаться. `threads.comment_ids = \"own\"` — свой #id, как у поста."
+details.en = "A comment has not a #id of its own but its post's and its number in the thread: `#kq3zt/2` — on its card in the thread, in Home, in To me, everywhere. The number is given once — in the order the comments were first seen (a thread opened for the first time: by their time) — and never moves, whatever comes later. The command line takes it: `#kq3zt/2 text` answers that comment. This device counts them: another that saw the thread in another order may number it otherwise. `threads.comment_ids = \"own\"` — a #id of its own, as a post's."
+
+[[feature]]
 id = "ai-helpers"
 status = "wont"
 name.ru = "ИИ-помощники в панели поста (как в Ice Cubes)"

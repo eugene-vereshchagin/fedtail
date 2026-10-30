@@ -1599,8 +1599,21 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         return got
 
     def short_ids(self, statuses):
-        """{status id: '#a3f'-style alias} for the posts on screen (boosts: the original)."""
-        return self.store.aliases(real(st)["id"] for st in statuses)
+        """{status id: '#a3f'-style alias} for the posts on screen (boosts: the original);
+        a numbered comment — its post's and its number, "a3f/2", as on Point
+        (threads.comment_ids = "post"): a comment was named as if it were a post of its own
+        (30.10), its thread's numbers seen only inside the thread. The command line
+        takes "#a3f/2" (target)."""
+        ids = [real(st)["id"] for st in statuses]
+        out = self.store.aliases(ids)
+        if self.cfg["feed"].get("comment_ids", "post") != "post":
+            return out
+        nums = self.store.comment_numbers(ids)
+        if nums:
+            roots = self.store.aliases(root for root, _n in nums.values())
+            for sid, (root, n) in nums.items():
+                out[sid] = f"{roots[root]}/{n}"
+        return out
 
     def resolve_alias(self, alias):
         return self.store.by_alias(alias)
@@ -1733,7 +1746,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             st = self.by_alias(alias)
             if st is None or not number:
                 return st
-            nodes = self._thread_nodes(real(st)["id"])
+            nodes = self._thread_nodes(real(st)["id"])  # numbered as said: #a3f/N
             return next((n.status for n in nodes if n.number == number), None)
         return self.submit(job)
 

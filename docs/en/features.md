@@ -494,6 +494,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A thread as a chain | has | 0.14.0 | `post.chain` | `in_reply_to_id` | Ice Cubes (up to five posts) |
 | A command line as on Point | has | 0.3.0 | `window.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
 | Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
+| A comment is #post/N, as on Point | has | 0.22.0 | `threads.comment_ids` | own | Point, Juick |
 | Spell checking in the compose panel | has | 0.20.0 | `post.spellcheck`, `post.spell_languages` | own: the system's dictionaries through Enchant | Tuba, Tusky, Mastodon web (the browser) |
 | Language check, link → quote, sending in the background, scheduled → editor, Drafts | has | 0.21.0 | `post.lang_check`, `post.link_quote`, `post.send_in_background`, `post.scheduled_to_draft`, `post.drafts_place` | `/api/v2/search`, `/api/v1/scheduled_statuses` | Fedilab (language), Tuba (a quote from a link, draft ↔ scheduled), Milktea (sending in the background), Pachli (a drafts tab) |
 
@@ -542,6 +543,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A command line as on Point.** At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts).
 
 **Short post names the same on every device.** A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them.
+
+**A comment is #post/N, as on Point.** A comment has not a #id of its own but its post's and its number in the thread: `#kq3zt/2` — on its card in the thread, in Home, in To me, everywhere. The number is given once — in the order the comments were first seen (a thread opened for the first time: by their time) — and never moves, whatever comes later. The command line takes it: `#kq3zt/2 text` answers that comment. This device counts them: another that saw the thread in another order may number it otherwise. `threads.comment_ids = "own"` — a #id of its own, as a post's.
 
 **Spell checking in the compose panel.** Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker.
 

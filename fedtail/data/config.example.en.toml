@@ -769,6 +769,11 @@ thread_progress = false
 # the thread" always goes to the first new one. Every interface and the phone.
 open_at = "post"
 
+# A comment's #id, as on Point: "post" — its post's and its number in the thread, #a3f/2
+# (the number given once, the order the comments were first seen in — it never moves;
+# the command line takes it: `#a3f/2 text`); "own" — a #id of its own, as a post's.
+comment_ids = "post"
+
 # Thread subscriptions, as on Point. The server tells you only of replies that
 # mention you; if two people answer each other under your post, you won't know.
 # fedtail itself rereads the threads you're subscribed to and puts what's new into "Subscriptions".

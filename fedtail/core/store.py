@@ -89,6 +89,14 @@ CREATE TABLE IF NOT EXISTS sub_members (
     root_id   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sub_members_root ON sub_members (root_id);
+-- a comment's number in its thread, as on Point (#post/N): given once, kept — the order
+-- the comments were first seen in (a whole thread's first look: by their time)
+CREATE TABLE IF NOT EXISTS comment_numbers (
+    status_id TEXT PRIMARY KEY,
+    root_id   TEXT NOT NULL,
+    n         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comment_numbers_root ON comment_numbers (root_id);
 -- threads the user left: automatic subscription never brings them back
 CREATE TABLE IF NOT EXISTS unsubs (
     root_id TEXT PRIMARY KEY
@@ -717,6 +725,49 @@ class Store:
                         (code[:n], code[:n] + "~")).fetchone()[0] > 1:
                     n += 1
                 out[sid] = code[:n]
+        return out
+
+    def number_comments(self, root_id, statuses):
+        """Give the comments of root_id's thread their numbers (/1, /2… as on Point):
+        those numbered keep theirs, the new ones come after, by their time — so a
+        number once said never moves, whatever comes later (a reply from another server
+        older than the ones seen). → {status id: n} of the thread's numbered ones."""
+        new = sorted((st for st in statuses if st.get("id") and st["id"] != root_id),
+                     key=lambda st: (st.get("created_at") or "", st["id"]))
+        with self._tx() as db:
+            have = dict(db.execute("SELECT status_id, n FROM comment_numbers WHERE root_id=?",
+                                   (root_id,)))
+            top = max(have.values(), default=0)
+            for st in new:
+                if st["id"] in have:
+                    continue
+                if db.execute("SELECT 1 FROM comment_numbers WHERE status_id=?",
+                              (st["id"],)).fetchone():
+                    continue  # numbered in another thread (a root seen wrong once): kept
+                top += 1
+                have[st["id"]] = top
+                db.execute("INSERT INTO comment_numbers VALUES (?, ?, ?)",
+                           (st["id"], root_id, top))
+        return have
+
+    def numbered_root(self, root_id):
+        """Has this post's thread numbered comments (it is their root)?"""
+        with self._reading() as db:
+            return db.execute("SELECT 1 FROM comment_numbers WHERE root_id=? LIMIT 1",
+                              (root_id,)).fetchone() is not None
+
+    def comment_numbers(self, status_ids):
+        """{status id: (root id, n)} of those of status_ids that are numbered comments."""
+        ids = list(dict.fromkeys(status_ids))
+        out = {}
+        with self._reading() as db:
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" * len(chunk))
+                for sid, root, n in db.execute(
+                        "SELECT status_id, root_id, n FROM comment_numbers "
+                        f"WHERE status_id IN ({marks})", chunk):
+                    out[sid] = (root, n)
         return out
 
     def by_alias(self, alias):

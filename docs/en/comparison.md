@@ -158,6 +158,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A thread as a chain | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A command line as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Short post names the same on every device | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A comment is #post/N, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Spell checking in the compose panel | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |
 | Language check, link → quote, sending in the background, scheduled → editor, Drafts | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   | ✓ |   |
 
@@ -249,4 +250,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **57** features of the 185 compared.
+Only in fedtail — **58** features of the 186 compared.

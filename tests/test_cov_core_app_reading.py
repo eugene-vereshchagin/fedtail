@@ -117,6 +117,42 @@ class ParentsTest(CoreCase):
         self.assertIsNone(c.target(alias, 9).result(timeout=T))
 
 
+class CommentIdsTest(CoreCase):
+    """30.10: a woman answering herself under her post — each comment got a #id of its
+    own, as if a post, and a card in Home read "#yzi8j", its thread nowhere. A comment
+    is #post/N now, as on Point: the number given once, kept, the same on every card
+    and in the command line."""
+
+    def test_post_and_number_kept(self):
+        c = self.connect()
+        self.w.add(status("020", BOB, minute=20), home=True)
+        self.w.add(status("021", BOB, "020", "B", minute=21, text="first"), home=True)
+        self.w.add(status("022", BOB, "021", "B", minute=22, text="second"), home=True)
+        c.poll_once()
+        post = c.store.aliases(["020"])["020"]
+        nodes = c.thread("022").result(timeout=T)
+        self.assertEqual([(n.status["id"], n.number) for n in nodes],
+                         [("020", 0), ("021", 1), ("022", 2)])
+        ids = c.short_ids([c.store.get_status(i) for i in ("020", "021", "022")])
+        self.assertEqual(ids, {"020": post, "021": f"{post}/1", "022": f"{post}/2"})
+        # an answer to the post itself, older than the comments by its time but seen
+        # after them: the next number — /1 and /2 never move
+        late = status("023", BOB, "020", "B", minute=20, text="late from afar")
+        self.w.add(late, home=True)
+        c.poll_once()
+        nodes = c.thread("020").result(timeout=T)
+        got = {n.status["id"]: n.number for n in nodes}
+        self.assertEqual(got, {"020": 0, "021": 1, "022": 2, "023": 3})
+        self.assertEqual(c.short_ids([late])["023"], f"{post}/3")
+        self.assertEqual(c.target(post, 2).result(timeout=T)["id"], "022")
+        # a new answer in Home to a numbered comment: numbered as it comes
+        self.w.add(status("024", BOB, "022", "B", minute=30, text="more"), home=True)
+        c.poll_once()
+        self.assertEqual(c.short_ids([c.store.get_status("024")])["024"], f"{post}/4")
+        c.cfg["feed"]["comment_ids"] = "own"
+        self.assertEqual(c.short_ids([late])["023"], c.store.aliases(["023"])["023"])
+
+
 class CompletingTest(CoreCase):
     def test_async_refresh_and_resolving_fail_quietly(self):
         c = self.connect()

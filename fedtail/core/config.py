@@ -115,6 +115,7 @@ DEFAULTS = {
         "thread_followed_only": False,
         "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
         "open_at": "post",         # a thread opened from a card: at it, or "first_unread"
+        "comment_ids": "post",     # a comment's #id: its post's and number (#a3f/2), or "own"
         "around_post": False,
         "why_home": False,
         "stats": False,            # "Statistics" in the ≡ menu: the week, day by day
@@ -363,6 +364,7 @@ CHOICES = {
     ("lanes", "browse_start"): {"last", "hours", "newest"},
     ("feed", "thread_from"): {"local", "mixed", "remote"},
     ("feed", "open_at"): {"post", "first_unread"},
+    ("feed", "comment_ids"): {"post", "own"},
     ("feed", "tag_click"): {"author", "everywhere"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
@@ -565,7 +567,8 @@ FILE_LAYOUT = (
                      "translate_key")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
                               "thread_recheck_for_minutes "
-                              "thread_followed_only thread_progress open_at")
+                              "thread_followed_only thread_progress open_at "
+                              "comment_ids")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "
