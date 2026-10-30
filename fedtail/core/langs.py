@@ -181,9 +181,20 @@ def by_words(text):
     return None
 
 
+# what says nothing of a text's language: a link, @name@server, #tag, :shortcode:
+_NOT_LANGUAGE = re.compile(r"https?://\S+|www\.\S+|@[\w.\-]+(?:@[\w.\-]+)?|#\w+|:[\w+\-]+:")
+
+
+def words_only(text):
+    """text without its links, @names, #tags and :emoji: — their letters are no language
+    (a Japanese post with its link's Latin letters counted as Latin, its "ja" called a
+    lie, and the language unknown: it passed a "ru only" filter, 30.10)."""
+    return _NOT_LANGUAGE.sub(" ", text or "")
+
+
 def guess(text, min_words=12):
     """The language of a plain text, or None."""
-    text = unicodedata.normalize("NFC", text or "")
+    text = words_only(unicodedata.normalize("NFC", text or ""))
     script = by_script(text)
     if script and script not in ("cyrillic", "latin"):
         return script
@@ -218,8 +229,8 @@ def post_language(status, mode="untagged", min_words=12):
     key = (status.get("id"), status.get("edited_at"), mode, min_words)
     if key[0] and key in _cache:
         return _cache[key]
-    text = "\n".join(x for x in (status.get("spoiler_text") or "",
-                                 html_to_text(status.get("content") or "")) if x)
+    text = words_only("\n".join(x for x in (status.get("spoiler_text") or "",
+                                            html_to_text(status.get("content") or "")) if x))
     script = by_script(text)
     if mode == "untagged" and tagged and not _contradicts(script, tagged):
         lang = tagged

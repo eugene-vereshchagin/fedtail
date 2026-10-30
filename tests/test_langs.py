@@ -229,6 +229,23 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(cfg["lanes"]["languages_in"], ["federated", "lists", "home"])
 
 
+class LinksAreNoLanguageTest(LangsBase):
+    """A link, @name@server, #tag, :emoji: say nothing of a post's language: a Japanese
+    post's link counted its Latin letters, its "ja" was called a lie and the language
+    unknown — it passed a "ru only" lane (the screenshot of 30.10)."""
+
+    def test_a_japanese_post_with_a_link(self):
+        self.without_detector()
+        html = ('<p>最後、もう少し何とか頑張って欲しいカミね</p><p><a href="https://m.example/1">'
+                'https://mastodon.crazynewworld.net/@take/115</a> #orjxa @kami@m.example</p>')
+        for tag in (None, "ja", "en"):
+            with self.subTest(tag=tag):
+                st = {"id": f"j{tag}", "content": html, "language": tag}
+                self.assertEqual(langs.post_language(st, "untagged", 12), "ja")
+        self.assertFalse(langs.wanted({"id": "jr", "content": html, "language": "ja"},
+                                      ["ru"], "untagged", 12))
+
+
 @unittest.skipUnless(__import__("importlib").util.find_spec("langdetect"),
                      "python3-langdetect isn't installed")
 class ProfilesTest(unittest.TestCase):
