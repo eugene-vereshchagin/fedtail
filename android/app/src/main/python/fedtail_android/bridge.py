@@ -753,7 +753,7 @@ def theme():
 PICTURES = {"reply": "reply", "boost": "boost", "like": "star", "liked": "star_full",
             "bookmark": "bookmark", "more": "more", "refresh": "refresh", "send": "send",
             "write": "edit", "menu": "menu", "attach": "attach", "poll": "poll",
-            "close": "close", "settings": "settings"}
+            "close": "close", "settings": "settings", "thread": "thread"}
 
 
 def pictures():

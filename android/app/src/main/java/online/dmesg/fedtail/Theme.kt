@@ -142,6 +142,15 @@ object Glyphs {
         moveTo(14f, 14f); horizontalLineTo(20f); verticalLineTo(20f); horizontalLineTo(14f); close()
     }
 
+    /** A thread: a stem and its branches (data/icons/fallback/thread.svg's shape). */
+    val Thread: ImageVector = stroke("thread") {
+        moveTo(5f, 3f); verticalLineTo(16f)
+        arcTo(3f, 3f, 0f, false, false, 8f, 19f); horizontalLineTo(15f)
+        moveTo(5f, 10f); horizontalLineTo(15f)
+        moveTo(19f, 10f); arcTo(2f, 2f, 0f, true, true, 15f, 10f); arcTo(2f, 2f, 0f, true, true, 19f, 10f)
+        moveTo(19f, 19f); arcTo(2f, 2f, 0f, true, true, 15f, 19f); arcTo(2f, 2f, 0f, true, true, 19f, 19f)
+    }
+
     val Done: ImageVector = stroke("done") {
         moveTo(5f, 12f); lineTo(10f, 17f); lineTo(19f, 7f)
     }

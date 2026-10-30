@@ -472,7 +472,7 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                 // someone new in a private talk: before the words, in the warning's colour
                 p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
                 Body(p, act, hideSensitive)
-                p.conversation?.let { BitLine(it, act) }
+                p.conversation?.let { ConversationLine(it, act) }
                 p.myReplies.forEach { BitLine(it, act) }
                 p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
                 Actions(p, act)
@@ -657,6 +657,18 @@ private fun BitLine(bit: Pair<String, String>, act: CardActions, color: Color? =
         modifier = Modifier.fillMaxWidth()
             .clickable(enabled = bit.second.isNotBlank()) { act.link(bit.second) }
             .padding(vertical = 2.dp))
+}
+
+/** A thread card's line ("14 comments · 1 new · bob: …"), opening with the theme's own
+ *  "thread" picture, as in the windows — not an emoji a font may lack. */
+@Composable
+private fun ConversationLine(bit: Pair<String, String>, act: CardActions) {
+    val grey = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        ThemedIcon("thread", Glyphs.Thread, null, Modifier.size(14.dp), tint = grey)
+        Spacer(Modifier.width(4.dp))
+        Box(Modifier.weight(1f)) { BitLine(bit, act) }
+    }
 }
 
 @Composable
