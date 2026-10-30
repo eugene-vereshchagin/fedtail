@@ -3167,6 +3167,14 @@ async function follow() {
         s.hidden = !r.status;
         swing(!!r.busy);
       }
+      // a thread grew (an answer came, mine from another place) or a post changed: the
+      // thread open beside is drawn anew — it stayed as it was opened
+      if (r.t !== undefined && r.t !== state.threadSeq) {
+        const first = state.threadSeq === undefined;
+        state.threadSeq = r.t;
+        const th = state.thread;
+        if (!first && th && state.side === th.token) openThread(th.id, th.at);
+      }
       for (const snd of r.sounds || []) playSound(snd);
       for (const note of r.notes || []) showNote(note);
       if (r.auth_failed && !state.authSaid) {  // the token refused: log in again there

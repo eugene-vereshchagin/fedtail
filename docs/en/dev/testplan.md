@@ -98,5 +98,7 @@ the tests a change can break.
 - a GTK tour like Qt's: menus, dialogs, sizes (now — shots and a bench);
 - Qt and GTK shots in one world are there already (`tools/showcase.py`); next — comparing
   them automatically: a theme in Qt against the same theme in GTK;
-- a wider behaviour scenario: editing, quoting, polls, lists and silence through every interface;
+- a wider behaviour scenario: editing, quoting, polls, lists and silence through every interface
+  (it holds, since 30.10, what each shows after the core speaks: a round's news, an answer in
+  an open thread, mine from another place, a read mark from elsewhere — `watch_*` steps);
 - Windows and macOS: the same selfcheck (GTK is skipped there).

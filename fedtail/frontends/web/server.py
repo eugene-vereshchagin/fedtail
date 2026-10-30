@@ -722,6 +722,9 @@ class Web:
         from ..common import sidebar
         out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes,
                "p": getattr(self, "poll_seq", 0), "status": sidebar.status_words(self.core),
+               # a thread grew (the core's thread_grew) or a post changed: the open one
+               # drawn anew — the phone asks the same number (bridge: "threads")
+               "t": getattr(self, "thread_seq", 0),
                "busy": sidebar.polling(self.core)}
         if self.auth_failed:
             out["auth_failed"] = self.auth_failed

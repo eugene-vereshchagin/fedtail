@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Web page: the thread open beside grows by itself — someone's answer that a round
+  brings, my own answer sent from another place; it stayed as it was opened (the page
+  now follows the server's thread count, as the phone does).
+- Terminal: a post read anywhere else (another window, the phone, another device
+  through sync) loses its ● in the lane on screen at once; the terminal never heard of
+  read marks it hadn't made itself till the lane was drawn anew.
 - GTK and the web page: a quote is shown once — the server's "RE: <link>" line for clients
   without quotes stood in the text over the quote fedtail drew; Qt alone took it out.
   Decided once now (`cardtext.shown_text`). GTK has a test of quotes of its own.

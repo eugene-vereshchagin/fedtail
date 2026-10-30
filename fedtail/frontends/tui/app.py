@@ -122,6 +122,8 @@ class PostItem(ListItem):
         self.text = text
         self.has_picture = False
         self.graphic = None
+        self.unread = False  # a lane's row: its ● (read_changed takes it off in place)
+        self.redraw = None   # unread → its text anew (the lane's builder sets it)
 
     def set_picture(self, pic):
         """The post's first picture under its text, in half blocks."""
@@ -972,6 +974,9 @@ class FedtailApp(App, PostsMixin):
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
         # replies from other servers, or an open thread asked again: it grows
         self.core.on("thread_grew", lambda _n, p: self.in_ui(self.thread_grew, p))
+        # read here or anywhere else (another window, the phone, a device through sync):
+        # the rows on screen lose their ● in place, as the windows' apply_read
+        self.core.on("read_changed", lambda _n, p: self.in_ui(self.read_changed, p))
         # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
         self.core.on("thread_progress", lambda _n, p: self.in_ui(self.thread_progress, p))
         # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top
@@ -1168,6 +1173,10 @@ class FedtailApp(App, PostsMixin):
                 shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
                                   parent=sp.parent, spec=sp)
                 item = PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
+                item.unread = bool(sp.unread)
+                item.redraw = lambda unread, sp=sp, e=e: render(show_post(
+                    core, e, sp.extra.get("short_id"), unread, width=width, parent=sp.parent,
+                    spec=sp))
                 if core.cfg["ui"].get("additional_highlight", True):
                     item.add_class("lit")  # under the mouse: tinted (the windows' highlight)
                 return item
@@ -1670,6 +1679,23 @@ class FedtailApp(App, PostsMixin):
                 self._redraw_pending = False
         else:
             self.update_lane_counts()
+
+    async def read_changed(self, ids):
+        """Posts marked read — here or anywhere else: the lane on screen takes their ● off
+        in place (nothing rebuilt), and the counts on the left follow."""
+        ids = set(ids or ())
+        try:
+            lv = self._main("#posts", ListView)
+        except Exception:  # noqa: BLE001 — no lane on screen (starting, closing)
+            return
+        for it in lv.children:
+            if isinstance(it, PostItem) and it.unread and it.redraw is not None and \
+                    (it.entry.id in ids or real(it.entry).id in ids):
+                it.unread = False
+                it.text = it.redraw(False)
+                if not it.has_picture or it.graphic is not None:
+                    it.body.update(it.text)  # a half-block picture redrawn with the lane
+        self.update_lane_counts()
 
     async def thread_progress(self, root_id):
         from ..common.progress import bar, thread_words

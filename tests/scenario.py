@@ -8,7 +8,11 @@ fake server (tests/fakes.py) and in the core. A driver per interface (tests/driv
 knows the way in; the reference one does every step through frontends/common directly:
 what the shared code says should happen.
 
-    STEPS            what to do, in order, with what each step shows (an observation)
+    STEPS            what to do, in order, with what each step shows (an observation);
+                     a watch_* step: the interface showing a thread or a lane, something
+                     happens elsewhere (a round's news, my answer from another place, a
+                     read mark from another device) — what it shows then (the core
+                     decides; each interface only draws, or stays behind: a blind spot)
     make_world()     the server every run starts from
     summary(core, w) what was done, read off the server and the core at the end
     run(driver)      → Trace(observations, summary, problems)
@@ -30,6 +34,8 @@ ALICE = fakes.acct("A", "alice@other.example")
 # the step ids are what the report's rows say
 STEPS = [
     ("lane_home", "lane", "home"),
+    ("news_seen", "watch_lane", "home", "news"),
+    ("read_seen", "watch_lane", "home", "read_elsewhere"),
     ("menu_bob", "menu", "010"),
     ("menu_mine", "menu", "030"),
     ("like", "button", "fav", "010"),
@@ -38,6 +44,10 @@ STEPS = [
     ("thread", "thread", "022"),
     ("follow_thread", "link", "sub", "020"),
     ("mute_thread", "link", "mutethread", "012"),
+    # after following it: my answer follows the thread by itself (the ⋯ menu's "follow"
+    # gone from the terminal's menu then)
+    ("answer_seen", "watch_thread", "022", "answer"),
+    ("mine_seen", "watch_thread", "022", "mine"),
     ("reply", "reply", "011", "scenario: a reply"),
     ("profile", "profile", "B"),
     ("follow_bob", "profile_act", "B", "follow"),
@@ -112,6 +122,43 @@ class Trace:
     cant: dict = field(default_factory=dict)  # step -> why
 
 
+def happen(what, core, w, view, target):
+    """Something done elsewhere, while the interface shows target: a round brings someone's
+    answer in the thread, or a new post; my answer sent from another place (the phone, the
+    terminal: the same profile); a lane read on another device."""
+    if what == "answer":
+        # newer than whatever came before (a round asks for what's newer than it has)
+        w.add(status("072", BOB, target, "ME", minute=52, vis="public", text="a late answer"),
+              home=True)
+        core.poll_once()
+    elif what == "mine":
+        view.post("my late answer", "public", view.by_id(target)).result(timeout=10)
+    elif what == "news":
+        w.add(status("071", BOB, minute=51, vis="public", text="news of a round"), home=True)
+        core.poll_once()
+    elif what == "read_elsewhere":
+        core.mark_read([e.id for _i, e in view.entries(target)][:2])
+    else:
+        raise ValueError(what)
+
+
+WATCH = {"watch_thread": ("open_thread", "shown_thread", "close_thread"),
+         "watch_lane": ("lane", None, None)}
+
+
+def watch(driver, kind, core, w, view, target, what):
+    """A watch_* step: the driver shows target, it happens, the driver says what it shows."""
+    opening, _shown, closing = WATCH[kind]
+    getattr(driver, opening)(target)
+    happen(what, core, w, view, target)
+    driver.settle()
+    shown = driver.shown_thread(target) if kind == "watch_thread" else \
+        (driver.unread_shown(target) if what == "read_elsewhere" else driver.shown_lane(target))
+    if closing:
+        getattr(driver, closing)(target)
+    return shown
+
+
 class Cant(Exception):
     """A driver's way of saying: this interface has no way to do this step."""
 
@@ -141,7 +188,8 @@ def run(driver, steps=STEPS):
                 sid, kind, *args = step
                 args = [fill(a, view) if isinstance(a, str) else a for a in args]
                 try:
-                    shown = getattr(driver, kind)(*args)
+                    shown = watch(driver, kind, core, w, view, *args) if kind in WATCH \
+                        else getattr(driver, kind)(*args)
                 except Cant as e:
                     trace.cant[sid] = str(e) or "—"
                     continue

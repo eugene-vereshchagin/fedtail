@@ -212,15 +212,26 @@ class Reference(Driver):
     def read_all(self, lane):
         self.view.mark_lane_read(lane)
 
+    # watch_* steps (scenario.watch): what the core says the open thread / lane hold now
+    def open_thread(self, sid):
+        pass
+
+    def shown_thread(self, sid):
+        return [n.post.id for n in self.view.thread(sid).result(timeout=10)]
+
+    def close_thread(self, sid):
+        pass
+
+    def shown_lane(self, name):
+        return [e.id for _i, e in self.view.entries(name)]
+
+    def unread_shown(self, name):
+        entries = [e for _i, e in self.view.entries(name)]
+        return sorted(self.view.unread(entries))
+
 
 # ---- the web page: its own HTTP calls --------------------------------------------------
 
-def post_vis(post, mine):
-    """The editor's "who sees it" for a reply, as app.js picks it: the narrower of the
-    post's and my default."""
-    order = ["public", "unlisted", "followers", "direct"]
-    return order[max(order.index(post.get("visibility", "followers")),
-                     order.index(mine) if mine in order else 2)]
 
 
 class Web(Driver):
@@ -278,6 +289,31 @@ class Web(Driver):
     def thread(self, sid):
         return [(p["id"], p.get("depth", 0)) for p in self.req(f"/api/thread?id={sid}")["posts"]]
 
+    # watch_* steps, as the page does them: what it fetched stays on screen till the
+    # server's answer to its wait says that changed — the lanes (v), an open thread (t)
+    def _wait_now(self):
+        return self.req("/api/wait?v=-1&s=-1&n=-1&p=-1")  # v=-1: answered at once
+
+    def open_thread(self, sid):
+        self._thread = [p["id"] for p in self.req(f"/api/thread?id={sid}")["posts"]]
+        self._thread_t = self._wait_now().get("t")
+
+    def shown_thread(self, sid):
+        t = self._wait_now().get("t")
+        if t is not None and t != self._thread_t:  # the page draws the open thread anew
+            self._thread = [p["id"] for p in self.req(f"/api/thread?id={sid}")["posts"]]
+        return self._thread
+
+    def close_thread(self, sid):
+        self._thread = None
+
+    def shown_lane(self, name):
+        return [p["id"] for p in self.req(f"/api/lane?name={name}")["posts"]]
+
+    def unread_shown(self, name):
+        return sorted(p["id"] for p in self.req(f"/api/lane?name={name}")["posts"]
+                      if p.get("unread"))
+
     def reply(self, sid, text):
         got = self.req("/api/link", {"url": f"fedtail:reply/{sid}"})
         c = got.get("compose") or {}
@@ -285,9 +321,10 @@ class Web(Driver):
             raise Cant("the reply editor didn't open")
         # the editor starts with the post's reply_prefix (the mentions), as app.js does
         post = next(p for p in self.req("/api/lane?name=home")["posts"] if p["sid"] == sid)
+        # who sees it: the core's start of a reply, as app.js asks it (/api/draft_start)
+        start = self.req("/api/draft_start", {"reply_to": sid})
         self.req("/api/post", {"text": (post.get("reply_prefix") or "") + text,
-                               "reply_to": sid,
-                               "visibility": post_vis(post, self.req("/api/me")["visibility"])})
+                               "reply_to": sid, "visibility": start["visibility"]})
 
     def profile(self, acc_id):
         # "details" opens what the windows show in the profile tab's head itself
@@ -496,6 +533,39 @@ class Tui(Driver):
             self.app.pop_screen()
             return got
         return self.run(go())
+
+    # watch_* steps: the screens as they stand, nothing asked anew
+    def open_thread(self, sid):
+        async def go():
+            from fedtail.frontends.tui.app import ThreadScreen
+            self.app.push_screen(ThreadScreen(sid))
+            await self.until(lambda: isinstance(self.app.screen, ThreadScreen) and
+                             len(self.app.screen.query_one("#posts").children) > 0)
+        self.run(go())
+
+    def shown_thread(self, sid):
+        async def go():
+            await self.pilot.pause(0.8)
+            return [i.entry.id for i in self.app.screen.query_one("#posts").children
+                    if hasattr(i, "entry")]
+        return self.run(go())
+
+    def close_thread(self, sid):
+        async def go():
+            self.app.pop_screen()
+            await self.pilot.pause(0.1)
+        self.run(go())
+
+    def _items_now(self):
+        return [i for i in self.app.query_one("#posts").children if hasattr(i, "entry")]
+
+    def shown_lane(self, name):
+        self.run(self.pilot.pause(0.8))
+        return [i.entry.id for i in self._items_now()]
+
+    def unread_shown(self, name):
+        self.run(self.pilot.pause(0.8))
+        return sorted(i.entry.id for i in self._items_now() if getattr(i, "unread", False))
 
     def reply(self, sid, text):
         async def go():
@@ -709,6 +779,40 @@ class Qt(_Window):
         tabs.removeTab(tabs.currentIndex())
         return got
 
+    # watch_* steps: the window's own widgets as they stand — never refreshed here, or the
+    # blind spot (the window not taking the news in by itself) is hidden
+    def _thread_rows(self):
+        from fedtail.frontends.qt.feed import ThreadWidget
+        w = self.win.tabs.currentWidget()
+        if not isinstance(w, ThreadWidget):
+            return []
+        v = w.view
+        return [v.rows[k] for k in v.order if getattr(v.rows[k], "status_id", None) is not None]
+
+    def open_thread(self, sid):
+        self.win.on_link(f"fedtail:thread/{sid}")
+        self.pump(until=lambda: self._thread_rows())
+        self.pump(0.3)
+
+    def shown_thread(self, sid):
+        self.pump(0.8)
+        return [r.spec.entry.id for r in self._thread_rows()]
+
+    def close_thread(self, sid):
+        self.win.tabs.removeTab(self.win.tabs.currentIndex())
+
+    def _rows_now(self, name):
+        v = self.win.lane_widgets[name].view
+        return [v.rows[k] for k in v.order if getattr(v.rows[k], "status_id", None) is not None]
+
+    def shown_lane(self, name):
+        self.pump(0.8)
+        return [r.spec.entry.id for r in self._rows_now(name)]
+
+    def unread_shown(self, name):
+        self.pump(0.8)
+        return sorted(r.spec.entry.id for r in self._rows_now(name) if r.spec.unread)
+
     def reply(self, sid, text):
         self.win.on_link(f"fedtail:reply/{sid}")
         self.pump(until=lambda: getattr(self.win, "open_composes", []))
@@ -846,6 +950,33 @@ class Gtk(_Window):
         got = [(c.entry.id, getattr(c, "depth", 0)) for c in _cards(self.win.threads[sid])]
         self.win.close_thread(sid)
         return got
+
+    # watch_* steps: the window's own cards as they stand, no refresh asked
+    def open_thread(self, sid):
+        from fedtail.frontends.gtk.window import _cards
+        self.win.on_link(f"fedtail:thread/{sid}")
+        self.pump(until=lambda: sid in self.win.threads and list(_cards(self.win.threads[sid])))
+        self.pump(0.3)
+
+    def shown_thread(self, sid):
+        from fedtail.frontends.gtk.window import _cards
+        self.pump(0.8)
+        page = self.win.threads.get(sid)
+        return [c.entry.id for c in _cards(page)] if page is not None else []
+
+    def close_thread(self, sid):
+        self.win.close_thread(sid)
+
+    def shown_lane(self, name):
+        self.pump(0.8)
+        lv = self.win.lane_views[name]
+        return [lv.specs[k].entry.id for k in lv.keys if lv.specs[k].entry is not None]
+
+    def unread_shown(self, name):
+        self.pump(0.8)
+        lv = self.win.lane_views[name]
+        return sorted(lv.specs[k].entry.id for k in lv.unread
+                      if k in lv.specs and lv.specs[k].entry is not None)
 
     def reply(self, sid, text):
         self.win.on_link(f"fedtail:reply/{sid}")
