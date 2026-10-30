@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- A post changed anywhere else — edited, liked, boosted — is shown changed at once in
+  the terminal (it heard of no change it hadn't made itself) and, its words, in the GTK
+  window (an edit stayed old there; only the counters moved).
 - Web page: a column counts a card read only once it stayed seen `reading.dwell_ms`, as
   the lane does — it marked it the moment it showed, however fast it went by. The phone:
   the booster's emoji in the "boosted by" line as pictures.

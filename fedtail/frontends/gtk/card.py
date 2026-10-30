@@ -17,6 +17,7 @@ from ..common.cardtext import (
     indent_of,
     inner_quote_bit,
     newcomer_bit,
+    only_counts_differ,
     shown_text,
 )
 from ..common.links import thread_url
@@ -244,8 +245,18 @@ class Card(Gtk.Box):
         self._fill_actions()
 
     def update(self, entry):
-        """Counters and my marks changed (status_updated): only the buttons move."""
+        """The post changed (status_updated): counters and my marks — only the buttons
+        move; its words (an edit, here or anywhere else) — the text drawn anew too, by the
+        rule Qt's card keeps (common/cardtext.only_counts_differ): an edit stayed old."""
+        old = self.post
         self.entry = entry
+        new = self.post
+        box = getattr(self, "text_box", None)
+        if box is not None and old != new and not only_counts_differ(old, new):
+            from dataclasses import replace as _replace
+            while (child := box.get_first_child()) is not None:
+                box.remove(child)
+            box.append(self._body(_replace(new, text=shown_text(new, self.ctx.cfg))))
         self._fill_actions()
         box = getattr(self, "poll_box", None)
         post = self.post

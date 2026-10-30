@@ -49,6 +49,7 @@ STEPS = [
     # gone from the terminal's menu then)
     ("answer_seen", "watch_thread", "022", "answer"),
     ("mine_seen", "watch_thread", "022", "mine"),
+    ("edit_seen", "watch_thread_text", "022", "edit_elsewhere"),
     ("reply", "reply", "011", "scenario: a reply"),
     ("profile", "profile", "B"),
     ("follow_bob", "profile_act", "B", "follow"),
@@ -57,6 +58,8 @@ STEPS = [
     ("read_up_to", "link", "readupto", "012"),
     ("lane_replies", "lane", "replies"),
     ("all_read", "read_all", "replies"),
+    # last: silence changes what every lane holds from then on
+    ("muted_seen", "watch_lane", "home", "mute_elsewhere"),
 ]
 
 
@@ -139,11 +142,19 @@ def happen(what, core, w, view, target):
         core.poll_once()
     elif what == "read_elsewhere":
         core.mark_read([e.id for _i, e in view.entries(target)][:2])
+    elif what == "edit_elsewhere":  # my post corrected in another interface
+        view.edit(view.by_id(target), "i answer alice, edited elsewhere").result(timeout=10)
+    elif what == "mute_elsewhere":  # someone silenced in another interface
+        # a round first: the windows' own poller has brought my posts of the steps before
+        # into Home by now, and the comparison is of what the silence takes away
+        core.poll_once()
+        view.mute(ALICE["id"]).result(timeout=10)
     else:
         raise ValueError(what)
 
 
 WATCH = {"watch_thread": ("open_thread", "shown_thread", "close_thread"),
+         "watch_thread_text": ("open_thread", "thread_text", "close_thread"),
          "watch_lane": ("lane", None, None)}
 
 
@@ -153,8 +164,13 @@ def watch(driver, kind, core, w, view, target, what):
     getattr(driver, opening)(target)
     happen(what, core, w, view, target)
     driver.settle()
-    shown = driver.shown_thread(target) if kind == "watch_thread" else \
-        (driver.unread_shown(target) if what == "read_elsewhere" else driver.shown_lane(target))
+    if kind == "watch_thread":
+        shown = driver.shown_thread(target)
+    elif kind == "watch_thread_text":  # the post's words as the thread shows them now
+        shown = "edited elsewhere" in driver.thread_text(target, target)
+    else:
+        shown = driver.unread_shown(target) if what == "read_elsewhere" else \
+            driver.shown_lane(target)
     if closing:
         getattr(driver, closing)(target)
     return shown

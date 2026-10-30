@@ -32,7 +32,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from ... import sysenv
 from ...core.view import View
 from ...i18n import _
-from ...model import real
+from ...model import Share, real
 from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
@@ -977,6 +977,8 @@ class FedtailApp(App, PostsMixin):
         # read here or anywhere else (another window, the phone, a device through sync):
         # the rows on screen lose their ● in place, as the windows' apply_read
         self.core.on("read_changed", lambda _n, p: self.in_ui(self.read_changed, p))
+        # a post changed — liked, boosted, edited, here or anywhere else: shown anew
+        self.core.on("status_updated", lambda _n, p: self.in_ui(self.post_changed, p))
         # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
         self.core.on("thread_progress", lambda _n, p: self.in_ui(self.thread_progress, p))
         # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top
@@ -1174,9 +1176,9 @@ class FedtailApp(App, PostsMixin):
                                   parent=sp.parent, spec=sp)
                 item = PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
                 item.unread = bool(sp.unread)
-                item.redraw = lambda unread, sp=sp, e=e: render(show_post(
-                    core, e, sp.extra.get("short_id"), unread, width=width, parent=sp.parent,
-                    spec=sp))
+                item.redraw = lambda unread, entry=None, sp=sp, e=e: render(show_post(
+                    core, entry or e, sp.extra.get("short_id"), unread, width=width,
+                    parent=sp.parent, spec=sp))
                 if core.cfg["ui"].get("additional_highlight", True):
                     item.add_class("lit")  # under the mouse: tinted (the windows' highlight)
                 return item
@@ -1696,6 +1698,31 @@ class FedtailApp(App, PostsMixin):
                 if not it.has_picture or it.graphic is not None:
                     it.body.update(it.text)  # a half-block picture redrawn with the lane
         self.update_lane_counts()
+
+    async def post_changed(self, post):
+        """A post changed (status_updated: a like, a boost, an edit — here or anywhere
+        else): its rows in the lane on screen drawn anew in place, a thread that shows it
+        loaded anew (the windows do the same; the terminal heard none of it)."""
+        if post is None:
+            return
+        from dataclasses import replace
+        pid = real(post).id
+        try:
+            lv = self._main("#posts", ListView)
+        except Exception:  # noqa: BLE001 — no lane on screen (starting, closing)
+            lv = None
+        for it in (lv.children if lv is not None else ()):
+            if isinstance(it, PostItem) and it.redraw is not None and \
+                    real(it.entry).id == pid:
+                it.entry = replace(it.entry, post=real(post)) if isinstance(it.entry, Share) \
+                    else real(post)
+                it.text = it.redraw(it.unread, it.entry)
+                if not it.has_picture or it.graphic is not None:
+                    it.body.update(it.text)
+        for screen in self.screen_stack:
+            if isinstance(screen, ThreadScreen) and any(
+                    n.post.id == pid for n in screen.nodes):
+                screen.load()
 
     async def thread_progress(self, root_id):
         from ..common.progress import bar, thread_words

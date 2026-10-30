@@ -222,6 +222,10 @@ class Reference(Driver):
     def close_thread(self, sid):
         pass
 
+    def thread_text(self, sid, pid):
+        from fedtail.model.text import html_to_text
+        return html_to_text(real(self.view.by_id(pid)).text)
+
     def shown_lane(self, name):
         return [e.id for _i, e in self.view.entries(name)]
 
@@ -295,14 +299,26 @@ class Web(Driver):
         return self.req("/api/wait?v=-1&s=-1&n=-1&p=-1")  # v=-1: answered at once
 
     def open_thread(self, sid):
-        self._thread = [p["id"] for p in self.req(f"/api/thread?id={sid}")["posts"]]
+        self._posts = self.req(f"/api/thread?id={sid}")["posts"]
+        self._thread = [p["id"] for p in self._posts]
         self._thread_t = self._wait_now().get("t")
 
-    def shown_thread(self, sid):
+    def _thread_now(self, sid):
         t = self._wait_now().get("t")
         if t is not None and t != self._thread_t:  # the page draws the open thread anew
-            self._thread = [p["id"] for p in self.req(f"/api/thread?id={sid}")["posts"]]
+            self._thread_t = t
+            self._posts = self.req(f"/api/thread?id={sid}")["posts"]
+            self._thread = [p["id"] for p in self._posts]
+
+    def shown_thread(self, sid):
+        self._thread_now(sid)
         return self._thread
+
+    def thread_text(self, sid, pid):
+        import re
+        self._thread_now(sid)
+        p = next((p for p in self._posts if p["id"] == pid or p.get("sid") == pid), None)
+        return re.sub(r"<[^>]*>", "", p["html"]) if p else ""
 
     def close_thread(self, sid):
         self._thread = None
@@ -451,14 +467,24 @@ class Phone(Driver):
     def open_thread(self, sid):
         self._v = self._version()
         self._seq = self.call("status").get("threads")
-        self._thread = [p["id"] for p in self.call("thread", sid)["posts"]]
+        self._posts = self.call("thread", sid)["posts"]
+        self._thread = [p["id"] for p in self._posts]
 
-    def shown_thread(self, sid):
+    def _thread_now(self, sid):
         moved, grew = self._changed()
         if moved and grew != self._seq:
             self._seq = grew
-            self._thread = [p["id"] for p in self.call("thread", sid)["posts"]]
+            self._posts = self.call("thread", sid)["posts"]
+            self._thread = [p["id"] for p in self._posts]
+
+    def shown_thread(self, sid):
+        self._thread_now(sid)
         return self._thread
+
+    def thread_text(self, sid, pid):
+        self._thread_now(sid)
+        p = next((p for p in self._posts if p["id"] == pid or p.get("sid") == pid), None)
+        return p["text"] if p else ""
 
     def close_thread(self, sid):
         self._thread = None
@@ -676,6 +702,14 @@ class Tui(Driver):
             await self.pilot.pause(0.8)
             return [i.entry.id for i in self.app.screen.query_one("#posts").children
                     if hasattr(i, "entry")]
+        return self.run(go())
+
+    def thread_text(self, sid, pid):
+        async def go():
+            await self.pilot.pause(0.8)
+            item = next((i for i in self.app.screen.query_one("#posts").children
+                         if getattr(getattr(i, "entry", None), "id", None) == pid), None)
+            return str(item.text) if item is not None else ""
         return self.run(go())
 
     def close_thread(self, sid):
@@ -926,6 +960,15 @@ class Qt(_Window):
         self.pump(0.8)
         return [r.spec.entry.id for r in self._thread_rows()]
 
+    def thread_text(self, sid, pid):
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.model.text import html_to_text
+        self.pump(0.8)
+        row = next((r for r in self._thread_rows() if r.spec.entry.id == pid), None)
+        return " ".join(html_to_text(lab.text()) for lab in row.findChildren(QLabel)
+                        if lab.objectName() == "postText") if row else ""
+
     def close_thread(self, sid):
         self.win.tabs.removeTab(self.win.tabs.currentIndex())
 
@@ -1091,6 +1134,14 @@ class Gtk(_Window):
         self.pump(0.8)
         page = self.win.threads.get(sid)
         return [c.entry.id for c in _cards(page)] if page is not None else []
+
+    def thread_text(self, sid, pid):
+        from fedtail.frontends.gtk.window import _cards
+        self.pump(0.8)
+        page = self.win.threads.get(sid)
+        card = next((c for c in _cards(page) if c.entry.id == pid), None) if page else None
+        block = getattr(card, "body_block", None)
+        return block.text() if block is not None else ""
 
     def close_thread(self, sid):
         self.win.close_thread(sid)
