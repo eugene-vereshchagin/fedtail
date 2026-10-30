@@ -25,7 +25,7 @@
 - A library of pictures for your own lanes
 - A thread with new replies shows on its card
 - Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post"
-- Commented posts: a thread a card, opened at the first new comment
+- Comments: a thread a card, opened at the first new comment
 - Where a thread opens: at the post or at the first new comment
 - New posts wait for Refresh
 - Sync set up in the window step by step, a new device by a password alone

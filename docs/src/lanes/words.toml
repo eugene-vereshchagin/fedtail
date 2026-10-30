@@ -55,8 +55,12 @@ ru = "Посты каждого автора вместе, самый актив
 en = "Each author's posts together, the busiest first: catching up by people."
 
 [rule.view]
-ru = "`threads` — по карточке на тред: его пост и число новых комментариев; только треды, где есть новое."
-en = "`threads` shows one card per thread: its post and the number of new comments; only threads with something new."
+ru = "`threads` — по карточке на тред: его пост и число новых комментариев; какие треды — `threads_shown`."
+en = "`threads` shows one card per thread: its post and the number of new comments; which threads — `threads_shown`."
+
+[rule.threads_shown]
+ru = "Какие треды показывает лента с `view = \"threads\"`: только те, где есть новое, или все, где ты отметился, — с новыми вместе за чертой «дальше новое»."
+en = "Which threads a `view = \"threads\"` lane shows: only those with something new, or every one you took part in — the new ones together past the “new below” line."
 
 [rule.open_at]
 ru = "Где откроется тред с карточки ленты: на посте или на первом непрочитанном комментарии (нет такого — на посте). Без ключа — по общей настройке тредов."
@@ -727,6 +731,12 @@ en = "Each author's posts together, the busiest first."
 [word.view.threads]
 ru = "По карточке на тред, с числом новых комментариев."
 en = "One card per thread, with the number of new comments."
+[word.threads_shown.new]
+ru = "Только треды, где есть новые комментарии (как на Point); так и без ключа."
+en = "Only the threads with new comments (as on Point); the same with no key."
+[word.threads_shown.all]
+ru = "Все треды, где ты отметился; с новым — вместе там, где начинается чтение, под чертой «дальше новое» (при «новое сверху» — над «дальше прочитанное»)."
+en = "Every thread you took part in; those with news together where reading starts, past the “new below” line (newest first — over “read below”)."
 [word.open_at.first_unread]
 ru = "Тред открывается на первом непрочитанном комментарии (нет такого — на посте)."
 en = "The thread opens at the first unread comment (none: at the post)."

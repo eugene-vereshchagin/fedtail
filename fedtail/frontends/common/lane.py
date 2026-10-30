@@ -236,6 +236,9 @@ class LaneModel:
         # view = "threads" (a lane of rules): one card a thread, as on Point — the threads
         # with new comments; one read while the lane is open stays till it is left
         self.threads_view = getattr(lane, "view", "") == "threads"
+        # threads_shown = "all": every thread, those with new comments together at the
+        # reading end — the "new below" line over them, as in any lane
+        self.threads_all = getattr(lane, "threads_shown", "") == "all"
         self.threads_kept = set()
         self.media = MediaFilter()
         kept = view.choice(f"media.{name}") if hasattr(view, "choice") else None
@@ -434,8 +437,11 @@ class LaneModel:
                 self.separator = (first.key, sum(1 for s in specs if s.unread))
         if self.separator and any(s.key == self.separator[0] for s in specs):
             i = next(i for i, s in enumerate(specs) if s.key == self.separator[0])
+            # newest first, the line stands under the new ones: what's below was there before
+            words = _("old_below", n=self.separator[1]) if self.newest_first \
+                else self.separator_text(self.separator[1])
             specs.insert(i, CardSpec(key=SEPARATOR, extra={
-                "separator": self.separator_text(self.separator[1])}))
+                "separator": words}))
         if self.newest_first:
             specs.reverse()
         lane = view.lane_by_name.get(self.name)
@@ -509,7 +515,9 @@ class LaneModel:
         """One card per conversation: its top post, with a line about the rest."""
         view = self.view
         groups = view.conversations(entries, unread)
-        if self.threads_view:  # the threads with new comments (and those read just now)
+        if self.threads_view and self.threads_all:  # the read ones first, the new last
+            groups = [g for g in groups if not g["unread"]] + [g for g in groups if g["unread"]]
+        elif self.threads_view:  # the threads with new comments (and those read just now)
             groups = [g for g in groups if g["unread"] or g["key"] in self.threads_kept]
             self.threads_kept |= {g["key"] for g in groups}
         tops = [g["top"] for g in groups]

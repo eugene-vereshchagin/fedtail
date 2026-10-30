@@ -32,10 +32,10 @@ _STRINGS = {
         "tip_local": "Вся твоя нода. Листается, без счётчика",
         "tip_bots": "Боты из тех, кого читаешь",
         "lane_network": "Сеть", "tip_network": "Федерация без людей своего сервера",
-        "lane_commented": "Посты с комментами",
+        "lane_commented": "Комментарии",
         "tip_commented": "Как на Point: твои посты, треды, на которые подписан, и те, где ты "
-                         "комментировал, — те, где есть новые комментарии; щелчок открывает "
-                         "тред на первом новом",
+                         "комментировал, по карточке на тред; щелчок открывает тред на первом "
+                         "новом",
         "lane_stranger_mentions": "Упоминания чужих",
         "tip_stranger_mentions": "Упоминания от тех, кто не подписан ни на тебя, ни ты на них",
         "rss_local_only": "Это запись RSS-ленты, её нет ни на одном сервере: её можно "
@@ -593,7 +593,7 @@ _STRINGS = {
                            "ленту до найденного",
         "find_archive_none": "и в архиве нет; «Ещё старее» внизу ленты подтянет с сервера",
         "to_new": "К новому", "show_all": "Всё", "new_n": ["{n} новое", "{n} новых", "{n} новых"],
-        "new_below": "дальше новое", "menu": "Меню",
+        "new_below": "дальше новое", "old_below": "дальше прочитанное", "menu": "Меню",
         "lane_codeword": "В конфиге: {name}",
         "try_theme": "Попробовать тему",
         "try_theme_tip": "Сразу, до перезапуска; насовсем — appearance.theme в конфиге",
@@ -702,6 +702,11 @@ _STRINGS = {
         "le_f_view": "Показывать", "le_view_posts": "посты", "le_view_threads": "треды",
         "le_f_view_tip": "«треды» — по карточке на тред (его пост) с числом новых "
                          "комментариев; только треды, где есть новое",
+        "le_f_threads_shown": "Какие треды",
+        "le_threads_new": "с новыми комментариями", "le_threads_all": "все, новые — вместе",
+        "le_f_threads_shown_tip": "Для «треды»: только те, где есть новое (как на Point), или "
+                                  "все, где ты отметился, — с новыми вместе за чертой "
+                                  "«дальше новое»",
         "le_f_open_at": "Тред открывается",
         "le_open_at_setting": "как в настройках (threads.open_at)",
         "le_open_at_post": "на посте", "le_open_at_first_unread": "на первом новом комменте",
@@ -1869,10 +1874,10 @@ _STRINGS = {
         "tip_local": "Your whole server. Browse, no counter",
         "tip_bots": "Bots among those you follow",
         "lane_network": "Network", "tip_network": "Federated without your own server's people",
-        "lane_commented": "Commented posts",
+        "lane_commented": "Comments",
         "tip_commented": "As on Point: your posts, threads you follow and those you "
-                         "commented in — the ones with new comments; a click opens the "
-                         "thread at the first new one",
+                         "commented in, a card a thread; a click opens the thread at the "
+                         "first new comment",
         "lane_stranger_mentions": "Strangers' mentions",
         "tip_stranger_mentions": "Mentions from people who neither follow you nor you them",
         "rss_local_only": "This is an RSS feed's item, no server has it: it can be opened "
@@ -2416,7 +2421,7 @@ _STRINGS = {
         "find_archive_none": "not in the archive either; \"Older\" at the lane's end asks "
                              "the server",
         "to_new": "To new", "show_all": "All", "new_n": ["{n} new", "{n} new"],
-        "new_below": "new below", "menu": "Menu",
+        "new_below": "new below", "old_below": "read below", "menu": "Menu",
         "lane_codeword": "In the config: {name}",
         "try_theme": "Try a theme",
         "try_theme_tip": "Right away, until restart; for good — appearance.theme in the config",
@@ -2520,6 +2525,11 @@ _STRINGS = {
         "le_f_view": "Show", "le_view_posts": "posts", "le_view_threads": "threads",
         "le_f_view_tip": "\"threads\" — a card a thread (its post) with how many new "
                          "comments; only the threads with something new",
+        "le_f_threads_shown": "Which threads",
+        "le_threads_new": "with new comments", "le_threads_all": "all, the new together",
+        "le_f_threads_shown_tip": "For \"threads\": only those with something new (as on "
+                                  "Point), or all you took part in — the new ones together "
+                                  "past the \"new below\" line",
         "le_f_open_at": "A thread opens",
         "le_open_at_setting": "as the settings say (threads.open_at)",
         "le_open_at_post": "at the post", "le_open_at_first_unread": "at the first new comment",

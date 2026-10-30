@@ -147,7 +147,8 @@ class Custom:
                           window=self.rule.window.total_seconds() if self.rule.window else 0.0,
                           filter_context=self.rule.filter_context,
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
-                          view=self.rule.view, open_at=self.rule.open_at,
+                          view=self.rule.view, threads_shown=self.rule.threads_shown,
+                          open_at=self.rule.open_at,
                           events=bool(self.event_conds), start=self.rule.start,
                           hide_empty=self.rule.hide_empty, badge=self.rule.badge,
                           switches=self._switches())

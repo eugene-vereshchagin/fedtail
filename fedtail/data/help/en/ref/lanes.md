@@ -154,8 +154,9 @@ program knows it.
 | `source` | see below | Narrows every condition to these sources. Without it the app picks the sources that can bring what the conditions ask for. |
 | `start` | `true` | `true` makes this lane of a set open first when the start lane in the settings names none of its lanes. |
 | `switches` | `posts_only`, `unread_only` | Quick filters above the lane: “posts only”, “unread only”. `[]` means none. Without the key, as in lanes before 0.22. |
+| `threads_shown` | `all`, `new` | Which threads a `view = "threads"` lane shows: only those with something new, or every one you took part in — the new ones together past the “new below” line. |
 | `title` | text, or one per language: `{ ru = "Посты", en = "Posts" }` | What the sidebar shows. Without it the name is shown. |
-| `view` | `threads` | `threads` shows one card per thread: its post and the number of new comments; only threads with something new. |
+| `view` | `threads` | `threads` shows one card per thread: its post and the number of new comments; which threads — `threads_shown`. |
 | `window` | `"12h"`, `"2d"` | The lane shows only posts younger than this. In `catch_up` the default is 12 hours. |
 
 ## A condition's keys
@@ -438,6 +439,13 @@ program knows it.
 | Word | What it means |
 |---|---|
 | `threads` | One card per thread, with the number of new comments. |
+
+### The words of `threads_shown`
+
+| Word | What it means |
+|---|---|
+| `all` | Every thread you took part in; those with news together where reading starts, past the “new below” line (newest first — over “read below”). |
+| `new` | Only the threads with new comments (as on Point); the same with no key. |
 
 ### The words of `open_at`
 

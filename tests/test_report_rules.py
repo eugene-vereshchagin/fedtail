@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
 
 class ThreadsViewTest(unittest.TestCase):
-    """view = "threads" (the extra set's "Commented posts", as on Point): a card a
+    """view = "threads" (the extra set's "Comments", as on Point): a card a
     thread with new comments, and a click opens it at the first of them."""
 
     def test_a_card_a_thread_and_the_jump(self):
@@ -138,6 +138,7 @@ class ThreadsViewTest(unittest.TestCase):
         view = View(core)
         lane = core.lane_by_name["commented"]
         self.assertEqual(lane.view, "threads")
+        lane.threads_shown = ""  # the extra set's way: the threads with news only
         m = LaneModel(view, "commented")
         specs = [s for s in m.build(False).specs if s.entry is not None]
         self.assertEqual([s.entry.id for s in specs], ["100"])  # one card: the post
@@ -171,6 +172,65 @@ class ThreadsViewTest(unittest.TestCase):
         self.assertEqual(len([s for s in m.build(True).specs if s.entry]), 1)  # kept now
         m.left()
         self.assertEqual([s for s in m.build(False).specs if s.entry], [])  # nothing new
+
+
+class AllThreadsTest(unittest.TestCase):
+    """30.10, the author: fedtail's "Comments" shows every thread I took part in (my
+    post, my comment, one I follow), those with new comments together where reading
+    starts, the "new below" line over them — "read below" under them, newest first."""
+
+    def test_every_thread_the_new_together(self):
+        import tempfile
+        from pathlib import Path
+
+        from fedtail import i18n
+        from fedtail.core import auth, config, paths
+        from fedtail.core.app import Core
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import SEPARATOR, LaneModel
+        from tests import fakes
+        from tests.fakes import BOB, ME, FakeApi, status
+        i18n.setup("en")
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = w = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "lanes": {"preset": "fedtail",
+                                            "enabled": ["home", "commented"]}})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        core.cfg["subs"]["interval_minutes"] = 0
+        core.poll_once()
+        w.add(status("100", ME, minute=1, vis="public"), home=True)
+        w.add(status("200", ME, minute=2, vis="public"), home=True)
+        core.poll_once()  # my posts: followed by themselves
+        w.add(status("201", BOB, "200", "ME", minute=3), mention=True)  # older news…
+        w.add(status("101", BOB, "100", "ME", minute=4), mention=True)  # …then read
+        core.poll_once()
+        core.mark_read(["101"])
+        view = View(core)
+        self.assertEqual(core.lane_by_name["commented"].threads_shown, "all")
+        self.assertEqual(i18n._("lane_commented"), "Comments")
+        built = LaneModel(view, "commented").build(False).specs
+        # the read thread too, before the line; the new one after it, though older
+        self.assertEqual([s.entry.id if s.entry else s.key for s in built],
+                         ["100", SEPARATOR, "200"])
+        self.assertEqual(built[1].extra["separator"], "new below")
+        core.cfg["feed"]["order"] = "newest_first"
+        built = LaneModel(view, "commented").build(False).specs
+        self.assertEqual([s.entry.id if s.entry else s.key for s in built],
+                         ["200", SEPARATOR, "100"])
+        self.assertEqual(built[1].extra["separator"], "read below")
+        core.cfg["feed"]["order"] = "oldest_first"
+        # the extra set's lane of the same name: only the threads with news, as before
+        core.lane_by_name["commented"].threads_shown = ""
+        built = LaneModel(view, "commented").build(False).specs
+        self.assertEqual([s.entry.id for s in built if s.entry], ["200"])
 
 
 class CommentAsMentionTest(unittest.TestCase):

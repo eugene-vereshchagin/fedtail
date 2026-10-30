@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- "Commented posts" is "Comments" now. In fedtail's set it shows every thread you took
+  part in (your post, your comment, one you follow), those with new comments together
+  where reading starts, past the "new below" line — "read below" when the newest come
+  first (`threads_shown = "all"`, a new key of a lane's rule; "new", as before, in the
+  extra set). The lane editor has it as "Which threads".
 - Debian packages one per interface: `fedtail-common` (the program, no toolkit),
   `fedtail-qt`, `fedtail-gtk`, `fedtail-tui`, and `fedtail` (common and a window, Qt or
   GTK) — GNOME no longer pulls Qt, KDE no GTK, a server only requests. An old `fedtail`

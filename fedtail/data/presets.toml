@@ -84,13 +84,14 @@ any = [
 ]
 none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
 
-# "Commented posts", as on Point: threads with new comments, a card each
+# "Comments", as on Point: the threads I took part in, a card each, the new ones together
 [[fedtail]]
 name = "commented"
 switches = ["unread_only"]
 group = "personal"
 source = ["subs", "mentions"]  # the comments, and the replies to me among them
 view = "threads"
+threads_shown = "all"  # every thread I took part in, the new ones together
 open_at = "first_unread"  # a click: the thread at its first new comment
 icon = "commented"
 any = [{ state = "subscribed" }]

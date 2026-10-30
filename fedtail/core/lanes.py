@@ -49,6 +49,7 @@ class Lane:
     # (common/lane.py); open_at — where a thread opened from a card opens ("post",
     # "first_unread"; "" — threads.open_at: core.open_at)
     view: str = ""
+    threads_shown: str = ""  # "all": a threads view's every thread ("" / "new": with news)
     open_at: str = ""
     # it takes events (likes, follows, follow requests… — a condition with `event`):
     # Core.lane_events gives them; with no source it takes nothing else (Activity)

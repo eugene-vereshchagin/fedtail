@@ -717,7 +717,7 @@ def _author_word(word, have):
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
              "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
-             "start", "hide_empty", "badge", "switches"}
+             "start", "hide_empty", "badge", "switches", "threads_shown"}
 # the lane's own switches besides its conditions' (`switches`): what a click hides or keeps
 # of what the lane already holds — not conditions, which take posts into it
 SWITCHES = ("posts_only", "unread_only")
@@ -743,6 +743,10 @@ _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "d
                # "threads": one card a thread — its post, with how many new comments
                # (as on Point); a click opens it at the first of them
                "view": {"", "threads"},
+               # which threads a view = "threads" lane shows: "new" — those with new
+               # comments (as on Point); "all" — every one, the new ones together where
+               # reading starts, "new below" over them
+               "threads_shown": {"", "new", "all"},
                # where a thread opened from its card opens; "" — threads.open_at
                "open_at": {"", "post", "first_unread"},
                # the colour of its count in the sidebar: "hot" — to answer (replies to
@@ -769,6 +773,7 @@ class Rule:
     per_author: int = 0            # at most so many posts of one author (the newest); 0 — any
     bundle: str = ""               # "author": each author's posts together
     view: str = ""                 # "threads": one card a thread, the new comments counted
+    threads_shown: str = ""        # "all": every thread, not only those with news
     open_at: str = ""              # a thread from its card: "post" / "first_unread"; ""
                                    # — as threads.open_at says
     hide_empty: bool = False       # shown only once something is in it ("Important people")

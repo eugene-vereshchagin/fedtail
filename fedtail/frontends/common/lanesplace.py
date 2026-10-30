@@ -279,6 +279,9 @@ class LanePlaces:
             Field("view", _("le_f_view"), str(t.get("view") or ""), "choice",
                   (("", _("le_view_posts")), ("threads", _("le_view_threads"))),
                   tip=_("le_f_view_tip")),
+            Field("threads_shown", _("le_f_threads_shown"), str(t.get("threads_shown") or ""),
+                  "choice", (("", _("le_threads_new")), ("all", _("le_threads_all"))),
+                  tip=_("le_f_threads_shown_tip")),
             Field("open_at", _("le_f_open_at"), str(t.get("open_at") or ""), "choice",
                   (("", _("le_open_at_setting")), ("post", _("le_open_at_post")),
                    ("first_unread", _("le_open_at_first_unread"))),
@@ -538,7 +541,8 @@ def _table_of(name, old, values):
     """The form's values → the lane's new table (what the form doesn't show stays)."""
     t = {k: v for k, v in old.items() if k not in ("title", "icon", "group", "source", "read",
                                                     "sort", "mode", "window", "filter_context",
-                                                    "per_author", "bundle", "view", "open_at",
+                                                    "per_author", "bundle", "view",
+                                                    "threads_shown", "open_at",
                                                     "any", "none", "switches")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
@@ -554,7 +558,7 @@ def _table_of(name, old, values):
     for key, default in (("icon", ""), ("group", "personal"), ("read", "through"),
                          ("sort", "arrival"), ("mode", "lane"), ("window", ""),
                          ("filter_context", ""), ("bundle", ""), ("view", ""),
-                         ("open_at", "")):
+                         ("threads_shown", ""), ("open_at", "")):
         v = str(values.get(key) or "")
         if v and (v != default or key in old):
             t[key] = v
