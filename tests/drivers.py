@@ -271,8 +271,12 @@ class Web(Driver):
         return data
 
     def lane(self, name):
+        """The lane opened: what the page shows from now on, till its wait says the lanes
+        changed (a new version: refresh() draws the lane anew)."""
         self.req("/api/active", {"name": name})
-        return [p["id"] for p in self.req(f"/api/lane?name={name}")["posts"]]
+        self._v = self._wait_now()["v"]
+        self._lane = self.req(f"/api/lane?name={name}")["posts"]
+        return [p["id"] for p in self._lane]
 
     def menu(self, sid):
         got = self.req(f"/api/post_menu?id={sid}")
@@ -323,12 +327,18 @@ class Web(Driver):
     def close_thread(self, sid):
         self._thread = None
 
+    def _lane_now(self, name):
+        v = self._wait_now()["v"]
+        if v != self._v:  # follow() → refresh() → selectLane(state.lane, true)
+            self._v = v
+            self._lane = self.req(f"/api/lane?name={name}")["posts"]
+        return self._lane
+
     def shown_lane(self, name):
-        return [p["id"] for p in self.req(f"/api/lane?name={name}")["posts"]]
+        return [p["id"] for p in self._lane_now(name)]
 
     def unread_shown(self, name):
-        return sorted(p["id"] for p in self.req(f"/api/lane?name={name}")["posts"]
-                      if p.get("unread"))
+        return sorted(p["id"] for p in self._lane_now(name) if p.get("unread"))
 
     def reply(self, sid, text):
         got = self.req("/api/link", {"url": f"fedtail:reply/{sid}"})
