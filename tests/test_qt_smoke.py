@@ -3419,8 +3419,16 @@ class QtSmokeTest(unittest.TestCase):
         try:
             for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "mra-green",
                          "mra-violet", "psi"):
+                held = lane.view._reading_anchor()
                 self.win.try_theme(name)
                 self.assertEqual(self.win.theme.id, name)
+                # the reading place where it was, the restyle's nested layout or not
+                v = lane.view
+                self.assertEqual(v.verticalScrollBar().value(),
+                                 max(0, v._ys[held[0]] - held[1]), name)
+                # the cards off the screen are built a few at a time, between the window's
+                # other work (FeedView._realize): the one above the reading place comes next
+                self.pump(until=lambda: "010" in lane.view.rows and "011" in lane.view.rows)
                 them = [w for w in lane.view.rows["011"].findChildren(QLabel)
                         if w.objectName() == "chatName"]
                 mine = [w for w in lane.view.rows["010"].findChildren(QLabel)
