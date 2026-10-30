@@ -66,3 +66,36 @@ class LinksTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MediaLinkTest(unittest.TestCase):
+    """30.10: "1 attachment was not downloaded … 0ba3a335ab822c8c.mp4 (error: file size
+    limit reached)" — the server leaves the clip's link in the text, and it went to the
+    browser. A link to a video or sound file goes to the interface's own player
+    (media.links_in_player), the browser when off or where there's none."""
+
+    def test_the_player_or_the_browser(self):
+        import types
+
+        from fedtail.frontends.common import links as L
+        self.assertEqual(L.media_link("https://f.example/a/0ba3.mp4"), "video")
+        self.assertEqual(L.media_link("https://f.example/s.OPUS?x=1"), "audio")
+        self.assertEqual(L.media_link("https://f.example/page.html"), "")
+        self.assertEqual(L.media_link("file:///etc/x.mp4"), "")  # the web only
+        cfg = {"ui": {"links_in_player": True}}
+        played, opened = [], []
+        host = types.SimpleNamespace(play_link=played.append, open_url=opened.append)
+        links = L.Links(types.SimpleNamespace(cfg=cfg), host)
+        links.open("https://f.example/a/0ba3.mp4")
+        self.assertEqual([(m.kind, m.url) for m in played],
+                         [("video", "https://f.example/a/0ba3.mp4")])
+        links.open("https://f.example/page")
+        self.assertEqual(opened, ["https://f.example/page"])
+        cfg["ui"]["links_in_player"] = False
+        links.open("https://f.example/a/0ba3.mp4")
+        self.assertEqual(opened[-1], "https://f.example/a/0ba3.mp4")
+        cfg["ui"]["links_in_player"] = True
+        bare = L.Links(types.SimpleNamespace(cfg=cfg),
+                       types.SimpleNamespace(open_url=opened.append))  # no player there
+        bare.open("https://f.example/b.mp3")
+        self.assertEqual(opened[-1], "https://f.example/b.mp3")

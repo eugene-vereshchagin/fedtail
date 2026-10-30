@@ -41,6 +41,18 @@ note.en = "After Refresh (⟳, F5) — \"Updated: 3 new\", \"nothing new\", \"No
 keys = ["refreshed_new", "refreshed_none", "refreshed_failed", "refreshed_wait"]
 
 [[capability]]
+id = "media-links"
+area = "media"
+web = "na"
+android = "no"
+android_note.ru = "Ссылка на файл открывается в браузере; свой плеер — только для вложений."
+android_note.en = "A link to a file opens in the browser; the own player is for attachments only."
+name.ru = "Ссылка на видео- и аудиофайл — в свой плеер"
+name.en = "A link to a video or sound file — into the own player"
+note.ru = "Ссылка в тексте поста на .mp4, .webm, .mp3, .opus… (так оставляет её сервер, не принявший большое вложение) играет в том же плеере, что и вложения: в окнах Qt и GTK — поверх окна, в терминале — mpv (`media.links_in_player`). Веб-странице не нужно: браузер играет такой файл сам."
+note.en = "A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server that didn't take a big attachment leaves it so) plays in the same player as attachments: over the window in Qt and GTK, mpv in the terminal (`media.links_in_player`). The web page needs none: the browser plays such a file itself."
+
+[[capability]]
 id = "custom-emoji"
 area = "reading"
 tui = "na"

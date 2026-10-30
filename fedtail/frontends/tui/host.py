@@ -63,6 +63,10 @@ class TuiHost:
         self.app.push_screen(ChooseScreen(title, text, options, check), got)
 
     # ---- places --------------------------------------------------------------------------
+    def play_link(self, m):
+        """A link to a video or sound file (common/links.py): mpv, as an attachment."""
+        self.app.play(m)
+
     def open_url(self, url):
         if url and openable(url):  # the web only: never a file or a share from a post
             webbrowser.open(url)

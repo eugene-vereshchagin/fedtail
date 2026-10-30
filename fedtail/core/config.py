@@ -61,6 +61,7 @@ DEFAULTS = {
         "image_height": 360,
         "image_viewer": "internal",
         "video_player": "internal",
+        "links_in_player": True,   # a link to a .mp4 / .mp3 in a post: the own player
         "video_decode": "software",
         "gifv": "play",
         "gifv_max": 3,
@@ -578,6 +579,7 @@ FILE_LAYOUT = (
                              "home_hide aliases "
                              "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
+                          "links_in_player "
                           "video_decode gifv gifv_max gifv_fps image_upscale save_dir")
      + _keys("feed", "prefetch")
      + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "

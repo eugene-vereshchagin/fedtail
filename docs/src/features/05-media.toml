@@ -54,13 +54,13 @@ android = "has"
 since = "0.11.0"
 name.ru = "Видео, аудио, гифки внутри окна"
 name.en = "Video, audio, gifs inside the window"
-config = "`media.video_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps`"
+config = "`media.video_player`, `media.links_in_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps`"
 api = "`media_attachments`"
 others.ru = "у всех"
 others.en = "everyone"
 clients = ["all"]
-details.ru = "Видео играет поверх окна (пробел — пауза, ← → — перемотка, M — звук, O — в браузер, Esc — закрыть), аудио — плеером в карточке. Нужен QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); без него — стоп-кадр с ▶ и браузер. Гифки Мастодона (короткие беззвучные видео): `\"play\"` — крутятся в карточке, пока она на экране (не больше трёх разом), `\"click\"` — стоп-кадр, клик — поверх окна."
-details.en = "A video plays over the window (Space — pause, ← → — seek, M — sound, O — to the browser, Esc — close), audio — with a player in the card. Needs QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); without it — a still frame with ▶ and the browser. Mastodon's gifs (short silent videos): `\"play\"` — loop in the card while it's on screen (at most three at once), `\"click\"` — a still frame, a click plays it over the window."
+details.ru = "Видео играет поверх окна (пробел — пауза, ← → — перемотка, M — звук, O — в браузер, Esc — закрыть), аудио — плеером в карточке. Нужен QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); без него — стоп-кадр с ▶ и браузер. Гифки Мастодона (короткие беззвучные видео): `\"play\"` — крутятся в карточке, пока она на экране (не больше трёх разом), `\"click\"` — стоп-кадр, клик — поверх окна. Ссылка в тексте на .mp4, .mp3… (её оставляет сервер, не принявший большое вложение) играет там же — `media.links_in_player`."
+details.en = "A video plays over the window (Space — pause, ← → — seek, M — sound, O — to the browser, Esc — close), audio — with a player in the card. Needs QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); without it — a still frame with ▶ and the browser. Mastodon's gifs (short silent videos): `\"play\"` — loop in the card while it's on screen (at most three at once), `\"click\"` — a still frame, a click plays it over the window. A link in the text to a .mp4, .mp3… (a server that didn't take a big attachment leaves it) plays there too — `media.links_in_player`."
 
 [[feature]]
 id = "video-software"

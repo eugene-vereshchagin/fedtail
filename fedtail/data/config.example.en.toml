@@ -898,6 +898,11 @@ image_viewer = "internal"
 # python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets); without it — the browser.
 video_player = "internal"
 
+# A link in a post's text to a video or sound file (…/clip.mp4, …/song.mp3 — a server that
+# didn't take a big attachment leaves its link so): true — into the same player as an
+# attachment (the terminal: mpv); false — the browser.
+links_in_player = true
+
 # What decodes video: "software" — the processor (videos in the fediverse are small, it copes
 # easily), "hardware" — the graphics card, as Qt decides. On some cards (NVIDIA:
 # "CUDA_ERROR_INVALID_VALUE", "more than 32 decode surfaces" in the log) hardware

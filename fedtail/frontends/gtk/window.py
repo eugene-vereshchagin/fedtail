@@ -2236,6 +2236,10 @@ class MainWindow(Gtk.ApplicationWindow):
             self.status("")
         self.call(self.view.resolve(url), got, lambda _e: self.open_url(url))
 
+    def play_link(self, m):
+        """A link to a video or sound file (common/links.py): the window's player."""
+        return self.play_media([m], 0)
+
     def play_media(self, media, index=0):
         """A video, a gifv or a sound: the player over the window (ui.video_player)."""
         from . import player

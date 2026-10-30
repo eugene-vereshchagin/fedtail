@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- A link in a post to a video or sound file (…/clip.mp4 — what a server leaves when it
+  didn't take a big attachment) plays in the own player, as an attachment: Qt, GTK, the
+  terminal's mpv (`media.links_in_player`); it went to the browser.
 - `threads.auto` takes my acts on someone's post too: `"boosts"`, `"likes"`, `"bookmarks"`,
   `"quotes"`, `"votes"` — its thread followed, news from then on. Off by default.
 - A thread card's line is short and draws in any font: "14 comments · 1 new · bob: “…”"

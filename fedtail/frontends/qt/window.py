@@ -2262,6 +2262,10 @@ class MainWindow(QMainWindow):
         title and a link, an event with its time and place (common/places.py)."""
         return self.open_place("long_form", real_entry(self._post(st)).id)
 
+    def play_link(self, m):
+        """A link to a video or sound file (common/links.py): the window's player."""
+        self.play_video(m)
+
     def play_video(self, m, items=None):
         """A video or a gifv: over the window (ui.video_player), or in the browser.
         items: all the videos and gifs of the post, to go between them there."""

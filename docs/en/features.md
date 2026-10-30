@@ -393,7 +393,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Picture viewer | has | 0.1.0 | `media.image_viewer`, `media.image_upscale`, `media.image_height` | — | everyone |
 | Picture grid | has | 0.9.0 | `media.media_grid` | `meta.focus` | Mastodon web, Tusky, Phanpy, Elk |
 | Picture descriptions (alt) | has | 0.9.0 | `media.alt_text` | `description` | everyone |
-| Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | everyone |
+| Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.links_in_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | everyone |
 | Video without a hardware decoder (the default) | has | 0.16.0 | `media.video_decode` | — | only in fedtail |
 | Save a picture, video, gif | has | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
 | Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
@@ -407,7 +407,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Picture descriptions (alt).** `"tooltip"` — on hover; `"caption"` — also as a caption under the pictures. Descriptions are found by `Ctrl+F`.
 
-**Video, audio, gifs inside the window.** A video plays over the window (Space — pause, ← → — seek, M — sound, O — to the browser, Esc — close), audio — with a player in the card. Needs QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); without it — a still frame with ▶ and the browser. Mastodon's gifs (short silent videos): `"play"` — loop in the card while it's on screen (at most three at once), `"click"` — a still frame, a click plays it over the window.
+**Video, audio, gifs inside the window.** A video plays over the window (Space — pause, ← → — seek, M — sound, O — to the browser, Esc — close), audio — with a player in the card. Needs QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); without it — a still frame with ▶ and the browser. Mastodon's gifs (short silent videos): `"play"` — loop in the card while it's on screen (at most three at once), `"click"` — a still frame, a click plays it over the window. A link in the text to a .mp4, .mp3… (a server that didn't take a big attachment leaves it) plays there too — `media.links_in_player`.
 
 **Save a picture, video, gif.** The ⤓ button, the S key in the viewer, a right click on a picture in a lane. `""` — into the desktop's Downloads.
 
@@ -867,6 +867,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| A link to a video or sound file — into the own player | ✓ | ✓ | ✓ | · | — | A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server that didn't take a big attachment leaves it so) plays in the same player as attachments: over the window in Qt and GTK, mpv in the terminal (`media.links_in_player`). The web page needs none: the browser plays such a file itself. Android: A link to a file opens in the browser; the own player is for attachments only. |
 | The picture viewer: leaf through, 1:1, the original, save | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal shows a picture full screen (chafa, kitty) and saves the original (`s`); the web page has its viewer with Save and 1:1. The window's words about Qt's formats and “the original is loading” aren't theirs. |
 | Video and sound inside the program | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player. |
 

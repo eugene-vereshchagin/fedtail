@@ -16,6 +16,8 @@ The host is the window. It must have:
   compose(reply_to=None, invite=False, edit=None, quote=None)
   show_history(post) report(post) open_reactions(post, kind) open_quotes(post)
   read_up_to(id) redrafted(redraft)
+  play_link(media)                   optional: a link to a video or sound file, in the
+                                     interface's own player (media.links_in_player)
 A host without one of the optional ones (report, open_quotes…) gets a "not here yet"
 status instead — the GTK window grows into it stage by stage.
 """
@@ -83,6 +85,26 @@ def tag_menu(url):
     return out
 
 
+# a link in a post's text to a file of these, played in the interface's own player
+VIDEO_LINK_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
+AUDIO_LINK_EXT = (".mp3", ".ogg", ".oga", ".opus", ".m4a", ".flac", ".wav")
+
+
+def media_link(url):
+    """"video" / "audio" for an http(s) link to such a file (by its path's ending), or
+    "" — a server that didn't take an attachment leaves its link in the text
+    ("…0ba3a335ab822c8c.mp4 (error: file size limit reached)", 30.10)."""
+    from urllib.parse import urlsplit
+    if not isinstance(url, str) or not url.lower().startswith(("https://", "http://")):
+        return ""
+    path = urlsplit(url).path.lower()
+    if path.endswith(VIDEO_LINK_EXT):
+        return "video"
+    if path.endswith(AUDIO_LINK_EXT):
+        return "audio"
+    return ""
+
+
 class Links:
     def __init__(self, view, host):
         self.view, self.host = view, host
@@ -90,6 +112,14 @@ class Links:
     def open(self, url):
         link = parse(url)
         if link is None:
+            kind = media_link(url)
+            play = getattr(self.host, "play_link", None)
+            if kind and play is not None and \
+                    self.view.cfg["ui"].get("links_in_player", True):
+                from ...model import Media, Ref
+                log.info("link: the player (%s)", kind)
+                play(Media(ref=Ref("link", "", url), kind=kind, url=url))
+                return
             log.info("link: browser")
             self.host.open_url(url)
             return

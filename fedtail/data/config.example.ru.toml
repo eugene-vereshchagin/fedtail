@@ -897,6 +897,11 @@ image_viewer = "internal"
 # python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets); без него — браузер.
 video_player = "internal"
 
+# Ссылка в тексте поста на видео- или аудиофайл (…/clip.mp4, …/song.mp3 — так оставляет
+# ссылку сервер, не принявший большое вложение): true — в тот же плеер, что и вложения (в
+# терминале — mpv); false — в браузер.
+links_in_player = true
+
 # Чем декодировать видео: "software" — процессором (видео в федиверсе маленькие, ему
 # легко), "hardware" — видеокартой, как решит Qt. На некоторых картах (NVIDIA:
 # "CUDA_ERROR_INVALID_VALUE", "more than 32 decode surfaces" в логе) аппаратное
