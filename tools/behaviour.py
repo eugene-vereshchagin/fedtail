@@ -1,8 +1,9 @@
 """Do the five interfaces *do* the same (the phone through its bridge)? The scenario of
 tests/scenario.py — open a lane, the ⋯ menu, like, boost, a thread, follow a thread,
-reply, a profile, follow someone, delete, the command line, read up to here, all read — through each interface's own way
-in (tests/drivers.py), held against what frontends/common says should happen; and
-whether each window has every place a link may ask for. Writes a table:
+reply, a profile, follow someone, delete, the command line, read up to here, all read —
+through each interface's own way in (tests/drivers.py), held against what
+frontends/common says should happen; and whether each window has every place a link may
+ask for. Writes a table:
 
     python3 tools/behaviour.py OUT.md
 

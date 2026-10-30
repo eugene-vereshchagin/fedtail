@@ -1,7 +1,8 @@
 """Do the five interfaces behave alike (the phone through its bridge)? The scenario
 (tests/scenario.py) done through each one's own way in (tests/drivers.py), compared with
-what frontends/common says should happen. An interface missing here is skipped (its toolkit isn't installed);
-tools/behaviour.py writes the same comparison as a table for the self-check's report.
+what frontends/common says should happen. An interface missing here is skipped (its
+toolkit isn't installed); tools/behaviour.py writes the same comparison as a table for
+the self-check's report.
 
 And the host contract: every window common/links.py talks to has every place a link may
 ask for (open a thread, a profile, report a post…) — one without it says "not here
