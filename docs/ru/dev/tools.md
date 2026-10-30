@@ -43,6 +43,7 @@
 | `membench.py` | память и скорость на одних синтетических сутках: USS/PSS/RSS, где лежит память Python (`--trace`), старт, ленты, правила, прокрутка (`--ui qt`) — базовая линия [memory.md](memory.md) | `python3 tools/membench.py --ui qt` |
 | `gtk_bench.py` | то же для окна GTK | `python3 tools/gtk_bench.py` |
 | `coverage_lite.py` | покрытие строк без установки чего-либо (sys.monitoring, Python 3.12+), считаются все процессы ночного прогона (`tools/covhook/`) | `python3 tools/coverage_lite.py OUT` |
+| `stats.py` | числа для README: строки каждой части, тесты, покрытие → `docs/src/stats.toml` и часть `stats` (пишет ночной самопроверочный прогон; `tests/test_stats.py` скажет, когда они устарели) | `python3 tools/stats.py --write [--coverage DIR]` |
 
 ## Данные, картинки и звуки
 

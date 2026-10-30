@@ -43,6 +43,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | `membench.py` | memory and speed on one synthetic day: USS/PSS/RSS, where Python's memory is (`--trace`), the start, the lanes, the rules, scrolling (`--ui qt`) — the baseline of [memory.md](memory.md) | `python3 tools/membench.py --ui qt` |
 | `gtk_bench.py` | the same for the GTK window | `python3 tools/gtk_bench.py` |
 | `coverage_lite.py` | line coverage with nothing installed (sys.monitoring, Python 3.12+), every process of a night run counted (`tools/covhook/`) | `python3 tools/coverage_lite.py OUT` |
+| `stats.py` | the READMEs' numbers: lines of each part, tests, coverage → `docs/src/stats.toml` and the `stats` part (the night's self-check writes them; `tests/test_stats.py` says when they drift) | `python3 tools/stats.py --write [--coverage DIR]` |
 
 ## Data, pictures and sounds
 

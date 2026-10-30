@@ -1,0 +1,17 @@
+# fedtail in numbers: written by tools/stats.py --write (the night's self-check
+# does it), read by tools/docs_build.py into docs/<lang>/parts/stats.md.
+counted = "2026-10-30"
+tests = 1968
+coverage = 87.7
+
+[lines]
+qt = 14777
+gtk = 12642
+tui = 4251
+web = 6194
+common = 10662
+strings = 3684
+core = 21260
+android = 7789
+tests = 39427
+tools = 8591

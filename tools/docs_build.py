@@ -11,7 +11,8 @@ What it builds, for each language in LANGS (Russian and English):
 * ``docs/<lang>/comparison.md`` — fedtail next to other clients, one matrix a chapter;
 * ``docs/<lang>/config.md`` — every config option, from
   ``fedtail/data/config.example.<lang>.toml`` (see ``tools/config_doc.py``);
-* generated parts in ``docs/<lang>/parts/``: ``features-short``, ``only-in-fedtail``,
+* generated parts in ``docs/<lang>/parts/``: ``stats`` (from ``docs/src/stats.toml``,
+  ``tools/stats.py``), ``features-short``, ``only-in-fedtail``,
   ``whats-new``, ``roadmap``;
 * ``docs/<lang>/lanes.md`` — how to write a lane: ``docs/src/lanes/head.<lang>.md``, then
   every key of a lane and of a condition with every word it takes, the words from the core
@@ -507,6 +508,61 @@ def render_comparison(chapters, lang):
     return "\n".join(out) + "\n"
 
 
+# ---- docs/<lang>/parts/stats.md ---------------------------------------------------
+
+STATS = ROOT / "docs" / "src" / "stats.toml"
+STATS_WORDS = {
+    "ru": {"head": "Код, тесты, покрытие",
+           "intro": "Посчитано {date}: строки, на которых что-то есть (комментарии тоже), "
+                    "без чужого кода, который fedtail носит с собой.",
+           "part": "Что", "lines": "Строк",
+           "parts": {"core": "Ядро (с протоколами и моделью)",
+                     "common": "Общий код интерфейсов", "qt": "Окно Qt", "gtk": "Окно GTK",
+                     "tui": "Терминал", "web": "Веб-страница (Python, JS, CSS)",
+                     "android": "Android (Kotlin и мост)", "strings": "Слова на двух языках"},
+           "working": "Рабочий код", "tests": "Тесты", "tools": "Инструменты разработки",
+           "sum": "Тестов — **{tests}**, и они проходят **{cov} %** строк рабочего кода на "
+                  "Python. Кода тестов — **{ratio}** от рабочего.",
+           "thousand": "{n} тыс."},
+    "en": {"head": "Code, tests, coverage",
+           "intro": "Counted {date}: lines with something on them (comments too), without "
+                    "the others' code fedtail carries along.",
+           "part": "What", "lines": "Lines",
+           "parts": {"core": "The core (with the protocols and the model)",
+                     "common": "The interfaces' common code", "qt": "The Qt window",
+                     "gtk": "The GTK window", "tui": "The terminal",
+                     "web": "The web page (Python, JS, CSS)",
+                     "android": "Android (Kotlin and the bridge)",
+                     "strings": "The words in two languages"},
+           "working": "Working code", "tests": "Tests", "tools": "Development tools",
+           "sum": "**{tests}** tests, and they run **{cov} %** of the working Python code's "
+                  "lines. The tests' code is **{ratio}** of the working code's.",
+           "thousand": "{n}k"},
+}
+
+
+def render_stats(lang):
+    """The READMEs' numbers, from docs/src/stats.toml (tools/stats.py writes it)."""
+    w = STATS_WORDS[lang]
+    with open(STATS, "rb") as f:
+        s = tomllib.load(f)
+    lines = s["lines"]
+
+    def k(n):
+        short = f"{n / 1000:.1f}".rstrip("0").rstrip(".") if n < 10000 else str(round(n / 1000))
+        return w["thousand"].format(n=short.replace(".", "," if lang == "ru" else "."))
+    working = sum(lines[p] for p in w["parts"])
+    rows = [[w["parts"][p], k(lines[p])] for p in w["parts"]]
+    rows += [[f"**{w['working']}**", f"**{k(working)}**"], [w["tests"], k(lines["tests"])],
+             [w["tools"], k(lines["tools"])]]
+    ratio = f"{lines['tests'] / working:.1f}".replace(".", "," if lang == "ru" else ".")
+    cov = str(round(s.get("coverage", 0)))
+    out = [f"### {w['head']}", "", w["intro"].format(date=s["counted"]), ""]
+    out += _table([w["part"], w["lines"]], rows)
+    out += ["", w["sum"].format(tests=s["tests"], cov=cov, ratio=ratio)]
+    return "\n".join(out) + "\n"
+
+
 # ---- generated parts ----------------------------------------------------------------
 
 def render_short(chapters, lang):
@@ -626,6 +682,7 @@ def build():
         out[d / "parts" / "parity.md"] = render_parity(lang)
         out[d / "parts" / "android.md"] = render_android(chapters, lang)
         out[d / "lanes.md"] = render_lanes(lang)
+        out[d / "parts" / "stats.md"] = render_stats(lang)
         example = config_doc.example_path(lang)
         out[d / "config.md"] = config_doc.build(example.read_text("utf-8"), lang)
     # parts first (they include nothing), then the generated pages, then the rest — so

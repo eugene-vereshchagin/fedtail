@@ -650,6 +650,9 @@ def main():
         run.step("coverage", ["tools/coverage_lite.py", str(d), "--report"], timeout=900,
                  folder=d, note="lines of fedtail/ the whole night ran", wrap=())
         shutil.rmtree(d / "hits", ignore_errors=True)  # put together: lines.json has it
+        # the READMEs' numbers, with the night's coverage (commit them, then docs_build)
+        run.step("stats", ["tools/stats.py", "--write", "--coverage", str(d)], timeout=120,
+                 note="docs/src/stats.toml: lines, tests, coverage", wrap=())
     clean_temp(started)
     report(run, out, facts)
     archive = zip_of(out)  # in the run's own folder, next to what it holds

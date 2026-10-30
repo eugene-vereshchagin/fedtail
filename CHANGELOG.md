@@ -2,6 +2,8 @@
 
 ## 0.22.0 — in progress
 
+- The READMEs say fedtail in numbers: lines of each part, tests, coverage
+  (`tools/stats.py`, written by the night's self-check).
 - The network gone: a round stops at the first "no way to the server" instead of asking
   every source in turn, each failure said to the user; it is said once an outage, and the
   rounds wait longer each time (as for a server down) till it answers again. A dead RSS
