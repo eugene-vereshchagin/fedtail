@@ -32,7 +32,7 @@ from ...i18n import _
 from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
 from ..common import timed
-from ..common.cardtext import context_chars, indent_of
+from ..common.cardtext import context_chars, indent_of, shown_text
 from ..common.commands import Commands
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
@@ -315,7 +315,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     """A lane entry (Post or Share) as the page draws it; spec (common/lane.py): the
     card's own words come with it."""
     p = real(entry)
-    html = p.text
+    html = shown_text(p, view.cfg)  # without "RE:" when the page draws the quote
     if view.cfg["feed"].get("collapse_tags", True):  # a tail of #tags: "… +N" (the windows')
         from ...model.text import collapse_tag_stuffing
         html = collapse_tag_stuffing(html, full=number is not None or depth is not None)

@@ -12,7 +12,13 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from ..common.cardtext import context_chars, indent_of, inner_quote_bit, newcomer_bit
+from ..common.cardtext import (
+    context_chars,
+    indent_of,
+    inner_quote_bit,
+    newcomer_bit,
+    shown_text,
+)
 from ..common.links import thread_url
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
@@ -365,7 +371,9 @@ class Card(Gtk.Box):
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         # the text in a box of its own: a translation takes its place and gives it back
         self.text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        self.text_box.append(self._body(p))
+        # without the "RE:" line, the quote drawn below (common/cardtext.shown_text)
+        from dataclasses import replace as _replace
+        self.text_box.append(self._body(_replace(p, text=shown_text(p, self.ctx.cfg))))
         inner.append(self.text_box)
         if p.media:
             inner.append(self._media(p))

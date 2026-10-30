@@ -279,6 +279,23 @@ class BridgeTest(_Base):
         self.assertIn("grew", self.call("reveal", "home", 0))
         self.assertIn("threads", self.call("status"))
 
+    def test_a_quote_once_and_what_it_quotes(self):
+        """The phone, as every interface: the server's "RE: <link>" line out of the text when
+        the quote is drawn, and a quote that quotes too — its line in words.quote_inner."""
+        self.demo()
+        from tests.fakes import BOB, NEWS, FakeApi, status
+        inner = status("960", NEWS, minute=58, text="the quoted one")
+        inner["quote"] = {"state": "accepted", "quoted_status_id": "100"}
+        st = status("961", BOB, minute=59, text="look at this")
+        st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
+        st["quote"] = {"state": "accepted", "quoted_status": inner}
+        FakeApi.world.add(st, home=True)
+        self.bridge._core().poll_once()
+        p = next(x for x in self.call("lane", "home", True)["posts"] if x["sid"] == "961")
+        self.assertNotIn("RE:", p["text"])
+        self.assertIn("look at this", p["text"])
+        self.assertEqual(p["words"]["quote_inner"]["link"], "fedtail:thread/100")
+
     def test_activity_is_a_lane_of_events(self):
         """Activity is a lane like any (a rule of events only): the lane brings its rows as
         events in their parts, every button a fedtail: link the phone runs through link();

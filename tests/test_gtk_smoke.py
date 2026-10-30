@@ -1172,6 +1172,45 @@ class GtkSmokeTest(_GtkBase):
         self.assertIn("> жирно", dlg._text())
         dlg.close()
 
+    def test_quotes(self):
+        """As Qt's: the quoted post framed inside; one that quotes too — a line inside the
+        frame, a link to its thread (no card in a card); a pending one says so; off — as
+        the server sent it."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        inner = status("093", NEWS, minute=1, text="исходная новость")
+        st = status("094", BOB, minute=2, text="смотрите")
+        st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
+        st["quote"] = {"state": "accepted", "quoted_status": inner}
+
+        from fedtail.frontends.gtk.textblock import TextBlock
+
+        def texts(card):  # the labels' markup (their links too) and the bodies' text
+            return " ".join(w.get_label() if isinstance(w, Gtk.Label) else w.layout.get_text()
+                            for w in _walk(card) if isinstance(w, (Gtk.Label, TextBlock)))
+        card = Card(self.win.ctx, "q", adapter.post(st))
+        self.assertIn("исходная новость", texts(card))
+        self.assertNotIn("RE:", texts(card))
+        self.assertNotIn("цитирует пост", texts(card))
+        inner["quote"] = {"state": "accepted", "quoted_status_id": "090"}  # Mastodon's shape
+        card = Card(self.win.ctx, "q", adapter.post(st))
+        self.assertIn("цитирует пост", texts(card))
+        self.assertIn("fedtail:thread/090", texts(card))
+        st["quote"] = {"state": "pending", "quoted_status_id": "093"}
+        card = Card(self.win.ctx, "q", adapter.post(st))
+        self.assertIn("одобрения", texts(card))
+        self.assertNotIn("цитирует пост", texts(card))
+        cfg = self.win.ctx.cfg["feed"]
+        cfg["quotes"] = "off"
+        try:
+            st["quote"] = {"state": "accepted", "quoted_status": inner}
+            card = Card(self.win.ctx, "q", adapter.post(st))
+            self.assertIn("RE:", texts(card))
+            self.assertNotIn("исходная новость", texts(card))
+            self.assertNotIn("цитирует пост", texts(card))
+        finally:
+            cfg["quotes"] = "card"
+
     def test_which_account_of_mine_got_it(self):
         """All accounts in one window: "→ @account" on the card, in its own colour."""
         from fedtail.frontends.common.lane import account_color

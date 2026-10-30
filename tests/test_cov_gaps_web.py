@@ -76,6 +76,16 @@ class WebGapsTest(TmpDir):
         me = self.web.me()
         self.assertEqual((me["dwell_ms"], me["unfocused_seconds"]), (900, 0))
 
+    def test_a_quote_drawn_once(self):
+        """The page draws the quote: the server's "RE: <link>" line is out of the text, as
+        in the windows (it showed the quote twice)."""
+        st = fakes.status("094", fakes.BOB, text="look")
+        st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
+        st["quote"] = {"state": "accepted", "quoted_status": fakes.status("093", fakes.NEWS)}
+        got = web.post_json(self.web.core, adapter.post(st))
+        self.assertNotIn("RE:", got["html"])
+        self.assertTrue(got["quote"])
+
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)
         me = self.web.me()  # logged in, not connected yet: connected now

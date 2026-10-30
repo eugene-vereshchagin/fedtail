@@ -107,6 +107,16 @@ def newcomer_bit(post, parent):
                _("dm_newcomer_tip"), kind="newcomer")
 
 
+def shown_text(p, cfg):
+    """A post's HTML as a card shows it: without the "RE: <link>" paragraph servers add for
+    clients that can't show quotes, when fedtail shows the quote itself (feed.quotes not
+    "off") — decided here for every interface: Qt took it out, GTK and the web page showed
+    the quote twice."""
+    from ...model.text import without_quote_fallback
+    mode = (cfg.get("feed") or {}).get("quotes", "card")
+    return without_quote_fallback(p.text) if p.quote is not None and mode != "off" else p.text
+
+
 def inner_quote_bit(quoted, mode="card"):
     """The quoted post's own quote, as Mastodon's page shows it: one line under the quote —
     "❝ quotes Bob's post", a link to its thread — never a card in a card (Mastodon gives
@@ -208,7 +218,7 @@ def card_words(spec, cfg, date, in_thread=None):
 
 
 __all__ = ["Bit", "CardWords", "card_words", "inner_quote_bit", "name_of", "newcomer_bit",
-           "newcomers", "quote_bit", "thread_news_bit"]
+           "newcomers", "quote_bit", "shown_text", "thread_news_bit"]
 
 
 def only_counts_differ(old, new):

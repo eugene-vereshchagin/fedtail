@@ -40,6 +40,7 @@ from ..common.cardtext import (
     inner_quote_bit,
     newcomer_bit,
     only_counts_differ,
+    shown_text,
     thread_news_bit,
 )
 from ..common.lane import (  # noqa: F401  (Qt's names)
@@ -538,11 +539,9 @@ class PostRow(QWidget):
             row.addWidget(back)
             cv.addLayout(row)
         if p.text:
-            html = p.text
+            html = shown_text(p, self.ctx.cfg)  # without "RE:", the quote drawn
             if tr and self.show_translation and tr.get("html"):
                 html = tr["html"]
-            if quote:
-                html = without_quote_fallback(html)
             if self.ctx.cfg["feed"].get("collapse_tags", True):
                 html = collapse_tag_stuffing(html, full=bool(self.spec.in_thread))
             if self.ctx.cfg["ui"]["links_in_app"]:

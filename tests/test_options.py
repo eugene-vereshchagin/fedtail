@@ -209,3 +209,18 @@ class InnerQuoteTest(unittest.TestCase):
         self.assertIsNone(inner_quote_bit(whole.quote.post, "off"))
         pending = self.post({"state": "pending", "quoted_status_id": "012"})
         self.assertIsNone(inner_quote_bit(pending.quote.post))
+
+    def test_the_re_line_goes_when_the_quote_is_drawn(self):
+        """The server's "RE: <link>" for clients without quotes: out of the text when
+        fedtail draws the quote (Qt did it alone; GTK and the web page showed it twice)."""
+        from fedtail.frontends.common.cardtext import shown_text
+        from fedtail.protocols.mastodon import adapter
+
+        from .fakes import BOB, NEWS, status
+        st = status("094", BOB, text="look")
+        st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
+        st["quote"] = {"state": "accepted", "quoted_status": status("093", NEWS)}
+        p = adapter.post(st)
+        self.assertNotIn("RE:", shown_text(p, {}))
+        self.assertIn("RE:", shown_text(p, {"feed": {"quotes": "off"}}))
+

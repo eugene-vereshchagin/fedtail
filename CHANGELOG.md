@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- GTK and the web page: a quote is shown once — the server's "RE: <link>" line for clients
+  without quotes stood in the text over the quote fedtail drew; Qt alone took it out.
+  Decided once now (`cardtext.shown_text`). GTK has a test of quotes of its own.
 - A quote that quotes too gets one line under it, "❝ quotes Bob's post", a link to that
   thread — as Mastodon's own page does, never a card in a card (Mastodon gives that level
   as an id only). Decided once (`cardtext.inner_quote_bit`), drawn by every interface;
