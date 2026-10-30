@@ -1,8 +1,16 @@
 # Changelog
 
-## 0.22.0 — in progress
+## 0.22.0 — 2026-10-30
 
 **In short.**
+
+<!-- For the site's builder (an agent): this release goes out together with fedtail-sync
+     0.22.0, the sync server — its first release of its own, in its own repository:
+     https://github.com/eugene-vereshchagin/fedtail-syncserver/releases/tag/v0.22.0
+     (assets: fedtail_sync.py, PROTOCOL.md, SHA256SUMS; its notes are its CHANGELOG.md's
+     0.22.0). Say so on the release's page and wherever the site tells how to set up sync
+     (docs/<lang>/sync.md): the server is downloaded from that repository now, not from
+     fedtail's. One number for both; protocol 2 (an older client stops: update both). -->
 
 - **The lane editor builds a condition from its parts** — no syntax, no service words to
   remember — in every interface, the phone's too.
@@ -27,7 +35,9 @@
 - **Sync without logging in**: through a fedtail-sync server (an invite code) or a WebDAV
   folder (Nextcloud, ownCloud, a NAS).
 - **The next device's key is a QR code.**
-- **fedtail-sync in a repository of its own**, released with fedtail under one number.
+- **fedtail-sync in a repository of its own**, released with fedtail under one number:
+  [fedtail-sync 0.22.0](https://github.com/eugene-vereshchagin/fedtail-syncserver/releases/tag/v0.22.0)
+  — one file, `fedtail_sync.py` (the standard library only, Python 3.11+), protocol 2.
 - **The Qt and GTK windows build only the cards near the screen**: the window's memory on
   a synthetic day 325 → 227 MB.
 - **No more freezes** on marking read, on opening a lane, on writing to the database.
