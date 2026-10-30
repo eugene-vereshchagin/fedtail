@@ -348,6 +348,134 @@ class Web(Driver):
         self.req("/api/read", {"ids": ids})
 
 
+# ---- the phone: the Python bridge its Kotlin screens call (android/…/bridge.py) ------------
+
+class Phone(Driver):
+    """The phone as its screens drive it: each step through the bridge's functions, the
+    JSON the Kotlin side reads. What a screen shows stays as it was fetched till the
+    phone's watch loop says so (AppModel.watch): a new version — the lane loaded anew; a
+    new "threads" count too — the open thread. The Compose side itself is the emulator's
+    (androidTest)."""
+    name = "phone"
+
+    def start(self, core, world):
+        super().start(core, world)
+        import importlib.util
+        from pathlib import Path
+
+        from fedtail.frontends.web import server as web
+        path = (Path(__file__).resolve().parent.parent / "android" / "app" / "src" / "main"
+                / "python" / "fedtail_android" / "bridge.py")
+        spec = importlib.util.spec_from_file_location("fedtail_android_bridge_driver", path)
+        self.b = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.b)
+        self._through = web.PIC_THROUGH
+        self.b._s.update(core=core, web=web.Web(core, None), demo=False)
+
+    def stop(self):
+        from fedtail.frontends.web import server as web
+        web.PIC_THROUGH = self._through
+        self.b._s.update(core=None, web=None)  # the scenario shuts its core itself
+
+    def call(self, fn, *args):
+        got = json.loads(getattr(self.b, fn)(*args))
+        if isinstance(got, dict) and "error" in got:
+            raise AssertionError(f"{fn}: {got['error']}\n{got.get('trace', '')}")
+        return got
+
+    def lane(self, name):
+        """The lane opened: what it shows from now on (till the watch loop says so)."""
+        self._v = self._version()
+        posts = self.call("lane", name, False)["posts"]
+        self._lanes = {name: posts}
+        return [p["id"] for p in posts]
+
+    def menu(self, sid):
+        got = self.call("post_menu", sid)
+        return menu_keys([(it["kind"], it["url"]) for it in got["items"]])
+
+    def button(self, action, sid):
+        verb = {"fav": "like", "boost": "share", "bookmark": "bookmark"}[action]
+        self.call("act", verb, sid)
+
+    def _shown_ids(self):
+        return json.dumps([p["id"] for p in self.call("lane", "home", True)["posts"]])
+
+    def link(self, action, sid):
+        url = f"fedtail:{action}/{sid}"
+        got = self.call("link", url, False, None, self._shown_ids())
+        if "confirm" in got:
+            self.call("link", url, True, None, self._shown_ids())
+
+    def thread(self, sid):
+        return [(p["id"], p.get("depth", 0)) for p in self.call("thread", sid)["posts"]]
+
+    def reply(self, sid, text):
+        got = self.call("link", f"fedtail:reply/{sid}")
+        if (got.get("compose") or {}).get("reply_to") != sid:
+            raise Cant("the reply editor didn't open")
+        start = self.call("draft_start", sid)
+        self.call("post", json.dumps({"text": start["text"] + text, "reply_to": sid,
+                                      "visibility": start["visibility"]}))
+
+    def profile(self, acc_id):
+        return [a["key"] for a in self.call("account", acc_id)["actions"]
+                if a["key"] not in PLACES_ONLY]
+
+    def profile_act(self, acc_id, key):
+        got = self.call("profile_act", acc_id, key)
+        if "confirm" in got:
+            self.call("profile_act", acc_id, key, None, True)
+
+    def command(self, line):
+        got = self.call("command", line)
+        if got.get("confirm"):
+            got = self.call("command", line, True)
+        if not got.get("ok"):
+            raise Cant(got.get("message") or "refused")
+
+    def read_all(self, lane):
+        self.call("lane_read", lane)
+
+    # watch_* steps, as AppModel.watch: shown as fetched till the version moves
+    def _version(self):
+        return int(self.b.wait(-1, 0))  # since -1: answered at once
+
+    def _changed(self):
+        v = int(self.b.wait(self._v, 1.0))
+        grew = self.call("status").get("threads")
+        moved = v != self._v
+        self._v = v
+        return moved, grew
+
+    def open_thread(self, sid):
+        self._v = self._version()
+        self._seq = self.call("status").get("threads")
+        self._thread = [p["id"] for p in self.call("thread", sid)["posts"]]
+
+    def shown_thread(self, sid):
+        moved, grew = self._changed()
+        if moved and grew != self._seq:
+            self._seq = grew
+            self._thread = [p["id"] for p in self.call("thread", sid)["posts"]]
+        return self._thread
+
+    def close_thread(self, sid):
+        self._thread = None
+
+    def _lane_now(self, name):
+        moved, _grew = self._changed()
+        if moved:  # AppModel.watch: loadLane(current, keep = true)
+            self._lanes[name] = self.call("lane", name, True)["posts"]
+        return self._lanes[name]
+
+    def shown_lane(self, name):
+        return [p["id"] for p in self._lane_now(name)]
+
+    def unread_shown(self, name):
+        return sorted(p["id"] for p in self._lane_now(name) if p.get("unread"))
+
+
 # ---- the terminal: the Textual app, headless, its keys and screens ----------------------
 
 class Tui(Driver):

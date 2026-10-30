@@ -1,5 +1,5 @@
-"""Do the four interfaces *do* the same? The scenario of tests/scenario.py — open a lane,
-the ⋯ menu, like, boost, a thread, follow a thread, reply, a profile, follow someone,
+"""Do the five interfaces *do* the same (the phone through its bridge)? The scenario of
+tests/scenario.py — open a lane, the ⋯ menu, like, boost, a thread, follow a thread, reply, a profile, follow someone,
 delete, the command line, read up to here, all read — through each interface's own way
 in (tests/drivers.py), held against what frontends/common says should happen; and
 whether each window has every place a link may ask for. Writes a table:
@@ -40,9 +40,9 @@ def main():
              "Each step through the interface's own way in, held against frontends/common "
              "(tests/scenario.py). ✓ — the same; ✗ — differs (below); · — not reached (the "
              "run broke before it); — — not run here.", ""]
-    names = ["web", "tui", "qt", "gtk"]
+    names = ["web", "phone", "tui", "qt", "gtk"]
     results, why_not = {}, {}
-    for d in [drivers.Web()] + [getattr(drivers, k)() for k in ("Tui", "Qt", "Gtk")
+    for d in [drivers.Web(), drivers.Phone()] + [getattr(drivers, k)() for k in ("Tui", "Qt", "Gtk")
                                 if getattr(drivers, k, None) is not None
                                 and getattr(drivers, k).can_run()]:
         try:

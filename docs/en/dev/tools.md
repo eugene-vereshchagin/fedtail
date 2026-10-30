@@ -30,7 +30,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 
 | tool | what it does | how to run |
 |---|---|---|
-| `behaviour.py` | one scenario (a lane, ⋯, like, boost, thread, reply, profile, delete, the command line…) through all four interfaces, held against what `frontends/common` decides | `python3 tools/behaviour.py OUT.md` |
+| `behaviour.py` | one scenario (a lane, ⋯, like, boost, thread, reply, profile, delete, the command line…) through all five interfaces, held against what `frontends/common` decides | `python3 tools/behaviour.py OUT.md` |
 | `parity.py` | which words of the interface (buttons, menu items, dialogs) one frontend shows and the others don't | `python3 tools/parity.py OUT.md` |
 | `cross_check.py` | several self-check runs side by side: KDE as the reference, Windows, GTK — looks, menus, behaviour, failures | `python3 tools/cross_check.py REF OTHER…` |
 | `theme_compare.py` | each theme in Qt and in GTK side by side, with their main colours compared | `python3 tools/theme_compare.py SELFCHECK_OUT` |

@@ -1,5 +1,6 @@
-"""One scenario, every interface: do the same things in Qt, GTK, the web page and the
-terminal, on the same made-up server, and compare what each showed and what each did.
+"""One scenario, every interface: do the same things in Qt, GTK, the web page, the
+terminal and the phone (its bridge: the calls its Kotlin screens make), on the same
+made-up server, and compare what each showed and what each did.
 
 The words of an interface (tools/parity.py) say what it offers; this says what it
 *does*. Every step goes through the interface's own way in — the web page's HTTP API,

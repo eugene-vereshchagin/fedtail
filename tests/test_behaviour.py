@@ -1,5 +1,5 @@
-"""Do the four interfaces behave alike? The scenario (tests/scenario.py) done through
-each one's own way in (tests/drivers.py), compared with what frontends/common says
+"""Do the five interfaces behave alike (the phone through its bridge)? The scenario
+(tests/scenario.py) done through each one's own way in (tests/drivers.py), compared with what frontends/common says
 should happen. An interface missing here is skipped (its toolkit isn't installed);
 tools/behaviour.py writes the same comparison as a table for the self-check's report.
 
@@ -82,7 +82,7 @@ def host_gaps():
 
 def available():
     """The drivers this machine can run (a toolkit missing: its driver is left out)."""
-    got = [drivers.Web()]
+    got = [drivers.Web(), drivers.Phone()]  # the phone: its bridge, plain Python
     for make in (getattr(drivers, "Tui", None), getattr(drivers, "Qt", None),
                  getattr(drivers, "Gtk", None)):
         if make is not None and make.can_run():
