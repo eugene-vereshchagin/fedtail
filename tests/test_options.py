@@ -289,4 +289,5 @@ class BrowseStartTest(unittest.TestCase):
         self.assertEqual(self.model("last", stood="p1").start(specs), ("p1", "bottom"))
         # the place let go from the store: the first of the last hours, not the top
         self.assertEqual(self.model("last", stood="gone").start(specs), ("p2", "top"))
+        self.assertEqual(self.model("last", stood=None).start(specs), (None, "end"))  # never
         self.assertEqual(self.model("hours", hours=0.01).start(specs), (None, "end"))

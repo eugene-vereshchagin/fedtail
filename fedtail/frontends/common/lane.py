@@ -571,8 +571,8 @@ class LaneModel:
 
     def _browse_start(self, specs):
         """Where a browse lane (Federated, Local) opens — lanes.browse_start: "last" —
-        where one stood in it last; that place gone (a relay pours in thousands a day,
-        and what is older than the lane keeps was let go) — as "hours"; "hours" — the
+        where one stood in it last (never: the newest end); that place gone (a relay pours
+        in thousands a day, and what is older than the lane keeps was let go) — as "hours"; "hours" — the
         first post of the last lanes.browse_start_hours, else the newest end; "newest"
         — at the newest end, older ones a scroll back."""
         lc = self.cfg.get("lanes") or {}
@@ -587,6 +587,8 @@ class LaneModel:
             if got:
                 self._stood = place
                 return got, "bottom"
+            if not place:  # never stood in it: the newest end, as ever
+                return None, "end"
         from datetime import UTC, datetime, timedelta
         since = datetime.now(UTC) - timedelta(hours=float(lc.get("browse_start_hours", 2)))
 
