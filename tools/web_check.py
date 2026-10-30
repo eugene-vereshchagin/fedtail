@@ -288,6 +288,7 @@ def with_playwright(base, key, out):
                 page.mouse.click(5, 5)
             columns(page, out)
             hold_card(page)
+            column_dwell(page)
             page.close()
         browser.close()
 
@@ -379,6 +380,41 @@ def hold_card(page):
                       "as a picture came in")
     if got["after"] != got["was"]:
         ERRORS.append("hold: still held after the reader moved")
+
+
+def column_dwell(page):
+    """A column's card seen whole counts read only once it stayed so reading.dwell_ms (the
+    lane's rule); one that went by faster stays unread (it was read at a glance)."""
+    got = page.evaluate("""async () => {
+      const keep = state.me.mark_read, dwell = state.me.dwell_ms;
+      state.me.mark_read = "on_scroll"; state.me.dwell_ms = 300;
+      const body = document.createElement("div");
+      body.style.cssText = "position:fixed;left:0;top:0;width:300px;height:300px;overflow-y:auto";
+      const make = (id) => { const c = document.createElement("article");
+        c.className = "post unread"; c.dataset.id = id; c.style.height = "120px"; return c; };
+      const a = make("dwell-a"), b = make("dwell-b");
+      const gap = document.createElement("div"); gap.style.height = "800px";
+      body.append(a, gap, b);
+      document.body.append(body);
+      const p = { body, posts: [{ id: "dwell-a", unread: true }, { id: "dwell-b", unread: true }],
+                  count: document.createElement("span"), name: "dwell-test" };
+      paneRead(p);
+      await new Promise((ok) => setTimeout(ok, 100));
+      const early = a.classList.contains("unread");  // seen, not yet long enough
+      body.scrollTop = 900;  // b comes in, a goes away before its time? (it had 100 ms)
+      await new Promise((ok) => setTimeout(ok, 500));
+      const res = { early, a: a.classList.contains("unread"), b: b.classList.contains("unread") };
+      if (p.obs) p.obs.disconnect();
+      body.remove();
+      state.me.mark_read = keep; state.me.dwell_ms = dwell;
+      return res;
+    }""")
+    if not got["early"]:
+        ERRORS.append("columns: a card counted read before reading.dwell_ms")
+    if not got["a"]:
+        ERRORS.append("columns: a card that went by faster than dwell_ms counted read")
+    if got["b"]:
+        ERRORS.append("columns: a card that stayed dwell_ms wasn't counted read")
 
 
 def didnt_load(what, body):

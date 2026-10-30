@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- Web page: a column counts a card read only once it stayed seen `reading.dwell_ms`, as
+  the lane does — it marked it the moment it showed, however fast it went by. The phone:
+  the booster's emoji in the "boosted by" line as pictures.
 - A server's emoji (:blobcat:) as pictures in the GTK window — in posts, names, the boost's
   line, quotes and Activity: it showed them as text everywhere (Pango puts no picture in a
   line; the text block keeps a square for each and draws the picture there). Qt draws

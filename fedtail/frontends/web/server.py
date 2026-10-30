@@ -289,9 +289,17 @@ def event_json(spec, dismiss_one=True):
 
 def words_json(view, spec, date):
     """The words around a card (common/cardtext.py): the windows' own."""
-    from ..common.cardtext import card_words
+    from ..common.cardtext import card_words, name_of
     w = card_words(spec, view.cfg, date)
-    return {"boosted": bit_json(w.boosted), "meta": [bit_json(b) for b in w.meta],
+    # "♻ Bob :blob: boosted · 14:20" with the booster's emoji as pictures, beside the words
+    # (the phone draws it so; the page has the name of its own)
+    boosted_html = ""
+    by = getattr(spec.entry, "by", None)
+    if w.boosted is not None and by is not None and by.emojis and ":" in name_of(by):
+        name = escape(name_of(by))
+        boosted_html = escape(w.boosted.text).replace(name, with_emojis(name, by.emojis), 1)
+    return {"boosted": bit_json(w.boosted), "boosted_html": boosted_html,
+            "meta": [bit_json(b) for b in w.meta],
             "context": bit_json(w.context), "warning": w.warning, "folded": w.folded,
             "my_replies": [bit_json(b) for b in w.my_replies],
             "conversation": bit_json(w.conversation), "reactions": w.reactions,

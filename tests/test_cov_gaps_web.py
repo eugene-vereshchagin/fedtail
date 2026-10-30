@@ -86,6 +86,19 @@ class WebGapsTest(TmpDir):
         self.assertNotIn("RE:", got["html"])
         self.assertTrue(got["quote"])
 
+    def test_a_boosters_emoji_beside_the_words(self):
+        """words.boosted_html: the boost's line with the booster's :blob: as its picture
+        (the phone draws it; the words stay the windows')."""
+        from fedtail.frontends.common.lane import CardSpec
+        blob = [{"shortcode": "blob", "url": "https://x/blob.png",
+                 "static_url": "https://x/blob.png"}]
+        raw = fakes.status("097", dict(fakes.BOB, display_name="Bob :blob:", emojis=blob))
+        raw["reblog"] = fakes.status("096", fakes.NEWS, text="news")
+        share = adapter.post(raw)  # a boost: a Share around the post
+        got = web.words_json(self.web.core, CardSpec(key="097", entry=share), web.web_date)
+        self.assertIn("/pic?u=https%3A%2F%2Fx%2Fblob.png", got["boosted_html"])
+        self.assertIn(":blob:", got["boosted"]["text"])
+
     def test_a_page_before_the_core_connected(self):
         self.assertIsNone(self.core.me)
         me = self.web.me()  # logged in, not connected yet: connected now

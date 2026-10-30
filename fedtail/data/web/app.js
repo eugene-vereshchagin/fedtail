@@ -1426,15 +1426,23 @@ function paneRead(p) {  // reading.mark_read = on_scroll: a card seen whole in a
     for (const k of ["wheel", "touchmove", "keydown"])
       p.body.addEventListener(k, () => { reading.touched = Date.now(); }, { passive: true });
   }
+  // a card seen whole and staying so for read.dwell_ms (the lane's rule: common/lane
+  // dwell_ms) — it was read the moment it showed, however fast the column went by
+  const waiting = new Map();  // card → its timer
   p.obs = new IntersectionObserver((entries) => {
-    if (!readingNow()) return;  // out of focus: looked at again when it comes back
     for (const e of entries) {
-      if (!e.isIntersecting || !e.target.classList.contains("unread")) continue;
-      unmark(e.target);
-      const x = p.posts.find((y) => y.id === e.target.dataset.id);
-      if (x) x.unread = false;
-      paneCount(p);
-      p.obs.unobserve(e.target);
+      const card = e.target;
+      if (!e.isIntersecting) { clearTimeout(waiting.get(card)); waiting.delete(card); continue; }
+      if (!card.classList.contains("unread") || waiting.has(card)) continue;
+      waiting.set(card, setTimeout(() => {
+        waiting.delete(card);
+        if (!card.isConnected || !card.classList.contains("unread") || !readingNow()) return;
+        unmark(card);
+        const x = p.posts.find((y) => y.id === card.dataset.id);
+        if (x) x.unread = false;
+        paneCount(p);
+        p.obs && p.obs.unobserve(card);
+      }, Number(state.me.dwell_ms ?? 350)));
     }
   }, { root: p.body, threshold: 0.9 });
   for (const c of p.body.querySelectorAll(".post.unread, .event.unread")) p.obs.observe(c);

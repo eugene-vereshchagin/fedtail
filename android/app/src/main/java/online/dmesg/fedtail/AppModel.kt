@@ -155,6 +155,7 @@ data class PostItem(
     val quoteInner: Pair<String, String>? = null, // the quote quotes too: "❝ quotes …", its link
     val conversation: Pair<String, String>? = null,  // "💬 N in the conversation, new: M…"
     val boosted: Pair<String, String>? = null,  // "♻ boosted by X · 14:02" → their profile
+    val boostedHtml: String = "",               // the same with X's :emoji: (boosted_html)
     val contextLine: Pair<String, String>? = null,  // the parent's line when it isn't here yet
     val quoteOff: Boolean = false,   // the card's words leave the quote out (feed.quotes = "off")
     // not a post but an event's row of the lane (likes, follows, a follow request…): its
@@ -2251,6 +2252,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             quoteOff = o.optJSONObject("words")?.let { it.isNull("quote") } ?: false,
             conversation = bit(o.optJSONObject("words")?.optJSONObject("conversation")),
             boosted = bit(o.optJSONObject("words")?.optJSONObject("boosted")),
+            boostedHtml = o.optJSONObject("words")?.let { str(it, "boosted_html") } ?: "",
             contextLine = bit(o.optJSONObject("words")?.optJSONObject("context")),
             newcomer = bit(o.optJSONObject("words")?.optJSONObject("newcomer")),
             threadNews = bit(o.optJSONObject("words")?.optJSONObject("thread_news")),

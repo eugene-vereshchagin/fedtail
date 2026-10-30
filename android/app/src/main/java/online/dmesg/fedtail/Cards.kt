@@ -446,7 +446,7 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                 Head(p, act, dim = !p.unread)
                 // "♻ boosted by X · 14:02": a tap — their profile
                 val boosted = p.boosted
-                if (boosted != null) BitLine(boosted, act)
+                if (boosted != null) BitLine(boosted, act, html = p.boostedHtml)
                 else if (p.sharedBy.isNotBlank()) {
                     Small(stringResource(R.string.shared_by, p.sharedBy))
                 }
@@ -647,8 +647,12 @@ private fun EventRow(ev: EventItem, unread: Boolean, act: CardActions) {
 /** A line around a card (common/cardtext.py): its words, a tap on it — its link (a thread,
  *  a person). */
 @Composable
-private fun BitLine(bit: Pair<String, String>, act: CardActions, color: Color? = null) {
-    Text(bit.first, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+private fun BitLine(bit: Pair<String, String>, act: CardActions, color: Color? = null,
+                    html: String = "") {
+    // with a name's :emoji: (the core's html): their pictures, as in the card's head
+    val words = remember(bit.first, html) { nameText(bit.first, html) }
+    Text(words, inlineContent = remember(words) { emojiContent(words) },
+        fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
         color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth()
             .clickable(enabled = bit.second.isNotBlank()) { act.link(bit.second) }
