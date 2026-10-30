@@ -547,6 +547,8 @@ class LaneModel:
         bottom of the screen as it was, or on top when new posts came under it (they
         show then); else the first unread."""
         unread = [s.key for s in specs if s.unread]
+        if self.lazy:  # a browse lane: nothing unread there, its own choice
+            return self._browse_start(specs)
         if self.cfg["feed"]["start_at"] == "first_unread" and not self.newest_first:
             place = self.view.get_state(self.STOOD + self.name) \
                 if hasattr(self.view, "get_state") else None
@@ -566,6 +568,38 @@ class LaneModel:
                 return SEPARATOR, "top"
             return unread[0], "top"
         return None, "end"
+
+    def _browse_start(self, specs):
+        """Where a browse lane (Federated, Local) opens — lanes.browse_start: "last" —
+        where one stood in it last; that place gone (a relay pours in thousands a day,
+        and what is older than the lane keeps was let go) — as "hours"; "hours" — the
+        first post of the last lanes.browse_start_hours, else the newest end; "newest"
+        — at the newest end, older ones a scroll back."""
+        lc = self.cfg.get("lanes") or {}
+        mode = lc.get("browse_start", "last")
+        if mode == "newest":
+            return None, "end"
+        if mode == "last":
+            place = self.view.get_state(self.STOOD + self.name) \
+                if hasattr(self.view, "get_state") else None
+            got = next((s.key for s in specs if place and (s.key == place or (
+                s.entry is not None and s.entry.id == place))), None)
+            if got:
+                self._stood = place
+                return got, "bottom"
+        from datetime import UTC, datetime, timedelta
+        since = datetime.now(UTC) - timedelta(hours=float(lc.get("browse_start_hours", 2)))
+
+        def when(s):
+            e = s.entry
+            if e is None:
+                return None
+            return e.created if isinstance(e, Share) and e.created else real(e).created
+        fresh = [s.key for s in specs if (when(s) or since) > since]
+        if not fresh:
+            return None, "end"
+        # the oldest of them: reading goes on to the newest from there
+        return (fresh[-1], "bottom") if self.newest_first else (fresh[0], "top")
 
     def start_key(self, specs):
         """The card reading starts at (the ones around it are built first)."""

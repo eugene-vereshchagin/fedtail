@@ -240,6 +240,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (its preferences)
         self.translation_languages = None  # {source: [targets]} its translator can do
+        self._browse_extra = {}  # browse source → (posts kept beyond browse_keep, pages asked)
         self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server

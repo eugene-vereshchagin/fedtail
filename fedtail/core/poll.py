@@ -336,6 +336,29 @@ class PollMixin:
             steps[name] = steps.get(name, 0.0) + now - getattr(self, "_step_at", now)
         self._step_at = now
 
+    def _fill_browse(self, name):
+        """lanes.browse_fill_pages: an open browse lane (Federated, Local) the languages
+        filter left short of a page — a relay pours in, nearly all of it in other
+        languages, and the lane showed one post of two hundred (30.10) — asks pages
+        older till it has one, at most so many pages while it stays open; what they
+        brought is kept beyond browse_keep. → the posts kept so, for the prune."""
+        pages = int(self.cfg["lanes"].get("browse_fill_pages", 5))
+        extra, asked = self._browse_extra.get(name, (0, 0))
+        page = self.cfg["feed"]["page_size"]
+        here = [x.name for x in self.lanes if x.source == name]
+        while asked < pages:
+            short = [n for n in here if len(self.lane_entries(n)) < page
+                     and self.language_hidden(n)]
+            if not short:
+                break
+            got = sources.fetch_older(self.store, self.sources[name], page)
+            asked += 1
+            extra += len(got)
+            if not got:  # the server has nothing older: no more asking
+                asked = pages
+        self._browse_extra[name] = (extra, asked)
+        return extra
+
     def _poll_once(self):
         with self._poll_lock:
             first_run = not self.store.kv_get("initialized", False)
@@ -416,6 +439,7 @@ class PollMixin:
                     continue
                 if name in lazy:  # browse lanes: only while open, newest page only
                     if name not in open_sources:
+                        self._browse_extra.pop(name, None)  # closed: back to browse_keep
                         continue
                     try:
                         keep = int(self.cfg["lanes"].get("browse_keep", 200))
@@ -424,7 +448,9 @@ class PollMixin:
                         # the newest `keep`, and what "Older" brought into an open lane
                         shown = max((self._limits.get(x.name, 0) for x in self.lanes
                                      if x.source == name), default=0)
-                        self.store.prune(name, max(keep, shown - fc["render_limit"] + keep))
+                        extra = self._fill_browse(name)
+                        self.store.prune(name, max(keep, shown - fc["render_limit"] + keep)
+                                         + extra)
                         # the server answered, and with nothing: its live feeds are off
                         # (mastodon.social and others do that) — the lane says so
                         empty = getattr(self.sources[name], "last_count", 1) == 0

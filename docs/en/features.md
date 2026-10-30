@@ -72,7 +72,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Federated, Home, Local | has | 0.2.0 | `lanes.enabled` (`"federated"`, `"home"`, `"local"`), `lanes.browse_keep` | `timelines/home`, `timelines/public` | everyone |
+| Federated, Home, Local | has | 0.2.0 | `lanes.enabled` (`"federated"`, `"home"`, `"local"`), `lanes.browse_keep`, `lanes.browse_fill_pages`, `lanes.browse_start`, `lanes.browse_start_hours` | `timelines/home`, `timelines/public` | everyone |
 | Lane names in the config match their titles | has | 0.15.0 | `home`, `replies`, `federated`, `my_posts`, `my_likes`; the old `people`, `comments`, `global`, `mine`, `favourites` are understood too; a lane's word is in its tooltip on the left | — | — |
 | Bots in a lane of their own | has | 0.1.0 | `lanes.enabled` (`"bots"`), `lanes.extra_bots` | the `account.bot` field | only in fedtail |
 | Personal lanes | has | 0.1.0 | `lanes.preset`, `lanes.enabled` | notifications, `visibility=direct` | everyone, but laid out differently |
@@ -118,7 +118,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 
 <details><summary>In detail</summary>
 
-**Federated, Home, Local.** “Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end; they hold the newest `lanes.browse_keep` (200) of the whole stream, however fast a relay pours in. A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes).
+**Federated, Home, Local.** “Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end; they hold the newest `lanes.browse_keep` (200) of the whole stream, however fast a relay pours in. When the languages filter leaves less than a page in one, it asks pages older by itself while open (`lanes.browse_fill_pages`). It opens where you stood last, and when that place is gone, at the first post of the last hours (`lanes.browse_start`, `browse_start_hours`; or at the newest at once). A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes).
 
 **Bots in a lane of their own.** Posts of accounts with the “bot” tick leave Home for a lane of their own, “Bots”. A bot without the tick goes into `lanes.extra_bots`: on your server — `"nick"`, on another — `"nick@server"`.
 

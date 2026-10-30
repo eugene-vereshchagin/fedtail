@@ -172,6 +172,9 @@ DEFAULTS = {
         "custom": [],
         "unsorted": True,
         "browse_keep": 200,
+        "browse_fill_pages": 5,
+        "browse_start": "last",
+        "browse_start_hours": 2,
         "bubble": [],
         "federated_extra": [],
         "tags_extra": [],
@@ -356,6 +359,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("lanes", "browse_start"): {"last", "hours", "newest"},
     ("feed", "thread_from"): {"local", "mixed", "remote"},
     ("feed", "open_at"): {"post", "first_unread"},
     ("feed", "tag_click"): {"author", "everywhere"},
@@ -434,6 +438,8 @@ SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("lanes", "browse_start_hours"): 1,
+    ("lanes", "browse_fill_pages"): 0,
     ("ui", "message_percent"): 20,
     ("poll", "announcements_minutes"): 0,
     ("ui", "gifv_fps"): 1,
@@ -532,7 +538,9 @@ FILE_LAYOUT = (
                            "whats_this compose compose_size icon_count icon_count_except "
                            "desktop_entry")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
-                             "custom tag_groups languages languages_in detect_language "
+                             "browse_fill_pages browse_start browse_start_hours custom "
+                             "tag_groups languages languages_in "
+                             "detect_language "
                              "detect_min_words detect_among federated_extra tags_extra bubble "
                              "extra_minutes extra_posts rss_items rss_summary_chars "
                              "tags_one_request")),

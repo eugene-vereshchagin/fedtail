@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Federated and Local: a lane the languages filter left short of a page asks pages older
+  by itself while open (`lanes.browse_fill_pages`, 5) and keeps them — it showed one post
+  of two hundred. Where one opens: `lanes.browse_start` — "last" (where you stood; that
+  place gone from the store — the first post of the last `browse_start_hours`), "hours",
+  "newest". Decided once for every interface (common/lane.py).
 - The languages filter: a post's links, @names, #tags and :emoji: no longer count when its
   language is told — a Japanese post with a link had more Latin letters than Japanese
   ones, its own "ja" was taken for a lie, the language came out unknown and it passed a

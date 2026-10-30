@@ -17,13 +17,13 @@ android = "has"
 since = "0.2.0"
 name.ru = "Федерация, Лента, Локальная"
 name.en = "Federated, Home, Local"
-config = "`lanes.enabled` (`\"federated\"`, `\"home\"`, `\"local\"`), `lanes.browse_keep`"
+config = "`lanes.enabled` (`\"federated\"`, `\"home\"`, `\"local\"`), `lanes.browse_keep`, `lanes.browse_fill_pages`, `lanes.browse_start`, `lanes.browse_start_hours`"
 api = "`timelines/home`, `timelines/public`"
 others.ru = "у всех"
 others.en = "everyone"
 clients = ["all"]
-details.ru = "«Лента» (`home`) — те, кого ты читаешь, без ботов; открывается по умолчанию. «Локальная» — вся твоя нода. «Федерация» — всё, что нода знает со всех серверов. Федерация и Локальная подгружаются, только пока открыты, и идут без счётчиков непрочитанного: их листают, а не дочитывают; в них — самые новые `lanes.browse_keep` (200) из всего потока, как бы быстро ни лил релей. Между свежей страницей и тем, что было раньше, в них допустим разрыв — в отличие от «Ленты», которая догоняется без дыр (см. Догонять без дыр)."
-details.en = "“Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end; they hold the newest `lanes.browse_keep` (200) of the whole stream, however fast a relay pours in. A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes)."
+details.ru = "«Лента» (`home`) — те, кого ты читаешь, без ботов; открывается по умолчанию. «Локальная» — вся твоя нода. «Федерация» — всё, что нода знает со всех серверов. Федерация и Локальная подгружаются, только пока открыты, и идут без счётчиков непрочитанного: их листают, а не дочитывают; в них — самые новые `lanes.browse_keep` (200) из всего потока, как бы быстро ни лил релей. Если фильтр языков оставил в ней меньше страницы, она сама догружает страницы постарше (`lanes.browse_fill_pages`), пока открыта. Открывается она на прошлом месте, а если его уже нет — на первом посте последних часов (`lanes.browse_start`, `browse_start_hours`; или сразу на свежем). Между свежей страницей и тем, что было раньше, в них допустим разрыв — в отличие от «Ленты», которая догоняется без дыр (см. Догонять без дыр)."
+details.en = "“Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end; they hold the newest `lanes.browse_keep` (200) of the whole stream, however fast a relay pours in. When the languages filter leaves less than a page in one, it asks pages older by itself while open (`lanes.browse_fill_pages`). It opens where you stood last, and when that place is gone, at the first post of the last hours (`lanes.browse_start`, `browse_start_hours`; or at the newest at once). A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes)."
 
 [[feature]]
 id = "lane-words"

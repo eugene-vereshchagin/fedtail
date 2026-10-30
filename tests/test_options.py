@@ -224,3 +224,69 @@ class InnerQuoteTest(unittest.TestCase):
         self.assertNotIn("RE:", shown_text(p, {}))
         self.assertIn("RE:", shown_text(p, {"feed": {"quotes": "off"}}))
 
+
+
+class BrowseFillTest(TmpDir):
+    """A browse lane the languages filter left short of a page asks pages older by itself
+    (lanes.browse_fill_pages), and keeps them: Federated showed one post of 200 (30.10)."""
+    make = test_cli.CliTest.make
+
+    def test_federated_fills_from_older_pages(self):
+        from .fakes import BOB, status
+        core, w = self.make(lanes={"languages": ["ru"], "languages_in": ["federated"],
+                                   "browse_keep": 20, "browse_fill_pages": 3},
+                            feed={"page_size": 5})
+        for i in range(10):  # older: Russian ones
+            st = status(f"1{i:02d}", BOB, minute=i, vis="public", text="русский пост")
+            st["language"] = "ru"
+            w.local.append(st)
+        for i in range(25):  # the newest: a relay's flood in English (20 kept + 3 pages)
+            st = status(f"2{i:02d}", BOB, minute=10 + i, vis="public", text="english")
+            st["language"] = "en"
+            w.local.append(st)
+        core.connect().result()
+        core.set_active_lanes(["federated"])
+        core.poll_once()
+        shown = core.lane_entries("federated")
+        self.assertGreaterEqual(len(shown), 5, "filled from older pages")
+        self.assertTrue(all(st.get("language") == "ru" for _i, st in shown))
+        core.poll_once()  # the next round keeps them (beyond browse_keep)
+        self.assertGreaterEqual(len(core.lane_entries("federated")), 5)
+        core.set_active_lanes([])
+        core.poll_once()  # closed: back to browse_keep
+        self.assertNotIn("federated", core._browse_extra)
+
+
+class BrowseStartTest(unittest.TestCase):
+    """Where a browse lane opens (lanes.browse_start): the last place — or, gone from the
+    store, the first post of the last hours; the first of the last hours; the newest."""
+
+    def model(self, mode, stood=None, hours=2):
+        from types import SimpleNamespace
+
+        from fedtail.frontends.common.lane import LaneModel
+        m = object.__new__(LaneModel)
+        m.lazy, m.name, m.newest_first = True, "federated", False
+        m.cfg = {"lanes": {"browse_start": mode, "browse_start_hours": hours},
+                 "feed": {"start_at": "first_unread"}}
+        m.view = SimpleNamespace(get_state=lambda key: stood)
+        return m
+
+    def specs(self):
+        from datetime import UTC, datetime, timedelta
+        from types import SimpleNamespace
+
+        from fedtail.frontends.common.lane import CardSpec
+        now = datetime.now(UTC)
+        ages = [10, 5, 1.5, 0.5, 0.1]  # hours ago, oldest first
+        return [CardSpec(key=f"p{i}", entry=SimpleNamespace(
+            id=f"p{i}", created=now - timedelta(hours=h))) for i, h in enumerate(ages)]
+
+    def test_each_way(self):
+        specs = self.specs()
+        self.assertEqual(self.model("newest").start(specs), (None, "end"))
+        self.assertEqual(self.model("hours").start(specs), ("p2", "top"))  # 1.5 h ago
+        self.assertEqual(self.model("last", stood="p1").start(specs), ("p1", "bottom"))
+        # the place let go from the store: the first of the last hours, not the top
+        self.assertEqual(self.model("last", stood="gone").start(specs), ("p2", "top"))
+        self.assertEqual(self.model("hours", hours=0.01).start(specs), (None, "end"))

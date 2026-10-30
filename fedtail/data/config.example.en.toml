@@ -378,6 +378,20 @@ unsorted = true
 # fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update.
 browse_keep = 200
 
+# A browse lane (Federated, Local) the languages filter left with less than a page asks this
+# many pages older by itself while it is open; what they bring is kept beyond browse_keep.
+# 0 — no.
+browse_fill_pages = 5
+
+# Where a browse lane (Federated, Local) opens: "last" — where you stood in it last time;
+# that place gone (relays bring thousands of posts a day, and the old ones go) — as "hours";
+# "hours" — at the first post of the last browse_start_hours hours; "newest" — at the
+# freshest, the older ones a scroll back.
+browse_start = "last"
+
+# browse_start = "hours" (and "last" when its place is gone): from how many hours back.
+browse_start_hours = 2
+
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
 # name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
 # icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
