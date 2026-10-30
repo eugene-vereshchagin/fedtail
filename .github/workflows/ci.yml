@@ -105,6 +105,24 @@ jobs:
       - run: pip install requests PySide6-Essentials cryptography
       - run: python -m unittest -v tests.test_budgets
 
+  # the web page in a real browser: what app.js does (tests only reach the server) — the
+  # lanes, menus, the editor, holding the opening card, a column's reading
+  web-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install requests cryptography playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python tools/web_check.py web-check
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: web-check-${{ github.run_number }}
+          path: web-check/
+
   # the port: Windows with Qt from pip
   windows:
     runs-on: windows-latest
@@ -374,7 +392,8 @@ jobs:
   # with that version's CHANGELOG section as the notes
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, security, test, budgets, debian, windows-build, linux-build, deb, apk]
+    needs: [lint, security, test, budgets, web-check, debian, windows-build, linux-build, deb,
+            apk]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -14,6 +14,7 @@ A commit with `[skip ci]` in its message runs nothing.
 | `security` | every push and PR | the sync code faces the internet: `bandit` and ruff's bandit rules over `fedtail/core/sync`; the client against the real server (a checkout of fedtail-syncserver's main, whose version must be fedtail's), on Python 3.11 and 3.13 — the server's own tests run in its repository |
 | `audit` | every push and PR | known vulnerabilities in what fedtail runs on (`pip-audit`): warnings only, a new CVE upstream never holds a release |
 | `test` | every push and PR | all the tests on Python 3.11, 3.12 and 3.13 with Qt from pip, offscreen; then fedtail installed as a package and started |
+| `web-check` | every push and PR | the web page in Chromium (Playwright): `tools/web_check.py` — every lane, the ≡ and ⋯ menus, the editor, a thread, the viewer, a phone's width, holding the opening card, a column's reading; its screenshots kept when it fails; `release` waits for it |
 | `budgets` | every push and PR | the memory bench (`tools/membench.py`: 2000 posts, 20 lanes, an hour of polling) — the core alone and the Qt window — against ceilings of memory, time, widgets and the picture cache (`tests/test_budgets.py`, docs/en/dev/memory.md, step 8); `release` waits for it |
 | `debian` | every push and PR | all the tests on Debian 13 with Qt and GTK 4 from apt, under Xvfb — the real target |
 | `windows` | every push and PR | all the tests on Windows with Qt from pip (docs/en/dev/windows.md uses the same packages and command, a test checks) |
