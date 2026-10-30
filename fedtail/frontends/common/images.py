@@ -24,11 +24,14 @@ import requests
 
 from ... import diag
 from ...core import remote
+from ...core.config import DEFAULTS
 from ...version import USER_AGENT
 
 log = logging.getLogger(__name__)
 FEED_SIDE = 1200
-MEM_MB = 64  # default memory budget for decoded pictures (ui.image_cache_mb)
+FULL_SIDE = 8192    # the viewer: a picture at its own size, up to this
+VIEWER_MARGIN = 24  # the viewer's margins (the windows' alike)
+MEM_MB = DEFAULTS["ui"]["image_cache_mb"]  # decoded pictures' budget: the config's default
 # the most one answer may bring: a picture's address comes from someone else's post, and
 # an answer that never ends must not fill the memory or the disk
 PICTURE_MAX = 20 * 1024 * 1024    # a preview, an avatar, a picture in the feed

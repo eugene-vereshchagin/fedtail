@@ -8,11 +8,11 @@ from __future__ import annotations
 import logging
 
 from ...core import spell
+from ...core.spell import SUGGESTIONS
 from ...i18n import _, current_language
 from .gi_setup import Gio, GLib, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
-SUGGESTIONS = 8
 DELAY_MS = 300  # typing on: marked once it pauses, not at every key
 
 

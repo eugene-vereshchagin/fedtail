@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 
 from ...i18n import _
+from ..common.images import FULL_SIDE  # noqa: F401 — the windows' one
+from ..common.images import VIEWER_MARGIN as MARGIN
 from .gi_setup import GLib, Gtk, tip
 
 log = logging.getLogger(__name__)
 
-FULL_SIDE = 8192
-MARGIN = 24
 ALT_MAX_H = 180  # px a picture's description takes at most: the rest scrolls
 
 

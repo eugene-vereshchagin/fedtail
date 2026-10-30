@@ -2591,9 +2591,9 @@ function showCw(on) {
 
 function counter() {
   const n = [...$("#text").value].length + [...$("#cw").value].length;
-  const limit = (state.me.editor || {}).limit || 500;
-  $("#chars").textContent = n ? n + " / " + limit : "";
-  $("#chars").classList.toggle("over", n > limit);
+  const limit = (state.me.editor || {}).limit;  // the server's (max_characters), as told
+  $("#chars").textContent = n && limit ? n + " / " + limit : "";
+  $("#chars").classList.toggle("over", !!limit && n > limit);
   const key = state.replyTo ? "draft." + state.replyTo.sid : "draft.new";
   store(key, $("#text").value);
   clearTimeout(state.checkTimer);  // the chain and the #CamelCase hint, as the windows count

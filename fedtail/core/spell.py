@@ -42,6 +42,8 @@ SKIP = re.compile(r"""
 # a word: letters, inner apostrophes and hyphens (don't, кто-то); digits make it not one
 WORD = re.compile(r"[^\W\d_](?:[^\W\d_]|['’\-](?=[^\W\d_]))*", re.UNICODE)
 
+SUGGESTIONS = 8  # what a wrong word's menu offers, at most — every window's
+
 
 def words(text):
     """[(start, end, word)] of the words to check in text (positions in characters)."""

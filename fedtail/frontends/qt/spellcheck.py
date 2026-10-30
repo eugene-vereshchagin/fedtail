@@ -8,10 +8,10 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QAction, QColor, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 
 from ...core import spell
+from ...core.spell import SUGGESTIONS
 from ...i18n import _, current_language
 
 log = logging.getLogger(__name__)
-SUGGESTIONS = 8
 
 
 class SpellHighlighter(QSyntaxHighlighter):

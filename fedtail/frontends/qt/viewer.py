@@ -13,9 +13,9 @@ from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QToolButton, QWidget
 
 from ...i18n import _
+from ..common.images import FULL_SIDE  # noqa: F401 — the windows' one
+from ..common.images import VIEWER_MARGIN as MARGIN
 
-FULL_SIDE = 8192
-MARGIN = 24
 CAPTION_H = 44
 ALT_SHARE = 0.3  # a description takes at most this much of the height: the rest scrolls
 BUTTONS_CSS = """

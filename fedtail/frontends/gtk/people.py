@@ -39,7 +39,8 @@ class AccountRow(Gtk.Box):
         names.append(handle)
         if acc.note:
             from ...model.text import html_to_text
-            bio = Gtk.Label(label=html_to_text(acc.note)[:220], xalign=0, wrap=True)
+            from .contact import BIO_CHARS
+            bio = Gtk.Label(label=html_to_text(acc.note)[:BIO_CHARS], xalign=0, wrap=True)
             bio.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             bio.set_lines(2)
             bio.set_ellipsize(Pango.EllipsizeMode.END)
