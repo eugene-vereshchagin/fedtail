@@ -550,6 +550,8 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         lv.index = nxt
 
     async def fill(self, items_in):
+        if not (self.query("#posts") and self.query("#title")):
+            return  # the screen went (or isn't drawn yet) while its thread came: no place
         core = self.app.core
         self.nodes = list(items_in)
         lv = self.query_one("#posts", ListView)

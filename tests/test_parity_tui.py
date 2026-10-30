@@ -294,6 +294,23 @@ class ThreadHeadTest(Base):
             await self.wait(pilot, lambda: len(scr.query_one("#posts").children) == 3,
                             what="my answer in the thread")
 
+    async def test_a_thread_that_comes_after_its_screen_went(self):
+        """CI, 30.10: the thread's answer came while its screen had no title (gone, or
+        not drawn yet) — NoMatches took the test down. It draws nothing then."""
+        from fedtail.frontends.tui.app import ThreadScreen
+        core, w = self.make()
+        w.add(status("010", BOB, minute=1, text="the root"), home=True)
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            scr = ThreadScreen("010")
+            app.push_screen(scr)
+            await self.wait(pilot, lambda: len(scr.query_one("#posts").children) == 1)
+            items = core.thread("010").result()
+            scr.query_one("#title").remove()
+            await pilot.pause()
+            await scr.fill(items)  # no title: quietly nothing
+
     async def test_count_cw_follow_via_home(self):
         from textual.widgets import Static
 
