@@ -374,11 +374,16 @@ class TuiCurtainTest(test_cov_tui_host.Base):
         app = FedtailApp(core)
         async with app.run_test(size=(120, 40)) as pilot:
             core.poll_once()
+            # the curtain's row with its words in (a slow runner: the row first, then
+            # what's in it)
             await self.wait(pilot, lambda: any(getattr(i, "key", None) == CURTAIN
+                                               and i.query(Static)
                                                for i in app.query_one("#posts").children),
                             what="the curtain")
             self.assertIsNone(app.lane)
-            shown = str(app.query_one("#posts").children[0].query_one(Static).render())
+            row = next(i for i in app.query_one("#posts").children
+                       if getattr(i, "key", None) == CURTAIN)
+            shown = str(row.query_one(Static).render())
             self.assertIn("Lanes closed", shown)
             app.query_one("#posts", ListView).focus()
             await pilot.press("enter")
