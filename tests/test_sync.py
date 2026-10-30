@@ -286,16 +286,40 @@ class FolderSyncTest(Devices):
         self.desk.store.kv_set("list_order", ["L2", "L1"])
         self.desk.mark_read(["101"])
         self.desk.store.put_items("home", [("101", status("101", BOB), ""),
-                                           ("102", status("102", BOB), "")])
-        self.desk.store.mark_read(["102"])  # read before sync was there: no op recorded
+                                           ("102", status("102", BOB), ""),
+                                           ("103", status("103", BOB), "")])
+        # read by hand before sync was there: no op recorded, but the user's
+        self.desk.store.mark_read(["102"], shared=True)
+        self.desk.store.mark_read(["103"])  # fedtail's own (the first run): stays home
         self.desk.sync_now()
         self.phone.sync_join(self.desk.sync_key())
         self.phone.sync_now()
         self.assertEqual(self.phone.store.kv_get("list_order"), ["L2", "L1"])
-        self.assertEqual(self.phone.store.read_set(["101", "102"]), {"101", "102"})
+        self.assertEqual(self.phone.store.read_set(["101", "102", "103"]), {"101", "102"})
         sent = self.desk.store.sync_pending_count()
         self.desk.sync_now()  # once per key, not every round
         self.assertEqual(self.desk.store.sync_pending_count(), sent)
+
+    def test_a_new_device_doesnt_read_the_old_ones_lanes(self):
+        """A phone's first run marks everything it fetched read; its snapshot (and its
+        packed journal) carries the user's marks only — or the desktop's unread lanes
+        went read the moment the phone joined (31.10)."""
+        posts = [(i, status(i, BOB), "") for i in ("201", "202", "203")]
+        self.desk.store.put_items("home", posts)
+        self.desk.sync_now()
+        self.phone.store.put_items("home", posts)
+        self.phone.store.mark_read(["201", "202", "203"])  # the phone's first run
+        self.phone.mark_read(["203"])                       # read there by hand
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual(self.desk.store.read_set(["201", "202", "203"]), {"203"})
+        self.assertEqual(self.phone.sync.state_ops()[-1:], [{"r": ["203"]}])  # packed so too
+        # what came from the desk travels on in the phone's own snapshot
+        self.desk.mark_read(["201"])
+        self.desk.sync_now()
+        self.phone.sync_now()
+        self.assertEqual(sorted(self.phone.store.recent_read(10)), ["201", "203"])
 
     def test_a_copied_profile_is_a_device_of_its_own(self):
         """state.db copied to another computer carries the device id: there it gets one

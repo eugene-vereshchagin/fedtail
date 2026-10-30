@@ -8,6 +8,12 @@
   server is said under the button — not a snackbar hidden by the keyboard — and a site
   that isn't a fediverse server is said so, not "HTTP 404". The button says it opens the
   browser; the keyboard's "Go" logs in; "logging in…" while the token comes.
+- **Sync: a new device no longer marks the others' lanes read.** Its first run marks
+  everything it fetched read (as it should, there), but the snapshot it sent on joining
+  — and every packed journal — carried those marks too, so the desktop's custom lanes
+  went read when the phone came. Only the marks a person made (here or on another
+  device) travel now; the store keeps them apart (`read_shared`).
+- Phone: `read.dwell_ms` is heeded (it was a fixed 350 ms), as in the windows.
 - Docs (sync): the lanes' counts may be off for the first minutes of a newly joined
   device, until the other devices' read marks have come in — and why.
 

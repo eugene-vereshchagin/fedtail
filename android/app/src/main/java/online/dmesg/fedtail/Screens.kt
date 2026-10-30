@@ -392,7 +392,7 @@ private fun ThreadPlace(
                 model.threadAimed = model.threadOpening
                 model.threadAimAt = null
             }
-            MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it, inThread = true) }
+            MarkWhileScrolling(state, model.markOnScroll, model.dwellMs) { model.markRead(it, inThread = true) }
             if (model.threadPosts.isEmpty()) Centered {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()

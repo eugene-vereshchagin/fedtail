@@ -223,13 +223,14 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: (
 
 /** Read marks: what stood whole on screen when scrolling stopped (read.mark_read). */
 @Composable
-fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -> Unit) {
-    LaunchedEffect(state, on) {
+fun MarkWhileScrolling(state: LazyListState, on: Boolean, dwellMs: Long,
+                       mark: (List<String>) -> Unit) {
+    LaunchedEffect(state, on, dwellMs) {
         if (!on) return@LaunchedEffect
         snapshotFlow { state.isScrollInProgress to state.layoutInfo.visibleItemsInfo.size }
             .collect { (scrolling, _) ->
                 if (scrolling) return@collect
-                delay(350)
+                delay(dwellMs)  // read.dwell_ms, as the windows'
                 val info = state.layoutInfo
                 mark(info.visibleItemsInfo.filter {
                     it.offset >= info.viewportStartOffset &&

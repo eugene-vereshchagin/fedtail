@@ -247,6 +247,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var handle by mutableStateOf("")
     var newestFirst by mutableStateOf(false)
     var markOnScroll by mutableStateOf(true)
+    var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
     var prefetch by mutableStateOf("previews") // feed.prefetch: pictures fetched ahead
@@ -489,6 +490,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         handle = me.optString("handle")
         newestFirst = me.optString("order") == "newest_first"
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
+        dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
         expandCw = me.optBoolean("expand_cw")

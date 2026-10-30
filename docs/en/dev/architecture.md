@@ -311,6 +311,7 @@ Rules:
 | `aliases(n, status_id)` | short ids the counter gave (before 0.18) |
 | `short_ids(code, status_id)` | derived short ids: the full 8-character code → the post |
 | `sync_out(seq, op)` | sync ops recorded, not sent yet (core/sync) |
+| `read_shared(status_id)` | the read marks sync may carry: the user's (`Core.mark_read`) and other devices'; not fedtail's own (the first run, history) — the snapshot and the packed journal take them from here |
 | `sync_lww(key, at, device, value)` | the newest setting per thread, for sync's last-writer-wins |
 | `subs(root_id, since, last_activity, checked, auto)` | followed threads |
 | `sub_members(status_id, root_id)` | posts already seen in a followed thread |
@@ -540,7 +541,8 @@ the prefixed ones a rule names (`account:`, `remote:`, `rss:`… — `sources.py
   `Sync` (engine.py) is made by `Core.__init__` when `engine.wanted(cfg)`; `Core.mark_read`,
   `subscribe`, `unsubscribe`, `mute_thread` record into the store's `sync_out` (read
   marks only when the *user* made them — `store.mark_read` by the core itself isn't
-  recorded), thread states also into `sync_lww` (key `t:<root>`, `(at ms, device)` —
+  recorded; they also go into `read_shared`, the only marks a snapshot or a packed
+  journal carries — never the first run's "all read"), thread states also into `sync_lww` (key `t:<root>`, `(at ms, device)` —
   the newest wins). The `fedtail-sync` thread (started by `start_polling`, stopped first
   in `shutdown` after a last push) every `sync.interval_seconds`, or 3 s after a record:
   `sync_pending` → batches of ops sealed by `crypto.seal` (AES-256-GCM under

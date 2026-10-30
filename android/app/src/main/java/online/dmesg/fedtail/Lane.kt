@@ -230,7 +230,7 @@ fun LaneScreen(
                     try { holdPlace(state, at, model.startBottom) } finally { model.holding = false }
                 }
             }
-            MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
+            MarkWhileScrolling(state, model.markOnScroll, model.dwellMs) { model.markRead(it) }
             StoodWhileScrolling(state, shown = { model.onScreen(it) }) { key, end ->
                 if (model.aimKey == null && !model.holding) model.stood(key, end)
             }

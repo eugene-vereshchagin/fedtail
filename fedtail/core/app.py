@@ -1518,7 +1518,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             posts = {(st.get("reblog") or {}).get("id") for st in have.values()
                      if isinstance(st, dict) and isinstance(st.get("reblog"), dict)}
             status_ids += sorted(i for i in posts - set(status_ids) if i)
-            self.store.mark_read(status_ids)
+            self.store.mark_read(status_ids, shared=True)
             self.emit("read_changed", status_ids)  # the cards: at once
             self._reading_moment(len(status_ids))
 

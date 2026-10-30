@@ -43,6 +43,11 @@ CREATE INDEX IF NOT EXISTS items_sort ON items (source, sort);
 CREATE TABLE IF NOT EXISTS read (
     status_id TEXT PRIMARY KEY
 );
+-- the read marks that travel (sync): made by the user here or another device's — not
+-- the ones fedtail makes itself (the first run's "all read", history, my own posts)
+CREATE TABLE IF NOT EXISTS read_shared (
+    status_id TEXT PRIMARY KEY
+);
 CREATE TABLE IF NOT EXISTS missing (
     status_id TEXT PRIMARY KEY
 );
@@ -513,6 +518,8 @@ class Store:
                 out["read"] = db.execute(
                     "DELETE FROM read WHERE status_id NOT IN (SELECT id FROM statuses)"
                 ).rowcount
+                db.execute("DELETE FROM read_shared WHERE status_id NOT IN "
+                           "(SELECT id FROM statuses)")
                 self._read = None
             if out["statuses"]:
                 self.status_version += 1
@@ -655,10 +662,11 @@ class Store:
         return st
 
     def recent_read(self, limit):
-        """Ids of the newest stored posts marked read, at most `limit`."""
+        """Ids of the newest stored posts marked read by the user (here or on another
+        device: read_shared — what sync may carry), at most `limit`."""
         with self._reading() as db:
             return [r[0] for r in db.execute(
-                "SELECT r.status_id FROM read r JOIN statuses s ON s.id = r.status_id "
+                "SELECT r.status_id FROM read_shared r JOIN statuses s ON s.id = r.status_id "
                 "ORDER BY s.created_at DESC LIMIT ?", (int(limit),))]
 
     def get_status(self, sid):
@@ -1344,10 +1352,15 @@ class Store:
                               (sort, MINE_EVENT + "%")).fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
-    def mark_read(self, status_ids):
+    def mark_read(self, status_ids, shared=False):
+        """shared: the user's marks (or another device's), which sync may carry again
+        (recent_read); not the ones fedtail makes by itself."""
         with self._tx() as db:
             ids = list(status_ids)
             db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in ids])
+            if shared:
+                db.executemany("INSERT OR IGNORE INTO read_shared VALUES (?)",
+                               [(i,) for i in ids])
             if self._read is not None:
                 self._read.update(ids)
             self.read_version += 1

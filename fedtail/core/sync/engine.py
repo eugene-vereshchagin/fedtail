@@ -42,7 +42,9 @@ same state, but the read marks of posts older than the newest SNAPSHOT_READ.
 What a device already knows when it first syncs under a key goes out once too (`_snapshot`):
 the settings carried whole (not `lane_rules`), stamped time 0 so any real change anywhere
 beats them; how
-far events are seen; the read marks of the posts it keeps. A device that joins later
+far events are seen; the user's read marks of the posts it keeps (the store's read_shared:
+made here by hand or got from another device — never the first run's "all read", which
+made a new phone mark the desktop's lanes read, 31.10). A device that joins later
 gets the state, not only what changed after it came.
 
 Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server: the journal
@@ -775,8 +777,10 @@ class Sync:
                     drafts.append(op["dr"])
         if reads:
             fresh = list(set(reads) - self.store.read_set(reads))
+            # every one of them the user's (somewhere): carried on in this device's
+            # snapshots too, even the ones read here already by fedtail itself
+            self.store.mark_read(reads, shared=True)
             if fresh:
-                self.store.mark_read(fresh)
                 self.core.emit("read_changed", fresh)
         for root, state in threads:
             try:
