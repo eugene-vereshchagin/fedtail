@@ -74,7 +74,7 @@ class LoadTest(unittest.TestCase):
             return custom.infer_sources(Rule.parse({"name": "x", "any": [cond]}).any[0])
         self.assertEqual(feeds(source=["home", "list:3"]), {"home", "list:3"})
         self.assertEqual(feeds(me="mention"), {"mentions"})
-        self.assertEqual(feeds(me="in_my_thread"), {"subs"})
+        self.assertEqual(feeds(me="in_my_thread"), {"subs", "home"})  # followed or not (§10, 30.10)
         self.assertEqual(feeds(author="me"), {"mine"})
         self.assertEqual(feeds(author="local"), {"local"})
         self.assertEqual(feeds(state="bookmarked"), {"bookmarks"})

@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- A hung first copy no longer keeps fedtail from starting: its window silent for
+  `window.hung_copy_seconds` (20), it answers the new start "hung", is ended (asked, then
+  made to) and the new one takes its place.
+- A lane's `me = "in_my_thread"` works — it never matched (its set was never filled) — and
+  for threads not followed too: from the store, a post of mine above or a top I wrote
+  under.
 - A rare one, off by default (no button even): `people.watch_replies` — a profile's
   "Follow replies to all their posts": their latest posts' threads followed at once,
   each new post's as the round brings it — who answers a bot of yours.

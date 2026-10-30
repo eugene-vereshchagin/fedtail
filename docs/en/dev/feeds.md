@@ -337,8 +337,11 @@ Besides "setting up becomes programming":
 * Nested groups in `any`: yes — a condition's own `any` (an AND of ORs), §4.
 * Events and posts in one lane: allowed (`event = …` conditions); a lane counts only its posts
   as unread, events keep Activity's "seen".
-* `in_my_thread` without following the thread: no — only followed threads, it costs a
-  `/context` per thread.
+* `in_my_thread` without following the thread: yes (30.10) — from the store alone, no
+  request: up a post's stored parents to the top, a post of mine on the way or a top I
+  wrote under (`Core.in_my_thread`); a thread whose parents aren't stored stays unknown.
+  Such a condition reads the followed threads and Home. (The atom was never filled
+  before: `World.my_threads` stayed empty.)
 * The lane editor on the phone: a form over the same rules (≡ → Lanes), a condition as one
   line to type, checked on save — the same place in all four interfaces.
 

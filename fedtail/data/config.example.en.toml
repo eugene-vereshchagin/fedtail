@@ -176,6 +176,11 @@ text_markup = true
 # `--ui gtk`).
 frontend = "auto"
 
+# The program is started while it runs already, but that copy's window hasn't answered for
+# this many seconds (hung): the running copy is ended (asked to quit, then made to) and
+# this one starts in its place. 0 — never: the hung one stays, nothing opens.
+hung_copy_seconds = 20
+
 # How the window opens:
 #   "single" — one window: the lanes on the left, one lane on the right (or several side by
 #              side, in columns — open_columns below, and the ❯ button at the top left);

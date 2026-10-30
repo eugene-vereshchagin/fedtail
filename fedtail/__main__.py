@@ -288,6 +288,13 @@ def main(argv=None):
         print(f"fedtail: profile '{where.profile}' is already running — brought it to front.",
               file=sys.stderr)
         return 0
+    if instance.hung_pid:  # the running copy's window hangs (window.hung_copy_seconds)
+        from .core.instance import end_process
+        logging.getLogger("fedtail").warning(
+            "the running copy (pid %d) hangs — ended, starting anew", instance.hung_pid)
+        print(f"fedtail: the running '{where.profile}' (pid {instance.hung_pid}) hangs — "
+              "ending it and starting anew.", file=sys.stderr)
+        end_process(instance.hung_pid)
 
     from . import diag
     ui = args.ui or cfg["ui"]["frontend"]

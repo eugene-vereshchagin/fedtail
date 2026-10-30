@@ -78,7 +78,8 @@ def run(core, instance, argv):
             bridge.open_requested.emit(msg[5:].strip())
         else:
             bridge.raise_requested.emit()
-    instance.listen(message)
+    # a window hung this long: the next start ends this copy (window.hung_copy_seconds)
+    instance.listen(message, core.cfg["ui"].get("hung_copy_seconds", 20))
     url = getattr(core, "open_at_start", None)
     if url:
         win.open_when_ready(url)

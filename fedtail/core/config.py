@@ -15,6 +15,7 @@ DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
         "frontend": "auto",
+        "hung_copy_seconds": 20,  # a running copy's window hung this long: a start ends it
         "adwaita": "auto",
         "accessibility": "auto",
         "gtk_headerbar": "auto",
@@ -537,7 +538,8 @@ FILE_LAYOUT = (
                                "faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
      + _keys("feed", "emoji custom_emoji text_markup")),
-    ("window", _keys("ui", "frontend layout open_columns columns column_width default_columns "
+    ("window", _keys("ui", "frontend hung_copy_seconds "
+                           "layout open_columns columns column_width default_columns "
                            "message_percent "
                            "themes_by_layout roster_on_top roster_threads split_tabs "
                            "dock_commands sidebar_groups sidebar_width sidebar_footer "

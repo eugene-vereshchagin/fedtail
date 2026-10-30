@@ -774,6 +774,15 @@ def start_stats(cfg):
 
 
 # ---- freeze watchdog --------------------------------------------------------------------------
+def gui_stuck_for():
+    """Seconds since the window's thread last beat its watchdog; 0 without one (the
+    terminal, the web page: nothing known to be stuck)."""
+    dog = _state.get("watchdog")
+    if dog is None or dog._stop.is_set():
+        return 0.0
+    return max(0.0, time.monotonic() - dog.last)
+
+
 class Watchdog:
     """The GUI thread calls beat() every second (from a timer). If the beats stop
     for `seconds`, the stacks of all threads go to the log once — that is where
@@ -784,6 +793,7 @@ class Watchdog:
         self.last = time.monotonic()
         self.stuck_since = None
         self._stop = threading.Event()
+        _state["watchdog"] = self  # gui_stuck_for: the single instance asks it
 
     def beat(self):
         now = time.monotonic()
@@ -799,6 +809,8 @@ class Watchdog:
 
     def stop(self):
         self._stop.set()
+        if _state.get("watchdog") is self:
+            _state["watchdog"] = None
 
     def _run(self):
         while not self._stop.wait(1.0):

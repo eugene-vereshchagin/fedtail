@@ -724,10 +724,14 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             def __contains__(self, sid):
                 return core.followed_root(sid) is not None
 
+        class _MyThreads:  # me = "in_my_thread": a thread I wrote in, followed or not
+            def __contains__(self, sid):
+                return core.in_my_thread(sid)
+
         lc = self.cfg["lanes"]
         host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
         return atoms.World(me_id=self.me["id"] if self.me else "", my_host=host,
-                           subscribed=_Subscribed(),
+                           subscribed=_Subscribed(), my_threads=_MyThreads(),
                            following=self._following or set(),
                            followed_tags=getattr(self, "_followed_tag_names", None) or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),

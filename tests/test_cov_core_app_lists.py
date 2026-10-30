@@ -190,6 +190,29 @@ class WatchRepliesTest(CoreCase):
         self.assertFalse(view.relationship("B").result(timeout=T).watched_replies)
 
 
+class InMyThreadTest(CoreCase):
+    """30.10: me = "in_my_thread" never matched — World.my_threads was never filled.
+    Now from the store, followed or not: a post of mine above it, or a top I wrote
+    under (a sibling branch)."""
+
+    def test_above_beside_and_not(self):
+        c = self.connect()
+        self.w.add(status("080", BOB, minute=80, vis="public"), home=True)        # top
+        self.w.add(status("081", ME, "080", "B", minute=81, vis="public"), home=True)  # me
+        self.w.add(status("082", BOB, "081", "ME", minute=82, vis="public"), home=True)
+        self.w.add(status("083", BOB, "080", "B", minute=83, vis="public"), home=True)
+        self.w.add(status("090", BOB, minute=90, vis="public"), home=True)        # another
+        self.w.add(status("091", BOB, "090", "B", minute=91, vis="public"), home=True)
+        c.poll_once()
+        self.assertTrue(c.in_my_thread("082"))   # my post above it
+        self.assertTrue(c.in_my_thread("083"))   # a branch beside mine, the same top
+        self.assertTrue(c.in_my_thread("080"))   # the top itself
+        self.assertFalse(c.in_my_thread("091"))  # a thread I didn't write in
+        from fedtail.core import atoms
+        facts = atoms.post_facts(c.store.get_status("083"), c._world(), "home")
+        self.assertIn("in_my_thread", facts.me)
+
+
 class ChoicesTest(CoreCase):
     user = {"feed": {"remember_choices": True}}
 

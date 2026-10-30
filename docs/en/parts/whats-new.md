@@ -9,6 +9,7 @@
 - Formatting buttons
 - A comment is #post/N, as on Point
 - Mute a hashtag in one click
+- A hung copy doesn't stop a start
 
 **0.21.0:**
 

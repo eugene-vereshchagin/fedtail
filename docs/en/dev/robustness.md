@@ -32,7 +32,7 @@ product, not only the code.
 | Sleep and waking | the wait for the next round notices the computer slept (the wall clock went on, the monotonic one stood) and polls at once; the stream reconnects by itself | done in 0.20 |
 | The time or the zone changed | intervals are measured by the monotonic clock; posts' dates come in UTC and are shown in the zone of the moment they're drawn. A clock badly wrong breaks TLS checks — the connection error says so | there |
 | Several copies | one window a profile; different profiles run side by side. A second copy of the same profile brings up the first and exits | there |
-| How the single instance works; the first copy hung | a unix socket in the profile's folder (0600) or a Windows named pipe with a key from the profile's folder. A hung first copy isn't replaced: its listening thread answers, the window doesn't come. Ending the process cures it | the author's call |
+| How the single instance works; the first copy hung | a unix socket in the profile's folder (0600) or a Windows named pipe with a key from the profile's folder. A hung first copy is ended (30.10): it answers a second one "hung <pid>" when its window hasn't beaten its watchdog for `window.hung_copy_seconds` (20), and the start asks it to quit (SIGTERM), makes it after 5 s (SIGKILL) and takes its place; 0 — never. A copy of before 0.22 answers nothing: counted alive | done in 0.22 |
 | `kill -9` / End Task | no lock files; a stale socket is removed at the next start, a Windows pipe goes with its process. SQLite in WAL mode recovers by itself; the config and the login are written atomically | there |
 | Fast user switching | everything is in the user's home (`%APPDATA%`, `~/.local/share`); each user has a pipe and a key of their own, another's process can't reach the window | there |
 | Cyrillic, spaces in paths | paths are `pathlib`, calls without a shell; tests on Windows paths | there |
@@ -118,5 +118,4 @@ product, not only the code.
 | Auto-update | none (apt, a store, downloading by hand); a check for a new version with a hint in the menu |
 | NTLM/Kerberos proxies | document a go-between; add `requests-ntlm` |
 | The system's dark theme on the go | apply at once (Qt: `colorSchemeChanged`); keep it at start |
-| A hung first copy | the window answers with a timeout, and offers to end the old process |
 | The Windows certificate, the apt key | the secrets `WINDOWS_CERT_PFX`, `APT_GPG_KEY` |

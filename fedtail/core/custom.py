@@ -49,7 +49,8 @@ def infer_sources(cond):
         return set(s["source"])
     out = set()
     if s.get("me"):
-        out.add("subs" if s["me"] == {"in_my_thread"} else "mentions")
+        # a thread I wrote in: its followed checks, and Home — followed or not (§10)
+        out |= {"subs", "home"} if s["me"] == {"in_my_thread"} else {"mentions"}
     who = s.get("author", set())
     if "me" in who:
         out.add("mine")

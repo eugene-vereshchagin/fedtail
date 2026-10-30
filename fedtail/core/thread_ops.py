@@ -39,6 +39,50 @@ class ThreadsMixin:
 
     SUB_CHAIN = 40  # how far up a reply's stored parents are followed to find its thread
 
+    def in_my_thread(self, status_id):
+        """me = "in_my_thread": a post of a thread I wrote in — followed or not (feeds.md
+        §10, decided 30.10; the atom was never filled before). Up the stored parents to
+        the top: a post of mine on the way, or a top under which I wrote (my_roots).
+        The store only, no request: a thread whose parents aren't here stays unknown."""
+        me = (self.me or {}).get("id")
+        if not me:
+            return False
+        store, cur, top = self.store, status_id, status_id
+        for _ in range(self.SUB_CHAIN):
+            st = store.get_status(cur)
+            if not st:
+                break
+            if cur != status_id and (st.get("account") or {}).get("id") == me:
+                return True
+            top = cur
+            cur = st.get("in_reply_to_id")
+            if not cur:
+                break
+        return top in self._my_roots() or store.sub_root_of(status_id) in self._my_roots()
+
+    def _my_roots(self):
+        """The tops of the threads I wrote in, as the store has them (cached until a
+        post comes or goes)."""
+        key = getattr(self.store, "status_version", 0)
+        hit = self.__dict__.get("_my_roots_cache")
+        if hit and hit[0] == key:
+            return hit[1]
+        me = (self.me or {}).get("id")
+        roots = set()
+        for parent in (self.store.replied_to_by(me) if me else ()):
+            cur, top = parent, parent
+            for _ in range(self.SUB_CHAIN):
+                st = self.store.get_status(cur)
+                if not st:
+                    break
+                top = cur
+                cur = st.get("in_reply_to_id")
+                if not cur:
+                    break
+            roots.add(top)
+        self._my_roots_cache = (key, roots)
+        return roots
+
     def followed_root(self, status_id):
         """The followed thread a post is in, known at once: its own membership, else up
         its stored parents to a post of a followed thread — and then it is a member from

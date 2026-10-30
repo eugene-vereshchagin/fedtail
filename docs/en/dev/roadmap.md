@@ -37,9 +37,8 @@ built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
 
 ## Waiting for a decision
 
-- `feeds.md` §10: nested groups in `any`; `in_my_thread` without following.
 - The author's calls of `robustness.md`: the token's store, encrypting the database,
-  checking for a new version, NTLM proxies, the system's theme on the go, a hung first copy.
+  checking for a new version, NTLM proxies, the system's theme on the go.
 
 ## Loose ends
 

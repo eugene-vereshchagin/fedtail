@@ -91,7 +91,8 @@ def run(core, instance, argv):
 
         def message(msg):
             GLib.idle_add(lambda: (front.present(), GLib.SOURCE_REMOVE)[1])
-        instance.listen(message)
+        # a window hung this long: the next start ends this copy (window.hung_copy_seconds)
+        instance.listen(message, core.cfg["ui"].get("hung_copy_seconds", 20))
         front.present()
 
         def warm_menu():

@@ -240,6 +240,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Interface language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ✓ |   |   | ✓ |   |   | ✓ |   | ✓ |   |   |   |   |   |
 | `fedtail --check`: what the system lacks — and one apt line | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A hung copy doesn't stop a start | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Interfaces
 
@@ -251,4 +252,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **59** features of the 187 compared.
+Only in fedtail — **60** features of the 188 compared.

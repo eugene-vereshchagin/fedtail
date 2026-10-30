@@ -151,6 +151,39 @@ class InstanceTest(unittest.TestCase):
             first.close()  # twice is fine
             self.assertFalse(second.poke_existing())
 
+    @unittest.skipUnless(hasattr(socket, "AF_UNIX"), "a unix socket")
+    def test_a_hung_first_copy_says_so_and_is_ended(self):
+        """30.10: a first copy whose window hung answered the second, which then opened
+        nothing, ever. Its watchdog says it hangs: "hung <pid>", and the start ends it."""
+        import subprocess
+        import sys
+
+        from fedtail import diag
+        dog = diag.Watchdog(60)
+        self.addCleanup(dog.stop)
+        first = instance.SingleInstance(self.tmp / "instance.sock")
+        self.addCleanup(first.close)
+        got = []
+        first.listen(got.append, stuck_after=20)
+        second = instance.SingleInstance(self.tmp / "instance.sock")
+        self.assertTrue(second.poke_existing())  # alive: brought to front
+        self.assertIsNone(second.hung_pid)
+        dog.last -= 30  # its window: no beat for half a minute
+        self.assertFalse(second.poke_existing())
+        self.assertEqual(second.hung_pid, os.getpid())
+        time.sleep(0.1)
+        self.assertEqual(got, ["raise"])  # the hung one isn't asked to show itself
+        first.stuck_after = 0  # window.hung_copy_seconds = 0: never
+        self.assertTrue(second.poke_existing())
+        # ending: asked, then made to
+        p = subprocess.Popen([sys.executable, "-c",
+                              "import signal, time; signal.signal(signal.SIGTERM, "
+                              "signal.SIG_IGN); time.sleep(60)"])
+        self.addCleanup(p.kill)
+        time.sleep(0.3)
+        self.assertTrue(instance.end_process(p.pid, wait=0.5))
+        self.assertIsNotNone(p.wait(timeout=5))
+
     def _wrong_key(self, pipes):
         try:
             pipes.client(instance._pipe_name(str(self.tmp / "instance.sock")), "AF_PIPE",

@@ -391,3 +391,22 @@ others.en = "only in fedtail"
 clients = []
 details.ru = "Что обязательно, что нужно каждому интерфейсу и что даёт дополнительное (эмодзи-шрифт, WebP, проверка языка…) — есть ли, и готовая строка `sudo apt install …` для недостающего. При запуске без обязательного — та же строка вместо трейсбэка."
 details.en = "What is a must, what each interface needs and what the extras give (the emoji font, WebP, the language check…) — whether it's there, and a ready `sudo apt install …` line for what's missing. Started without a must-have — the same line instead of a traceback."
+
+[[feature]]
+id = "hung-copy"
+status = "has"
+android = "na"
+android_note.ru = "на телефоне одна копия — у системы"
+android_note.en = "on a phone the system keeps the one copy"
+since = "0.22.0"
+name.ru = "Зависшая копия не мешает запуску"
+name.en = "A hung copy doesn't stop a start"
+config = "`window.hung_copy_seconds`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "fedtail у профиля одна копия: второй запуск поднимает окно первой. Если окно первой не отвечает `window.hung_copy_seconds` секунд (20), новый запуск её завершает — сначала просьбой, потом силой — и встаёт на её место; раньше не открывалось ничего, пока процесс не убьёшь руками. 0 — не трогать зависшую."
+details.en = "A profile has one copy of fedtail: a second start raises the first one's window. When the first one's window hasn't answered for `window.hung_copy_seconds` seconds (20), the new start ends it — asked, then made to — and takes its place; before, nothing opened till the process was killed by hand. 0 — leave a hung one be."
+

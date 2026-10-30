@@ -688,6 +688,13 @@ class Store:
         with self.lock:
             self.db.execute("INSERT OR IGNORE INTO missing VALUES (?)", (sid,))
 
+    def replied_to_by(self, author_id):
+        """[parent id] of every stored reply by author_id: the threads they wrote in."""
+        with self._reading() as db:
+            return [r[0] for r in db.execute(
+                "SELECT DISTINCT reply_to FROM statuses WHERE author = ? AND reply_to IS NOT "
+                "NULL AND reply_to <> ''", (author_id,))]
+
     def replies_by(self, parent_ids, author_id):
         """{parent id: [replies by author, oldest first]}"""
         ids = list(parent_ids)
