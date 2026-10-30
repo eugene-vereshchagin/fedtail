@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.22.0 (in progress):**
 
 - A tag as its author writes it, as on Point
+- Following the replies to all of someone's posts
 - A draft's pictures travel with it
 - Sync: WebDAV spoken directly, the journal packed
 - The post under the mouse lit

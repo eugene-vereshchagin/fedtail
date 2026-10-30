@@ -535,6 +535,7 @@ class Relationship:
     note: str = ""                 # my private note on them
     languages: tuple[str, ...] | None = None  # only these of theirs come to Home (None: all)
     hidden_home: bool = False      # kept out of Home here, still followed (feed.home_hide)
+    watched_replies: bool = False  # every post's replies followed (people.watch_replies)
 
 
 # how deep a reply is drawn indented, in every interface: past it the tree goes on flat

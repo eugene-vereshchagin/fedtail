@@ -138,6 +138,7 @@ DEFAULTS = {
         "following_max": 1000,
         "search_limit": 20,
         "home_hide": False,
+        "watch_replies": False,  # a profile's "Follow replies to all their posts"
         "aliases": False,
         "nick_colors": False,      # "Name colour…" on a profile: their name in my colour
         "remote_posts": 20,
@@ -576,7 +577,7 @@ FILE_LAYOUT = (
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "
                              "follow_date_note forget_unfollowed following_max search_limit "
-                             "home_hide aliases "
+                             "home_hide watch_replies aliases "
                              "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
                           "links_in_player "

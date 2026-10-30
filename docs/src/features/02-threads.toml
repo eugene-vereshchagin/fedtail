@@ -186,3 +186,19 @@ others.en = "Point, Juick (not fediverse clients)"
 clients = []
 details.ru = "Одна настройка для всех карточек: `\"post\"` — тред встаёт на посте, `\"first_unread\"` — на первом непрочитанном комментарии (нет такого — на посте). Лента из правил может решить за себя («Посты с комментами» — к первому новому); строка «🔔 N новых в треде» всегда ведёт к первому новому. Во всех интерфейсах и на телефоне."
 details.en = "One setting for every card: `\"post\"` — the thread stands at the post, `\"first_unread\"` — at the first unread comment (none — at the post). A lane of rules may decide for itself (\"Commented posts\" — at the first new one); \"🔔 N new in the thread\" always goes to the first new one. Every interface and the phone."
+
+[[feature]]
+id = "watch-replies"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Следить за ответами на все посты человека"
+name.en = "Following the replies to all of someone's posts"
+config = "`people.watch_replies`"
+api.ru = "своё (его посты и `/context` их тредов)"
+api.en = "own (their posts and their threads' `/context`)"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Редкое: видеть, кто отвечает какому-то аккаунту — например своему боту. С `people.watch_replies = true` в профиле появляется «Следить за ответами на все его посты»: треды его последних 10 постов сразу в подписках, каждого нового — как только круг его принесёт (его посты спрашиваются каждый круг). Ответы идут в ленты подписанных тредов — «Комментарии», «Подписки». Выключено по умолчанию — нет и кнопки."
+details.en = "A rare one: seeing who answers some account — a bot of yours, say. With `people.watch_replies = true` a profile has \"Follow replies to all their posts\": their latest 10 posts' threads followed at once, each new one's as soon as a round brings it (their posts are asked every round). The replies go to the lanes of followed threads — Comments, Subscriptions. Off by default — not even the button."

@@ -228,6 +228,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 | Comments: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` and `threads_shown` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
+| Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
 
 <details><summary>In detail</summary>
 
@@ -252,6 +253,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Comments: a thread a card, opened at the first new comment.** Your posts, threads you commented in (`subs.auto`) and those followed by hand: a card a thread, under it "14 comments · 1 new · who: “…”". A click opens the thread right at the first new comment. In fedtail's set (since 0.22) every such thread, those with something new together where reading starts, past the "new below" line (newest first — over the "read below" line): `threads_shown = "all"`. In the extra set, as on Point, only the threads with news: one read stays while you're in the lane and goes when you come back. Shown by default in fedtail's set, turned on in the lane editor for the others; the same thing — `view = "threads"` on a lane of rules of your own.
 
 **Where a thread opens: at the post or at the first new comment.** One setting for every card: `"post"` — the thread stands at the post, `"first_unread"` — at the first unread comment (none — at the post). A lane of rules may decide for itself ("Commented posts" — at the first new one); "🔔 N new in the thread" always goes to the first new one. Every interface and the phone.
+
+**Following the replies to all of someone's posts.** A rare one: seeing who answers some account — a bot of yours, say. With `people.watch_replies = true` a profile has "Follow replies to all their posts": their latest 10 posts' threads followed at once, each new one's as soon as a round brings it (their posts are asked every round). The replies go to the lanes of followed threads — Comments, Subscriptions. Off by default — not even the button.
 
 </details>
 

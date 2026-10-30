@@ -292,6 +292,58 @@ class PeopleMixin:
             return on
         return self.submit(job)
 
+    def reply_watched(self):
+        """Accounts whose every post's replies are followed (people.watch_replies)."""
+        return set(self.store.kv_get("people.reply_watch", []) or ())
+
+    WATCH_BACK = 10  # their latest posts followed at once when the watch is turned on
+
+    def watch_replies(self, acc_id, on=True):
+        """Follow the replies to all of someone's posts (on) or stop: their latest
+        WATCH_BACK posts' threads followed now, and each new post's as it comes (the
+        round asks their posts, account:<id>/posts) — who answers a bot of one's own
+        (30.10). The threads stay followed when it's off; new ones aren't. A Future."""
+        def job():
+            now = self.reply_watched()
+            (now.add if on else now.discard)(str(acc_id))
+            self.store.kv_set("people.reply_watch", sorted(now))
+            since = dict(self.store.kv_get("people.reply_watch_since", {}) or {})
+            if on:  # the round follows their posts from now: not the first page it reads
+                from .store import now_iso
+                since[str(acc_id)] = now_iso()
+            else:
+                since.pop(str(acc_id), None)
+            self.store.kv_set("people.reply_watch_since", since)
+            if on:
+                try:
+                    got = self.api.account_statuses(str(acc_id), limit=self.WATCH_BACK,
+                                                    exclude_replies=True,
+                                                    exclude_reblogs=True) or []
+                except Exception as e:  # noqa: BLE001 — the round brings their new ones
+                    log.info("watch replies %s: %s", acc_id, e)
+                    got = []
+                self._watch_threads(got)
+            return on
+        return self.submit(job)
+
+    def _watch_threads(self, statuses, since=""):
+        """The threads of these posts followed (people.watch_replies), each once; since:
+        only those posted after it (the round's first page of them is old news)."""
+        from . import subs
+        done = 0
+        for st in statuses:
+            if not st.get("id") or st.get("reblog") or st.get("in_reply_to_id") or \
+                    (st.get("created_at") or "") < since or self.subscribed(st):
+                continue
+            try:
+                if subs.subscribe(self.store, self.api, st, auto=True):
+                    done += 1
+            except Exception as e:  # noqa: BLE001 — that one next time
+                log.info("watch replies: %s: %s", st.get("id"), e)
+        if done:
+            self.emit("subs_changed", None)
+        return done
+
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
         (in Likes & boosts, with activity.types including "status")."""

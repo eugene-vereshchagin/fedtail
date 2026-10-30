@@ -156,6 +156,40 @@ class FollowForActsTest(CoreCase):
             self.assertTrue(c.subscribed(get(sid) or {"id": sid}), sid)
 
 
+class WatchRepliesTest(CoreCase):
+    """30.10, the author: "follow replies to all posts of someone" — who answers a bot
+    of his. Rare: off by default, not even the button; on — the latest posts' threads
+    followed, and each new post's as the round brings it."""
+
+    def test_the_button_the_latest_and_the_new(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common import profile as prof
+        from fedtail.model import Account, Relationship
+        c = self.connect()
+        self.w.add(status("070", BOB, minute=70, vis="public"), home=True)
+        self.w.add(status("071", BOB, "070", "B", minute=71, vis="public"), home=True)
+        c.poll_once()
+        acc = Account(ref=None, handle="bob", username="bob")
+        keys = [a.key for a in prof.actions(acc, Relationship(), False, c.cfg,
+                                            lambda _f: True)]
+        self.assertNotIn("watch_replies", keys)  # off: no button at all
+        c.cfg["feed"]["watch_replies"] = True
+        keys = [a.key for a in prof.actions(acc, Relationship(), False, c.cfg,
+                                            lambda _f: True)]
+        self.assertIn("watch_replies", keys)
+        view = View(c)
+        self.assertTrue(view.watch_replies("B", True).result(timeout=T))
+        self.assertTrue(c.subscribed(c.store.get_status("070")))  # the latest: at once
+        self.assertTrue(view.relationship("B").result(timeout=T).watched_replies)
+        later = status("079", BOB, minute=90, vis="public")
+        later["created_at"] = "2099-12-31T00:00:00.000Z"  # after the watch began
+        self.w.add(later, home=True)
+        c.poll_once()
+        self.assertTrue(c.subscribed(c.store.get_status("079")))  # new: as it comes
+        view.watch_replies("B", False).result(timeout=T)
+        self.assertFalse(view.relationship("B").result(timeout=T).watched_replies)
+
+
 class ChoicesTest(CoreCase):
     user = {"feed": {"remember_choices": True}}
 

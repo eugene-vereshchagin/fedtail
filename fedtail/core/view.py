@@ -506,12 +506,14 @@ class View:
 
     def _with_home(self, acc_id, rel):
         """The server's Relationship, plus what only this program knows: taken out of
-        Home by hand (feed.home_hide)."""
+        Home by hand (feed.home_hide), their posts' replies followed (watch_replies)."""
         hidden = getattr(self._core, "hidden_home", None)
         if rel is None or hidden is None:
             return rel
         from dataclasses import replace
-        return replace(rel, hidden_home=str(acc_id) in hidden())
+        watched = getattr(self._core, "reply_watched", None)
+        return replace(rel, hidden_home=str(acc_id) in hidden(),
+                       watched_replies=bool(watched and str(acc_id) in watched()))
 
     def relationship(self, acc_id):
         return _then(self._core.relationship(acc_id),

@@ -1361,6 +1361,10 @@ _STRINGS = {
         "moved_open": "Открыть", "moved_follow": "Подписаться там",
         "boosts_hide": "без его бустов", "boosts_show": "с его бустами",
         "home_hide_on": "Убрать из Ленты", "home_hide_off": "Вернуть в Ленту",
+        "watch_replies_on": "Следить за ответами на все его посты",
+        "watch_replies_off": "Не следить за ответами на его посты",
+        "watch_replies_tip": "Треды его последних постов и каждого нового — в подписки: "
+                             "видно, кто ему отвечает (people.watch_replies)",
         "alias_edit": "Своё имя…", "alias_title": "Как тебе звать {acct}",
         "alias_tip": "Имя, которое ты видишь вместо его собственного — только у тебя; пусто — "
                      "его имя",
@@ -3178,6 +3182,10 @@ _STRINGS = {
         "moved_open": "Open", "moved_follow": "Follow there",
         "boosts_hide": "hide their boosts", "boosts_show": "show their boosts",
         "home_hide_on": "Not in Home", "home_hide_off": "Back to Home",
+        "watch_replies_on": "Follow replies to all their posts",
+        "watch_replies_off": "Stop following replies to their posts",
+        "watch_replies_tip": "Their latest posts' threads and every new one's, followed: "
+                             "you see who answers them (people.watch_replies)",
         "alias_edit": "My name for them…", "alias_title": "What you call {acct}",
         "alias_tip": "A name you see instead of theirs — yours only; empty — their own",
         "alias_saved": "Name saved",

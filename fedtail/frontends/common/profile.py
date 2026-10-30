@@ -84,6 +84,9 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
             hidden = rel.hidden_home
             out.append(Act("home_hide", "🏠 " + (_("home_hide_off") if hidden
                                                  else _("home_hide_on")), _("home_hide_tip")))
+        if cfg["feed"].get("watch_replies"):  # rare: who answers someone (a bot of mine)
+            out.append(Act("watch_replies", _("watch_replies_off") if rel.watched_replies
+                           else _("watch_replies_on"), _("watch_replies_tip")))
         out.append(Act("mention", _("mention")))
         out.append(Act("mute", _("unmute") if rel.muting else _("mute")))
         out.append(Act("block", _("unblock") if rel.blocking else _("block")))
@@ -152,6 +155,9 @@ def do(key, acc, rel, view, host, changed):
     elif key == "home_hide":  # out of Home, still followed (feed.home_hide)
         on = not rel.hidden_home
         host.call(view.hide_from_home(acc.id, on), after(hidden_home=on), host.error)
+    elif key == "watch_replies":  # every post's replies followed (people.watch_replies)
+        on = not rel.watched_replies
+        host.call(view.watch_replies(acc.id, on), after(watched_replies=on), host.error)
     elif key == "mention":
         host.compose(text=f"@{acc.handle} ")
     elif key == "mute":

@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- A rare one, off by default (no button even): `people.watch_replies` — a profile's
+  "Follow replies to all their posts": their latest posts' threads followed at once,
+  each new post's as the round brings it — who answers a bot of yours.
 - A link in a post to a video or sound file (…/clip.mp4 — what a server leaves when it
   didn't take a big attachment) plays in the own player, as an attachment: Qt, GTK, the
   terminal's mpv (`media.links_in_player`); it went to the browser.

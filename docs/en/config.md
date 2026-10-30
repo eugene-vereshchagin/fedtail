@@ -262,6 +262,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `people.following_max` | `1000` | How many of whom you follow fedtail reads (for the mutuals and the rules' "followed"). Follow more — raise it. |
 | `people.search_limit` | `20` | Search: this many results of each kind (people, posts, tags). |
 | `people.home_hide` | `false` | On the profile of someone you follow — "Not in Home": their posts stay out of Home while the follow, lists and the bell stay. In this program only. |
+| `people.watch_replies` | `false` | A rare one, for watching who answers an account (a bot of yours): on a profile, "Follow replies to all their posts" — their latest 10 posts' threads followed at once, and each new post's as it comes (their posts asked every round: a request each); the replies come into the lanes of followed threads (Comments, Subscriptions). Off — not even the button. |
 | `people.aliases` | `false` | On a profile — "My name for them…": a name you see instead of theirs (yours only; with sync.people — on your other devices too). |
 | `people.nick_colors` | `false` | On a profile — "Name colour…": their name on cards in your colour (a name from the list or #rrggbb; yours only; with sync.people — on your other devices too). |
 

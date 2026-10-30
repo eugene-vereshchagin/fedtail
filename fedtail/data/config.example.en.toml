@@ -862,6 +862,12 @@ search_limit = 20
 # the follow, lists and the bell stay. In this program only.
 home_hide = false
 
+# A rare one, for watching who answers an account (a bot of yours): on a profile, "Follow
+# replies to all their posts" — their latest 10 posts' threads followed at once, and each
+# new post's as it comes (their posts asked every round: a request each); the replies come
+# into the lanes of followed threads (Comments, Subscriptions). Off — not even the button.
+watch_replies = false
+
 # On a profile — "My name for them…": a name you see instead of theirs (yours only;
 # with sync.people — on your other devices too).
 aliases = false

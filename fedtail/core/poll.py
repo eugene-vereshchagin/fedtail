@@ -521,8 +521,12 @@ class PollMixin:
                           if n in self.lane_by_name]
             open_sources = {self.lane_by_name[n].source for n in open_names} | \
                 {f for n in open_names for f in self.lane_by_name[n].feeds}
+            # people.watch_replies: their posts asked each round, each one's thread followed
+            watched = sorted(self.reply_watched()) if self.cfg["feed"].get(
+                "watch_replies") and self._follows_threads() else []
+            watch_sources = [f"account:{a}/posts" for a in watched]
             needed = list(dict.fromkeys(lanes.sources_needed(self.lanes) +
-                                        self._waiting_sources()))
+                                        self._waiting_sources() + watch_sources))
             for name in needed:
                 if name not in self.sources and self.api is not None:
                     # a stream named by a lane's rule (account:, link:, quotes:, remote:)
@@ -572,6 +576,11 @@ class PollMixin:
                 except Exception as e:  # network down etc.
                     self._round_error(name, e)
 
+            since = self.store.kv_get("people.reply_watch_since", {}) or {}
+            for acc, name in zip(watched, watch_sources, strict=True):  # their new posts: followed
+                if new_by_source.get(name):
+                    self._watch_threads([self.store.get_status(i) or {}
+                                         for i in new_by_source[name]], since.get(acc, ""))
             self._step("sources")
             # other servers' public lanes and tags (lanes.federated_extra, tags_extra)
             fed_open = "federated" in open_sources
