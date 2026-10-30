@@ -159,7 +159,7 @@ class Custom:
         if not self.event_conds:
             return False
         world = world or atoms.World()
-        facts = atoms.event_facts(notification, world)
+        facts = atoms.event_facts(notification, world, self.needs)
         if not facts.event or any(c.matches(facts, world.now) for c in self.rule.none):
             return False
         hits = [i for i, c in enumerate(self.rule.any)

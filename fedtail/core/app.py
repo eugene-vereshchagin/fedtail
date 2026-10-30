@@ -206,6 +206,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def __init__(self, cfg, paths, api_class=None):
         self.cfg = cfg
         self.paths = paths
+        langs.configure(cfg["lanes"].get("detect_among", "auto"))  # before any guess
         # what this account's server speaks (docs/en/dev/protocols.md): the client, its errors,
         # its live stream, its objects → fedtail.model
         self.proto = proto.PROTO  # the protocol this core speaks (core/proto.py)

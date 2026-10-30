@@ -21,8 +21,9 @@ ROOT = Path(__file__).resolve().parent.parent
 RUN = bool(os.environ.get("FEDTAIL_BUDGETS"))
 
 # what the bench says the scenario holds (USS, MB) and takes (ms), at most
-# a new lane's fill linking stored posts instead of writing them anew (29.10): 90 → 75
-CORE = {"memory": {"after.uss_mb": 75},
+# a new lane's fill linking stored posts instead of writing them anew (29.10): 90 → 75;
+# langdetect loaded only when a rule or the filter asks (52 MB at 30.10): 75 → 65
+CORE = {"memory": {"after.uss_mb": 65},
         "time": {"open every lane (19)": 2000, "lanes' rules applied anew (all of them)": 2500}}
 # step 5 (only the cards near the screen: 29.10) took these down from 480 / 340 MB,
 # 6000 / 25 000 ms and 3000 widgets

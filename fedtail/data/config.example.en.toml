@@ -428,6 +428,11 @@ detect_language = "untagged"
 # The shortest post (in words) the guess by words is tried on: shorter ones it gets wrong.
 detect_min_words = 12
 
+# Which languages python3-langdetect guesses among: "auto" — Latin and Cyrillic ones (only
+# their texts reach the guess by words, the others are told by their script) — some 11 MB
+# of memory; "all" — all of its 55, some 60 MB, the same answers.
+detect_among = "auto"
+
 # Wider than your server knows. Servers whose public lane (their own people's posts) also comes
 # into Federated while it's open, and servers whose tag lanes come into your lanes of tags
 # (a lane of #linux takes #linux from them too): read without an account, each new post fetched

@@ -154,6 +154,7 @@ DEFAULTS = {
         "languages_in": ["federated", "local", "tags"],
         "detect_language": "untagged",
         "detect_min_words": 12,
+        "detect_among": "auto",   # langdetect's profiles: Latin and Cyrillic, or "all"
         "tag_groups": [],
         "custom": [],
         "unsorted": True,
@@ -396,6 +397,7 @@ CHOICES = {
     ("tui", "sound"): {"bell", "scheme", "off"},
     ("sound", "enabled"): {"auto", "on", "off"},
     ("lanes", "detect_language"): {"off", "untagged", "always"},
+    ("lanes", "detect_among"): {"auto", "all"},
     ("lanes", "preset"): set(presets.names()),
 }
 # the lanes some set has (fedtail/data/presets.toml), and Unsorted
@@ -488,7 +490,7 @@ FILE_LAYOUT = (
                            "desktop_entry")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
                              "custom tag_groups languages languages_in detect_language "
-                             "detect_min_words federated_extra tags_extra bubble "
+                             "detect_min_words detect_among federated_extra tags_extra bubble "
                              "extra_minutes tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "

@@ -2,6 +2,11 @@
 
 ## 0.22.0 — in progress
 
+- Lighter core: python3-langdetect is loaded only when a guess is wanted — each Activity row
+  guessed its post's language for rules that never asked, loading all of it (the core
+  alone 110 → 52 MB). When it is wanted, only its Latin and Cyrillic profiles, as 4-byte
+  floats: 60 → 11 MB, the same answers (`lanes.detect_among = "all"` — every one).
+  Telugu, Kannada, Malayalam, Gujarati and Punjabi are told by their script now.
 - Web page: its own errors (a script's, an unhandled promise) go into fedtail's log as
   `web page error:` lines with their stack — they stayed in a browser's console nobody
   looks at. Addresses lose their query, at most 20 a load.

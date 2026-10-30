@@ -229,6 +229,69 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(cfg["lanes"]["languages_in"], ["federated", "lists", "home"])
 
 
+@unittest.skipUnless(__import__("importlib").util.find_spec("langdetect"),
+                     "python3-langdetect isn't installed")
+class ProfilesTest(unittest.TestCase):
+    """langdetect's profiles as fedtail loads them: the Latin and Cyrillic ones only,
+    their numbers 4-byte floats — 60 MB → 11 — and the same answers as its own loading."""
+
+    TEXTS = {
+        "en": "The weather in the city was cold this morning, but the market was full of people.",
+        "de": "Das Wetter in der Stadt war heute Morgen kalt, aber der Markt war voller Menschen.",
+        "pl": "Pogoda w mieście była dziś rano zimna, ale targ był pełen ludzi kupujących chleb.",
+        "uk": "Погода в місті сьогодні вранці була холодною, але ринок був повний людей.",
+        "tr": "Bu sabah şehirde hava soğuktu ama pazar ekmek alan insanlarla doluydu.",
+    }
+
+    def setUp(self):
+        from langdetect import detector_factory
+        self.df = detector_factory
+        saved = (langs._detector, langs._among, detector_factory._factory)
+
+        def back():
+            langs._detector, langs._among, detector_factory._factory = saved
+            langs._cache.clear()
+        self.addCleanup(back)
+        langs._detector, detector_factory._factory = None, None
+
+    def answers(self):
+        from langdetect import detect_langs
+        return {k: detect_langs(t)[0].lang for k, t in self.TEXTS.items()}
+
+    def test_latin_and_cyrillic_as_floats_answer_the_same(self):
+        langs._among = "auto"
+        langs._load()
+        f = self.df._factory
+        self.assertEqual(len(f.langlist), 35)
+        self.assertFalse({"ja", "zh-cn", "ar", "hi", "th"} & set(f.langlist))
+        self.assertEqual(next(iter(f.word_lang_prob_map.values())).typecode, "f")
+        ours = self.answers()
+        self.df._factory = None
+        self.df.init_factory()  # langdetect's own: all 55, lists of floats
+        self.assertEqual(self.answers(), ours)
+        self.assertEqual(ours, {k: k for k in self.TEXTS})
+
+    def test_all_of_them_when_asked(self):
+        langs.configure("all")
+        langs._load()
+        self.assertEqual(len(self.df._factory.langlist), 55)
+        langs.configure("auto")  # a change drops what was loaded: the next guess loads
+        self.assertIsNone(langs._detector)
+        self.assertIsNone(self.df._factory)
+
+    def test_an_event_doesnt_guess_unless_its_rule_asks(self):
+        """Each Activity row worked out every atom of its post, the language too: langdetect
+        loaded (57 MB) with no languages filter and no rule asking (30.10)."""
+        from fedtail.core import atoms
+        st = {"id": "1", "content": "<p>" + LONG_DE + "</p>", "account": {"id": "B"},
+              "language": None, "created_at": "2026-10-30T00:00:00Z"}
+        n = {"type": "favourite", "status": st, "account": {"id": "B"}}
+        world = atoms.World(detect="untagged")
+        atoms.event_facts(n, world, needs={"event"})
+        self.assertIsNone(langs._detector)
+        self.assertIn("de", atoms.event_facts(n, world, needs={"lang"}).lang)
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -26,6 +26,8 @@ _SCRIPTS = [
     (0xAC00, 0xD7AF, "ko"), (0x1100, 0x11FF, "ko"), (0x3130, 0x318F, "ko"),
     (0x3040, 0x30FF, "ja"),  # kana: Japanese even among Chinese characters
     (0x4E00, 0x9FFF, "zh"), (0x3400, 0x4DBF, "zh"),
+    (0x0A00, 0x0A7F, "pa"), (0x0A80, 0x0AFF, "gu"), (0x0C00, 0x0C7F, "te"),
+    (0x0C80, 0x0CFF, "kn"), (0x0D00, 0x0D7F, "ml"),
 ]
 _CYRILLIC = (0x0400, 0x04FF)
 _UK, _BE = set("іїєґ"), set("ў")
@@ -39,6 +41,30 @@ MIN_PROBABILITY = 0.8  # what langdetect must be sure of
 _cache = {}
 _CACHE_MAX = 20000
 _detector = None       # langdetect's detect_langs, or False when it isn't installed
+# langdetect's profiles of languages its guess is never asked about: their script tells them
+# above (Devanagari is "hi", Arabic letters "ar" — as before), so only Latin and Cyrillic
+# texts reach it. Not loading these 20 of its 55 is two thirds of its memory (the CJK ones
+# have the most n-grams) and changes no answer.
+_BY_SCRIPT = {"ar", "fa", "ur", "he", "hi", "mr", "ne", "bn", "ta", "te", "kn", "ml", "gu",
+              "pa", "th", "el", "ja", "ko", "zh-cn", "zh-tw"}
+_among = "auto"        # lanes.detect_among: "auto" — those above left out; "all" — every one
+
+
+def configure(among="auto"):
+    """lanes.detect_among, before the first guess (Core does it as it starts); a change
+    after one loads the profiles anew at the next."""
+    global _among, _detector
+    among = among if among in ("auto", "all") else "auto"
+    if among != _among:
+        _among = among
+        if _detector:
+            _detector = None
+            _cache.clear()
+            try:
+                from langdetect import detector_factory
+                detector_factory._factory = None
+            except ImportError:
+                pass
 
 
 def base(code):
@@ -97,7 +123,43 @@ def _load():
             _detector = detect_langs
         except ImportError:
             _detector = False
+        else:
+            _load_profiles()
     return _detector
+
+
+def _load_profiles():
+    """langdetect's profiles read the way its DetectorFactory.load_profile reads them —
+    but only the languages it is asked about (_BY_SCRIPT left out, unless "all"), and each
+    n-gram's probabilities as an array of 4-byte floats, not a list of Python floats: 60 MB
+    → 11 (30.10). Its internals unlike these (another version): its own loading, as is."""
+    import json
+    import os
+    from array import array
+    try:
+        from langdetect import detector_factory as df
+        from langdetect.utils.lang_profile import LangProfile
+        if df._factory is not None:
+            return
+        files = [f for f in os.listdir(df.PROFILES_DIRECTORY) if not f.startswith(".")
+                 and (_among == "all" or f not in _BY_SCRIPT)]
+        factory = df.DetectorFactory()
+        size, table = len(files), {}
+        for name in files:
+            with open(os.path.join(df.PROFILES_DIRECTORY, name), encoding="utf-8") as f:
+                profile = LangProfile(**json.load(f))
+            index = len(factory.langlist)
+            factory.langlist.append(profile.name)
+            for word, count in profile.freq.items():
+                probs = table.get(word)
+                if probs is None:
+                    probs = table[word] = array("f", bytes(4 * size))
+                if 1 <= len(word) <= 3:
+                    probs[index] = count / profile.n_words[len(word) - 1]
+        factory.word_lang_prob_map = table
+        df._factory = factory
+    except (ImportError, AttributeError, OSError, ValueError, TypeError):
+        return
 
 
 def available():

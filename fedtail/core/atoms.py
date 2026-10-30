@@ -461,13 +461,16 @@ def _state_atoms(f, st, wrapper, world, author_id):
     if sid in world.deleted:
         f.state.add("deleted")
 
-def event_facts(notification, world=None):
+def event_facts(notification, world=None, needs=None):
     """The atoms of an event (a notification, or one fedtail derived: {"type": "unfollow",
-    "account": …}): the event's word, who did it, and the post it is about, if any."""
+    "account": …}): the event's word, who did it, and the post it is about, if any.
+    needs: the axes the rule asks about, as post_facts takes them — every event's post had
+    all of its atoms worked out, its language guessed too (langdetect loaded, 57 MB, for a
+    rule that never asked: 30.10)."""
     world = world or World()
     now = world.now or datetime.now(UTC)
     st = notification.get("status")
-    f = post_facts(st, world) if st else Facts()
+    f = post_facts(st, world, None, needs) if st else Facts()
     f.kind = set()  # the event isn't a post: its post's kind stays in target
     if st:
         f.target = _target(real(st), world)

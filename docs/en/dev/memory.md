@@ -193,6 +193,14 @@ So the order of the plan holds for the core, but the window's weight is in the c
   for 2962 cards. The request is served when the card is built, before the watcher is
   on; the second look then finds the height cached (the median measure 2.1 → 0.9 ms,
   the measures from the event loop 7028 → 3878).
+* **langdetect** (`core/langs.py`, `core/atoms.py`, 30.10). The core alone at 2000 posts
+  was 110 MB on this machine, 57 of them langdetect's 55 profiles — a list of 55 Python
+  floats for each of 87 000 n-grams. Loaded with no languages filter and no rule asking:
+  each Activity row worked out every atom of its post, its language guessed too
+  (`event_facts` takes the rule's needs now) — 110 → 52 MB. When a guess is needed, only
+  the Latin and Cyrillic profiles are read (the other scripts are told by their letters;
+  `lanes.detect_among = "all"` — every one), as 4-byte floats: 60 → 11 MB, the same
+  answers. The core's budget 75 → 65 MB.
 * **A new lane's fill** (`store.link_items`, `core/custom.py`, 29.10). Where the core alone
   was heavy: a free lane (and Unsorted) takes its feeds' posts, stored already, and wrote
   them back through `put_items` — each one serialised anew, its stored text read in to

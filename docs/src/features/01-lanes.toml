@@ -549,14 +549,14 @@ android = "has"
 since = "0.21.0"
 name.ru = "Только языки, которые читаешь"
 name.en = "Only the languages you read"
-config = "`lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words`"
+config = "`lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words`, `lanes.detect_among`"
 api.ru = "поле `language` поста; своя догадка"
 api.en = "the post's `language` field; our own guess"
 others.ru = "Mastodon — по метке автора, в настройках сервера"
 others.en = "Mastodon — by the author's tag, in the server's settings"
 clients = ["Mastodon web"]
-details.ru = "Посты на языках не из `lanes.languages` уходят из Федерации, Локальной и лент тегов (`lanes.languages_in`; Лента — нет: подписки читаешь целиком). Если автор язык не указал или указал неправильно, fedtail угадывает сам: письменность выдаёт китайский, японский, корейский, арабский, грузинский, кириллицу (украинский и белорусский — по своим буквам) на любой длине; латиницу — python3-langdetect, если он есть, на постах от `lanes.detect_min_words` слов. Пост, язык которого не понять, остаётся. Это не точная раскладка, а защита от потока на чужих языках."
-details.en = "Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read."
+details.ru = "Посты на языках не из `lanes.languages` уходят из Федерации, Локальной и лент тегов (`lanes.languages_in`; Лента — нет: подписки читаешь целиком). Если автор язык не указал или указал неправильно, fedtail угадывает сам: письменность выдаёт китайский, японский, корейский, арабский, грузинский, кириллицу (украинский и белорусский — по своим буквам) на любой длине; латиницу — python3-langdetect, если он есть, на постах от `lanes.detect_min_words` слов; его словари грузятся, только когда догадка нужна, и только латинские и кириллические (`lanes.detect_among`, около 11 МБ вместо 60, с 0.22.0). Пост, язык которого не понять, остаётся. Это не точная раскладка, а защита от потока на чужих языках."
+details.en = "Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more; its dictionaries are loaded only when a guess is needed, and only the Latin and Cyrillic ones (`lanes.detect_among`, some 11 MB instead of 60, since 0.22.0). A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read."
 
 [[feature]]
 id = "lane-presets"
