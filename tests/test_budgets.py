@@ -11,6 +11,7 @@ without a reason in memory.md."""
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -33,6 +34,34 @@ QT = {"memory": {"after.uss_mb": 250, "after_malloc_trim.uss_mb": 240},
       "time": {"Qt window up, Home drawn": 2500, "open every lane (19)": 8000,
                "Home scrolled through 1000 posts": 1500},
       "counts": {"qt.widgets": 1300, "qt.images_mb": 66}}
+
+
+# the GTK window (tools/gtk_bench.py, single layout, 2000 posts): a turn of its loop at
+# most this long on any step — the freezes a reader feels — and these steps this long at
+# most (30.10: the worst turn 136 ms at the start, the lanes 25 ms, a theme 1.0 s)
+GTK = {"worst_ms": 250,
+       "time": {"start: window, connected": 2500, "open lane federated": 500,
+                "open lane local": 500, "open lane bots": 500, "try theme nord": 2500}}
+STEP = re.compile(r"^\s+(.+?)\s+(\d+) ms\s+worst\s+(\d+) ms", re.M)
+
+
+def gtk_bench():
+    """gtk_bench.py's steps: [(name, ms, worst ms)], on a screen of its own (xvfb)."""
+    env = {k: v for k, v in os.environ.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY")}
+    out = subprocess.run(["xvfb-run", "-a", sys.executable, str(ROOT / "tools" / "gtk_bench.py"),
+                          "--layout", "single", "--theme", "system", "--posts", "2000"],
+                         check=True, timeout=1500, env=env, capture_output=True, text=True)
+    return [(m[1].strip(), int(m[2]), int(m[3])) for m in STEP.finditer(out.stdout)]
+
+
+def gtk_over(steps, budget):
+    """[what is over its ceiling, in words] — a step's worst turn, a step's time."""
+    bad = [f"{name}: a turn of {worst} ms, the ceiling {budget['worst_ms']}"
+           for name, _ms, worst in steps if worst > budget["worst_ms"]]
+    times = {name: ms for name, ms, _w in steps}
+    bad += [f"time {name}: {times[name]} ms, the ceiling {most}"
+            for name, most in budget["time"].items() if times.get(name, 0) > most]
+    return bad
 
 
 def bench(*args):
@@ -75,6 +104,13 @@ class OverTest(unittest.TestCase):
         self.assertEqual(over(r, {"counts": {"qt.widgets": 4}}), ["qt.widgets: 5, the ceiling 4"])
         self.assertEqual(over(r, {"time": {"open every lane (19)": 5}}),
                          ["time open every lane (19): 10 ms, the ceiling 5"])
+        steps = [("start: window, connected", 300, 120), ("scroll", 900, 400)]
+        self.assertEqual(gtk_over(steps, {"worst_ms": 250, "time": {"start: window, "
+                                                                    "connected": 200}}),
+                         ["scroll: a turn of 400 ms, the ceiling 250",
+                          "time start: window, connected: 300 ms, the ceiling 200"])
+        self.assertEqual(STEP.findall("  open lane bots    23 ms   worst     13 ms   slow"),
+                         [("open lane bots", "23", "13")])
 
 
 @unittest.skipUnless(RUN, "slow: set FEDTAIL_BUDGETS=1")
@@ -88,6 +124,21 @@ class BudgetTest(unittest.TestCase):
         except ImportError:
             self.skipTest("no PySide6")
         self.assertEqual(over(bench("--ui", "qt"), QT), [])
+
+    def test_the_gtk_window(self):
+        """GTK as fast as Qt, kept so: no step's turn a freeze, the start and the lanes
+        quick (docs/en/dev/gtk.md's "not slower than KDE")."""
+        import shutil
+        try:
+            import gi
+            gi.require_version("Gtk", "4.0")
+        except (ImportError, ValueError):
+            self.skipTest("no GTK 4")
+        if not shutil.which("xvfb-run"):
+            self.skipTest("no xvfb-run")
+        steps = gtk_bench()
+        self.assertTrue(steps, "gtk_bench said nothing")
+        self.assertEqual(gtk_over(steps, GTK), [])
 
 
 if __name__ == "__main__":

@@ -43,8 +43,10 @@ built-in ones presets of them (`feeds.md`). Everything — in CHANGELOG.md.
 
 ## Loose ends
 
-- The GTK lane has no budget test of its own yet (`tests/test_budgets.py` is Qt's and the
-  core's); `tools/gtk_bench.py` is the measure meanwhile.
+- The GTK window has its budget test since 30.10 (`tests/test_budgets.py`, through
+  `tools/gtk_bench.py`): no step's turn over 250 ms, the start and the lanes quick. CI's
+  `budgets` job has no GTK (pip's Python): it runs where python3-gi is — the night's
+  self-check.
 - A card is ~7 ms to build in Qt (dozens of widgets): cheaper only by building it of
   fewer — a work of its own.
 

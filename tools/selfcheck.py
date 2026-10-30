@@ -470,6 +470,13 @@ def main():
             run.step("tests", cmd, timeout=1800,
                      wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
                      note="xvfb" if xvfb else "this desktop")
+            if a.night:
+                # the budgets of memory and time: the core, the Qt window, the GTK one
+                # (tests/test_budgets.py — CI's budgets job has no GTK: here it has)
+                os.environ["FEDTAIL_BUDGETS"] = "1"
+                run.step("budgets", ["-m", "unittest", "-v", "tests.test_budgets"],
+                         timeout=2400,
+                         wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else ())
         if "qt" in only:
             if not qt:
                 run.skip("qt-tour", "no PySide6 (pip install PySide6)")
