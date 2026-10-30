@@ -90,7 +90,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | An empty live lane says why it's empty | has | 0.11.0 | — | `timelines/public` | only in fedtail |
 | Filtering a lane by media and boosts | has | 0.11.0 | — (kept until restart) | own | only in fedtail |
 | Repeated boosts don't bring an old post up again | has | 0.15.0 | `card.repeat_boosts` | own | only in fedtail (a Mastodon server drops a repeat only among the freshest posts) |
-| All / Posts only / New; Feed / Conversations | has | 0.3.0 | `lanes.posts_only`, `reading.remember_choices` | own | Phanpy — similar to “Conversations” |
+| All / Posts only / New; Feed / Conversations | has | 0.3.0 | `lanes.posts_only`, `reading.remember_choices`, `[[lanes.custom]]`: `switches` | own | Phanpy — similar to “Conversations” |
 | Find in a lane | has | 0.2.0 | — | own, in the local database | only in fedtail |
 | Sending to a slow server without doubles | has | 0.16.0 | `post.send_timeout` | `Idempotency-Key`, `accounts/:id/statuses` | only in fedtail |
 | Find in every lane at once | has | 0.16.0 | a tick in the `Ctrl+F` bar | own, in the local database | only in fedtail |
@@ -161,7 +161,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Repeated boosts don't bring an old post up again.** A post comes into a lane once — as itself or with its first boost. A boost of a post this lane has had already, or one already read (in a thread, in another lane), is not shown and not counted as unread; the post stays where it first came. `repeat_boosts = true` — every boost again, as everyone does. The server (Mastodon) drops a repeat only if the original was among the last ~40 posts of the feed — that's why old posts kept surfacing again and again.
 
-**All / Posts only / New; Feed / Conversations.** Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `reading.remember_choices = true`.
+**All / Posts only / New; Feed / Conversations.** Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. Which of them stand over a lane — its rule: `switches = ["posts_only", "unread_only"]` (“Switches” in the editor). In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `reading.remember_choices = true`.
 
 **Find in a lane.** `Ctrl+F` finds in the open lane by text, nick, `#id` and picture captions. It searches its own database and doesn't ask the server, so it works offline too. `Enter`, `↓`, `F3` or `Ctrl+F` again — to the next match, `Shift+Enter` — to the previous one.
 

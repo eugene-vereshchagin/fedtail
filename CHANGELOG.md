@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- A lane says which quick filters stand over it: `switches = ["posts_only", "unread_only"]`
+  in `[[lanes.custom]]` and the presets (the editor's "Switches"); none said — as
+  before. The built-in sets name theirs.
 - Federated and Local: a lane the languages filter left short of a page asks pages older
   by itself while open (`lanes.browse_fill_pages`, 5) and keeps them — it showed one post
   of two hundred. Where one opens: `lanes.browse_start` — "last" (where you stood; that

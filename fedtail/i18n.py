@@ -703,6 +703,10 @@ _STRINGS = {
         "le_f_open_at": "Тред открывается",
         "le_open_at_setting": "как в настройках (threads.open_at)",
         "le_open_at_post": "на посте", "le_open_at_first_unread": "на первом новом комменте",
+        "le_f_switches": "Переключатели",
+        "le_f_switches_tip": "Кнопки над лентой, которые прячут или оставляют часть того, что "
+                             "в ней уже есть: «Только посты» — без ответов, «Новое» — только "
+                             "непрочитанное. Какие есть — решает её правило.",
         "le_f_open_at_tip": "Где встаёт тред, открытый с карточки этой ленты; нет новых — "
                             "на посте",
         "le_f_window_tip": "Только посты последних: 6h, 12h, 2d; пусто — все",
@@ -2515,6 +2519,10 @@ _STRINGS = {
         "le_f_open_at": "A thread opens",
         "le_open_at_setting": "as the settings say (threads.open_at)",
         "le_open_at_post": "at the post", "le_open_at_first_unread": "at the first new comment",
+        "le_f_switches": "Switches",
+        "le_f_switches_tip": "Buttons over the lane that hide or keep a part of what it "
+                             "already holds: \u201cPosts only\u201d — no replies, \u201cNew\u201d"
+                             " — the unread only. Which ones — its rule says.",
         "le_f_open_at_tip": "Where a thread opened from this lane's card stands; nothing new "
                             "— at the post",
         "le_f_window_tip": "Only posts of the last: 6h, 12h, 2d; empty — all",

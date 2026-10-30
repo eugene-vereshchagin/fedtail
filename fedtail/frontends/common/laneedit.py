@@ -277,6 +277,8 @@ class Editor:
             return False
         if custom.slot_of(t) and custom.slot_of(t) == custom.slot_of(base):
             return True  # a slot, written `kind = …` before 0.22 or `slot = …`
+        if "switches" not in t:  # a copy of before 0.22: the switches came by themselves
+            base = {k: v for k, v in base.items() if k != "switches"}
         return dict(t, name=name) == dict(base, name=name)
 
     def title(self, name):

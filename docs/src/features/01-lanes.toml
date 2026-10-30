@@ -301,14 +301,14 @@ android = "has"
 since = "0.3.0"
 name.ru = "Всё / Только посты / Новое; Лентой / Беседами"
 name.en = "All / Posts only / New; Feed / Conversations"
-config = "`lanes.posts_only`, `reading.remember_choices`"
+config = "`lanes.posts_only`, `reading.remember_choices`, `[[lanes.custom]]`: `switches`"
 api.ru = "своё"
 api.en = "own"
 others.ru = "Phanpy — похоже на «Беседы»"
 others.en = "Phanpy — similar to “Conversations”"
 clients = ["Phanpy"]
-details.ru = "Над лентой два переключателя. «Всё / Только посты / Новое»: со всеми комментами, только корневые посты или только непрочитанное. «Лентой / Беседами»: «Беседами» собирает тред в одну карточку, как разговоры на Point. В каких лентах «только посты» включено с запуска — `lanes.posts_only`. Каждый быстрый фильтр — эти, свои у ленты, воронка медиа, у Активности — держится до закрытия программы; между запусками — с `reading.remember_choices = true`."
-details.en = "Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `reading.remember_choices = true`."
+details.ru = "Над лентой два переключателя. «Всё / Только посты / Новое»: со всеми комментами, только корневые посты или только непрочитанное. «Лентой / Беседами»: «Беседами» собирает тред в одну карточку, как разговоры на Point. Какие из них стоят над лентой — её правило: `switches = [\"posts_only\", \"unread_only\"]` (поле «Переключатели» в редакторе). В каких лентах «только посты» включено с запуска — `lanes.posts_only`. Каждый быстрый фильтр — эти, свои у ленты, воронка медиа, у Активности — держится до закрытия программы; между запусками — с `reading.remember_choices = true`."
+details.en = "Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. Which of them stand over a lane — its rule: `switches = [\"posts_only\", \"unread_only\"]` (“Switches” in the editor). In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `reading.remember_choices = true`."
 
 [[feature]]
 id = "find-in-lane"

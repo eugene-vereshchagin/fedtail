@@ -717,7 +717,10 @@ def _author_word(word, have):
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
              "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
-             "start", "hide_empty", "badge"}
+             "start", "hide_empty", "badge", "switches"}
+# the lane's own switches besides its conditions' (`switches`): what a click hides or keeps
+# of what the lane already holds — not conditions, which take posts into it
+SWITCHES = ("posts_only", "unread_only")
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
@@ -772,6 +775,8 @@ class Rule:
     badge: str = ""                # its count's colour: "hot", "quiet", "" — the usual
     start: bool = False            # the set's lane to open first, when ui.start_lane names
                                    # none there (common/sidebar.start_lane)
+    switches: tuple | None = None  # of SWITCHES: "posts_only" (no replies), "unread_only";
+                                   # None — not said (a rule of before 0.22): the usual
     warnings: list = field(default_factory=list)
 
     @classmethod
@@ -816,6 +821,13 @@ class Rule:
                     setattr(rule, flag, table[flag])
                 else:
                     warnings.append(f"{flag}: {table[flag]!r} — true or false")
+        if "switches" in table:
+            got = list(table["switches"]) if isinstance(table["switches"], list) else []
+            bad = [w for w in got if w not in SWITCHES]
+            if bad or not isinstance(table["switches"], list):
+                warnings.append(f"switches: {table['switches']!r} — a list of "
+                                f"{', '.join(SWITCHES)}")
+            rule.switches = tuple(w for w in got if w in SWITCHES)
         if "icon" in table:
             if table["icon"] in LANE_ICONS:
                 rule.icon = table["icon"]

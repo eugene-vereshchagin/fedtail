@@ -120,13 +120,18 @@ class Custom:
             return False  # kept out whole (`none = [{ event = "…" }]`)
         return any(word in c.sets["event"] for c in self.event_conds)
 
+    def _switches(self):
+        """The rule's own switches, or None when it names none (the usual ones then)."""
+        return None if self.rule.switches is None else tuple(self.rule.switches)
+
     def lane(self):
         if self.events_only:  # no posts: its rows are the events it takes
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
                               group="standard" if self.rule.group == "standard"
                               else "personal", events=True, open_at=self.rule.open_at,
                               start=self.rule.start,
-                              hide_empty=self.rule.hide_empty, badge=self.rule.badge)
+                              hide_empty=self.rule.hide_empty, badge=self.rule.badge,
+                              switches=self._switches())
         if self.routed:
             keep = lanes._all  # its stream holds what the rule took
         else:
@@ -144,7 +149,8 @@ class Custom:
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, open_at=self.rule.open_at,
                           events=bool(self.event_conds), start=self.rule.start,
-                          hide_empty=self.rule.hide_empty, badge=self.rule.badge)
+                          hide_empty=self.rule.hide_empty, badge=self.rule.badge,
+                          switches=self._switches())
 
     def takes(self, status, world, source):
         world = world or atoms.World()

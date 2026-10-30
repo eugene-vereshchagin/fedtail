@@ -23,6 +23,9 @@ class Lane:
     # …its quick filters: (key, words) — "main" (what isn't hidden), "chip:<n>" (one
     # condition's posts); none — the lane has no switches
     chips: tuple = ()
+    # a lane of rules: its own switches ("posts_only", "unread_only") — only those; None —
+    # a lane made of the server's (a list, a lane of tags): the usual ones
+    switches: tuple | None = None
     # the sidebar section a lane goes to when GROUPS doesn't name it (free lanes, Unsorted)
     group: str = ""
     # the set's lane to open first when ui.start_lane names none there (its rule's `start`)

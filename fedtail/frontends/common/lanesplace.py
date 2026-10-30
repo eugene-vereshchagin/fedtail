@@ -283,6 +283,9 @@ class LanePlaces:
                   (("", _("le_open_at_setting")), ("post", _("le_open_at_post")),
                    ("first_unread", _("le_open_at_first_unread"))),
                   tip=_("le_f_open_at_tip")),
+            # the lane's own switches over what it holds (atoms.SWITCHES): its rule says
+            Field("switches", _("le_f_switches"), list(t.get("switches") or ()), "checks",
+                  tuple((s, _(s)) for s in atoms.SWITCHES), tip=_("le_f_switches_tip")),
         ]
         page.form = tuple(form)
         page.submit = self._btn(_("save"), "lane", "save", name, primary=True)
@@ -536,7 +539,7 @@ def _table_of(name, old, values):
     t = {k: v for k, v in old.items() if k not in ("title", "icon", "group", "source", "read",
                                                     "sort", "mode", "window", "filter_context",
                                                     "per_author", "bundle", "view", "open_at",
-                                                    "any", "none")}
+                                                    "any", "none", "switches")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
@@ -561,6 +564,9 @@ def _table_of(name, old, values):
             raise ValueError(_("le_f_per_author_tip"))
         if int(n) or "per_author" in old:
             t["per_author"] = int(n)
+    switches = [s for s in values.get("switches") or () if s in atoms.SWITCHES]
+    if switches or "switches" in old:
+        t["switches"] = switches
     src = [s for s in values.get("source") or () if isinstance(s, str)]
     if src:
         t["source"] = src[0] if len(src) == 1 else src

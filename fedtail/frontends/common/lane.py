@@ -214,9 +214,17 @@ class LaneModel:
         rank = view.lane_rank(name) if hasattr(view, "lane_rank") else 4
         self.rank = rank
         self.sources = {getattr(lane, "source", None), *(getattr(lane, "feeds", ()) or ())}
-        # "posts only" (the comments hidden): a lane of posts that isn't personal
-        self.has_posts_only = rank == 4 and bool(getattr(lane, "source", None)) and \
-            not getattr(lane, "events", False)
+        # its switches: a lane of rules — the ones its rule names (`switches`), nothing
+        # decided here for it; a list's or a lane of tags (the server's, no rule) — "posts
+        # only" when it isn't personal, "unread only" when it isn't browsed
+        own = getattr(lane, "switches", None)
+        if own is not None:
+            self.has_posts_only = "posts_only" in own
+            self.has_unread_only = "unread_only" in own
+        else:
+            self.has_posts_only = rank == 4 and bool(getattr(lane, "source", None)) and \
+                not getattr(lane, "events", False)
+            self.has_unread_only = not self.lazy
         self.chips = tuple(getattr(lane, "chips", ()) or ())  # a free lane's quick filters
         self.separator_text = separator_text or (lambda n: _("new_below"))
         self.separator = None    # (key of the first unread when the lane opened, count)
@@ -243,7 +251,7 @@ class LaneModel:
         if self.has_posts_only:
             opts.append("posts")
         opts += [k for k, _w in self.chips if k != "main"]  # then each switch
-        if not self.lazy:
+        if self.has_unread_only:
             opts.append("unread")
         self.filters = opts      # what the filter control offers ("all" alone: none)
 
@@ -572,9 +580,9 @@ class LaneModel:
     def _browse_start(self, specs):
         """Where a browse lane (Federated, Local) opens — lanes.browse_start: "last" —
         where one stood in it last (never: the newest end); that place gone (a relay pours
-        in thousands a day, and what is older than the lane keeps was let go) — as "hours"; "hours" — the
-        first post of the last lanes.browse_start_hours, else the newest end; "newest"
-        — at the newest end, older ones a scroll back."""
+        in thousands a day, and what is older than the lane keeps was let go) — as
+        "hours"; "hours" — the first post of the last lanes.browse_start_hours, else the
+        newest end; "newest" — at the newest end, older ones a scroll back."""
         lc = self.cfg.get("lanes") or {}
         mode = lc.get("browse_start", "last")
         if mode == "newest":
