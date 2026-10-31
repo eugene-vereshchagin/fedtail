@@ -41,6 +41,12 @@
 - Phone: a post tapped inside the thread open now doesn't open that thread again on top;
   the `#alias` is plain text without the command line (its tap did nothing); the card's
   ⋯ doesn't flash last time's items; ★ says "Undo like" when liked.
+- **Another client's glance at the notifications no longer reads your answers.** The
+  notifications' place on the server, moved by Tusky or the server's web when you open
+  a notification there, marked mentions and replies read in fedtail — on every device,
+  through sync — and nothing said they had come. Now only Home's place is taken from
+  other clients; `sync.mentions_by_marker = true` brings the old way back. fedtail's own
+  place still goes to the server.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

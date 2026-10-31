@@ -86,12 +86,12 @@ android = "has"
 since = "0.8.0"
 name.ru = "Позиция чтения общая с другими клиентами"
 name.en = "The reading place is shared with other clients"
-config = "`sync.sync_markers`"
+config = "`sync.sync_markers`, `sync.mentions_by_marker`"
 api = "`/api/v1/markers`"
 others = "Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes"
 clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Ice Cubes"]
-details.ru = "Дочитал «Ленту» или упоминания на телефоне — здесь это тоже прочитано, и наоборот. Работает с Mastodon, GoToSocial, Akkoma — если тот клиент сообщает место серверу: веб Mastodon, Ivory, Phanpy сообщают, Tusky держит место в «Ленте» у себя и делится только уведомлениями. `false` — прочитанное живёт только в fedtail."
-details.en = "Read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma — if that client tells the server its place: Mastodon's web, Ivory, Phanpy do; Tusky keeps its place in Home to itself and shares only notifications. `false` — read marks live in fedtail only."
+details.ru = "Дочитал «Ленту» или упоминания на телефоне — здесь это тоже прочитано, и наоборот. Работает с Mastodon, GoToSocial, Akkoma — если тот клиент сообщает место серверу: веб Mastodon, Ivory, Phanpy сообщают, Tusky держит место в «Ленте» у себя и делится только уведомлениями. Место в уведомлениях, сдвинутое другим клиентом, упоминания и ответы прочитанными здесь не делает (`sync.mentions_by_marker`): глянуть уведомления в Tusky не значит прочитать ответы. `false` — прочитанное живёт только в fedtail."
+details.en = "Read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma — if that client tells the server its place: Mastodon's web, Ivory, Phanpy do; Tusky keeps its place in Home to itself and shares only notifications. The notifications' place another client moved doesn't mark mentions and replies read here (`sync.mentions_by_marker`): a glance at Tusky's notifications isn't reading the answers. `false` — read marks live in fedtail only."
 
 [[feature]]
 id = "device-sync"

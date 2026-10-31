@@ -2177,6 +2177,23 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertNotIn("014", core.store.read_set(["014"]))
 
+    def test_another_clients_glance_at_notifications_reads_nothing(self):
+        """The notifications' place moved by another client (Tusky: its notification
+        opened) read the answers here and on every device, and nothing said they had
+        come (31.10) — unless sync.mentions_by_marker. fedtail's own place still goes."""
+        core, w = self.make()
+        core.connect().result()
+        core.poll_once()
+        w.add(status("020", BOB, "100", "ME", minute=20, text="an answer"), mention=True)
+        core.poll_once()
+        self.assertEqual(core.store.read_set(["020"]), set())
+        w.markers["notifications"] = "n020"   # glanced at in Tusky
+        core.poll_once()
+        self.assertEqual(core.store.read_set(["020"]), set())  # still to be read here
+        core.cfg["read"]["mentions_by_marker"] = True
+        core.poll_once()
+        self.assertEqual(core.store.read_set(["020"]), {"020"})
+
     def test_first_start_keeps_the_server_marker(self):
         """A new machine's first start: what another client left unread (newer than the
         server's home marker) stays unread, and the marker isn't pushed to "all read"."""

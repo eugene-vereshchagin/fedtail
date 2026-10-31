@@ -67,7 +67,11 @@ class MarkersMixin:
                 continue
             last = ((remote or {}).get(timeline) or {}).get("last_read_id")
             seen_key = f"marker.{timeline}"
-            if last and last != self.store.kv_get(seen_key):
+            # the notifications' place moved by another client marks nothing read here
+            # unless sync.mentions_by_marker: a glance at Tusky's notifications read the
+            # answers on every device, and nothing said they had come (31.10)
+            take = timeline == "home" or self.cfg["read"].get("mentions_by_marker", False)
+            if take and last and last != self.store.kv_get(seen_key):
                 older = [st["id"] for item, st in items if not id_after(item, last)]
                 fresh = [i for i in older if i not in self.store.read_set(older)]
                 if fresh:

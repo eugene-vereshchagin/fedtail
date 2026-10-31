@@ -1418,6 +1418,12 @@ people = false
 # GoToSocial, Akkoma. false — read marks live here only.
 sync_markers = true
 
+# The notifications' place another client (Tusky, the server's web) moved marks mentions and
+# replies read here too. false — only Home's place is taken from others: a glance at the
+# notifications there isn't reading the answers, and they stayed unread nowhere (31.10).
+# fedtail's own place still goes to the server either way.
+mentions_by_marker = false
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  14. The server

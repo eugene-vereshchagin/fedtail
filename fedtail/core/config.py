@@ -161,6 +161,7 @@ DEFAULTS = {
         "dwell_ms": 350,
         "unfocused_seconds": 5,
         "sync_markers": True,
+        "mentions_by_marker": False,
     },
     "lanes": {
         "preset": "fedtail",
@@ -608,7 +609,7 @@ FILE_LAYOUT = (
     ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
     ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds read threads "
                            "lanes drafts activity tiles lane_rules people")
-     + _keys("read", "sync_markers")),
+     + _keys("read", "sync_markers mentions_by_marker")),
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
                              "announcements_minutes")
      + _keys("net", "proxy proxy_at_login")),
