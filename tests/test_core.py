@@ -2514,6 +2514,20 @@ class CoreTest(TmpDir):
             time.sleep(0.02)
         self.assertEqual(w.revoked, ["tok"])
 
+    def test_a_rounds_steps_are_its_own_threads(self):
+        """_warm_lanes after a read mark (another thread) took the round's slow request
+        for "warm lanes 21.77 s" in the round's timing (31.10): it times nothing now."""
+        import threading
+        core, w = self.make()
+        core._steps, core._step_at = {}, time.monotonic() - 20
+        core._round_thread = threading.current_thread()
+        other = threading.Thread(target=core._step, args=("warm lanes",))
+        other.start()
+        other.join()
+        self.assertEqual(core._steps, {})
+        core._step("counts")  # the round's own: the 20 s are its
+        self.assertGreaterEqual(core._steps["counts"], 20)
+
     def test_login_outlives_the_app(self):
         """A phone kills the app while the browser is out: the code that comes back to
         the app started anew still finds the login begun (login.json), within the hour."""

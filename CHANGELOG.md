@@ -13,6 +13,13 @@
   — and every packed journal — carried those marks too, so the desktop's custom lanes
   went read when the phone came. Only the marks a person made (here or on another
   device) travel now; the store keeps them apart (`read_shared`).
+- A round's timing in the log is the round's own: a lane count made after a read mark
+  (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
+  a server answering in 20 s.
+- Markers (where reading stopped, shared with other clients) wait 10 s, not 30: a server
+  stuck on them once an hour held the whole round.
+- A picture of a few dozen bytes is called a server's stub in the log, not a format a
+  missing plugin would read.
 - Phone: `read.dwell_ms` is heeded (it was a fixed 350 ms), as in the windows.
 - Docs (sync): the lanes' counts may be off for the first minutes of a newly joined
   device, until the other devices' read marks have come in — and why.

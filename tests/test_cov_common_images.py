@@ -187,6 +187,15 @@ class ImagesTest(unittest.TestCase):
         got, _f = self.get(url)
         self.assertEqual(got[0][1], b"PNG2")
 
+    def test_a_stub_is_no_format(self):
+        """30 B of "image/webp" is a server's stub: not blamed on a missing plugin."""
+        url = "https://a/4.webp"
+        self.net[url] = Answer(b"bad" + b"x" * 27, kind="image/webp")  # 30 B, unreadable
+        with self.assertLogs("fedtail.frontends.common.images", "WARNING") as logs:
+            self.get(url)
+        self.assertIn("stub", logs.output[0])
+        self.assertNotIn(self.c.FORMAT_HINT, logs.output[0])
+
     def test_a_format_that_cant_be_shown(self):
         url = "https://a/3.avif"
         self.net[url] = Answer(b"bad avif", kind="image/avif")

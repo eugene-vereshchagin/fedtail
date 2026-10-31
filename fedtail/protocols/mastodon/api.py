@@ -712,9 +712,13 @@ class Api:
         return self.post(f"/api/v1/tags/{quote(name, safe='')}/"
                          f"{'follow' if on else 'unfollow'}")
 
+    MARKERS_TIMEOUT = 10  # an extra of the round: a server stuck on it (once an hour
+    # at the same minute, 31.10) held the whole round its 30 s; the next round asks again
+
     def markers(self, timelines=("home", "notifications")):
         """Where the reader stopped, shared by every client: {timeline: {last_read_id}}."""
-        return self.get("/api/v1/markers", {"timeline[]": list(timelines)}) or {}
+        return self.get("/api/v1/markers", {"timeline[]": list(timelines)},
+                        timeout=self.MARKERS_TIMEOUT) or {}
 
     def set_markers(self, positions):
         """positions: {timeline: last_read_id}."""

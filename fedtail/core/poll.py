@@ -375,6 +375,7 @@ class PollMixin:
         t = time.monotonic()
         self._steps = {}
         self._step_at = t
+        self._round_thread = threading.current_thread()  # whose steps are the round's
         self._polling = True
         self.emit("poll_state", True)  # "updating the lanes…" where the window shows it
         try:
@@ -423,7 +424,11 @@ class PollMixin:
                 "failing": int(getattr(self, "_fails_in_row", 0) or 0)}
 
     def _step(self, name):
-        """Poll timing: the time since the last step goes to name (summed)."""
+        """Poll timing: the time since the last step goes to name (summed). The round's
+        own thread only: _warm_lanes after a read mark (another thread) stepped too, and
+        took the round's slow request for itself ("warm lanes 21.77 s", 31.10)."""
+        if threading.current_thread() is not getattr(self, "_round_thread", None):
+            return
         now = time.monotonic()
         steps = getattr(self, "_steps", None)
         if steps is not None:

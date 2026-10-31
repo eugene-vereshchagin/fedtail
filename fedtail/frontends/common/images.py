@@ -107,6 +107,7 @@ class Cache:
     STUCK_AFTER = 180  # s: a request this old with no answer is asked for again
     STARVING = 6  # s: newest first — but a request waiting this long goes next
     FORMAT_HINT = "this format can't be shown"
+    NO_PICTURE_BELOW = 64  # B: no format makes a picture this small
     FEED_WORKERS = 8  # previews, avatars, emoji: small, many, on screen now
     BIG_WORKERS = 3   # originals (a single picture made sharp, the viewer, saving)
 
@@ -388,9 +389,13 @@ class Cache:
         if img is None:  # downloaded fine, but can't be read (webp, avif, heic…)
             self.why[url] = ("format", kind or "?")
             said = self.__dict__.setdefault("_formats_said", set())
+            # a few dozen bytes are no picture of any format: a server's stub, not a
+            # missing plugin (a 30 B "image/webp" sent the user after one, 31.10)
+            hint = self.FORMAT_HINT if len(data) >= self.NO_PICTURE_BELOW else \
+                "too small to be a picture: the server sent a stub"
             (log.debug if kind in said else log.warning)(
                 "image %s: %s, %d B — %s", _where(url), kind or "unknown type",
-                len(data), self.FORMAT_HINT)  # once per kind in the normal log
+                len(data), hint)  # once per kind in the normal log
             said.add(kind)
         else:  # never keep an error page or half a file
             p.write_bytes(data)

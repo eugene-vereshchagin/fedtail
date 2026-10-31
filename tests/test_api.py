@@ -105,6 +105,13 @@ class PlumbingTest(unittest.TestCase):
         with self.assertRaisesRegex(ApiError, "plain words"):
             a.get("/p")
 
+    def test_markers_wait_less_than_the_rest(self):
+        """A server stuck on markers once an hour held the whole round 30 s (31.10)."""
+        a, s = make(Resp(body={}))
+        a.markers()
+        self.assertEqual(s.last[2]["timeout"], Api.MARKERS_TIMEOUT)
+        self.assertLess(Api.MARKERS_TIMEOUT, 30)
+
     def test_network_errors_pass_through(self):
         a, _s = make(requests.ConnectionError("down"))
         with self.assertRaises(requests.ConnectionError):
