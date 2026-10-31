@@ -50,6 +50,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -490,34 +491,53 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             }
             val quoteScope = rememberCoroutineScope()
             place.replyTo?.let { answered ->
-                // the post answered, whole: select a piece, "❝ Quote in reply" puts it
-                // where the cursor is (the windows' and the web's quoting piece by piece)
-                var whole by remember { mutableStateOf(false) }
+                // the post answered, in a box of its own: its start always in sight; a
+                // long one opens whole, and there a piece of it is selected and "❝ Quote
+                // in reply" puts it where the cursor is (the windows' quoting)
+                var whole by remember(answered.sid) { mutableStateOf(false) }
+                var cut by remember(answered.sid) { mutableStateOf(false) }
                 var shown by remember(answered.sid) { mutableStateOf(TextFieldValue(answered.text)) }
-                if (!whole) {
-                    Text("↳ @${answered.handle}: ${answered.text}", maxLines = 3,
-                        overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.clickable { whole = true })
-                } else {
-                    OutlinedTextField(value = shown, onValueChange = { shown = it.copy(text = answered.text) },
-                        readOnly = true, label = { Text("↳ @${answered.handle}") },
-                        supportingText = { Text(stringResource(R.string.reply_whole)) },
-                        textStyle = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.fillMaxWidth())
-                    TextButton(enabled = !shown.selection.collapsed, onClick = {
-                        val piece = shown.text.substring(shown.selection.min, shown.selection.max)
-                        quoteScope.launch {
-                            val got = Core.quoteLines(piece.trim())
-                            val quoted = if (Core.failed(got) == null) got.optString("text")
-                                         else piece.trim().lines().joinToString("\n") { "> $it" } + "\n\n"
-                            val at = field.selection.max
-                            val text = field.text.substring(0, at) + quoted + field.text.substring(at)
-                            field = TextFieldValue(text, TextRange(at + quoted.length))
-                            model.composeText = text
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        Text("↳ @${answered.handle}", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                        if (!whole) {
+                            Text(answered.text, maxLines = 6, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                onTextLayout = { cut = it.hasVisualOverflow },
+                                modifier = Modifier.fillMaxWidth().clickable { whole = true })
+                        } else {
+                            BasicTextField(value = shown,
+                                onValueChange = { shown = it.copy(text = answered.text) },
+                                readOnly = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                         }
-                    }) { Text(stringResource(R.string.quote_in_reply)) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (cut || whole) TextButton(onClick = { whole = !whole }) {
+                                Text(stringResource(if (whole) R.string.reply_less
+                                                    else R.string.reply_more))
+                            }
+                            if (whole) TextButton(enabled = !shown.selection.collapsed, onClick = {
+                                val piece = shown.text.substring(shown.selection.min, shown.selection.max)
+                                quoteScope.launch {
+                                    val got = Core.quoteLines(piece.trim())
+                                    val quoted = if (Core.failed(got) == null) got.optString("text")
+                                                 else piece.trim().lines().joinToString("\n") { "> $it" } + "\n\n"
+                                    val at = field.selection.max
+                                    val text = field.text.substring(0, at) + quoted + field.text.substring(at)
+                                    field = TextFieldValue(text, TextRange(at + quoted.length))
+                                    model.composeText = text
+                                }
+                            }) { Text(stringResource(R.string.quote_in_reply)) }
+                        }
+                        if (whole) Text(stringResource(R.string.reply_whole),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             if (model.quoteOf.isNotBlank()) {

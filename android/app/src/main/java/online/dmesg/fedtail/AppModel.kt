@@ -1140,6 +1140,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (Core.failed(d) != null || editId != null || quoteId != null) return@launch
             if (place !is Place.Compose || composeText != opened) return@launch // typed meanwhile
             composeText = str(d, "text").ifBlank { composeText }
+            // who sees a reply: the core's word (post.reply_never_wider), shown chosen —
+            // none lit looked like nothing was decided (31.10)
+            if (composeVisibility == null) str(d, "visibility").takeIf { it.isNotBlank() }
+                ?.let { composeVisibility = it }
             if (!d.optBoolean("restored")) return@launch
             str(d, "cw").takeIf { it.isNotBlank() }?.let { composeCw = it; composeCwOn = true }
             str(d, "visibility").takeIf { it.isNotBlank() }?.let { composeVisibility = it }

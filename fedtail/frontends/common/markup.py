@@ -53,13 +53,17 @@ PLACES = ("left", "right", "top", "bottom")  # where the buttons stand by the te
 VERTICAL = ("left", "right")                 # …a column beside it, else a row
 
 
-def place(cfg, markdown):
+def place(cfg, markdown, narrow=False):
     """Where the buttons stand — "left", "right", "top", "bottom" — or "" when there are
     none: post.format_bar = "off", or the server doesn't understand Markdown (the marks
-    would come out as they are)."""
+    would come out as they are). narrow: a phone's screen — a column beside the text
+    took a third of its width (31.10), so the column becomes a row under the text, by
+    the keyboard."""
     mode = ((cfg or {}).get("post") or {}).get("format_bar", "left")
     if mode not in PLACES or not markdown:
         return ""
+    if narrow and mode in VERTICAL:
+        return "bottom"
     return mode
 
 

@@ -61,6 +61,9 @@ class BridgeTest(_Base):
         facts = self.call("editor")
         self.assertIn("link", [b["name"] for b in facts["format_bar"]])
         self.assertEqual(facts["format_place"], "bottom")
+        # a column beside the text (the desktop's "left") is a row on the phone's screen
+        self.bridge._core().cfg["post"]["format_bar"] = "left"
+        self.assertEqual(self.call("editor")["format_place"], "bottom")
         got = self.call("format_text", json.dumps({"name": "italic", "text": "😀 hi",
                                                    "start": 3, "end": 5}))
         self.assertEqual(got, {"text": "😀 *hi*", "start": 4, "end": 6})

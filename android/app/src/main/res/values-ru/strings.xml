@@ -39,6 +39,8 @@
     <string name="vis_direct">Лично</string>
     <string name="vis_as_parent">Кто увидит: как у поста, на который отвечаешь, если не выберешь сам</string>
     <string name="quote_in_reply">❝ Процитировать в ответ</string>
+    <string name="reply_more">Показать целиком · цитировать</string>
+    <string name="reply_less">Свернуть</string>
     <string name="reply_whole">Весь пост: выдели кусок, чтобы процитировать</string>
     <string name="config">Конфиг</string>
     <string name="save">Сохранить</string>

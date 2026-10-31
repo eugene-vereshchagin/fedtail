@@ -40,6 +40,8 @@
     <string name="vis_direct">Direct</string>
     <string name="vis_as_parent">Who sees it: as the post it answers, unless you pick</string>
     <string name="quote_in_reply">❝ Quote in reply</string>
+    <string name="reply_more">Show it all · quote</string>
+    <string name="reply_less">Less</string>
     <string name="reply_whole">The whole post: select a piece to quote</string>
     <string name="config">Config</string>
     <string name="save">Save</string>

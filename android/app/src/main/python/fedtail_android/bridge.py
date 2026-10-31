@@ -520,8 +520,11 @@ def editor():
     """The editor's facts: the server's limits, the languages to pick from, the poll's
     lengths, spell checking on or off, the default visibility."""
     def go():
+        from fedtail.frontends.common import markup
         facts = _s["web"].editor_facts()
-        facts["visibility"] = _core().default_visibility()
+        core = _core()
+        facts["visibility"] = core.default_visibility()
+        facts["format_place"] = markup.place(core.cfg, core.markdown, narrow=True)
         return facts
     return _answer(go)
 

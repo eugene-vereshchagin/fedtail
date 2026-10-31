@@ -13,6 +13,12 @@
   — and every packed journal — carried those marks too, so the desktop's custom lanes
   went read when the phone came. Only the marks a person made (here or on another
   device) travel now; the store keeps them apart (`read_shared`).
+- **Phone: the reply editor tidied.** The post answered stands in a box of its own, six
+  lines of it in sight; a longer one says so ("Show it all · quote") and opens whole,
+  where a piece is selected to quote. Who sees the reply is shown chosen (the core's
+  pick, as the post answered) instead of no chip lit. The formatting buttons are a row
+  under the text: a column beside it (post.format_bar "left"/"right", the desktop's)
+  took a third of the screen.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.
