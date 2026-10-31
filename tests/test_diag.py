@@ -181,8 +181,9 @@ class DiagTest(unittest.TestCase):
         diag._state["on"] = True
 
     def test_old_logs_go(self):
-        """A new version starts with a clean log folder; the logs the old default put in
-        the home folder go too; the log goes to the data folder unless told otherwise."""
+        """A new version starts with the last day of the old one's logs only; the logs
+        the old default put in the home folder go too; the log goes to the data folder
+        unless told otherwise."""
         from fedtail import version
         tmp = Path(self._tmp.name)
         keep = diag.OLD_LOG_DIR
@@ -198,6 +199,9 @@ class DiagTest(unittest.TestCase):
             folder.mkdir(parents=True)
             (folder / "version").write_text("0.0.1.dev1+gold\n", "utf-8")
             (folder / "2026-10-02_10-00-00.log").write_text("old", "utf-8")
+            os.utime(folder / "2026-10-02_10-00-00.log", (1, 1))  # long ago: it goes
+            # the hours before the update stay: the report sent after it is about them
+            (folder / "2026-10-31_12-00-00.log").write_text("this morning", "utf-8")
             (folder / "fedtail.log").write_text("first versions' one file", "utf-8")
             (folder / "fedtail.log.1").write_text("old", "utf-8")
             (folder / "notes.txt").write_text("not ours", "utf-8")
@@ -205,6 +209,7 @@ class DiagTest(unittest.TestCase):
             self.assertFalse(old_home.exists())  # and ~/fedtail-logs itself, empty now
             self.assertFalse((tmp / "home-logs").exists())
             self.assertFalse((folder / "2026-10-02_10-00-00.log").exists())
+            self.assertTrue((folder / "2026-10-31_12-00-00.log").exists())
             self.assertEqual(list(folder.glob("fedtail.log*")), [])
             self.assertTrue((folder / "notes.txt").exists())  # not ours: left alone
             now = version.info()["version"].replace(" (dirty)", "")

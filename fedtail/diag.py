@@ -101,11 +101,20 @@ OUR_LOGS = ("2[0-9][0-9][0-9]-*.log", "latest.log", "crash.log", "stacks.log", "
             "fedtail.log", "fedtail.log.[0-9]*", "memory-*.txt")
 
 
-def _remove_ours(folder):
-    """Our log files in folder gone; the folder too if that leaves it empty."""
+# the last day of the version before stays when a new one starts: an update is when one
+# sends a report of what went wrong before it (the phone's 12:40 was gone at 19:26, 31.10)
+KEEP_BEFORE_UPDATE_S = 24 * 3600
+
+
+def _remove_ours(folder, keep_since=None):
+    """Our log files in folder gone; the folder too if that leaves it empty. keep_since:
+    a time — session logs written after it stay."""
     for pattern in OUR_LOGS:
         for f in folder.glob(pattern):
             try:
+                if keep_since is not None and pattern == OUR_LOGS[0] and \
+                        f.stat().st_mtime >= keep_since:
+                    continue
                 if f.is_symlink() or f.is_file():
                     f.unlink()
             except OSError:
@@ -117,8 +126,9 @@ def _remove_ours(folder):
 
 
 def _forget_old_logs(paths, folder):
-    """Logs of another version are no use any more: a fresh version starts clean.
-    Also the logs the old default left in ~/fedtail-logs/<profile>/."""
+    """Logs of another version go when a fresh one starts — but its last day stays (the
+    report sent right after an update is about what went wrong before it). Also the
+    logs the old default left in ~/fedtail-logs/<profile>/."""
     from . import version
     now = version.info()["version"].replace(" (dirty)", "")
     mark = folder / "version"
@@ -128,7 +138,8 @@ def _forget_old_logs(paths, folder):
         before = None
     if before != now:
         if before is not None or any(folder.glob("2[0-9][0-9][0-9]-*.log")):
-            _remove_ours(folder)
+            import time
+            _remove_ours(folder, keep_since=time.time() - KEEP_BEFORE_UPDATE_S)
             folder.mkdir(parents=True, exist_ok=True)
         try:
             mark.write_text(now + "\n", "utf-8")

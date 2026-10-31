@@ -1512,7 +1512,8 @@ mode = "auto"
 
 # Where to write. "" — into the profile's data folder, logs/ (~/.local/share/fedtail/<profile>/logs;
 # the ≡ menu → "Debugging" → "Open the log folder"). A folder of your own — here, the profile is added by itself.
-# A new version deletes the old version's logs at its first start: it has no use for them.
+# A new version deletes the old version's logs at its first start — but for the last day of
+# them: the report sent right after an update is about what went wrong before it.
 log_dir = ""
 
 # A log file over this many MB — start the next one without waiting for a new hour.

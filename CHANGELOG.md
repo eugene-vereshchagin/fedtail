@@ -29,6 +29,8 @@
   list's end is read, a card glimpsed and scrolled past is read. The phone counted only
   cards whole on screen, so a long post or one with a picture never was — its thread
   stood unread on the phone, even opened, till the laptop read it.
+- A new version keeps the last day of the old one's logs (it deleted them all): the
+  report sent right after an update is about what went wrong before it.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

@@ -12,7 +12,8 @@ In releases (and the one-file builds made from them) the mode is off: the profil
 
 In the profile's data folder, `logs/` — `~/.local/share/fedtail/<profile>/logs/` (another
 place — `debug.log_dir`). The logs of the previous version
-are deleted by the new one at its first start (the folder holds a `version` file — whose they are):
+are deleted by the new one at its first start, but for their last day (the folder holds a
+`version` file — whose they are):
 
 ```
 ~/.local/share/fedtail/default/logs/
