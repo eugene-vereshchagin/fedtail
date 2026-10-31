@@ -67,7 +67,10 @@ def quote_lines(text, prefix="> ", strip_mentions=False):
     empty lines kept as a bare ">", the leading @mentions of a whole post dropped
     (strip_mentions) — the reply has its own. Ends in an empty line: without it the
     answer typed next would be read as part of the quote. "" for nothing to quote."""
-    text = (text or "").replace("\u2029", "\n").replace("\r\n", "\n").strip()
+    # every kind of line break a toolkit hands over is a line: Qt's selected text breaks
+    # a <br> with U+2028, and only the first line of each paragraph got its ">" — the
+    # rest went as plain text, out of the quote (31.10)
+    text = re.sub(r"\r\n|[\r\u2028\u2029\x0b\x85]", "\n", text or "").strip()
     if strip_mentions:
         text = _LEADING_MENTIONS.sub("", text).strip()
     if not text:

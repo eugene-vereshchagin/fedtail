@@ -62,6 +62,10 @@ class QuoteReplyTest(unittest.TestCase):
         self.assertEqual(quote_lines("@bob тут"), "> @bob тут\n\n")  # a selection: as is
         self.assertEqual(quote_lines("  "), "")
         self.assertEqual(quote_lines("a\u2029b", "» "), "» a\n» b\n\n")
+        # Qt's selection breaks a <br> with U+2028: each line is quoted, not the first
+        # of a paragraph alone (31.10)
+        self.assertEqual(quote_lines("one\u2028two\u2029\u2029three\r\nfour"),
+                         "> one\n> two\n>\n> three\n> four\n\n")
 
     def test_join_quote(self):
         self.assertEqual(join_quote("", "> q"), "")
