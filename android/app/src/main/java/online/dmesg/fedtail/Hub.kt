@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) {
     var menu by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val tiles = model.overview == "tiles"
     Scaffold(
         // tiles: grey tiles on white, as the switcher's sheet (mockup "3"); a list: white rows on grey
@@ -121,6 +122,8 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                     onClick = { menu = false; model.openSettings() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.config)) },
                                     onClick = { menu = false; model.openConfig() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.report_send)) },
+                                    onClick = { menu = false; model.shareReport(deviceFacts(context)) })
                                 if (BuildConfig.DEBUG) {  // dev builds only
                                     DropdownMenuItem(text = { Text(stringResource(R.string.selfcheck)) },
                                         onClick = { menu = false; model.openSelfCheck() })

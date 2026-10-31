@@ -100,6 +100,8 @@
     <string name="default_is">by default: %1$s</string>
     <string name="reset">reset</string>
     <string name="done">done</string>
+    <string name="report_send">Send a report</string>
+    <string name="report_making">Making the report…</string>
     <string name="selfcheck">Self-check</string>
     <string name="selfcheck_intro">Everything the app does, on this phone with your account — read-only: nothing is posted, liked or marked read. Then share the report: the logs, the config and these steps (never the token or the database).</string>
     <string name="selfcheck_run">Run</string>

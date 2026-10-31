@@ -99,6 +99,8 @@
     <string name="default_is">по умолчанию: %1$s</string>
     <string name="reset">сбросить</string>
     <string name="done">готово</string>
+    <string name="report_send">Отправить отчёт</string>
+    <string name="report_making">Собираю отчёт…</string>
     <string name="selfcheck">Самопроверка</string>
     <string name="selfcheck_intro">Всё, что делает приложение, на этом телефоне с твоим аккаунтом — только чтение: ничего не постится, не лайкается и не отмечается прочитанным. Потом — «Поделиться отчётом»: логи, конфиг и эти шаги (без токена и базы).</string>
     <string name="selfcheck_run">Запустить</string>

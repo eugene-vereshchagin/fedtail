@@ -130,7 +130,7 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
     // (the editor, a picture): back there, they stand where they stood
     val laneState = rememberLazyListState()
     val threadState = rememberLazyListState()
-    SideEffect { model.browse = openBrowser }
+    SideEffect { model.browse = openBrowser; model.shareFile = share }
     AskDialogs(model)
     when (val s = model.screen) {
         Screen.Starting -> Centered { Starting() }

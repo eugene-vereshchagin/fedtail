@@ -1409,6 +1409,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** ⋮ → "Send a report": the desktop's bug report (logs, config, the phone; never the
+     *  token or the database) to a messenger or mail — in every build, not only beside
+     *  the dev builds' self-check: a released app had no way to hand its logs over. */
+    fun shareReport(device: JSONObject) {
+        message = getApplication<Application>().getString(R.string.report_making)
+        viewModelScope.launch {
+            val got = Core.selfcheckReport(JSONArray(), device)
+            Core.failed(got)?.let { message = it; return@launch }
+            shareFile(got.optString("path"))
+        }
+    }
+
     /** The report (the desktop's bug report + the steps) → its file, to hand over. */
     fun selfCheckReport(device: JSONObject, share: (String) -> Unit) {
         viewModelScope.launch {
@@ -1510,6 +1522,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // ---- every place of the windows' ≡ menu, profiles, the ⋯ menu: the core's answers ----
     /** Opens links in the browser (the activity sets it: App()). */
     var browse: (String) -> Unit = {}
+    var shareFile: (String) -> Unit = {}  // the system's share sheet (MainActivity)
     var asking by mutableStateOf<Asking?>(null)
     var placeMenu by mutableStateOf(listOf<Pair<String, String>>())
     val pages = mutableStateMapOf<Place.Page, PageView>()

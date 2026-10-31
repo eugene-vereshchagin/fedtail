@@ -19,6 +19,9 @@
   pick, as the post answered) instead of no chip lit. The formatting buttons are a row
   under the text: a column beside it (post.format_bar "left"/"right", the desktop's)
   took a third of the screen.
+- **Phone: ⋮ → "Send a report"** in every build: the logs, the config and the phone's
+  facts (never the token or the database) to a messenger or mail. It was there only
+  beside the dev builds' self-check, so a released app couldn't hand its logs over.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.
