@@ -149,6 +149,7 @@ data class PostItem(
     val threadNews: Pair<String, String>? = null,   // "🔔 3 new in the thread"
     val myReplies: List<Pair<String, String>> = emptyList(),  // "↳ you replied …"
     val visibility: String = "",     // public | unlisted | private | direct
+    val canBoost: Boolean = true,    // the core's word (common/actions.can_boost)
     val meta: List<Pair<String, String>> = emptyList(),  // the marks with their links (time, edits)
     val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
     val quoteLine: Pair<String, String>? = null,  // the quote as one line; null — none shown
@@ -248,6 +249,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var newestFirst by mutableStateOf(false)
     var markOnScroll by mutableStateOf(true)
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
+    var bookmarkButton by mutableStateOf(true)  // ui.bookmark_button: 🔖 beside ↩ ★ ♻
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
     var prefetch by mutableStateOf("previews") // feed.prefetch: pictures fetched ahead
@@ -491,6 +493,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         newestFirst = me.optString("order") == "newest_first"
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
+        bookmarkButton = me.optBoolean("bookmark_button", true)
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
         expandCw = me.optBoolean("expand_cw")
@@ -777,8 +780,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (x.sid == p.sid) x.copy(poll = now.poll, pollOpen = now.pollOpen,
                     pollOptions = now.pollOptions) else x
             }
-            posts = posts.map(swap)
-            threadPosts = threadPosts.map(swap)
+            swapEverywhere(swap)
         }
     }
 
@@ -1079,6 +1081,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** The thread of a post; at: where it stands once loaded — "post", or "first_unread"
      *  (common/links.py THREAD_AT: a card's open_at, a fedtail:threadnew/ link). */
     fun openThread(postId: String, at: String = "post") {
+        // a post of the thread open now, tapped: that thread already — not another copy
+        // of it on top (a flicker, and Back pressed twice to get out, 31.10)
+        if (place is Place.Thread && threadPosts.any { it.sid == postId || it.id == postId }) return
         threadCwOpen = false
         // three columns: the thread pane shows one thread — a new one takes its place
         val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
@@ -1162,9 +1167,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         places = places + Place.Compose(replyTo)
     }
 
+    /** Something to send: words, or pictures alone (Qt's rule, the server's too). */
+    fun canSend() = composeText.isNotBlank() || attachments.any { it.token.isNotBlank() } ||
+        (editId != null && attachments.isNotEmpty())
+
     fun send(altOk: Boolean = false, langOk: Boolean = false) {
         val p = place as? Place.Compose ?: return
-        if (composeText.isBlank() || sending || uploading > 0) return
+        if (!canSend() || sending || uploading > 0) return
         sending = true
         viewModelScope.launch {
             val body = JSONObject().put("text", composeText)
@@ -1266,8 +1275,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val swap = { x: PostItem ->
                 if (x.sid == p.sid) x.copy(liked = now.liked, likes = now.likes) else x
             }
-            posts = posts.map(swap)
-            threadPosts = threadPosts.map(swap)
+            swapEverywhere(swap)
         }
     }
 
@@ -1281,8 +1289,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (x.sid == p.sid) x.copy(liked = now.liked, likes = now.likes, shared = now.shared,
                     shares = now.shares, bookmarked = now.bookmarked) else x
             }
-            posts = posts.map(swap)
-            threadPosts = threadPosts.map(swap)
+            swapEverywhere(swap)
+        }
+    }
+
+    /** A card changed (★ ♻ 🔖, a vote): wherever it stands — the lane, the thread, a
+     *  profile, a place's page. Only the lane and the thread took it, so on a profile
+     *  the heart stayed grey and a second tap took the like back (31.10). */
+    private fun swapEverywhere(swap: (PostItem) -> PostItem) {
+        posts = posts.map(swap)
+        threadPosts = threadPosts.map(swap)
+        pages.keys.toList().forEach { k ->
+            pages[k]?.let { v -> pages[k] = v.copy(rows = v.rows.map { r ->
+                r.post?.let { r.copy(post = swap(it)) } ?: r }) }
+        }
+        profiles.keys.toList().forEach { k ->
+            profiles[k]?.let { v -> profiles[k] = v.copy(posts = v.posts.map(swap)) }
         }
     }
 
@@ -1725,15 +1747,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val swap = { x: PostItem ->
                 if (x.sid == p.sid) x.copy(poll = now.poll, pollOpen = now.pollOpen) else x
             }
-            posts = posts.map(swap)
-            threadPosts = threadPosts.map(swap)
-            pages.keys.toList().forEach { k ->
-                pages[k]?.let { v -> pages[k] = v.copy(rows = v.rows.map { r ->
-                    r.post?.let { r.copy(post = swap(it)) } ?: r }) }
-            }
-            profiles.keys.toList().forEach { k ->
-                profiles[k]?.let { v -> profiles[k] = v.copy(posts = v.posts.map(swap)) }
-            }
+            swapEverywhere(swap)
         }
     }
 
@@ -2269,6 +2283,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             own = o.optBoolean("own"),
             edited = o.optBoolean("edited"),
             visibility = str(o, "visibility"),
+            canBoost = o.optBoolean("can_boost", true),
             nameHtml = str(acc, "name_html"),
             nameColor = str(acc, "color"),
             labels = o.optJSONObject("words")?.optJSONArray("meta")?.let { m ->

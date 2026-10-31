@@ -76,6 +76,7 @@
     <string name="cw_show">показать</string>
     <string name="cw_hide">скрыть</string>
     <string name="media_sensitive">Деликатное — нажми, чтобы показать</string>
+    <string name="unlike">Убрать лайк</string>
     <string name="like">Нравится</string>
     <string name="play">Воспроизвести</string>
     <string name="close">Закрыть</string>

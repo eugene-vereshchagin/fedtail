@@ -476,7 +476,7 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             Text("👁", fontSize = 18.sp)
         }
         IconButton(onClick = { model.send() },
-            enabled = !model.sending && model.uploading == 0 && model.composeText.isNotBlank()) {
+            enabled = !model.sending && model.uploading == 0 && model.canSend()) {
             ThemedIcon("send", Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
         }
     }) { mod ->

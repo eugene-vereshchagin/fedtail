@@ -31,7 +31,7 @@ from ...core.view import View
 from ...i18n import _
 from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
-from ..common import timed
+from ..common import actions, timed
 from ..common.cardtext import context_chars, indent_of, shown_text
 from ..common.commands import Commands
 from ..richtext import clean
@@ -336,6 +336,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
         "account": account_json(p.author), "created": _iso(p.created),
         "edited": p.edited is not None, "visibility": p.visibility,
+        "can_boost": actions.can_boost(p),
         "warning": p.warning, "sensitive": p.sensitive,
         "html": with_emojis(web_clean(html, richtext_link_chars(view.cfg)), p.emojis),
         "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
@@ -790,6 +791,8 @@ class Web:
                 "picture_later": list(_picture_later()),
                 # the reading rule's numbers, as the windows read them (common/lane)
                 "dwell_ms": int(c["read"].get("dwell_ms", 350)),
+                # the card's 🔖 beside ↩ ★ ♻ (ui.bookmark_button), as the windows'
+                "bookmark_button": bool(c["ui"].get("bookmark_button", True)),
                 "message_percent": int(c["ui"].get("message_percent", 100)),
                 "unfocused_seconds": float(c["read"].get("unfocused_seconds", 5)),
                 "sensitive_media": config.sensitive_media(c),
@@ -1867,7 +1870,9 @@ class Web:
     def post(self, body):
         core = self.core
         text = (body.get("text") or "").strip()
-        if not text:
+        # pictures alone are a post (Qt's rule): the phone's and the page's photo without a
+        # caption stood unsendable (31.10)
+        if not text and not body.get("media") and not body.get("media_edit"):
             raise ValueError("empty")
         cw = (body.get("cw") or "").strip()
         if body.get("edit"):  # my post corrected (the ⋯ menu's Edit)

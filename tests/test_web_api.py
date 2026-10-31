@@ -46,6 +46,32 @@ class WebApiTest(TmpDir):
         self.assertEqual((alt, focus), ("a cat", None))
         self.assertTrue(thumb.endswith(cover["token"]))
 
+    def test_pictures_alone_are_a_post(self):
+        """A photo without a caption goes (Qt's rule): the page and the phone refused it
+        as "empty" (31.10); nothing at all still is."""
+        code, got = self.upload(b"\xff\xd8\xff\xe0jpeg", "cat.jpg")
+        self.assertEqual(code, 200, got)
+        body = {"text": "", "visibility": "public", "alt_ok": True,
+                "media": [{"token": got["token"], "alt": "a cat"}]}
+        code, _h, r = self.req("/api/post", body)
+        self.assertEqual(code, 200, r)
+        self.assertEqual(self.w.uploads[-1][1], "a cat")
+        self.assertNotEqual(self.req("/api/post", {"text": "  "})[0], 200)
+
+    def test_the_card_says_whether_it_boosts(self):
+        """The core's word on a boost (common/actions.can_boost), not each interface's:
+        the phone offered one on followers' posts, and the server refused."""
+        from fedtail.frontends.common import actions
+        self.w.add(status("401", ME, text="mine, followers", vis="private"), home=True)
+        self.w.add(status("402", ME, text="mine, public", vis="public"), home=True)
+        self.core.poll_once()
+        cards = {p["sid"]: p for p in json.loads(self.req("/api/lane?name=home")[2])["posts"]}
+        self.assertFalse(cards["401"]["can_boost"])
+        self.assertTrue(cards["402"]["can_boost"])
+        self.assertTrue(actions.can_boost(type("P", (), {"visibility": "unlisted"})))
+        me = json.loads(self.req("/api/me")[2])
+        self.assertTrue(me["bookmark_button"])  # ui.bookmark_button, the windows' default
+
     def test_edit_describes_my_pictures(self):
         mine = self.w.add(status("400", ME, text="pic", vis="public"), home=True)
         mine["media_attachments"] = [{"id": "m9", "type": "image",

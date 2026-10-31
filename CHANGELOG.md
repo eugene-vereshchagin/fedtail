@@ -31,6 +31,16 @@
   stood unread on the phone, even opened, till the laptop read it.
 - A new version keeps the last day of the old one's logs (it deleted them all): the
   report sent right after an update is about what went wrong before it.
+- **A post of pictures alone goes** — the phone and the web page refused a photo without
+  a caption as "empty"; the windows always took it.
+- Phone: ★ ♻ 🔖 and a vote show at once on a profile and on a place's page too (only the
+  lane and the thread took the new state: the heart stayed grey, a second tap undid it).
+- Phone and web page: a boost is offered only where the server takes one (public posts:
+  `common/actions.can_boost`, the core's word now, not each interface's own); the
+  phone's card has the 🔖 button by `ui.bookmark_button`, as the windows.
+- Phone: a post tapped inside the thread open now doesn't open that thread again on top;
+  the `#alias` is plain text without the command line (its tap did nothing); the card's
+  ⋯ doesn't flash last time's items; ★ says "Undo like" when liked.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

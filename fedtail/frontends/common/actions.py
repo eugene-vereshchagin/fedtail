@@ -82,6 +82,13 @@ class Button:
     who: str = ""
 
 
+def can_boost(p):
+    """Can this post be boosted? Public and quiet public only: a followers' or a direct
+    post the server refuses — every interface asks this (the phone offered it on every
+    post, 31.10)."""
+    return p.visibility in ("public", "unlisted")
+
+
 def buttons(entry, ctx, unread=False, open_at="post"):
     """The buttons under a post, in order. open_at: where its thread opens (the card's
     CardSpec.open_at)."""
@@ -93,7 +100,7 @@ def buttons(entry, ctx, unread=False, open_at="post"):
     out.append(Button("fav", ("rating", "starred-symbolic") if fav else
                       ("rating-unrated", "non-starred-symbolic"), "★" if fav else "☆",
                       _("faved") if fav else _("fav"), n(p.counts.likes), fav))
-    if p.visibility in ("public", "unlisted"):
+    if can_boost(p):
         out.append(Button("boost", ("media-playlist-repeat", "retweet"), "♻",
                           _("boosted") if boosted else _("boost"), n(p.counts.shares),
                           boosted))

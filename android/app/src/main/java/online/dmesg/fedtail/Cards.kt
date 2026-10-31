@@ -115,6 +115,8 @@ class CardActions(
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
     val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
     val pollRefresh: (PostItem) -> Unit = {},
+    val bookmarkButton: Boolean = false,             // ui.bookmark_button: 🔖 beside ↩ ★ ♻
+    val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
@@ -125,7 +127,8 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     expandCw = expandCw || cwOpen, profile = { openProfile(it) }, menu = { postMenu(it) },
     runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
-    actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) })
+    actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
+    bookmarkButton = bookmarkButton, aliasTaps = commandLine)
 
 // a server's emoji as the core writes it (web/server.py with_emojis): its picture's address
 private val EMOJI = Regex("""<img\b[^>]*\bclass="emoji"[^>]*\bsrc="([^"]*)"[^>]*>""")
@@ -582,8 +585,11 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
         if (p.alias.isNotBlank()) {
             Text("#" + p.alias, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // a tap puts it into the command line — only when there is one: off, the
+                // tap did nothing (31.10), so it is plain text then
                 modifier = Modifier.padding(start = 8.dp, end = 4.dp)
-                    .clickable { act.alias(p.alias) })
+                    .then(if (act.aliasTaps) Modifier.clickable { act.alias(p.alias) }
+                          else Modifier))
         }
     }
 }
@@ -941,7 +947,9 @@ private fun Actions(p: PostItem, act: CardActions) {
         }
         // a button, as ↩ and ★ beside it: a bare count let the tap through to the card,
         // which opened the thread instead (31.10); boosted — lit, a tap takes it back
-        TextButton(onClick = { act.share(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+        // only where the server takes a boost (common/actions.can_boost): public posts
+        if (p.canBoost) TextButton(onClick = { act.share(p) },
+            contentPadding = PaddingValues(horizontal = 8.dp)) {
             val lit = if (p.shared) MaterialTheme.colorScheme.secondary else grey
             ThemedIcon("boost", Glyphs.Boost,
                 stringResource(if (p.shared) R.string.unboost else R.string.boost),
@@ -951,9 +959,16 @@ private fun Actions(p: PostItem, act: CardActions) {
         TextButton(onClick = { act.like(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
             ThemedIcon(if (p.liked) "liked" else "like",
                 if (p.liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                stringResource(R.string.like), Modifier.size(18.dp),
+                stringResource(if (p.liked) R.string.unlike else R.string.like), Modifier.size(18.dp),
                 tint = if (p.liked) MaterialTheme.colorScheme.secondary else grey)
             if (p.likes > 0) Text(" ${p.likes}", fontSize = 13.sp, color = grey)
+        }
+        if (act.bookmarkButton) TextButton(onClick = { act.bookmark(p) },
+            contentPadding = PaddingValues(horizontal = 8.dp)) {
+            val said = stringResource(if (p.bookmarked) R.string.unbookmark else R.string.bookmark)
+            Text("🔖", fontSize = 15.sp,
+                color = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey,
+                modifier = Modifier.semantics { contentDescription = said })
         }
         Spacer(Modifier.weight(1f))
         CardMenu(p, act)
@@ -967,7 +982,8 @@ private fun CardMenu(p: PostItem, act: CardActions) {
     var open by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<JSONObject?>(null) }
     val clipboard = LocalClipboardManager.current
-    LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
+    // asked anew at each opening; last time's items gone meanwhile (they flashed, tappable)
+    LaunchedEffect(open) { if (open) { info = null; info = (act.menu ?: act.info)(p) } }
     Box {
         IconButton(onClick = { open = true }) {
             ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
@@ -979,7 +995,8 @@ private fun CardMenu(p: PostItem, act: CardActions) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.profile_of, p.handle)) },
                     onClick = { open = false; act.profile(p.accountId) })
             }
-            DropdownMenuItem(text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
+            if (p.canBoost) DropdownMenuItem(
+                text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
                 onClick = { open = false; act.share(p) })
             val items = info?.optJSONArray("items")
             if (items == null) {  // the windows' menu has its own (and says when it's done)

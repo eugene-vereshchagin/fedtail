@@ -485,11 +485,12 @@ function renderActions(p, inThread) {
   btn("↩" + n(p.counts.replies), w("reply"), false, () => compose(p));
   btn((p.mine.liked ? "★" : "☆") + n(p.counts.likes), p.mine.liked ? w("faved") : w("fav"),
       p.mine.liked, () => act("like", p));
-  if (p.visibility === "public" || p.visibility === "unlisted")
+  if (p.can_boost)  // the core's word (common/actions.can_boost)
     btn("♻" + n(p.counts.shares), p.mine.shared ? w("boosted") : w("boost"), p.mine.shared,
         () => act("share", p));
-  btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
-      () => act("bookmark", p));
+  if (!state.me || state.me.bookmark_button !== false)  // ui.bookmark_button
+    btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
+        () => act("bookmark", p));
   if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at));
   if (p.url) {
     const a = link("↗", p.url);
