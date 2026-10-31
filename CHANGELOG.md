@@ -13,6 +13,9 @@
   — and every packed journal — carried those marks too, so the desktop's custom lanes
   went read when the phone came. Only the marks a person made (here or on another
   device) travel now; the store keeps them apart (`read_shared`).
+- **Phone: a notification goes once its posts are read** — there, on another device or
+  by the server's marker. "To me: 2 new posts" stayed in the shade over a lane with
+  nothing unread; now opening the app (or the next background round) takes it back.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

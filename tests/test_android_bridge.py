@@ -559,6 +559,13 @@ class BridgeNotesTest(_Base):
         self.assertTrue(any("ping from the test" in n["body"] for n in got["notes"]), got)
         again = self.call("notes", got["n"])
         self.assertEqual(again["notes"], [])  # said once
+        # read elsewhere (the desktop, through sync): the shade's note goes, the app
+        # merely opened — "To me: 2 new posts" stood over a lane with none (31.10)
+        lane = next(n["lane"] for n in got["notes"] if "ping from the test" in n["body"])
+        self.assertNotIn(lane, again["read"])
+        core = self.bridge._s["core"]
+        core.mark_read(core.unread_ids(core.lane_entries(lane)))
+        self.assertIn(lane, self.call("notes", again["n"])["read"])
 
     def test_ready_makes_the_core_once(self):
         # the app's own log (diag) stays off here: its file would outlive the test's

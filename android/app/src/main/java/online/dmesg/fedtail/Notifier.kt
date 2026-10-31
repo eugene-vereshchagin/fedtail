@@ -52,6 +52,11 @@ object Notifier {
     fun take(context: Context, got: JSONObject) {
         if (got.has("error")) return
         lastSeq = got.optInt("n", lastSeq)
+        // read meanwhile (here, on another device, by the server's marker): its note goes
+        got.optJSONArray("read")?.let { read ->
+            val nm = NotificationManagerCompat.from(context)
+            for (i in 0 until read.length()) nm.cancel(read.getString(i).hashCode())
+        }
         if (!got.optBoolean("enabled", true)) return
         if (visible && !got.optBoolean("when_focused")) return
         show(context, got.optJSONArray("notes") ?: JSONArray(), got.optInt("count"))
