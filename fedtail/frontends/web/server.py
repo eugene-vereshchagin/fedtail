@@ -18,6 +18,7 @@ import secrets
 import sys
 import threading
 import time
+from datetime import datetime
 from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1539,7 +1540,19 @@ class Web:
 
     @staticmethod
     def _date(when):
-        return when.astimezone().strftime("%d.%m.%Y") if when else ""
+        """A day as the page writes it: an aware datetime (the model's) or ISO text — the
+        date I follow someone since is text (core.followed_since), and every profile I
+        followed through fedtail failed with "'str' has no astimezone" (31.10)."""
+        if not when:
+            return ""
+        if isinstance(when, str):
+            try:
+                when = datetime.fromisoformat(when.replace("Z", "+00:00"))
+            except ValueError:
+                return when[:10]
+            if when.tzinfo is None:
+                return when.strftime("%d.%m.%Y")
+        return when.astimezone().strftime("%d.%m.%Y")
 
     def profile_act(self, acc_id, key, answer=None, confirmed=False, chosen=None):
         """A profile's button (common/profile.py), done as the windows do it; what's

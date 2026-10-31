@@ -212,6 +212,16 @@ class WebProfileTest(TmpDir):
             got, more = nxt, nxt["older"]
         self.assertEqual(seen, set(b_posts))
 
+    def test_a_profile_i_follow_says_since_when(self):
+        """The date I follow someone since is ISO text (core.followed_since): the page's
+        and the phone's profile of everyone followed through fedtail failed with
+        "'str' object has no attribute 'astimezone'" (31.10)."""
+        self.w.following.add("B")
+        self.core.store.kv_set("followed_at", {"B": "2026-10-31T10:00:00+00:00"})
+        got = self.web.account("B", "all")
+        self.assertTrue(got["relation"]["following"])
+        self.assertIn("following since 31.10.2026", " ".join(got["meta"]))
+
     def test_origin_step_by_step(self):
         """Their own server: the addresses first, then the posts a few at a time."""
         from unittest import mock

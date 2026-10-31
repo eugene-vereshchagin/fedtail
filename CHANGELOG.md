@@ -47,6 +47,10 @@
   through sync — and nothing said they had come. Now only Home's place is taken from
   other clients; `sync.mentions_by_marker = true` brings the old way back. fedtail's own
   place still goes to the server.
+- **The web page's and the phone's profile of anyone followed through fedtail opens
+  again** — the date of following came as text, and the profile failed with
+  "'str' object has no attribute 'astimezone'"; after Follow it didn't refresh.
+- "Try a theme" names the config's chapter as the file does: `[appearance]`, not `[ui]`.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

@@ -600,9 +600,9 @@ _STRINGS = {
         "try_theme": "Попробовать тему",
         "try_theme_tip": "Сразу, до перезапуска; насовсем — appearance.theme в конфиге",
         "theme_in_config": "в конфиге",
-        "theme_tried": "Тема «{name}» — до перезапуска. Насовсем: theme = \"{name}\" в [ui] "
-                       "(сейчас там «{configured}»). Кнопки над лентой примут её вид "
-                       "после перезапуска.",
+        "theme_tried": "Тема «{name}» — до перезапуска. Насовсем: theme = \"{name}\" "
+                       "в [appearance] (сейчас там «{configured}»). Кнопки над лентой "
+                       "примут её вид после перезапуска.",
         "you_replied": "ты ответил {when}: «{text}»",
         "fav": "В избранное", "unfav": "Убрать из избранного", "boost": "Продвинуть",
         "unboost": "Отменить продвижение", "open_browser": "Открыть в браузере",
@@ -2439,9 +2439,9 @@ _STRINGS = {
         "try_theme": "Try a theme",
         "try_theme_tip": "Right away, until restart; for good — appearance.theme in the config",
         "theme_in_config": "in config",
-        "theme_tried": "Theme \"{name}\" until restart. For good: theme = \"{name}\" in [ui] "
-                       "(it says \"{configured}\" now). The buttons above a lane take "
-                       "its look after a restart.",
+        "theme_tried": "Theme \"{name}\" until restart. For good: theme = \"{name}\" "
+                       "in [appearance] (it says \"{configured}\" now). The buttons above "
+                       "a lane take its look after a restart.",
         "you_replied": "you replied {when}: “{text}”",
         "fav": "Favourite", "unfav": "Unfavourite", "boost": "Boost",
         "unboost": "Undo boost", "open_browser": "Open in browser",
