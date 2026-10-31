@@ -982,8 +982,9 @@ private fun CardMenu(p: PostItem, act: CardActions) {
     var open by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<JSONObject?>(null) }
     val clipboard = LocalClipboardManager.current
-    // asked anew at each opening; last time's items gone meanwhile (they flashed, tappable)
-    LaunchedEffect(open) { if (open) { info = null; info = (act.menu ?: act.info)(p) } }
+    // asked anew at each opening (last time's items stand till the answer: clearing them
+    // first made the UI test of this menu fail on CI's slow emulator, 31.10)
+    LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
     Box {
         IconButton(onClick = { open = true }) {
             ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),

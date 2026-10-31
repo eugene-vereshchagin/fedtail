@@ -39,8 +39,7 @@
   `common/actions.can_boost`, the core's word now, not each interface's own); the
   phone's card has the 🔖 button by `ui.bookmark_button`, as the windows.
 - Phone: a post tapped inside the thread open now doesn't open that thread again on top;
-  the `#alias` is plain text without the command line (its tap did nothing); the card's
-  ⋯ doesn't flash last time's items; ★ says "Undo like" when liked.
+  the `#alias` is plain text without the command line (its tap did nothing); ★ says "Undo like" when liked.
 - **Another client's glance at the notifications no longer reads your answers.** The
   notifications' place on the server, moved by Tusky or the server's web when you open
   a notification there, marked mentions and replies read in fedtail — on every device,
