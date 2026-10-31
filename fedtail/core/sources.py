@@ -196,6 +196,31 @@ def catch_up(store, source, page_size, limit):
     return new
 
 
+def late_arrivals(store, source, page_size, since, max_pages=10):
+    """Posts that came late: a server numbers a post by when it was written, so one
+    delivered late stands back among what catch_up passed already, and "newer than the
+    newest I have" never brings it (31.10: a device asking often lost such posts, one
+    asking seldom had them — the phone counted more than the desktop). Pages from the
+    newest back to `since` (ISO) — at most max_pages — what's not stored goes in.
+    Only holes are filled: nothing older than the oldest post stored (that would be
+    history, not a late post — "Older" brings it). Returns the new item ids."""
+    floor = store.oldest_sort(source.name)
+    if floor is None:
+        return []
+    new, page, pages = [], source.fetch(limit=page_size), 1
+    while page:
+        entries = _entries(source, page)
+        new += store.put_items(source.name,
+                               [e for e in entries if sort_key(e[2], e[0]) > floor])
+        if len(page) < page_size or pages >= max_pages or not entries:
+            break
+        oldest = min(entries, key=lambda e: sort_key(e[2], e[0]))
+        if (oldest[2] or "") < since or sort_key(oldest[2], oldest[0]) <= floor:
+            break
+        page, pages = source.fetch(limit=page_size, max_id=oldest[0]), pages + 1
+    return new
+
+
 def _fill_empty(store, source, page_size, limit):
     """No cursor yet. The very first time take one page; if the source was
     already watched (it was just empty), walk back to the moment we started

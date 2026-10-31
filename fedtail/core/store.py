@@ -894,6 +894,13 @@ class Store:
                                   (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
+    def oldest_sort(self, source):
+        """The sort key (sort_key) of a source's oldest stored item, or None."""
+        with self._reading() as db:
+            row = db.execute("SELECT MIN(sort) FROM items WHERE source=? AND item_id NOT LIKE ?",
+                             (source, self.LOCAL_ITEM)).fetchone()
+        return row[0] if row else None
+
     def oldest_item(self, source):
         with self._reading() as db:
             row = db.execute("SELECT item_id FROM items WHERE source=? "

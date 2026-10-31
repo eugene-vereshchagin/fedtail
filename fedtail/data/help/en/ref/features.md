@@ -265,7 +265,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Oldest on top, nothing jumps | has | 0.1.0 | `reading.order`, `reading.start_at`, `reading.on_new` | own | only in fedtail |
-| Catching up with no holes | has | 0.1.0 | `reading.page_size`, `reading.catch_up_limit` | `min_id` | only in fedtail |
+| Catching up with no holes | has | 0.1.0 | `reading.page_size`, `reading.catch_up_limit`, `reading.late_hours`, `reading.late_minutes` | `min_id`, `max_id` | only in fedtail |
 | When a post counts as read | has | 0.1.0 | `reading.mark_read`, `reading.read_button`, `reading.dwell_ms`, `reading.unfocused_seconds` | own | only in fedtail (the manual mode) |
 | Your own posts are always read | has | 0.13.0 | — | own | — |
 | The first run doesn't start with a pile | has | 0.1.0 | `reading.first_run_mark_read` | own | — |
@@ -283,7 +283,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Oldest on top, nothing jumps.** `reading.order = "oldest_first"` — oldest on top, you read downwards, like RSS or Point (`"newest_first"` — as everyone does). `reading.start_at = "first_unread"` — open a lane and you stand where you stood in it last, in any interface (read in the window — the terminal, the web page and the phone open there too), else at the first unread (`"newest"` — at the freshest). `reading.on_new = "keep_position"` — new posts come and the place doesn't move, only the counter grows (`"jump_to_newest"` — jump to the new).
 
-**Catching up with no holes.** Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here.
+**Catching up with no holes.** Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). A server numbers a post by when it was written, so one delivered late stands back among what was fetched already, and "newer than the newest" never brings it: every `late_minutes` the lane is looked `late_hours` back and the late ones are picked up (without it a device asking often lost them, one asking seldom had them, and the phone's counts and the desktop's differed). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here.
 
 **When a post counts as read.** `"on_scroll"` — when you've scrolled past the whole post and the feed stood `reading.dwell_ms`; a window without focus — only while scrolled by hand and `reading.unfocused_seconds` after (one rule in every interface, since 0.22.0); `"on_open"` — the whole lane as soon as you open it; `"manual"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode.
 

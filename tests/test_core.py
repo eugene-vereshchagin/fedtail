@@ -2194,6 +2194,35 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual(core.store.read_set(["020"]), {"020"})
 
+    def test_a_post_that_came_late_is_fetched(self):
+        """A server numbers a post by when it was written: one delivered late stands
+        among what was fetched already, and "newer than the newest" never brings it — a
+        device asking often lost it, one asking seldom had it (31.10: the phone counted
+        3–5 more than the desktop). Every feed.late_minutes the lane is looked back —
+        for holes only, never older than what is stored (that's history)."""
+        core, w = self.make(feed={"page_size": 40})
+        core.connect().result()
+        for i in (100, 110, 120, 130, 140, 150):
+            w.add(status(str(i), BOB, minute=i // 10), home=True)
+        core.poll_once()   # the first run
+        core.poll_once()   # looked back once: nothing late yet
+        w.add(status("125", BOB, minute=12, text="late"), home=True)
+        core.poll_once()
+        self.assertIsNone(core.store.get_status("125"))  # not due again yet: still missed
+        core._late_checked["home"] -= 3600                # feed.late_minutes later
+        core.poll_once()
+        self.assertIsNotNone(core.store.get_status("125"))
+        self.assertIn("125", core.unread_ids(core.lane_entries("home")))  # news, unread
+        w.add(status("090", BOB, minute=9, text="history"), home=True)  # before them all
+        core._late_checked["home"] -= 3600
+        core.poll_once()
+        self.assertIsNone(core.store.get_status("090"))  # not a late post: "Older" brings it
+        core.cfg["feed"]["late_minutes"] = 0  # never
+        w.add(status("126", BOB, minute=12, text="later"), home=True)
+        core._late_checked["home"] -= 3600
+        core.poll_once()
+        self.assertIsNone(core.store.get_status("126"))
+
     def test_first_start_keeps_the_server_marker(self):
         """A new machine's first start: what another client left unread (newer than the
         server's home marker) stays unread, and the marker isn't pushed to "all read"."""

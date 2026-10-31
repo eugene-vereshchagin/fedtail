@@ -101,6 +101,8 @@ DEFAULTS = {
         "thread_news": True,
         "page_size": 40,
         "catch_up_limit": 400,
+        "late_hours": 12,         # how far back a lane is looked through for late posts
+        "late_minutes": 10,       # …how often (0 — never)
         "render_limit": 300,
         "older_ahead": False,     # the end of a lane in sight: a page older by itself
         "repeat_boosts": False,
@@ -501,6 +503,8 @@ MINIMUM = {
     ("activity", "unlikes_posts"): 1,
     ("feed", "remote_posts"): 1,
     ("feed", "catch_up_limit"): 1,
+    ("feed", "late_hours"): 0,
+    ("feed", "late_minutes"): 0,
     ("feed", "render_limit"): 20,
     ("ui", "font_size"): 0,
     ("ui", "roster_threads"): 0,
@@ -557,7 +561,8 @@ FILE_LAYOUT = (
                              "extra_minutes extra_posts rss_items rss_summary_chars "
                              "tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
-    ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
+    ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit late_hours "
+                              "late_minutes render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),

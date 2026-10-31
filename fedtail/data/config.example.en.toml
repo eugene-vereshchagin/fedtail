@@ -542,6 +542,15 @@ page_size = 40
 # How many new posts to catch up a poll (the rest — with the next one).
 catch_up_limit = 400
 
+# Posts that come late. A server numbers a post by the time it was written, not when it
+# arrived: one delivered an hour late stands an hour back, behind what was fetched already,
+# and "newer than the newest I have" never brings it — a device that asks often lost such
+# posts, one that asks seldom had them (31.10: the phone counted 3–5 more than the desktop).
+# So every late_minutes a lane read through (Home, lists, tags) is looked through late_hours
+# back for posts it lacks. late_minutes = 0 — never.
+late_hours = 12
+late_minutes = 10
+
 # How many latest posts to keep on screen in a lane (older ones — with the "older" button).
 render_limit = 300
 

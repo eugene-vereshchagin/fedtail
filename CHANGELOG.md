@@ -56,6 +56,13 @@
   out as plain text, out of the quote.
 - A bug report has `unread.txt`: which posts each lane counts unread (ids only, never
   words) — two devices whose counts differ are compared post by post.
+- **Posts that come late are fetched; the phone's and the desktop's counts agree.** A
+  server numbers a post by when it was written, so one delivered late stands back among
+  what was fetched already, and "newer than the newest I have" never brought it: the
+  desktop, asking every minute and a half, lost such posts; the phone, asking seldom, had
+  them — and counted 3–5 more in a list (31.10, compared post by post: every one the
+  phone had more, the desktop had never got). Every `reading.late_minutes` (10) a lane
+  read through — Home, lists, tags — is looked `reading.late_hours` (12) back.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

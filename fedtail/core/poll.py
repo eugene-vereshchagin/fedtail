@@ -24,6 +24,12 @@ from .proto import RateLimited
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
+def _iso_ago(seconds):
+    """A moment `seconds` ago as the store writes times (store.now_iso)."""
+    from datetime import UTC, datetime, timedelta
+    return (datetime.now(UTC) - timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
 PARENTS_FIRST = 20  # parents fetched before the rules sort a round's replies
 
 
@@ -423,6 +429,22 @@ class PollMixin:
         return {"busy": bool(busy), "ok_at": ok,
                 "failing": int(getattr(self, "_fails_in_row", 0) or 0)}
 
+    # lanes looked through for late posts (sources.late_arrivals): Home and those read
+    # through like it — lists, tags (by name: "list:<id>", "tags:<spec>")
+    LATE_SOURCES = ("list:", "tags:")
+
+    def _late_due(self, name):
+        """Is it time to look `name` through for posts that came late (feed.late_minutes)?"""
+        every = float(self.cfg["feed"].get("late_minutes", 10) or 0) * 60
+        if every <= 0 or not (name == "home" or name.startswith(self.LATE_SOURCES)):
+            return False
+        done = self.__dict__.setdefault("_late_checked", {})
+        now = time.monotonic()
+        if now - done.get(name, now - every - 1) < every:
+            return False
+        done[name] = now
+        return True
+
     def _step(self, name):
         """Poll timing: the time since the last step goes to name (summed). The round's
         own thread only: _warm_lanes after a read mark (another thread) stepped too, and
@@ -572,6 +594,14 @@ class PollMixin:
                 try:
                     new_by_source[name] = sources.catch_up(
                         self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
+                    if not first_run and self._late_due(name):
+                        late = sources.late_arrivals(
+                            self.store, self.sources[name], fc["page_size"],
+                            _iso_ago(float(fc.get("late_hours", 12)) * 3600))
+                        if late:
+                            log.info("%s: %d came late (numbered back among the fetched)",
+                                     name, len(late))
+                            new_by_source[name] += late
                     self._step(name)
                     self.store.prune(name, self.keep_per_lane())
                     self._step("prune")
