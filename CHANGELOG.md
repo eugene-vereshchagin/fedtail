@@ -54,6 +54,8 @@
 - **Quote in reply quotes every line.** A piece selected in the windows broke its lines
   with U+2028, and only the first line of each paragraph got its "> " — the rest went
   out as plain text, out of the quote.
+- A bug report has `unread.txt`: which posts each lane counts unread (ids only, never
+  words) — two devices whose counts differ are compared post by post.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

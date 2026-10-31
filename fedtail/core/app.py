@@ -271,6 +271,12 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._opened_threads = {}  # root id -> when it was opened (thread recheck)
         self._rechecked = {}       # root id -> when it was asked again
         self._pending_login = None
+        # a bug report says which posts each lane counts unread (weakly: a core gone
+        # leaves no census behind, nor itself alive)
+        import weakref
+        me = weakref.ref(self)
+        diag.report_extra("unread.txt",
+                          lambda: me().unread_census() if me() is not None else "")
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._poll_lock = threading.Lock()
@@ -1465,6 +1471,28 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         pairs = [(st["id"], (st.get("reblog") or {}).get("id")) for _, st in entries]
         read = self.store.read_set({i for pair in pairs for i in pair if i})
         return {i for i, post in pairs if i not in read and (not post or post not in read)}
+
+    def unread_census(self):
+        """Which posts each lane counts unread — ids only, no words — for a bug report:
+        two devices whose counts differ are compared post by post. With the read marks'
+        own counts (all; the ones sync carries)."""
+        out = [f"read marks: {self.store_counts().get('read', '?')}, carried by sync: "
+               f"{len(self.store.recent_read(10 ** 6))}"]
+        for lane in list(self.lanes):
+            if lane.lazy:
+                continue
+            try:
+                entries = self.lane_entries(lane.name)
+                unread = self.unread_ids(entries)
+                n = self.unread_count(lane.name)
+            except Exception as e:  # noqa: BLE001 — a lane the core can't count now
+                out.append(f"{lane.name}: {e.__class__.__name__}")
+                continue
+            out.append(f"{lane.name} ({self.lane_title(lane.name)}): count {n}, "
+                       f"{len(unread)} unread of {len(entries)} loaded")
+            if unread:
+                out.append("  " + " ".join(sorted(unread)))
+        return "\n".join(out) + "\n"
 
     def unread_count(self, name):
         """Unread in a lane — cached while neither the lane nor any read mark changed:

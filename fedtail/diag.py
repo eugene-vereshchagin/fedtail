@@ -1158,6 +1158,20 @@ def full_snapshot(paths, cfg=None, census=None, dest_dir=None):
     return bug_report(paths, dest_dir, cfg)
 
 
+# what a running core adds to a report: {file name: fn() -> text} (the core registers
+# its unread census — which posts each lane counts unread, ids only: two devices'
+# counts that differ are compared post by post, 31.10)
+_REPORT_EXTRAS = {}
+
+
+def report_extra(name, fn):
+    """fn() → the text of `name` in the next bug report (None: none any more)."""
+    if fn is None:
+        _REPORT_EXTRAS.pop(name, None)
+    else:
+        _REPORT_EXTRAS[name] = fn
+
+
 def bug_report(paths, dest_dir=None, cfg=None, hours=48):
     """A .tar.gz with the logs of the last `hours`, crash and stack files, the config
     and a system summary. Never the token or the database. Returns the archive path."""
@@ -1189,6 +1203,11 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
         if paths.config_file.exists():  # its secrets redacted (an API key, a proxy's password)
             _add_text(tar, "config.toml", redact_config(paths.config_file.read_text("utf-8")))
         _add_text(tar, "system.txt", summary)
+        for extra, fn in list(_REPORT_EXTRAS.items()):
+            try:
+                _add_text(tar, extra, fn())
+            except Exception as e:  # noqa: BLE001 — the report goes without it
+                log.info("report: %s: %s", extra, e.__class__.__name__)
     return out
 
 

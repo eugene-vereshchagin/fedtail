@@ -2545,6 +2545,24 @@ class CoreTest(TmpDir):
         core._step("counts")  # the round's own: the 20 s are its
         self.assertGreaterEqual(core._steps["counts"], 20)
 
+    def test_the_report_says_which_posts_are_unread(self):
+        """Two devices' counts that differ are compared post by post: the bug report has
+        each lane's unread ids (ids only, never words) — 31.10, the phone 37, the desktop
+        33, and no way to tell which posts."""
+        import tarfile
+
+        from fedtail import diag
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("030", BOB, minute=30, text="secret words"), home=True)
+        core.poll_once()
+        out = diag.bug_report(core.paths, self.tmp, core.cfg)
+        with tarfile.open(out) as tar:
+            text = tar.extractfile("unread.txt").read().decode()
+        self.assertIn("030", text)
+        self.assertIn("home", text)
+        self.assertNotIn("secret words", text)
+
     def test_login_outlives_the_app(self):
         """A phone kills the app while the browser is out: the code that comes back to
         the app started anew still finds the login begun (login.json), within the hour."""
