@@ -912,9 +912,14 @@ private fun Actions(p: PostItem, act: CardActions) {
             ThemedIcon("reply", Glyphs.Reply, stringResource(R.string.reply), Modifier.size(18.dp), tint = grey)
             if (p.replies > 0) Text(" ${p.replies}", fontSize = 13.sp, color = grey)
         }
-        Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            ThemedIcon("boost", Glyphs.Boost, null, Modifier.size(18.dp), tint = grey)
-            if (p.shares > 0) Text(" ${p.shares}", fontSize = 13.sp, color = grey)
+        // a button, as ↩ and ★ beside it: a bare count let the tap through to the card,
+        // which opened the thread instead (31.10); boosted — lit, a tap takes it back
+        TextButton(onClick = { act.share(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+            val lit = if (p.shared) MaterialTheme.colorScheme.secondary else grey
+            ThemedIcon("boost", Glyphs.Boost,
+                stringResource(if (p.shared) R.string.unboost else R.string.boost),
+                Modifier.size(18.dp), tint = lit)
+            if (p.shares > 0) Text(" ${p.shares}", fontSize = 13.sp, color = lit)
         }
         TextButton(onClick = { act.like(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
             ThemedIcon(if (p.liked) "liked" else "like",
