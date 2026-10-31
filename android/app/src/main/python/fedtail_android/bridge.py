@@ -844,10 +844,8 @@ def _theme_fonts(name):
 def notes(since):
     """What to tell the phone's notification shade since the note numbered `since`
     (notifytext's words, by notify.privacy): {"notes": [{title, body, lane, thread}],
-    "n": the newest note's number, "when_focused", "enabled", "read": the lanes whose
-    note is to go (nothing unread there now)}."""
+    "n": the newest note's number, "when_focused", "enabled"}."""
     def go():
-        from fedtail.frontends import notifytext
         from fedtail.frontends.common import sidebar
         got, n = _s["web"].notes_since(int(since))
         core = _core()
@@ -856,13 +854,10 @@ def notes(since):
         # launchers that show numbers take it from the notes
         view = _s["web"].core
         names = [x["name"] for x in _s["web"].lanes()]
-        numbers = sidebar.counts(view, names)
-        count = sidebar.icon_total(view, core.cfg, numbers) \
+        count = sidebar.icon_total(view, core.cfg, sidebar.counts(view, names)) \
             if core.cfg["ui"].get("icon_count") else 0
         return {"notes": got, "n": n, "enabled": bool(cfg.get("enabled", True)),
-                "when_focused": bool(cfg.get("when_focused", False)), "count": int(count),
-                # notes of lanes read meanwhile (here, elsewhere): out of the shade
-                "read": notifytext.read_since(numbers) if view.me else []}
+                "when_focused": bool(cfg.get("when_focused", False)), "count": int(count)}
     return _answer(go)
 
 

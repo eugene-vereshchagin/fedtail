@@ -110,14 +110,6 @@ def due(view, items, cfg, on_screen, titles=None):
     return notes
 
 
-def read_since(numbers):
-    """The lanes whose note is out of date: nothing unread there now — read here, on
-    another device (sync) or by the server's marker. A shade that keeps a note till it is
-    tapped (the phone's) takes it back: "To me: 2 new posts" stood there over a lane
-    with none (31.10). numbers: {lane: unread} (sidebar.counts)."""
-    return sorted(name for name, n in numbers.items() if not n)
-
-
 def _activity_note(kind, notifs, privacy, lane="activity"):
     """"★ 3 in favourites" — from whom, and (full) on which post."""
     n = len(notifs)

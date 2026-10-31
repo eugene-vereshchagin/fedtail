@@ -556,20 +556,6 @@ note.en = "The terminal — through notify-send or the terminal's own code (kitt
 keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"]
 
 [[capability]]
-id = "notify-taken-back"
-area = "app"
-qt = "no"
-gtk = "no"
-tui = "no"
-web = "no"
-android = "has"
-name.ru = "Уведомление убирается, когда его посты прочитаны"
-name.en = "A notification taken back once its posts are read"
-note.ru = "Телефон убирает из шторки уведомление о ленте, в которой не осталось непрочитанного — прочитано там, на другом устройстве или по закладке сервера: шторка держит его, пока не нажмут. Уведомления рабочего стола и браузера уходят сами через несколько секунд."
-note.en = "The phone takes a lane's note out of the shade once nothing is unread there — read there, on another device or by the server's marker: the shade keeps a note till it is tapped. The desktop's and the browser's notifications go by themselves in a few seconds."
-keys = []
-
-[[capability]]
 id = "debug-basic"
 area = "app"
 android = "has"
