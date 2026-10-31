@@ -702,6 +702,26 @@ def older(name, ahead=False):
     return _answer(lambda: _s["web"].older(name, bool(ahead)))
 
 
+def seen(cards_json, vtop, vbottom, at_end=False, glimpsed_json="[]"):
+    """Which cards on screen are read now — the windows' rule (common/lane.seen), not the
+    phone's own: only a card on screen whole was read there, so one taller than the
+    screen (a long post, a picture) never was, and its thread stood unread (31.10).
+    cards: [{key, top, bottom}] in the list's pixels (a card scrolled past: above
+    vtop); glimpsed: the keys seen in part before. → {"read": [key], "glimpsed": [key]}."""
+    def go():
+        from fedtail.frontends.common import lane
+        before = set(json.loads(glimpsed_json or "[]"))
+        out = {"read": [], "glimpsed": []}
+        for c in json.loads(cards_json or "[]"):
+            key = str(c.get("key") or "")
+            got = lane.seen(int(c["top"]), int(c["bottom"]), int(vtop), int(vbottom),
+                            bool(at_end), key in before)
+            if got:
+                out[got].append(key)
+        return out
+    return _answer(go)
+
+
 def read(ids_json, lane=None):
     """Seen on screen: post ids, and event rows' keys ("event:<id>": the events seen up to
     it, LaneModel.read) → {ok}. lane: "mark all read" over it — its events seen too."""

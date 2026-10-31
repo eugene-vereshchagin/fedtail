@@ -2,6 +2,7 @@ package online.dmesg.fedtail
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -120,7 +122,9 @@ class FlowTest {
         val whole = nodes.indices.firstOrNull { i ->
             nodes[i].boundsInRoot.top > 250f && nodes[i].boundsInRoot.bottom < bottom
         } ?: nodes.indices.maxBy { nodes[it].boundsInRoot.top }
-        compose.onAllNodes(card)[whole].performClick()
+        // the card's own action, not a tap at its middle: that lands on a picture when
+        // the first unread has one, and opens the viewer, not the thread
+        compose.onAllNodes(card)[whole].performSemanticsAction(SemanticsActions.OnClick)
         waitText("/1")                                  // the thread, numbered as a tree
         waitText("Thread")
         back()

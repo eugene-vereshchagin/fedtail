@@ -126,6 +126,20 @@ class BridgeTest(_Base):
         self.assertTrue(said)
         self.assertNotIn("ValueError", said)
 
+    def test_what_is_read_is_the_windows_rule(self):
+        """A card taller than the screen is read once its end shows (common/lane.seen):
+        the phone counted only whole cards, and such a thread stood unread (31.10)."""
+        self.demo()
+        cards = [{"key": "tall", "top": -900, "bottom": 1500},  # its end on screen
+                 {"key": "whole", "top": 1500, "bottom": 1800},
+                 {"key": "cut", "top": 1800, "bottom": 2600},     # half under the edge
+                 {"key": "past", "top": -2, "bottom": -1}]        # glimpsed, scrolled by
+        got = self.call("seen", json.dumps(cards), 0, 2000, False, json.dumps(["past"]))
+        self.assertEqual(sorted(got["read"]), ["past", "tall", "whole"])
+        self.assertEqual(got["glimpsed"], ["cut"])
+        at_end = self.call("seen", json.dumps(cards[2:3]), 0, 2000, True, "[]")
+        self.assertEqual(at_end["read"], ["cut"])  # the list's end: what's on screen is read
+
     def test_a_link_to_a_clip_goes_to_the_player(self):
         """A link in a post to a .mp4 (a server that didn't take the attachment): the
         phone's own player, as the windows' (media.links_in_player)."""

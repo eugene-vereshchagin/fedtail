@@ -114,6 +114,10 @@ object Core {
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)
     suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
+    /** Which cards are read now, by the windows' rule (common/lane.seen). */
+    suspend fun seen(cards: JSONArray, vtop: Int, vbottom: Int, atEnd: Boolean,
+                     glimpsed: Collection<String>) =
+        obj("seen", cards.toString(), vtop, vbottom, atEnd, JSONArray(glimpsed).toString())
     suspend fun stood(lane: String, key: String, end: Boolean) = obj("stood", lane, key, end)
     suspend fun onScreen(ids: List<String>) = obj("on_screen", JSONArray(ids).toString())
     suspend fun laneRead(name: String) = obj("lane_read", name)

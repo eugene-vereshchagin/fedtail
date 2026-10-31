@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.em
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -221,10 +222,16 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: (
         })
 }
 
-/** Read marks: what stood whole on screen when scrolling stopped (read.mark_read). */
+/** Read marks when scrolling stops (read.mark_read): what the core's rule says is read —
+ *  the windows' own (common/lane.seen): whole on screen, or a card taller than the
+ *  screen whose end came into view, or anything on screen at the list's end, or a card
+ *  glimpsed and then scrolled past. The phone counted only cards whole on screen, and a
+ *  tall one never was (31.10). */
 @Composable
 fun MarkWhileScrolling(state: LazyListState, on: Boolean, dwellMs: Long,
                        mark: (List<String>) -> Unit) {
+    val glimpsed = remember(state) { mutableSetOf<String>() }
+    val where = remember(state) { HashMap<String, Int>() }  // a card's index, last seen
     LaunchedEffect(state, on, dwellMs) {
         if (!on) return@LaunchedEffect
         snapshotFlow { state.isScrollInProgress to state.layoutInfo.visibleItemsInfo.size }
@@ -232,10 +239,30 @@ fun MarkWhileScrolling(state: LazyListState, on: Boolean, dwellMs: Long,
                 if (scrolling) return@collect
                 delay(dwellMs)  // read.dwell_ms, as the windows'
                 val info = state.layoutInfo
-                mark(info.visibleItemsInfo.filter {
-                    it.offset >= info.viewportStartOffset &&
-                        it.offset + it.size <= info.viewportEndOffset
-                }.mapNotNull { it.key as? String })
+                val vtop = info.viewportStartOffset
+                val cards = JSONArray()
+                val shown = HashSet<String>()
+                info.visibleItemsInfo.forEach {
+                    val key = it.key as? String ?: return@forEach
+                    shown += key
+                    where[key] = it.index
+                    cards.put(JSONObject().put("key", key).put("top", it.offset)
+                        .put("bottom", it.offset + it.size))
+                }
+                // glimpsed before and now above the screen: scrolled past, read
+                val first = info.visibleItemsInfo.firstOrNull()?.index ?: 0
+                glimpsed.filter { it !in shown && (where[it] ?: Int.MAX_VALUE) < first }
+                    .forEach { cards.put(JSONObject().put("key", it).put("top", vtop - 2)
+                        .put("bottom", vtop - 1)) }
+                val got = Core.seen(cards, vtop, info.viewportEndOffset,
+                    !state.canScrollForward, glimpsed)
+                if (Core.failed(got) != null) return@collect
+                val read = got.optJSONArray("read") ?: JSONArray()
+                val part = got.optJSONArray("glimpsed") ?: JSONArray()
+                val readKeys = (0 until read.length()).map { read.getString(it) }
+                glimpsed.removeAll(readKeys.toSet())
+                (0 until part.length()).forEach { glimpsed += part.getString(it) }
+                if (readKeys.isNotEmpty()) mark(readKeys)
             }
     }
 }

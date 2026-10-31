@@ -24,6 +24,11 @@
   beside the dev builds' self-check, so a released app couldn't hand its logs over.
 - **Phone: the boost button works** — on a card it was a bare count, the tap went
   through to the card and opened the thread; now a button like ↩ and ★, lit when boosted.
+- **Phone: read marks by the windows' rule** (common/lane.seen, asked through the bridge):
+  a card taller than the screen is read once its end shows, anything on screen at the
+  list's end is read, a card glimpsed and scrolled past is read. The phone counted only
+  cards whole on screen, so a long post or one with a picture never was — its thread
+  stood unread on the phone, even opened, till the laptop read it.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.
