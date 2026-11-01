@@ -2977,6 +2977,18 @@ async function runCommand(e) {
 }
 
 // ---- links inside posts: fedtail:account/ID, :thread/ID, :tag/x, :resolve/URL -----------
+// a right click (a long press on a phone) on a #tag: the windows' menu of it
+// (common/links.tag_menu) — as its author writes it, everywhere, muted
+document.addEventListener("contextmenu", async (e) => {
+  const a = e.target.closest('a[href^="fedtail:tag/"]');
+  if (!a) return;
+  e.preventDefault();
+  let r;
+  try { r = await api("/api/tag_menu?url=" + encodeURIComponent(a.getAttribute("href"))); }
+  catch (err) { toast(err.message); return; }
+  if (r.items && r.items.length) popup(a, r.items.map((it) => [it.label, () => linkAct(it.url, null)]));
+});
+
 document.addEventListener("click", async (e) => {
   const a = e.target.closest("a[href]");
   if (!a) return;

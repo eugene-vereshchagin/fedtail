@@ -78,7 +78,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface),
                     title = {
-                        Column {
+                        // a tap: my profile, as the windows' "My profile" (02.11: the phone had
+                        // no way there but my own post's avatar)
+                        Column(Modifier.clickable(enabled = model.myId.isNotBlank()) {
+                            model.openProfile(model.myId)
+                        }) {
                             Text(stringResource(R.string.hub_title), fontWeight = FontWeight.Bold)
                             Text((if (model.handle.isBlank()) "fedtail" else "@" + model.handle) +
                                     (if (model.demo) " · demo" else "") +
@@ -103,6 +107,10 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                 // the windows' "accounts": add, switch, log in again, out
                                 DropdownMenuItem(text = { Text(stringResource(R.string.accounts)) },
                                     onClick = { menu = false; model.openPage("accounts") })
+                                if (model.myId.isNotBlank()) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.my_profile)) },
+                                        onClick = { menu = false; model.openProfile(model.myId) })
+                                }
                                 if (model.accountCount > 1 || model.merged) {
                                     DropdownMenuItem(text = {
                                         Text((if (model.merged) "☑ " else "☐ ") +

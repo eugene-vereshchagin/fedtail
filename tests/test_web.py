@@ -465,6 +465,14 @@ class WebTest(TmpDir):
         self.assertEqual({k: got[k] for k in ("subscribed", "muted", "own")},
                          {"subscribed": False, "muted": False, "own": False})
         self.assertEqual(self.req("/api/post_menu?id=../x")[0], 400)
+        # a right click on a #tag: the windows' menu of it (common/links.tag_menu, 02.11)
+        url = urllib.parse.quote("fedtail:tag/cats%20by%3A7", safe="")
+        tag = json.loads(self.req("/api/tag_menu?url=" + url)[2])["items"]
+        self.assertEqual([x["url"].split("/")[0] for x in tag],
+                         ["fedtail:tagby", "fedtail:tagall", "fedtail:mutetag"])
+        self.assertIn("cats", tag[1]["label"])
+        self.assertEqual(json.loads(self.req("/api/tag_menu?url=https%3A%2F%2Fx")[2]),
+                         {"items": []})
         self.assertEqual(self.req("/api/thread_act", {"action": "sub", "id": "002"})[0], 200)
         self.assertTrue(json.loads(self.req("/api/post_menu?id=002")[2])["subscribed"])
         self.w.missing = {"mute_thread"}  # GoToSocial

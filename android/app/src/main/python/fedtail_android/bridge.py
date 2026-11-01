@@ -459,6 +459,12 @@ def link(url, confirmed=False, chosen_json=None, shown_json=None):
     return _answer(go)
 
 
+def tag_menu(url):
+    """A long press on a post's #tag: the windows' menu of it (common/links.tag_menu) →
+    {"items": [{label, url}]}, each a fedtail: link link() does."""
+    return _answer(lambda: _s["web"].tag_menu(url))
+
+
 def account(acc_id, show=None):
     """A profile: {account, relation, meta, note_line, actions: [{key, label, tip,
     primary}], shows, show_tip, posts} — the web page's, cards with their words."""
@@ -1088,7 +1094,10 @@ def resolve(url):
 NOT_ON_PHONE = {"tui", "web", "cli", "sound"}
 ONLY_ON_PHONE = {
     "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app",
-           "theme", "announcements"},
+           "theme", "announcements",
+           # the card's and the shade's: heeded here too, so offered (only Config had them)
+           "bookmark_button", "act_as", "account_colors", "links_in_player", "icon_count",
+           "icon_count_except"},
     # the shade heeds these; how the desktop shows a note (backend) is the desktop's
     "notify": {"enabled", "lanes", "except", "privacy", "when_focused", "filtered"},
     "debug": {"level", "mode"},

@@ -262,4 +262,15 @@ class FlowTest {
         compose.onAllNodesWithContentDescription("Nothing new: to the newest").onFirst().performClick()
         waitDescription("Switch lane")
     }
+
+    @Test
+    fun myProfileIsInTheMenu() {
+        // the windows' "My profile": the phone had no way there but my own post (02.11)
+        launch()
+        overview()
+        compose.onAllNodesWithContentDescription("More").onFirst().performClick()
+        waitText("My profile", 15_000)
+        compose.onAllNodesWithText("My profile").onFirst().performClick()
+        waitText("Posts and replies", 30_000)          // a profile: what of theirs to show
+    }
 }

@@ -77,6 +77,8 @@ object Core {
 
     // a profile and its buttons (common/profile.py)
     suspend fun account(id: String, show: String?) = obj("account", id, show)
+    /** A #tag's menu (common/links.tag_menu): {"items": [{label, url}]}. */
+    suspend fun tagMenu(url: String) = obj("tag_menu", url)
     suspend fun accountMore(id: String, show: String?, maxId: String, cursor: String) =
         obj("account_more", id, show, maxId, cursor)
     suspend fun profileAct(id: String, key: String, answer: String?, confirmed: Boolean,

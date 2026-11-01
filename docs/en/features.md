@@ -147,7 +147,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Hashtag lane, following tags.** "#tag everywhere" opens a tag's lane (and a click on a tag with `card.tag_click = "everywhere"`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`.
 
-**A tag as its author writes it, as on Point.** A click on a #tag in a post opens that author's posts with the tag; on top — "#tag everywhere" (the tag's lane on your server) and the author's profile. A right click on a tag: by the author, everywhere, mute it. `tag_click = "everywhere"` — a click opens the tag's lane at once. Every interface and the phone.
+**A tag as its author writes it, as on Point.** A click on a #tag in a post opens that author's posts with the tag; on top — "#tag everywhere" (the tag's lane on your server) and the author's profile. A right click on a tag (a long press on the phone): by the author, everywhere, mute it. `tag_click = "everywhere"` — a click opens the tag's lane at once. Every interface and the phone.
 
 **My likes.** The posts you liked. The lane is off by default.
 
@@ -891,7 +891,8 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 |---|---|---|---|---|---|---|
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
 | Themes: try one | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder |
-| Debugging: a full snapshot into an archive, the log, the sound | ✓ | ✓ | ✓ | · | ✓ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
+| Desktop notifications and testing them | ✓ | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed. Android: Notifications go into the phone's shade, but there is no test one ("Debugging → Test a notification"): Android itself shows whether they are allowed |
+| Debugging: a full snapshot into an archive, the log, the sound | ✓ | ✓ | ✓ | · | ◐ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. Android: The report — ⋮ → "Send a report" (the log inside); the phone has no sound — nothing to test |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (editor size, tracing). Android: nothing to hover with |
 
 ---

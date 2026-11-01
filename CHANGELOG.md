@@ -5,6 +5,13 @@
 - **Phone: the arrow stays after "Mark all read".** With nothing new it goes to the newest
   end of the lane, as the windows' "To new" does — it vanished, and the end was a long
   scroll away.
+- **Phone: everything the windows reach, reached.** "My profile" — ⋮ and a tap on your
+  @handle over the overview (only your own post's avatar led there); a long press on a
+  #tag — its menu, as a right click in the windows (as its author writes it, everywhere,
+  muted; the web page has it on a right click too); ⋮ → Settings offers the switches the
+  phone heeds that only Config had (`card.bookmark_button`, `accounts.act_as`,
+  `accounts.account_colors`, `media.links_in_player`, `window.icon_count`). The table
+  of the interfaces says what the phone lacks of debugging: a test notification, sound.
 - Phone: the bookmark button is an icon in the card's grey (or the theme's own picture),
   as ↩ ♻ ♡ beside it — the 🔖 emoji took no colour and stood out.
 

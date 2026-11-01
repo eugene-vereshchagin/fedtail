@@ -49,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -110,6 +111,8 @@ class CardActions(
     val profile: (String) -> Unit = {},              // an account's id: its profile
     val menu: (suspend (PostItem) -> JSONObject)? = null, // the windows' ⋯ (common/actions)
     val runLink: (String) -> Unit = {},              // a fedtail: link of that menu
+    // a long press on a #tag: the windows' menu of it — [(words, fedtail: link)]
+    val tagMenu: suspend (String) -> List<Pair<String, String>> = { emptyList() },
     val page: (String, String) -> Unit = { _, _ -> }, // a place of that menu (lists, translate…)
     val quoteReply: (PostItem) -> Unit = {},
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
@@ -126,6 +129,10 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
     expandCw = expandCw || cwOpen, profile = { openProfile(it) }, menu = { postMenu(it) },
     runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
+    tagMenu = { url ->
+        val arr = Core.tagMenu(url).optJSONArray("items") ?: org.json.JSONArray()
+        (0 until arr.length()).map { arr.getJSONObject(it).let { o -> o.optString("label") to o.optString("url") } }
+    },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
     bookmarkButton = bookmarkButton, aliasTaps = commandLine)
@@ -206,23 +213,43 @@ fun postText(html: String, plain: String, linkColor: Color): AnnotatedString {
     }
 }
 
-/** A post's words: a tap on a link follows it, a tap anywhere else is the card's own. */
+/** A post's words: a tap on a link follows it, a tap anywhere else is the card's own; a
+ *  long press on a #tag — the windows' right-click menu of it (common/links.tag_menu: as
+ *  its author writes it, everywhere, muted; the phone had none, 02.11). */
 @Composable
-private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: () -> Unit) {
+private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
+                      runLink: (String) -> Unit, tagMenu: suspend (String) -> List<Pair<String, String>>,
+                      onTap: () -> Unit) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val link by rememberUpdatedState(onLink)
     val tap by rememberUpdatedState(onTap)
+    var menu by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    val scope = rememberCoroutineScope()
     val scale = LocalPostScale.current  // [font] post_scale: a theme's posts larger
     val emoji = remember(words) { emojiContent(words) }
-    Text(words, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, onTextLayout = { layout = it },
-        inlineContent = emoji,
-        modifier = Modifier.pointerInput(words) {
-            detectTapGestures { pos ->
-                val at = layout?.getOffsetForPosition(pos)
-                val url = at?.let { words.getStringAnnotations("URL", it, it).firstOrNull()?.item }
-                if (url != null) link(url) else tap()
+    fun urlAt(pos: androidx.compose.ui.geometry.Offset): String? {
+        val at = layout?.getOffsetForPosition(pos) ?: return null
+        return words.getStringAnnotations("URL", at, at).firstOrNull()?.item
+    }
+    Box {
+        Text(words, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, onTextLayout = { layout = it },
+            inlineContent = emoji,
+            modifier = Modifier.pointerInput(words) {
+                detectTapGestures(
+                    onLongPress = { pos ->
+                        val url = urlAt(pos)
+                        if (url != null && url.startsWith("fedtail:tag/")) {
+                            scope.launch { menu = tagMenu(url) }
+                        }
+                    },
+                    onTap = { pos -> val url = urlAt(pos); if (url != null) link(url) else tap() })
+            })
+        DropdownMenu(expanded = menu.isNotEmpty(), onDismissRequest = { menu = emptyList() }) {
+            menu.forEach { (said, url) ->
+                DropdownMenuItem(text = { Text(said) }, onClick = { menu = emptyList(); runLink(url) })
             }
-        })
+        }
+    }
 }
 
 /** Read marks when scrolling stops (read.mark_read): what the core's rule says is read —
@@ -735,7 +762,7 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     if (p.text.isNotBlank()) {
         val color = MaterialTheme.colorScheme.primary
         val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) }
-        PostWords(words, act.link) { act.open(p) }
+        PostWords(words, act.link, act.runLink, act.tagMenu) { act.open(p) }
     }
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive) { i -> act.media(p.media, i) }

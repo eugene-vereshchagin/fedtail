@@ -548,7 +548,9 @@ keys = ["about_copy", "about_copied", "made_by"]
 [[capability]]
 id = "notify-desktop"
 area = "app"
-android = "has"
+android = "partly"
+android_note.ru = "Уведомления — в шторку телефона, но проверочного («Отладка → Проверить уведомление») нет: Android сам показывает, разрешены ли они"
+android_note.en = "Notifications go into the phone's shade, but there is no test one (\"Debugging → Test a notification\"): Android itself shows whether they are allowed"
 name.ru = "Уведомления рабочего стола и их проверка"
 name.en = "Desktop notifications and testing them"
 note.ru = "Терминал — через notify-send или кодом самого терминала (kitty, WezTerm, foot…); веб — уведомлениями браузера, если разрешить."
@@ -569,7 +571,9 @@ keys = ["curtain_hint_tiles", "curtain_empty_tiles"]
 [[capability]]
 id = "debug-basic"
 area = "app"
-android = "has"
+android = "partly"
+android_note.ru = "Отчёт — ⋮ → «Отправить отчёт» (журнал внутри); звука на телефоне нет — проверять нечего"
+android_note.en = "The report — ⋮ → \"Send a report\" (the log inside); the phone has no sound — nothing to test"
 name.ru = "Отладка: полный слепок в архив, журнал, звук"
 name.en = "Debugging: a full snapshot into an archive, the log, the sound"
 web = "na"

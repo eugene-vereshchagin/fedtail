@@ -433,6 +433,10 @@ class BridgeTest(_Base):
         self.assertTrue(self.call("menu", "103")["subscribed"])
         self.assertIn("found", self.call("resolve", "https://nowhere.example/@x/1"))
         self.assertIn("error", json.loads(self.bridge.thread_act("sideways", "103")))
+        # a long press on a #tag: the windows' menu of it (common/links.tag_menu, 02.11)
+        items = self.call("tag_menu", "fedtail:tag/cats")["items"]
+        self.assertEqual([x["url"] for x in items], ["fedtail:tagall/cats", "fedtail:mutetag/cats"])
+        self.assertIn("message", self.call("link", items[1]["url"]))  # muted, said so
 
     def test_pinned_lanes_come_as_tiles_in_their_order(self):
         self.demo()
@@ -459,6 +463,11 @@ class BridgeTest(_Base):
         self.assertTrue(order["title"] and order["about"])
         self.assertEqual(opts[("window", "command_line")]["value"], False)  # the phone's
         self.assertEqual(opts[("phone", "overview")]["kind"], "choice")
+        # what the phone heeds is offered, not left to Config (02.11)
+        for place in (("card", "bookmark_button"), ("accounts", "act_as"),
+                      ("window", "icon_count"), ("media", "links_in_player")):
+            self.assertIn(place, opts)
+        self.assertNotIn(("media", "image_viewer"), opts)  # the windows' viewer only
         before = self.bridge._s["core"]
         self.assertEqual(self.call("setting_set", "reading", "order", '"newest_first"')["value"],
                          "newest_first")

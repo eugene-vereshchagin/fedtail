@@ -251,6 +251,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf<Screen>(Screen.Starting)
     var demo by mutableStateOf(false)
     var handle by mutableStateOf("")
+    var myId by mutableStateOf("")  // my account's id: "My profile" (the windows' ≡ item)
     var newestFirst by mutableStateOf(false)
     var markOnScroll by mutableStateOf(true)
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
@@ -495,6 +496,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         Core.failed(got)?.let { screen = Screen.Failed(it); return }
         val me = got.optJSONObject("me") ?: JSONObject()
         handle = me.optString("handle")
+        myId = me.optJSONObject("me")?.optString("id").orEmpty()
         newestFirst = me.optString("order") == "newest_first"
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
