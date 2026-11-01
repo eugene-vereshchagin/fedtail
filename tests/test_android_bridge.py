@@ -140,6 +140,22 @@ class BridgeTest(_Base):
         at_end = self.call("seen", json.dumps(cards[2:3]), 0, 2000, True, "[]")
         self.assertEqual(at_end["read"], ["cut"])  # the list's end: what's on screen is read
 
+    def test_the_overview_by_the_sidebars_sections(self):
+        """The phone's overview as the windows' sidebar: the set's lanes as tiles under
+        "Timelines" / "Personal", lists as rows under "Lists" (phone.tiles = "lanes");
+        "all" — every section tiles, "none" — none (31.10)."""
+        self.demo()
+        got = self.call("hub")["overview"]
+        tiles = {o["key"]: o["tiles"] for o in got}
+        self.assertTrue(tiles["standard"])
+        self.assertTrue(tiles["personal"])
+        self.assertFalse(tiles["lists"])
+        self.assertIn("home", next(o for o in got if o["key"] == "standard")["names"])
+        self.assertTrue(next(o for o in got if o["key"] == "lists")["title"])
+        for mode, want in (("all", True), ("none", False)):
+            self.bridge._core().cfg["phone"]["tiles"] = mode
+            self.assertTrue(all(o["tiles"] is want for o in self.call("hub")["overview"]))
+
     def test_a_link_to_a_clip_goes_to_the_player(self):
         """A link in a post to a .mp4 (a server that didn't take the attachment): the
         phone's own player, as the windows' (media.links_in_player)."""

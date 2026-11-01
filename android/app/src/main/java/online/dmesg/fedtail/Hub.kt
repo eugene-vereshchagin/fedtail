@@ -173,6 +173,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
         pinEditor(model)
         return
     }
+    // no tiles chosen by hand: the sidebar's sections, as the windows have them — the set's
+    // lanes as tiles under their titles, lists and tags as rows (phone.tiles)
+    if (model.hubPinned.isEmpty() && model.hubOverview.isNotEmpty()) {
+        sectionsAsSidebar(model, per)
+        return
+    }
     items(rows.size, key = { "t-$it" }) { r ->
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -198,6 +204,41 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
         }
         item(key = "r-" + lane.name) {
             RestRow(lane, browsed) { model.showLane(lane.name) }
+        }
+    }
+}
+
+/** The overview by the sidebar's sections (common/sidebar.overview): a title each, its
+ *  lanes as tiles or as rows. */
+private fun androidx.compose.foundation.lazy.LazyListScope.sectionsAsSidebar(
+    model: AppModel, per: Int,
+) {
+    model.hubOverview.forEachIndexed { si, sec ->
+        val lanes = sec.names.mapNotNull { model.hubLane(it) }
+        if (lanes.isEmpty()) return@forEachIndexed
+        if (si > 0 || sec.title.isNotBlank()) item(key = "ov-h-$si") {
+            SmallHead(sec.title.ifBlank { " " },
+                Modifier.padding(start = 16.dp, end = 16.dp, top = if (si > 0) 20.dp else 4.dp,
+                    bottom = 4.dp))
+        }
+        if (sec.tiles) {
+            val rows = lanes.chunked(per)
+            items(rows.size, key = { "ov-t-$si-$it" }) { r ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rows[r].forEach { (lane, mine) ->
+                        LaneTile(lane, mine, on = lane.name == model.current,
+                            modifier = Modifier.weight(1f)) { model.showLane(lane.name) }
+                    }
+                    repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
+                }
+            }
+        } else {
+            lanes.forEach { (lane, _) ->
+                item(key = "ov-r-" + lane.name) {
+                    RestRow(lane, model.hubBrowsed(lane.name)) { model.showLane(lane.name) }
+                }
+            }
         }
     }
 }

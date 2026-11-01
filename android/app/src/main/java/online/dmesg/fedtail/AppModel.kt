@@ -84,6 +84,11 @@ data class Announce(
 /** kind: you | reading | lists | browse (bridge.hub) */
 data class HubSection(val kind: String, val lanes: List<HubLane>)
 
+/** A section of the overview as the sidebar has it (common/sidebar.overview): its title,
+ *  its lanes in order, tiles or rows (phone.tiles). */
+data class OverviewSection(val key: String, val title: String, val names: List<String>,
+                           val tiles: Boolean)
+
 data class MediaItem(
     val kind: String, val preview: String, val url: String, val alt: String,
     val w: Int, val h: Int,
@@ -548,6 +553,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         hubOrder = (0 until order.length()).map { order.getString(it) }
         val pin = got.optJSONArray("pinned") ?: JSONArray()
         hubPinned = (0 until pin.length()).map { pin.getString(it) }
+        val ov = got.optJSONArray("overview") ?: JSONArray()
+        hubOverview = (0 until ov.length()).map { i ->
+            val o = ov.getJSONObject(i)
+            val n = o.optJSONArray("names") ?: JSONArray()
+            OverviewSection(o.optString("key"), o.optString("title"),
+                (0 until n.length()).map { n.getString(it) }, o.optBoolean("tiles"))
+        }
         hubUnread = got.optInt("unread")
         hubWithNews = got.optInt("with_news")
         hubSlow = got.optString("slow")
@@ -571,6 +583,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     var editTiles by mutableStateOf(false) // "change" over the tiles: rows to move / remove
+    var hubOverview by mutableStateOf(listOf<OverviewSection>())
+
+    /** A lane of the overview by name, and whether it is addressed to me (tinted). */
+    fun hubLane(name: String): Pair<HubLane, Boolean>? =
+        hub.firstNotNullOfOrNull { s -> s.lanes.firstOrNull { it.name == name }?.let { it to (s.kind == "you") } }
+
+    /** Only browsed (no count): a row says "browsed" for it. */
+    fun hubBrowsed(name: String) = hub.any { s -> s.kind == "browse" && s.lanes.any { it.name == name } }
 
     fun editPins() {
         editTiles = true

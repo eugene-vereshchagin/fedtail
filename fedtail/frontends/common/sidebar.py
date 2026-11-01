@@ -19,6 +19,23 @@ def groups(view, cfg):
     return [(g, names) for g, names in out if g != "lists" or cfg["lists"]["enabled"]]
 
 
+def overview(view, cfg):
+    """The phone's overview as the sidebar has its sections (groups(): the set's
+    "Timelines" and "Personal", then lists, tags): [{key, title, names, tiles}] —
+    phone.tiles says which are tiles: "lanes" — the set's own lanes (its sections),
+    lists and tags rows under their titles; "all" — every section; "none" — rows only.
+    The windows and the phone the same, section by section (31.10)."""
+    mode = (cfg.get("phone") or {}).get("tiles", "lanes")
+    out = []
+    for g, names in groups(view, cfg):
+        if not names:
+            continue
+        tiles = mode == "all" or (mode == "lanes" and g not in ("lists", "tags"))
+        out.append({"key": g or "", "title": group_title(g) or "", "names": list(names),
+                    "tiles": tiles})
+    return out
+
+
 def hub_kind(view, name):
     """The section of the phone's overview a lane stands in, by what its rule takes —
     never its name: "you" (addressed to me: private, replies, mentions — Core.lane_rank —

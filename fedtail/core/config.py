@@ -354,6 +354,7 @@ DEFAULTS = {
     },
     "phone": {
         "overview": "tiles",
+        "tiles": "lanes",
         "layout": "auto",
         "push": "auto",
         "stream": "always",        # the live stream: "always", "wifi" (Wi-Fi only), "off"
@@ -419,6 +420,7 @@ CHOICES = {
     ("debug", "mode"): {"auto", "on", "off"},
     ("cli", "color"): {"auto", "always", "never"},
     ("phone", "overview"): {"tiles", "list"},
+    ("phone", "tiles"): {"lanes", "all", "none"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
     ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
@@ -627,7 +629,7 @@ FILE_LAYOUT = (
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout push stream")),
+    ("phone", _keys("phone", "overview tiles layout push stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}

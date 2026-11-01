@@ -1701,6 +1701,12 @@ open_browser = true
 # the name); "list" — a list, a row per lane, with its first unread post.
 overview = "tiles"
 
+# Which lanes are tiles (overview = "tiles"), by the sidebar's sections, as the windows have
+# them: "lanes" — the set's own lanes ("Timelines", "Personal": what the set or you made)
+# as tiles under those titles, lists and tags as rows under theirs; "all" — every section
+# as tiles; "none" — rows only. Tiles you chose by hand ("change") go first whatever this says.
+tiles = "lanes"
+
 # How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and
 # a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread
 # side by side); "one", "two", "three" — always that many, if they fit.

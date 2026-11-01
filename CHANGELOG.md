@@ -68,6 +68,10 @@
   marked hidden shows); a tap elsewhere closes them too; a column of formatting buttons
   is a row above the text at a phone's width. `tools/web_check.py` checks the editor at
   that width.
+- **Phone: the overview by the windows' sidebar sections** — the set's own lanes as tiles
+  under "Timelines" and "Personal", lists and tags as rows under theirs (`phone.tiles`:
+  `lanes`, `all` — every section as tiles, `none` — rows only). Tiles chosen by hand
+  ("change") still go first.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.
