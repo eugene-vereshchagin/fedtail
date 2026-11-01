@@ -167,6 +167,7 @@ def with_playwright(base, key, out):
                 page.wait_for_timeout(400)
                 page.screenshot(path=str(out / "phone-02-lanes.png"))
                 page.keyboard.press("Escape")
+                phone_editor(page, out)
                 page.close()
                 continue
             lanes = page.eval_on_selector_all("#lanes a[data-lane]",
@@ -486,6 +487,30 @@ def holds_place(browser, base, key):
         f"place: the card read last stands {off:.0f} px off the screen's {where} "
         "after slow pictures came in" + (" — pushed away" if off > 24 else ""))
     page.close()
+
+
+def phone_editor(page, out):
+    """The editor at a phone's width, a column of format buttons beside the text: names
+    offered as "@mi" is typed stand under the text, not beside it (31.10: the list
+    squeezed the text to a letter wide), and a tap elsewhere closes them."""
+    page.evaluate("compose(null)")  # ✎ Write is in the closed menu at this width
+    page.wait_for_timeout(500)
+    page.evaluate("document.querySelector('#text-wrap').className = 'fmt-left'")
+    page.fill("#text", "@mi")
+    page.dispatch_event("#text", "input")
+    page.wait_for_timeout(800)
+    page.screenshot(path=str(out / "phone-05-compose-complete.png"))
+    width = page.eval_on_selector("#text", "e => e.getBoundingClientRect().width")
+    if width < 200:
+        ERRORS.append(f"phone editor: the text is {width:.0f} px wide beside the buttons")
+    if not page.is_visible("#complete"):
+        NOTES.append("phone editor: no names offered for @mi (the fake world's?)")
+    else:
+        page.mouse.click(5, 5)  # a tap elsewhere
+        page.wait_for_timeout(300)
+        if page.is_visible("#complete"):
+            ERRORS.append("phone editor: the names offered stay after a tap elsewhere")
+    page.keyboard.press("Escape")
 
 
 def main_menu(page, out):

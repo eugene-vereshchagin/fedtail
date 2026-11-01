@@ -3322,6 +3322,11 @@ async function start() {
   $("#text").addEventListener("input", completeSoon);
   $("#text").addEventListener("keydown", completeKeys, true);
   $("#text").addEventListener("blur", () => setTimeout(completeHide, 200));
+  // a tap anywhere but the list and the text closes it: a phone's tap doesn't always blur
+  document.addEventListener("pointerdown", (e) => {
+    const box = $("#complete");
+    if (box && !box.hidden && !box.contains(e.target) && e.target !== $("#text")) completeHide();
+  });
   $("#cw").addEventListener("input", counter);
   $("#vis").addEventListener("change", counter);  // made private: whom it adds (checkText)
   $("#cw").placeholder = w("cw_placeholder");
@@ -3444,14 +3449,20 @@ function completeDraw() {
     box = el("div", "complete");
     box.id = "complete";
     box.setAttribute("role", "listbox");
-    $("#text").after(box);
+    // under the text and its buttons, not beside the text: inside #text-wrap a column
+    // of buttons made it a third flex item, and the text shrank to a letter (31.10)
+    $("#text-wrap").after(box);
   }
   box.textContent = "";
   completeState.items.forEach((it, i) => {
     const b = el("button", "tool" + (i === completeState.at ? " on" : ""), it.label);
     b.type = "button";
     b.setAttribute("role", "option");
-    b.onmousedown = (e) => { e.preventDefault(); completePut(i); };
+    // pointerdown keeps the text's focus (a tap would blur it first); click puts it in —
+    // a finger's tap gives no mousedown on some phones, and the list stayed open (31.10)
+    b.onpointerdown = (e) => e.preventDefault();
+    b.onmousedown = (e) => e.preventDefault();
+    b.onclick = () => completePut(i);
     box.append(b);
   });
   box.hidden = false;

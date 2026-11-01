@@ -62,6 +62,12 @@
   them — and counted 3–5 more in a list (31.10, compared post by post: every one the
   phone had more, the desktop had never got). Every `reading.late_minutes` (10) a lane
   read through — Home, lists, tags — is looked `reading.late_hours` (12) back.
+- **Web page, the editor on a phone:** the names offered as you type "@…" stand under the
+  text, not beside it (they squeezed the text to a letter wide), and they close — hidden,
+  they stood on screen all the same (display:flex beat the hidden attribute; now nothing
+  marked hidden shows); a tap elsewhere closes them too; a column of formatting buttons
+  is a row above the text at a phone's width. `tools/web_check.py` checks the editor at
+  that width.
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

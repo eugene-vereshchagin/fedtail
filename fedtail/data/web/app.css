@@ -11,6 +11,9 @@
           --ctx: #272a30; --warn: #e0b04a; --shadow: none; }
 }
 * { box-sizing: border-box; }
+/* hidden means hidden, whatever display a class gives (the names offered under the editor
+   had display:flex and stayed on screen hidden, 31.10) */
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); overflow: hidden;
        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans", sans-serif; }
@@ -465,6 +468,9 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 .complete { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow: auto;
             border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
             padding: 4px; margin-top: 4px; }
+/* hidden means hidden: display:flex above beat the attribute, and the list "closed" in
+   the code stood on screen all the same (31.10) */
+.complete[hidden] { display: none; }
 .complete button { text-align: left; }
 .complete button.on { background: var(--accent); color: var(--accent-text, #fff); }
 
@@ -492,6 +498,13 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 #text-wrap.fmt-left > #format-bar, #text-wrap.fmt-right > #format-bar {
   flex-direction: column; flex-wrap: nowrap; margin: 0; }
 #format-bar[hidden] { display: none; }
+/* a phone's width: a column of buttons beside the text took a third of it — a row above
+   it then (markup.place does the same for the phone app) */
+@media (max-width: 600px) {
+  #text-wrap.fmt-left, #text-wrap.fmt-right { flex-direction: column; }
+  #text-wrap.fmt-left > #format-bar, #text-wrap.fmt-right > #format-bar {
+    flex-direction: row; flex-wrap: wrap; margin: 4px 0 2px; }
+}
 #format-bar .fmt { min-width: 2em; padding: 2px 6px; }
 #format-bar .fmt-bold { font-weight: bold; }
 #format-bar .fmt-italic { font-style: italic; }
