@@ -154,6 +154,19 @@ object Glyphs {
     val Done: ImageVector = stroke("done") {
         moveTo(5f, 12f); lineTo(10f, 17f); lineTo(19f, 7f)
     }
+
+    private fun ribbon(p: PathBuilder) = p.apply {
+        moveTo(6f, 3f); horizontalLineTo(18f); verticalLineTo(21f)
+        lineTo(12f, 16f); lineTo(6f, 21f); close()
+    }
+
+    /** A bookmark: a ribbon in the card's grey, as ↩ ♻ ♡ beside it (the 🔖 emoji
+     *  took no colour and stood out, 02.11); filled — the post is bookmarked. */
+    val Bookmark: ImageVector = stroke("bookmark") { ribbon(this) }
+
+    val Bookmarked: ImageVector = ImageVector.Builder("bookmarked", 24.dp, 24.dp, 24f, 24f).path(
+        fill = SolidColor(Color.Black), stroke = SolidColor(Color.Black), strokeLineWidth = 2f,
+        strokeLineJoin = StrokeJoin.Round) { ribbon(this) }.build()
 }
 
 // ---- a theme's font and pictures ------------------------------------------------------

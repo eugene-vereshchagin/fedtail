@@ -54,6 +54,7 @@
     <string name="lang_other_ask">Language code (ISO 639): eo, es, cv, jbo, tok… — it stays on the list</string>
     <string name="forward">Forward</string>
     <string name="to_new">To the new</string>
+    <string name="to_end">Nothing new: to the newest</string>
     <string name="prev_media">Previous</string>
     <string name="next_media">Next</string>
     <string name="media_no_alt">%1$s without a description</string>

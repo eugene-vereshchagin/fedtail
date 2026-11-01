@@ -133,19 +133,22 @@ fun LaneScreen(
                         },
                         actions = {
                             // "to the new" with how many there are, and "mark all read" — the
-                            // windows' lane buttons (a bare arrow told nothing)
+                            // windows' lane buttons (a bare arrow told nothing). Nothing new: the
+                            // arrow stays and goes to the newest end, as the windows' does — after
+                            // "mark all read" the end was a long scroll away (02.11)
                             val unread = model.posts.count { it.unread }
-                            if (unread > 0) {
-                                val toNew = stringResource(R.string.to_new)
-                                TextButton(onClick = {
-                                    scope.launch {
-                                        aim(state, model.posts, model.newestFirst,
-                                            before = if (model.newestFirst) 0 else 1,
-                                            divider = model.divider?.first)
-                                    }
-                                }, modifier = Modifier.semantics { contentDescription = toNew }) {
-                                    Text((if (model.newestFirst) "↑ " else "↓ ") + unread, fontSize = 15.sp)
+                            val toNew = stringResource(if (unread > 0) R.string.to_new else R.string.to_end)
+                            TextButton(onClick = {
+                                scope.launch {
+                                    aim(state, model.posts, model.newestFirst,
+                                        before = if (model.newestFirst) 0 else 1,
+                                        divider = model.divider?.first)
                                 }
+                            }, modifier = Modifier.semantics { contentDescription = toNew }) {
+                                Text((if (model.newestFirst) "↑" else "↓") +
+                                    (if (unread > 0) " $unread" else ""), fontSize = 15.sp)
+                            }
+                            if (unread > 0) {
                                 val allRead = stringResource(R.string.mark_all_read)
                                 IconButton(onClick = { model.markLaneRead() },
                                     modifier = Modifier.semantics { contentDescription = allRead }) {

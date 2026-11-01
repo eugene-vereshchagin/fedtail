@@ -249,4 +249,17 @@ class FlowTest {
         assertTrue("the lane jumped: ${first.first} → ${same!!.first}",
             kotlin.math.abs(same.first - first.first) < 2f)
     }
+
+    @Test
+    fun theArrowStaysAfterMarkAllRead() {
+        // "Mark all read" left no arrow: the newest end was a long scroll away (02.11)
+        launch("lane" to "home")
+        waitDescription("Switch lane")
+        waitFor("a card", 90_000) { compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty() }
+        val all = compose.onAllNodesWithContentDescription("Mark all read")
+        if (all.fetchSemanticsNodes().isNotEmpty()) all.onFirst().performClick()
+        waitDescription("Nothing new: to the newest")
+        compose.onAllNodesWithContentDescription("Nothing new: to the newest").onFirst().performClick()
+        waitDescription("Switch lane")
+    }
 }

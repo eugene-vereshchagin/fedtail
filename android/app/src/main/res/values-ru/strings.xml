@@ -53,6 +53,7 @@
     <string name="lang_other_ask">Код языка (ISO 639): eo, es, cv, jbo, tok… — останется в списке</string>
     <string name="forward">Вперёд</string>
     <string name="to_new">К новому</string>
+    <string name="to_end">Нового нет: к самым свежим</string>
     <string name="prev_media">Предыдущее</string>
     <string name="next_media">Следующее</string>
     <string name="media_no_alt">%1$s без описания</string>

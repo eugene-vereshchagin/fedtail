@@ -2,6 +2,12 @@
 
 ## 0.22.2 — in progress
 
+- **Phone: the arrow stays after "Mark all read".** With nothing new it goes to the newest
+  end of the lane, as the windows' "To new" does — it vanished, and the end was a long
+  scroll away.
+- Phone: the bookmark button is an icon in the card's grey (or the theme's own picture),
+  as ↩ ♻ ♡ beside it — the 🔖 emoji took no colour and stood out.
+
 ## 0.22.1 — 2026-11-02
 
 **In short: bug fixes.** The 0.22 branch goes on with fixes, not a 0.23: the phone's and

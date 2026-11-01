@@ -115,7 +115,7 @@ class CardActions(
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
     val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
     val pollRefresh: (PostItem) -> Unit = {},
-    val bookmarkButton: Boolean = false,             // ui.bookmark_button: 🔖 beside ↩ ★ ♻
+    val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
 )
 
@@ -966,9 +966,9 @@ private fun Actions(p: PostItem, act: CardActions) {
         if (act.bookmarkButton) TextButton(onClick = { act.bookmark(p) },
             contentPadding = PaddingValues(horizontal = 8.dp)) {
             val said = stringResource(if (p.bookmarked) R.string.unbookmark else R.string.bookmark)
-            Text("🔖", fontSize = 15.sp,
-                color = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey,
-                modifier = Modifier.semantics { contentDescription = said })
+            ThemedIcon("bookmark", if (p.bookmarked) Glyphs.Bookmarked else Glyphs.Bookmark, said,
+                Modifier.size(18.dp),
+                tint = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey)
         }
         Spacer(Modifier.weight(1f))
         CardMenu(p, act)
