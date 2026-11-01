@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.22.1 — in progress
+## 0.22.1 — 2026-11-02
+
+**In short: bug fixes.** The 0.22 branch goes on with fixes, not a 0.23: the phone's and
+the desktop's unread counts agree (late posts are fetched), logging in on the phone works
+in one go, a new sync device no longer marks the others' lanes read, another client
+reading the notifications no longer reads your answers; the phone's boost, read marks and
+reply editor mended; a post of pictures alone goes. Plus the lanes as tiles — the phone's
+overview by the sidebar's sections, and (off by default) on the windows' curtain.
+
+<!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
+     with fedtail-sync 0.22.1 (the same server under the new number; protocol 2). The next
+     version is 0.22.2, not 0.23: "coming next" names 0.22.2. -->
 
 - **Logging in on the phone, in one go.** The code the browser brings back is no longer
   lost when the phone closed the app meanwhile (or when it comes before the app is up):
