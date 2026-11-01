@@ -96,6 +96,12 @@ class Theme:
                 f"background: {c['card']}; border: 1px solid {c['card_border']}; "
                 f"border-radius: {r}px;")
         fam = f"font-family: {css_families(font_family)};" if font_family else ""
+        # the curtain's tiles: the theme's glossy buttons where it has them (button_end),
+        # else a card a little lighter on top
+        gloss = c.get("button_end", c["button"]) != c["button"]
+        tile_bg = (f"linear-gradient(to bottom, {c['button']}, {c['button_end']})" if gloss
+                   else f"linear-gradient(to bottom, shade({c['card']}, 1.04), {c['card']})")
+        tile_line = c["button_border"] if gloss else c["card_border"]
         return f"""
 window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; {fam} }}
 .ft-sidebar {{ background: {c['sidebar']}; border-right: 1px solid {c['sidebar_border']}; }}
@@ -119,9 +125,8 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-lane-header togglebutton:checked, .ft-lane-header button:checked {{
     background: {c['accent']}; color: {c['on_accent']}; }}
 .ft-active {{ color: {c['accent']}; }}
-.ft-lane-tile {{ background-image: linear-gradient(to bottom, shade({c['card']}, 1.04),
-                                                   {c['card']});
-                 color: {c['text']}; border: 1px solid {c['card_border']};
+.ft-lane-tile {{ background-image: {tile_bg};
+                 color: {c['text']}; border: 1px solid {tile_line};
                  border-radius: {br + 4}px; padding: 6px;
                  box-shadow: 0 1px 2px alpha(black, 0.10), 0 3px 8px alpha(black, 0.08); }}
 .ft-lane-tile.ft-tile-news {{ border-color: {c['accent']}; font-weight: 600; }}

@@ -495,9 +495,10 @@ body.tiles-up #lanes { display: none; }
 .curtain .tile { min-height: 84px; display: flex; flex-direction: column; align-items: center;
                  justify-content: center; gap: 2px; color: var(--text);
                  /* raised: lighter on top, a shadow under it, lifted more under the mouse */
-                 background: linear-gradient(to bottom, color-mix(in srgb, var(--card) 92%, #fff),
-                                             var(--card));
-                 border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px);
+                 /* --tile: the theme's glossy buttons (button_end), where it has them */
+                 background: var(--tile, linear-gradient(to bottom,
+                     color-mix(in srgb, var(--card) 92%, #fff), var(--card)));
+                 border: 1px solid var(--tile-line, var(--line)); border-radius: calc(var(--radius) + 4px);
                  box-shadow: 0 1px 2px rgba(0, 0, 0, .10), 0 3px 8px rgba(0, 0, 0, .08);
                  padding: 6px; cursor: pointer; font: inherit;
                  transition: box-shadow .12s, transform .12s; }

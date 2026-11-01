@@ -2213,13 +2213,18 @@ class GtkThemeTest(unittest.TestCase):
         from fedtail.frontends.gtk import theme as themes
         for p in sorted(themefile.BUILTIN_DIR.glob("*.toml")):
             data, _w = themefile.load(p.stem)
-            css = themes.Theme(data, themes.desktop()).css("Sans", 1.1)
+            theme = themes.Theme(data, themes.desktop())
+            css = theme.css("Sans", 1.1)
             prov = Gtk.CssProvider()
             errors = []
             prov.connect("parsing-error",
                          lambda _p, _s, e, errors=errors: errors.append(e.message))
             themes._load_css(prov, css)
             self.assertEqual(errors, [], p.stem)
+            # the curtain's tiles: the theme's glossy buttons where it has them
+            tile = css.split(".ft-lane-tile {")[1].split("}")[0]
+            glossy = theme.c["button_end"].css() != theme.c["button"].css()
+            self.assertEqual("shade(" not in tile, glossy, p.stem)
 
 
 if __name__ == "__main__":

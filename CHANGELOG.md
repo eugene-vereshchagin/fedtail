@@ -75,9 +75,10 @@
 - **Tiles on the curtain, in the windows and the web page** (`window.tiles`, off by
   default): under the opossum the lanes as tiles by the sidebar's sections, as the phone's
   overview — the set's own lanes as tiles, lists and tags as buttons (`"lanes"`), or all
-  as tiles (`"all"`); raised, the ones with news outlined. While the curtain is up the
-  lanes' list on the left steps aside; a tile opens its lane and the list is back. The
-  terminal has none (lines of text: its sidebar is the list).
+  as tiles (`"all"`); raised, the ones with news outlined, glossy as the theme's buttons
+  where they are (the retro themes). While the curtain is up the lanes' list on the left
+  steps aside; a tile opens its lane and the list is back. The terminal has none (lines
+  of text: its sidebar is the list).
 - A round's timing in the log is the round's own: a lane count made after a read mark
   (another thread) took the round's slow request for itself — "warm lanes 21.77 s" was
   a server answering in 20 s.

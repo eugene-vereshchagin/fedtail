@@ -115,6 +115,12 @@ def _focus(value):
     return (round(max(-1.0, min(1.0, x)), 2), round(max(-1.0, min(1.0, y)), 2))
 
 
+def _css_color(value):
+    """A colour a theme file gives that is safe to put into the page's CSS."""
+    return isinstance(value, str) and bool(re.fullmatch(
+        r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|rgba?\([\d.,\s%]+\)", value))
+
+
 def _light(colors):
     """Is the theme a light one (its text darker than its page)?"""
     def lum(c):
@@ -816,7 +822,7 @@ class Web:
                   ("--unread", ("card_border_unread", "accent")), ("--ctx", ("ctx",)),
                   ("--danger", ("hot",)), ("--on-hot", ("on_hot",)),
                   ("--quiet", ("quiet",)), ("--on-quiet", ("on_quiet",)),
-                  ("--button-border", ("button_border",)))
+                  ("--button-border", ("button_border",)), ("--button", ("button",)))
 
     def theme_name(self):
         return self.theme or self.core.cfg["ui"].get("theme") or "system"
@@ -838,11 +844,17 @@ class Web:
         for var, keys in self.THEME_VARS:
             got = next((colors[k] for k in keys
                         if isinstance(colors.get(k), str) and colors[k] != "auto"), "")
-            if got and re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|rgba?\([\d.,\s%]+\)",
-                                    got):
+            if _css_color(got):
                 out[var[2:]] = got
         if "bg" not in out or "text" not in out:
             out = {}  # the page and its text follow the system: the browser's own then
+        elif out.get("button") and _css_color(colors.get("button_end")) and \
+                colors["button_end"] != colors.get("button"):
+            # the theme's glossy buttons (button_end): the curtain's tiles are drawn so
+            out["tile"] = (f"linear-gradient(to bottom, {out['button']}, "
+                           f"{colors['button_end']})")
+            if out.get("button-border"):
+                out["tile-line"] = out["button-border"]
         family = (theme.get("font") or {}).get("family") or ""
         family = family if re.fullmatch(r"[\w\s,\"'-]*", family) else ""
         return out, _light(colors), family

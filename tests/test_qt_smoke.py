@@ -3313,6 +3313,13 @@ class QtSmokeTest(unittest.TestCase):
             self.assertNotIn("gradient", flat._bg("window"))
             self.assertNotIn("QScrollArea#feed { background: qlineargradient",
                              flat.stylesheet(10, "x"))
+            # the curtain's tiles: the retro themes' glossy buttons, a card elsewhere
+            retro = themes.apply(self.app, config.validate({"ui": {"theme": "qip-retro"}})[0])
+            tile = retro.stylesheet(10, "x").split("QToolButton#laneTile, ")[1]
+            self.assertIn(retro._bg("button"), tile.split("}")[0])
+            self.assertNotIn(retro._bg("button"),
+                             flat.stylesheet(10, "x").split("QToolButton#laneTile, ")[1]
+                             .split("}")[0])
         finally:
             themes.apply(self.app, config.validate({})[0])
 

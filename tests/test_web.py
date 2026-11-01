@@ -319,6 +319,9 @@ class WebTest(TmpDir):
         self.assertEqual(self.req("/api/theme", {"name": "../etc"})[0], 400)
         self.assertEqual(self.core.cfg["ui"]["theme"], "system")  # the config stays
         webs = self.srv.web
+        self.assertNotIn("--tile:", css)  # night: plain buttons, the tiles a card
+        self.req("/api/theme", {"name": "qip-retro"})  # glossy buttons: the tiles so too
+        self.assertIn("--tile: linear-gradient(to bottom, #", self.req("/theme.css")[2])
         webs.theme = "no-such-theme"
         self.assertEqual(webs.theme_css(), "")  # won't load: the page's own colours
 

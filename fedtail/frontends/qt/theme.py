@@ -179,6 +179,20 @@ class Theme:
             (self._ticks(k) if s.get("icons") != "desktop" else "") + \
             (DEBUG_CSS if s.get("debug") else "")
 
+    def _tiles_css(self, k, br):
+        """The curtain's tiles: the theme's glossy buttons where it has them (button_end,
+        the retro themes), else a card a little lighter on top."""
+        if self.c.get("button_end") not in (None, self.c["button"]):
+            bg, down, line = self._bg("button"), k("button"), k("button_border")
+        else:
+            bg = (f"qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, "
+                  f"stop: 0 {self._lift(k('card'))}, stop: 1 {k('card')})")
+            down, line = k("card"), k("card_border")
+        return f"""QToolButton#laneTile, QToolButton#laneChip {{ color: {k('text')}; background: {bg};
+    border: 1px solid {line}; border-bottom-color: {self._sink(line)};
+    border-radius: {br + 4}px; padding: 6px; }}
+QToolButton#laneTile:pressed, QToolButton#laneChip:pressed {{ background: {down}; }}"""
+
     @staticmethod
     def _ticks(k):
         """Check boxes and radio buttons in the theme's colours: the desktop's style
@@ -293,12 +307,7 @@ QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QWidget#laneHeader[slim="true"] QLabel#laneTitle {{ font-size: {round(base_pt * 1.15, 1)}pt; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#tilesHead {{ color: {k('muted')}; font-weight: 600; font-size: {round(base_pt * 0.85, 1)}pt; }}
-QToolButton#laneTile, QToolButton#laneChip {{ color: {k('text')};
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 {self._lift(k('card'))},
-                                stop: 1 {k('card')});
-    border: 1px solid {k('card_border')}; border-bottom-color: {self._sink(k('card_border'))};
-    border-radius: {br + 4}px; padding: 6px; }}
-QToolButton#laneTile:pressed, QToolButton#laneChip:pressed {{ background: {k('card')}; }}
+{self._tiles_css(k, br)}
 QToolButton#laneTile {{ font-size: {round(base_pt * 1.05, 1)}pt; }}
 QToolButton#laneTile[news="true"] {{ border-color: {k('accent')}; font-weight: 600; }}
 QToolButton#laneTile:hover, QToolButton#laneChip:hover {{ border-color: {k('accent')}; }}
