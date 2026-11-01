@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.22.2 — in progress
+
 ## 0.22.1 — 2026-11-02
 
 **In short: bug fixes.** The 0.22 branch goes on with fixes, not a 0.23: the phone's and
