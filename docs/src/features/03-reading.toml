@@ -134,14 +134,14 @@ android_note.en = "a phone has no Esc"
 since = "0.3.0"
 name.ru = "Esc — шторка, а не закрытие окна"
 name.en = "Esc draws a curtain instead of closing the window"
-config = "`window.esc`, `window.start_lane`"
+config = "`window.esc`, `window.start_lane`, `window.tiles`"
 api.ru = "своё"
 api.en = "own"
 others.ru = "только в fedtail"
 others.en = "only in fedtail"
 clients = []
-details.ru = "Esc закрывает то, что сверху (картинку, поиск), а последний Esc при `window.esc = \"curtain\"` задёргивает все ленты шторкой: окно на месте, слева счётчики, справа пусто, и ничего не отмечается прочитанным — утром откроешь, а новое накопилось. `\"tray\"` — убрать в трей, `\"off\"` — ничего. С чего начинать при запуске — `window.start_lane`: `\"none\"` (шторка, Enter откроет прошлую), `\"last\"` или имя ленты."
-details.en = "Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = \"curtain\"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `\"tray\"` — off to the tray, `\"off\"` — nothing. What to start with — `window.start_lane`: `\"none\"` (the curtain, Enter opens the last one), `\"last\"` or a lane's name."
+details.ru = "Esc закрывает то, что сверху (картинку, поиск), а последний Esc при `window.esc = \"curtain\"` задёргивает все ленты шторкой: окно на месте, слева счётчики, справа пусто, и ничего не отмечается прочитанным — утром откроешь, а новое накопилось. `\"tray\"` — убрать в трей, `\"off\"` — ничего. С чего начинать при запуске — `window.start_lane`: `\"none\"` (шторка, Enter откроет прошлую), `\"last\"` или имя ленты. `window.tiles` — на шторке под опоссумом ленты плитками по секциям боковой панели, как обзор телефона (`\"lanes\"` — свои ленты набора плитками, списки и теги кнопками; `\"all\"`; `\"none\"` — без плиток, по умолчанию): пока шторка задёрнута, список лент слева отходит, плитка открывает свою ленту — и он возвращается."
+details.en = "Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = \"curtain\"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `\"tray\"` — off to the tray, `\"off\"` — nothing. What to start with — `window.start_lane`: `\"none\"` (the curtain, Enter opens the last one), `\"last\"` or a lane's name. `window.tiles` — the lanes as tiles under the opossum, by the sidebar's sections, as the phone's overview (`\"lanes\"` — the set's own lanes as tiles, lists and tags as buttons; `\"all\"`; `\"none\"` — no tiles, the default): while the curtain is up the lanes' list on the left steps aside; a tile opens its lane, and the list is back."
 
 [[feature]]
 id = "sync-draft-pictures"

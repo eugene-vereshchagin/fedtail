@@ -140,6 +140,20 @@ class Theme:
                 f"QWidget#feedBody {{ background: transparent; }}\n"
                 f"QPlainTextEdit#dockText {{ background: {g}; }}")
 
+    @staticmethod
+    def _lift(color, by=0.06):
+        """A colour a little lighter: a tile's top (raised, as a button is)."""
+        from PySide6.QtGui import QColor
+        c = QColor(color)
+        return c.lighter(int(100 + by * 100)).name() if c.isValid() else color
+
+    @staticmethod
+    def _sink(color, by=0.18):
+        """A colour a little darker: a tile's bottom edge."""
+        from PySide6.QtGui import QColor
+        c = QColor(color)
+        return c.darker(int(100 + by * 100)).name() if c.isValid() else color
+
     def stylesheet(self, base_pt, mono_family):
         k = self.css
         s = self.shape
@@ -278,6 +292,16 @@ QWidget#laneHeader {{ background: {self._bg('header')}; {self._stripes_css()} {s
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QWidget#laneHeader[slim="true"] QLabel#laneTitle {{ font-size: {round(base_pt * 1.15, 1)}pt; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
+QLabel#tilesHead {{ color: {k('muted')}; font-weight: 600; font-size: {round(base_pt * 0.85, 1)}pt; }}
+QToolButton#laneTile, QToolButton#laneChip {{ color: {k('text')};
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 {self._lift(k('card'))},
+                                stop: 1 {k('card')});
+    border: 1px solid {k('card_border')}; border-bottom-color: {self._sink(k('card_border'))};
+    border-radius: {br + 4}px; padding: 6px; }}
+QToolButton#laneTile:pressed, QToolButton#laneChip:pressed {{ background: {k('card')}; }}
+QToolButton#laneTile {{ font-size: {round(base_pt * 1.05, 1)}pt; }}
+QToolButton#laneTile[news="true"] {{ border-color: {k('accent')}; font-weight: 600; }}
+QToolButton#laneTile:hover, QToolButton#laneChip:hover {{ border-color: {k('accent')}; }}
 QLabel#loadingPlate, QFrame#loadingPlate {{ background: {k('view')}; color: {k('muted')};
     border: 1px solid {k('header_border')}; border-radius: 12px; padding: 8px 18px; }}
 QFrame#loadingPlate {{ padding: 0; }}

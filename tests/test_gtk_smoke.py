@@ -611,6 +611,31 @@ class GtkSmokeTest(_GtkBase):
         self.assertFalse(self.win.curtain_shown())
         self.assertEqual(self.win._current_lane(), "home")
 
+    def test_tiles_on_the_curtain(self):
+        """window.tiles, as Qt: the curtain's tiles by the sidebar's sections, the lanes'
+        list stepped aside while it is up; a tile opens its lane, the list is back."""
+        from gi.repository import Gdk, Gtk
+        self.win.cfg["ui"]["tiles"] = "lanes"
+        self.assertTrue(self.win._key(None, Gdk.KEY_Escape, 0, 0))
+        self.assertTrue(self.win.curtain_shown())
+        self.assertFalse(self.win.side_scroll.get_visible())
+        tiles = []
+        stack = [self.win.curtain_tiles]
+        while stack:
+            w = stack.pop()
+            if isinstance(w, Gtk.Button) and w.has_css_class("ft-lane-tile"):
+                tiles.append(w)
+            c = w.get_first_child()
+            while c is not None:
+                stack.append(c)
+                c = c.get_next_sibling()
+        home = next(b for b in tiles
+                    if b.get_child().get_text().split("\n")[-1] == self.win.lane_title("home"))
+        home.emit("clicked")
+        self.assertTrue(pump(lambda: not self.win.curtain_shown(), 3))
+        self.assertTrue(self.win.side_scroll.get_visible())
+        self.assertEqual(self.win._current_lane(), "home")
+
     def test_the_status_line_says_what_qt_says(self):
         """Connecting, the server down (again in 20 s), a link not opened, deleted."""
         self.assertTrue(self.win._hello.startswith("@"))

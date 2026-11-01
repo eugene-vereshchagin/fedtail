@@ -1278,6 +1278,7 @@ async function arrange(focus) {
 
 // a lane picked (the sidebar, a notification, the address): in columns, its column
 async function goLane(name) {
+  document.body.classList.remove("tiles-up");  // the lanes' list back (window.tiles)
   if (cols.on) {
     if (!cols.names.includes(name)) {
       cols.names.splice(cols.names.indexOf(state.lane) + 1, 0, name);
@@ -1477,6 +1478,28 @@ async function showCurtain() {
   const plate = emptyBox(c.title);
   plate.classList.add("curtain");
   plate.append(el("div", "", c.info), el("div", "muted", c.hint));
+  // window.tiles: the lanes as tiles under the opossum, by the sidebar's sections; the
+  // lanes' list steps aside meanwhile (a tile opens its lane, and it comes back)
+  const tiles = c.tiles || [];
+  document.body.classList.toggle("tiles-up", tiles.length > 0);
+  const all = el("div", "tiles-all");  // every section on one left edge
+  if (tiles.length) plate.append(all);
+  for (const sec of tiles) {
+    if (!sec.lanes.length) continue;
+    const part = el("div", "tiles-sec");  // a section's title over its tiles, as one
+    if (sec.title) part.append(el("div", "tiles-head", sec.title));
+    const grid = el("div", sec.tiles ? "tiles" : "tiles chips");
+    for (const l of sec.lanes) {
+      const b = el("button", "tile" + (l.count ? " news" : ""));
+      b.type = "button";
+      if (sec.tiles && l.count) b.append(el("b", "", l.count), el("span", "", l.title));
+      else b.textContent = l.count ? l.title + "  " + l.count : l.title;
+      b.onclick = () => goLane(l.name);
+      grid.append(b);
+    }
+    part.append(grid);
+    all.append(part);
+  }
   box.append(plate);
 }
 

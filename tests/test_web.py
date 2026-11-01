@@ -698,6 +698,14 @@ class WebTest(TmpDir):
         got = json.loads(body)
         self.assertEqual(got["title"], i18n._("curtain_title"))
         self.assertEqual(got["last"], "home")
+        self.assertEqual(got["tiles"], [])  # window.tiles = "none": the curtain as it was
+        self.core.cfg["ui"]["tiles"] = "lanes"  # the lanes as tiles, by the sidebar's sections
+        got = json.loads(self.req("/api/curtain")[2])
+        self.assertEqual(got["hint"], i18n._("curtain_hint_tiles"))
+        tiled = [x for sec in got["tiles"] if sec["tiles"] for x in sec["lanes"]]
+        self.assertIn("home", [x["name"] for x in tiled])
+        self.assertTrue(all(x["title"] for x in tiled))
+        self.core.cfg["ui"]["tiles"] = "none"
         posts = [s for s in self.w.statuses]
         self.assertTrue(posts)
         self.req("/api/stood", {"lane": "home", "key": posts[0]})

@@ -556,6 +556,17 @@ note.en = "The terminal — through notify-send or the terminal's own code (kitt
 keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"]
 
 [[capability]]
+id = "curtain-tiles"
+area = "window"
+tui = "partly"
+android = "has"
+name.ru = "Плитки лент на заставке"
+name.en = "The lanes as tiles on the curtain"
+note.ru = "`window.tiles`: на заставке (все ленты закрыты) — ленты плитками по секциям боковой панели, список лент слева отходит; на телефоне это его обзор (`phone.tiles`). Терминал — строки текста: его шторка (общие слова, `common/sidebar.curtain`) плиток не рисует, его боковая панель и есть список."
+note.en = "`window.tiles`: on the curtain (every lane closed) the lanes as tiles by the sidebar's sections, the lanes' list on the left stepping aside; on the phone it is its overview (`phone.tiles`). The terminal is lines of text: its curtain (the common words, `common/sidebar.curtain`) draws no tiles, its sidebar is the list."
+keys = ["curtain_hint_tiles", "curtain_empty_tiles"]
+
+[[capability]]
 id = "debug-basic"
 area = "app"
 android = "has"

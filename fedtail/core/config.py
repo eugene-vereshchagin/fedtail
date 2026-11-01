@@ -14,6 +14,7 @@ from . import presets, taggroups
 DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
+        "tiles": "none",          # the curtain's tiles (common/sidebar.overview)
         "frontend": "auto",
         "hung_copy_seconds": 20,  # a running copy's window hung this long: a start ends it
         "adwaita": "auto",
@@ -421,6 +422,7 @@ CHOICES = {
     ("cli", "color"): {"auto", "always", "never"},
     ("phone", "overview"): {"tiles", "list"},
     ("phone", "tiles"): {"lanes", "all", "none"},
+    ("ui", "tiles"): {"lanes", "all", "none"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
     ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
@@ -550,7 +552,7 @@ FILE_LAYOUT = (
                            "message_percent "
                            "themes_by_layout roster_on_top roster_threads split_tabs "
                            "dock_commands sidebar_groups sidebar_width sidebar_footer "
-                           "start_lane tray close_to_tray esc post_keys number_keys pin_tabs "
+                           "start_lane tiles tray close_to_tray esc post_keys number_keys pin_tabs "
                            "command_line "
                            "whats_this compose compose_size icon_count icon_count_except "
                            "desktop_entry")),

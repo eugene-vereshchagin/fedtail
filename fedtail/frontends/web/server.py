@@ -1280,8 +1280,15 @@ class Web:
         """The curtain's words (every lane closed) and the lane Enter opens there."""
         from ..common import sidebar
         names = [n for _g, ns in sidebar.groups(self.core, self.core.cfg) for n in ns]
-        title, info, hint = sidebar.curtain(self.core, names)
-        return {"title": title, "info": info, "hint": hint,
+        mode = self.core.cfg["ui"].get("tiles", "none")
+        title, info, hint = sidebar.curtain(self.core, names, tiles=mode != "none")
+        # window.tiles: the lanes as tiles under the opossum, by the sidebar's sections
+        tiles = [] if mode == "none" else [
+            {"title": sec["title"], "tiles": sec["tiles"],
+             "lanes": [{"name": n, "title": t, "count": c}
+                       for n in sec["names"] for t, c in [sidebar.tile_text(self.core, n)]]}
+            for sec in sidebar.overview(self.core, self.core.cfg, mode)]
+        return {"title": title, "info": info, "hint": hint, "tiles": tiles,
                 "last": sidebar.start_lane(self.core, names, closable=False)}
 
     def on_screen(self, ids):

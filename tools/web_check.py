@@ -513,6 +513,32 @@ def phone_editor(page, out):
     page.keyboard.press("Escape")
 
 
+def curtain_tiles(base, key, out, core):
+    """window.tiles: the curtain has the lanes as tiles under the opossum, the lanes' list
+    steps aside meanwhile; a tile opens its lane and the list is back."""
+    from playwright.sync_api import sync_playwright
+    keep = dict(core.cfg["ui"])
+    core.cfg["ui"].update(tiles="lanes", start_lane="none")
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 860})
+            page.goto(base + "/?k=" + key)
+            page.wait_for_selector(".curtain .tile", timeout=15000)
+            page.wait_for_timeout(500)
+            page.screenshot(path=str(out / "desktop-00c-curtain-tiles.png"))
+            if page.is_visible("#lanes"):
+                ERRORS.append("curtain tiles: the lanes' list didn't step aside")
+            page.locator(".curtain .tile").first.click()
+            page.wait_for_timeout(800)
+            if page.locator(".curtain").count() or not page.is_visible("#lanes"):
+                ERRORS.append("curtain tiles: a tile didn't open its lane, the list back")
+            browser.close()
+    finally:
+        core.cfg["ui"].clear()
+        core.cfg["ui"].update(keep)
+
+
 def main_menu(page, out):
     """≡: a window over the page — the everyday buttons on top, the groups (the windows'
     submenus) at the left, a group's items beside them; every place of the menu is in
@@ -676,6 +702,7 @@ def main():
         try:
             import playwright  # noqa: F401
             with_playwright(base, key, out)
+            curtain_tiles(base, key, out, core)
         except ImportError:
             with_chromium(base, key, out)
     except Exception:  # noqa: BLE001

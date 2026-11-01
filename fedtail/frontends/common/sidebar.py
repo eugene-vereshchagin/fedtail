@@ -19,13 +19,13 @@ def groups(view, cfg):
     return [(g, names) for g, names in out if g != "lists" or cfg["lists"]["enabled"]]
 
 
-def overview(view, cfg):
-    """The phone's overview as the sidebar has its sections (groups(): the set's
-    "Timelines" and "Personal", then lists, tags): [{key, title, names, tiles}] —
-    phone.tiles says which are tiles: "lanes" — the set's own lanes (its sections),
-    lists and tags rows under their titles; "all" — every section; "none" — rows only.
-    The windows and the phone the same, section by section (31.10)."""
-    mode = (cfg.get("phone") or {}).get("tiles", "lanes")
+def overview(view, cfg, mode=None):
+    """The lanes as tiles, by the sidebar's sections (groups(): the set's "Timelines"
+    and "Personal", then lists, tags): [{key, title, names, tiles}] — the phone's
+    overview and the windows' curtain alike. mode (phone.tiles, window.tiles): "lanes"
+    — the set's own lanes (its sections) as tiles, lists and tags rows under their
+    titles; "all" — every section; "none" — rows only (None: the phone's)."""
+    mode = mode or (cfg.get("phone") or {}).get("tiles", "lanes")
     out = []
     for g, names in groups(view, cfg):
         if not names:
@@ -34,6 +34,13 @@ def overview(view, cfg):
         out.append({"key": g or "", "title": group_title(g) or "", "names": list(names),
                     "tiles": tiles})
     return out
+
+
+def tile_text(view, name):
+    """A tile's words: (title, count — "" for none)."""
+    title = view.lane_title(name) or _("lane_" + name)
+    n = count(view, name)
+    return title, (str(n) if n else "")
 
 
 def hub_kind(view, name):
@@ -99,10 +106,13 @@ def start_lane(view, names, closable=True):
                 names[0] if names else None)
 
 
-def curtain(view, names):
+def curtain(view, names, tiles=False):
     """The words of the curtain — every lane closed (ui.start_lane = "none", or Esc):
     (title, what piles up behind it, how to open). Every interface draws these: the
-    terminal and the web page opened the lane of last time instead (29.10)."""
+    terminal and the web page opened the lane of last time instead (29.10). tiles
+    (window.tiles): the counts are on the tiles, and a tile opens a lane."""
+    if tiles:
+        return _("curtain_title"), _("curtain_empty_tiles"), _("curtain_hint_tiles")
     waiting = [(view.lane_title(n) or _("lane_" + n), count(view, n)) for n in names]
     waiting = [(t, c) for t, c in waiting if c]
     info = _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting)) \

@@ -119,6 +119,16 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-lane-header togglebutton:checked, .ft-lane-header button:checked {{
     background: {c['accent']}; color: {c['on_accent']}; }}
 .ft-active {{ color: {c['accent']}; }}
+.ft-lane-tile {{ background-image: linear-gradient(to bottom, shade({c['card']}, 1.04),
+                                                   {c['card']});
+                 color: {c['text']}; border: 1px solid {c['card_border']};
+                 border-radius: {br + 4}px; padding: 6px;
+                 box-shadow: 0 1px 2px alpha(black, 0.10), 0 3px 8px alpha(black, 0.08); }}
+.ft-lane-tile.ft-tile-news {{ border-color: {c['accent']}; font-weight: 600; }}
+.ft-lane-tile:hover {{ border-color: {c['accent']};
+                       box-shadow: 0 2px 4px alpha(black, 0.14), 0 8px 18px alpha(black, 0.12); }}
+.ft-lane-tile:active {{ box-shadow: 0 1px 2px alpha(black, 0.12); }}
+.ft-tiles-head {{ color: {c['muted']}; font-weight: 600; font-size: smaller; }}
 .ft-new-pill {{ background: {c['new_pill']}; color: {c['on_new_pill']};
                border-radius: 11px; padding: 2px 10px; font-weight: 600; }}
 .ft-feed > row {{ background: transparent; padding: 3px 0; }}

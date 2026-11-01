@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     QUrl,
 )
 from PySide6.QtGui import (
+    QColor,
     QGuiApplication,
     QIcon,
     QImage,
@@ -445,6 +446,9 @@ class MainWindow(QMainWindow):
         # frame (the core is starting: busy) — the lanes come out from under it when
         # they're in (_open_start_lane), not before anything at all is painted
         self.right_stack.setCurrentWidget(self.curtain)
+        # window.tiles: the lanes' list steps aside under the curtain, back when it lifts
+        # (a lane, a profile, a search — whatever lifts it)
+        self.right_stack.currentChanged.connect(lambda _i: self._lanes_step_aside())
         self.split.setStretchFactor(0, 0)
         self.split.setStretchFactor(1, 1)
         self.split.setSizes([self._sidebar_width(), 10_000])
@@ -688,6 +692,11 @@ class MainWindow(QMainWindow):
         self.lanes.customContextMenuRequested.connect(self._lane_menu)
         self._rebuild_sidebar()
         v.addWidget(self.lanes, 1)
+        # its room while the lanes' list steps aside for the curtain's tiles (window.tiles):
+        # else the layout spread the account's name and address down the column
+        self.lanes_gap = QWidget()
+        self.lanes_gap.setVisible(False)
+        v.addWidget(self.lanes_gap, 1)
         if self.cfg["ui"]["sidebar_footer"]:
             self.footer = QLabel()
             self._footer_text()
@@ -2701,12 +2710,89 @@ class MainWindow(QMainWindow):
         self.curtain_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.curtain_info.setWordWrap(True)
         v.addWidget(self.curtain_info)
-        hint = QLabel(_("curtain_hint"))
+        hint = self.curtain_hint = QLabel(_("curtain_hint"))
         hint.setObjectName("muted")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         v.addWidget(hint)
+        # window.tiles: the lanes as tiles under the opossum (common/sidebar.overview)
+        self.curtain_tiles = QWidget()
+        self.curtain_tiles_box = QVBoxLayout(self.curtain_tiles)
+        self.curtain_tiles_box.setContentsMargins(0, 18, 0, 0)
+        self.curtain_tiles.setVisible(False)
+        v.addWidget(self.curtain_tiles, 0, Qt.AlignmentFlag.AlignHCenter)
         v.addStretch(3)
         return w
+
+    TILE_W, TILE_H, TILES_PER_ROW = 132, 84, 4
+
+    def _tiles_mode(self):
+        return self.ctx.cfg["ui"].get("tiles", "none")
+
+    def _curtain_tiles(self):
+        """window.tiles: the curtain's tiles, section by section as the sidebar has them
+        (common/sidebar.overview) — the set's lanes as tiles, lists and tags as small
+        buttons; a click opens the lane. Drawn anew with the counts."""
+        box = getattr(self, "curtain_tiles_box", None)
+        if box is None:
+            return
+        while box.count():
+            item = box.takeAt(0)
+            if item.widget() is not None:
+                item.widget().deleteLater()
+        mode = self._tiles_mode()
+        self.curtain_tiles.setVisible(mode != "none" and bool(self.core.me))
+        if mode == "none" or not self.core.me:
+            return
+        from PySide6.QtWidgets import QGridLayout
+        view = self.ctx.view
+        for sec in sidebar.overview(view, self.ctx.cfg, mode):
+            names = [n for n in sec["names"] if n in self.lane_items]
+            if not names:
+                continue
+            if sec["title"]:
+                head = QLabel(sec["title"].upper())
+                head.setObjectName("tilesHead")
+                box.addWidget(head)
+            grid_w = QWidget()
+            grid = QGridLayout(grid_w)
+            grid.setContentsMargins(0, 4, 0, 10)
+            grid.setSpacing(8)
+            per = self.TILES_PER_ROW if sec["tiles"] else self.TILES_PER_ROW - 1
+            for i, name in enumerate(names):
+                title, n = sidebar.tile_text(view, name)
+                b = QToolButton()
+                b.setObjectName("laneTile" if sec["tiles"] else "laneChip")
+                b.setText(f"{n}\n{title}" if sec["tiles"] and n else
+                          title if sec["tiles"] else (f"{title}  {n}" if n else title))
+                b.setProperty("news", bool(n))
+                if sec["tiles"]:
+                    b.setFixedSize(self.TILE_W, self.TILE_H)
+                else:
+                    b.setFixedWidth(self.TILE_W + self.TILE_W // 3)
+                b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+                # raised: a soft shadow under it (QSS has none; flat on KDE, 31.10)
+                from PySide6.QtWidgets import QGraphicsDropShadowEffect
+                shadow = QGraphicsDropShadowEffect(b)
+                shadow.setBlurRadius(14)
+                shadow.setOffset(0, 2)
+                shadow.setColor(QColor(0, 0, 0, 46))
+                b.setGraphicsEffect(shadow)
+                b.clicked.connect(lambda _c=False, n=name: self.select_lane(n))
+                grid.addWidget(b, i // per, i % per)
+            box.addWidget(grid_w)
+
+    def _lanes_step_aside(self):
+        """With window.tiles the lanes' list on the left steps aside while the curtain
+        is up (the tiles stand for it there) and comes back with a lane open."""
+        lanes = getattr(self, "lanes", None)
+        if lanes is None:
+            return
+        aside = self._tiles_mode() != "none" and self.curtain_shown()
+        lanes.setVisible(not aside)
+        self.lanes_gap.setVisible(aside)
+        hint = getattr(self, "curtain_hint", None)
+        if hint is not None:
+            hint.setText(_("curtain_hint_tiles" if aside else "curtain_hint"))
 
     CURTAIN_ICON = 96
 
@@ -2780,6 +2866,7 @@ class MainWindow(QMainWindow):
         self.core.set_active_lane(None)
         self.core.set_active_lanes([])
         self._curtain_text()
+        self._lanes_step_aside()  # (already the curtain: no change signal)
         log.info("all lanes closed (Esc)")
 
     def _curtain_text(self):
@@ -2787,7 +2874,9 @@ class MainWindow(QMainWindow):
                    for n in self.lane_order if self.lane_items[n].badge.isVisible()]
         self.curtain_info.setText(
             _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting))
-            if waiting else _("curtain_empty"))
+            if waiting and self._tiles_mode() == "none" else
+            _("curtain_empty_tiles" if self._tiles_mode() != "none" else "curtain_empty"))
+        self._curtain_tiles()
 
     def hide_away(self):
         """Off the screen at once: to the tray if there is one, else minimized."""

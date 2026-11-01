@@ -248,6 +248,13 @@ sidebar_footer = true
 #   a lane's name — always that one: "home", "replies", "subs"… (as in [lanes]).
 start_lane = "none"
 
+# Tiles on the curtain (every lane closed: at start, or Esc), under the opossum, as the
+# phone's overview: "lanes" — the set's own lanes ("Timelines", "Personal") as tiles,
+# lists and tags as small buttons under their titles; "all" — every section as tiles;
+# "none" — no tiles, the curtain as it was. With tiles the lanes' list on the left steps
+# aside while the curtain is up; a tile opens its lane and the list comes back.
+tiles = "none"
+
 # The tray icon (qt, gtk). false — no icon at all: notifications then go through the
 # desktop only (notify-send), the cross closes the program, Esc with window.esc = "tray" minimizes.
 tray = true

@@ -1869,6 +1869,31 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertFalse(self.win.curtain_shown())
 
+    def test_tiles_on_the_curtain(self):
+        """window.tiles: the curtain has the lanes as tiles under the opossum, section by
+        section as the sidebar (common/sidebar.overview); the lanes' list steps aside
+        while it is up; a tile opens its lane and the list is back (31.10)."""
+        from PySide6.QtWidgets import QToolButton
+        self.win.cfg["ui"]["tiles"] = "lanes"
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.pump(until=lambda: "home" in self.win.lane_items)
+        self.win.close_all()
+        self.assertTrue(self.win.curtain_shown())
+        self.assertFalse(self.win.lanes.isVisible())
+        tiles = self.win.curtain_tiles.findChildren(QToolButton, "laneTile")
+        self.assertTrue(tiles)
+        home = next(b for b in tiles if b.text().split("\n")[-1] == self.win.lane_title("home"))
+        home.click()
+        self.pump(0.05)
+        self.assertFalse(self.win.curtain_shown())
+        self.assertTrue(self.win.lanes.isVisible())
+        self.assertEqual(self.win.lane_now, "home")
+        self.win.cfg["ui"]["tiles"] = "none"  # the curtain as it was
+        self.win.close_all()
+        self.assertTrue(self.win.lanes.isVisible())
+        self.assertFalse(self.win.curtain_tiles.isVisible())
+
     def test_tabs_and_the_curtain(self):
         """A tab already open, called from under the curtain, comes out of it (my own
         profile from my name); Enter in the sidebar search opens the search, not the last

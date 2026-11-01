@@ -268,10 +268,13 @@ class MainWindow(Gtk.ApplicationWindow):
         self.sidebar.add_css_class("navigation-sidebar")
         self.sidebar.connect("row-selected", self._lane_selected)
         self.sidebar.connect("row-activated", self._row_activated)
-        side_scroll = Gtk.ScrolledWindow(vexpand=True)
+        side_scroll = self.side_scroll = Gtk.ScrolledWindow(vexpand=True)
         side_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         side_scroll.set_child(self.sidebar)
         side.append(side_scroll)
+        # its room while the lanes' list steps aside for the curtain's tiles (window.tiles)
+        self.lanes_gap = Gtk.Box(vexpand=True, visible=False)
+        side.append(self.lanes_gap)
         self.footer = Gtk.Label(xalign=0, label=self._footer_text())
         self.footer.add_css_class("ft-muted")
         self.footer.add_css_class("caption")
@@ -289,6 +292,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.stack = Gtk.Stack()
         self.curtain = self._build_curtain()  # every lane closed (Esc), as Qt's
         self.stack.add_named(self.curtain, "__curtain__")
+        # window.tiles: the lanes' list steps aside under the curtain, back when it lifts
+        self.stack.connect("notify::visible-child", lambda *_a: self._lanes_step_aside())
         self.tabs = Gtk.Notebook()
         self.tabs.set_scrollable(True)
         self.tabs.set_show_tabs(False)
@@ -665,10 +670,75 @@ class MainWindow(Gtk.ApplicationWindow):
                                       max_width_chars=60)
         self.curtain_info.add_css_class("ft-muted")
         box.append(self.curtain_info)
-        hint = Gtk.Label(label=_("curtain_hint"))
+        hint = self.curtain_hint = Gtk.Label(label=_("curtain_hint"))
         hint.add_css_class("ft-muted")
         box.append(hint)
+        # window.tiles: the lanes as tiles under the opossum (common/sidebar.overview)
+        self.curtain_tiles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4,
+                                     visible=False, margin_top=18)
+        box.append(self.curtain_tiles)
         return box
+
+    TILE_W, TILE_H, TILES_PER_ROW = 132, 84, 4
+
+    def _tiles_mode(self):
+        return self.cfg["ui"].get("tiles", "none")
+
+    def _curtain_tiles(self, numbers=None):
+        """window.tiles: the curtain's tiles, section by section as the sidebar has them
+        (common/sidebar.overview) — the set's lanes as tiles, lists and tags as small
+        buttons; a click opens the lane (Qt's the same)."""
+        box = getattr(self, "curtain_tiles", None)
+        if box is None:
+            return
+        while (child := box.get_first_child()) is not None:
+            box.remove(child)
+        mode = self._tiles_mode()
+        box.set_visible(mode != "none" and bool(self.view.me))
+        if mode == "none" or not self.view.me:
+            return
+        for sec in sidebar.overview(self.view, self.cfg, mode):
+            names = [n for n in sec["names"] if n in self.lane_rows]
+            if not names:
+                continue
+            if sec["title"]:
+                head = Gtk.Label(label=sec["title"].upper(), xalign=0)
+                head.add_css_class("ft-tiles-head")
+                box.append(head)
+            grid = Gtk.Grid(row_spacing=8, column_spacing=8, margin_bottom=10)
+            per = self.TILES_PER_ROW if sec["tiles"] else self.TILES_PER_ROW - 1
+            for i, name in enumerate(names):
+                title, n = sidebar.tile_text(self.view, name)
+                if sec["tiles"]:
+                    words = f"{n}\n{title}" if n else title
+                else:
+                    words = f"{title}  {n}" if n else title
+                b = Gtk.Button()
+                label = Gtk.Label(label=words, justify=Gtk.Justification.CENTER, wrap=True)
+                b.set_child(label)
+                b.add_css_class("ft-lane-tile")
+                if n:
+                    b.add_css_class("ft-tile-news")
+                if sec["tiles"]:
+                    b.set_size_request(self.TILE_W, self.TILE_H)
+                else:
+                    b.set_size_request(self.TILE_W + self.TILE_W // 3, -1)
+                b.connect("clicked", lambda _b, nm=name: self.select_lane(nm))
+                grid.attach(b, i % per, i // per, 1, 1)
+            box.append(grid)
+
+    def _lanes_step_aside(self):
+        """With window.tiles the lanes' list on the left steps aside while the curtain is
+        up (the tiles stand for it) and comes back with a lane open."""
+        scroll = getattr(self, "side_scroll", None)
+        if scroll is None:
+            return
+        aside = self._tiles_mode() != "none" and self.curtain_shown()
+        scroll.set_visible(not aside)
+        self.lanes_gap.set_visible(aside)
+        hint = getattr(self, "curtain_hint", None)
+        if hint is not None:
+            hint.set_text(_("curtain_hint_tiles" if aside else "curtain_hint"))
 
     def curtain_shown(self):
         return self.stack.get_visible_child() is getattr(self, "curtain", None)
@@ -778,15 +848,19 @@ class MainWindow(Gtk.ApplicationWindow):
         self.view.set_active_lanes([])
         self._curtain_text()
         self._curtain_swing()
+        self._lanes_step_aside()  # (already the curtain: no change signal)
         log.info("all lanes closed (Esc)")
 
     def _curtain_text(self, numbers=None):
         numbers = numbers if numbers is not None else sidebar.counts(self.view,
                                                                     self.lane_rows)
         waiting = [(self.lane_title(n), numbers[n]) for n in self.lane_rows if numbers.get(n)]
+        tiles = self._tiles_mode() != "none"
         self.curtain_info.set_text(
             _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting))
-            if waiting else _("curtain_empty"))
+            if waiting and not tiles else
+            _("curtain_empty_tiles" if tiles else "curtain_empty"))
+        self._curtain_tiles()
 
     # ---- the head of the sidebar ---------------------------------------------------------
     def _me_head(self):

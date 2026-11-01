@@ -485,6 +485,32 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 .post .media .alt.open { display: block; -webkit-line-clamp: unset; }
 #viewer-alt { display: block; max-height: 30vh; overflow-y: auto; white-space: pre-wrap; }
 
+/* window.tiles: the curtain's tiles; the lanes' list steps aside while it is up */
+body.tiles-up #lanes { display: none; }
+.curtain .tiles-all { width: fit-content; max-width: 100%; margin: 0 auto; text-align: left; }
+.curtain .tiles-head { margin: 18px 0 4px; font-size: .8em; font-weight: 600; color: var(--muted);
+                       text-transform: uppercase; text-align: left; }
+.curtain .tiles { display: grid; grid-template-columns: repeat(4, 132px); gap: 8px; }
+.curtain .tiles.chips { grid-template-columns: repeat(3, 176px); }
+.curtain .tile { min-height: 84px; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 2px; color: var(--text);
+                 /* raised: lighter on top, a shadow under it, lifted more under the mouse */
+                 background: linear-gradient(to bottom, color-mix(in srgb, var(--card) 92%, #fff),
+                                             var(--card));
+                 border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px);
+                 box-shadow: 0 1px 2px rgba(0, 0, 0, .10), 0 3px 8px rgba(0, 0, 0, .08);
+                 padding: 6px; cursor: pointer; font: inherit;
+                 transition: box-shadow .12s, transform .12s; }
+.curtain .tile:hover { box-shadow: 0 2px 4px rgba(0, 0, 0, .14), 0 8px 18px rgba(0, 0, 0, .12);
+                       transform: translateY(-1px); }
+.curtain .tile:active { box-shadow: 0 1px 2px rgba(0, 0, 0, .12); transform: none; }
+.curtain .tiles.chips .tile { min-height: 0; padding: 8px; }
+.curtain .tile.news { border-color: var(--accent); font-weight: 600; }
+.curtain .tile:hover { border-color: var(--accent); }
+@media (max-width: 600px) {
+  .curtain .tiles, .curtain .tiles.chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* the empty lane's opossum (the windows' curtain): swinging while the lanes update */
 .empty img.possum { display: block; width: 96px; height: 96px; margin: 24px auto 8px; }
 

@@ -11,6 +11,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. The curtain is there at start (`window.start_lane = "none"`), Enter opens the last lane. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
 | The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
+| The lanes as tiles on the curtain | ✓ | ✓ | ◐ | ✓ | ✓ | `window.tiles`: on the curtain (every lane closed) the lanes as tiles by the sidebar's sections, the lanes' list on the left stepping aside; on the phone it is its overview (`phone.tiles`). The terminal is lines of text: its curtain (the common words, `common/sidebar.curtain`) draws no tiles, its sidebar is the list. |
 
 ### Reading
 
