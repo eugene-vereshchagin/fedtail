@@ -252,7 +252,8 @@ start_lane = "none"
 # phone's overview: "lanes" — the set's own lanes ("Timelines", "Personal") as tiles,
 # lists and tags as small buttons under their titles; "all" — every section as tiles;
 # "none" — no tiles, the curtain as it was. With tiles the lanes' list on the left steps
-# aside while the curtain is up; a tile opens its lane and the list comes back.
+# aside while the curtain is up; a tile opens its lane and the list comes back. (The
+# phone's home is phone.overview.)
 tiles = "none"
 
 # The tray icon (qt, gtk). false — no icon at all: notifications then go through the
@@ -1704,15 +1705,12 @@ open_browser = true
 # itself). On a computer these settings do nothing.
 
 [phone]
-# The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and
-# the name); "list" — a list, a row per lane, with its first unread post.
-overview = "tiles"
-
-# Which lanes are tiles (overview = "tiles"), by the sidebar's sections, as the windows have
+# The overview of lanes — the home screen, by the sidebar's sections as the windows have
 # them: "lanes" — the set's own lanes ("Timelines", "Personal": what the set or you made)
-# as tiles under those titles, lists and tags as rows under theirs; "all" — every section
-# as tiles; "none" — rows only. Tiles you chose by hand ("change") go first whatever this says.
-tiles = "lanes"
+# as tiles four in a row (the count and the name), lists and tags as rows under their
+# titles; "all" — every section as tiles; "list" — a list, a row per lane, with its first
+# unread post. Tiles you chose by hand ("change") go first whatever this says.
+overview = "lanes"
 
 # How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and
 # a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread

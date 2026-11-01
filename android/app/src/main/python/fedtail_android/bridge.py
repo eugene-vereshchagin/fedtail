@@ -671,7 +671,7 @@ def hub():
         every = [x for v in sections.values() for x in v]
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
                 "pinned": [n for n in core.pinned_tiles() if any(x["name"] == n for x in every)],
-                # the sidebar's sections and which are tiles (phone.tiles, common/sidebar)
+                # the sidebar's sections and which are tiles (phone.overview, common/sidebar)
                 "overview": sidebar.overview(view, core.cfg),
                 "order": [x["name"] for x in walk if x["unread"]],
                 "unread": sum(x["unread"] for x in walk),

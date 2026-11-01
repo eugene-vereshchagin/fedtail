@@ -142,8 +142,8 @@ class BridgeTest(_Base):
 
     def test_the_overview_by_the_sidebars_sections(self):
         """The phone's overview as the windows' sidebar: the set's lanes as tiles under
-        "Timelines" / "Personal", lists as rows under "Lists" (phone.tiles = "lanes");
-        "all" — every section tiles, "none" — none (31.10)."""
+        "Timelines" / "Personal", lists as rows under "Lists" (phone.overview = "lanes");
+        "all" — every section tiles, "list" — none (31.10)."""
         self.demo()
         got = self.call("hub")["overview"]
         tiles = {o["key"]: o["tiles"] for o in got}
@@ -152,8 +152,8 @@ class BridgeTest(_Base):
         self.assertFalse(tiles["lists"])
         self.assertIn("home", next(o for o in got if o["key"] == "standard")["names"])
         self.assertTrue(next(o for o in got if o["key"] == "lists")["title"])
-        for mode, want in (("all", True), ("none", False)):
-            self.bridge._core().cfg["phone"]["tiles"] = mode
+        for mode, want in (("all", True), ("list", False)):
+            self.bridge._core().cfg["phone"]["overview"] = mode
             self.assertTrue(all(o["tiles"] is want for o in self.call("hub")["overview"]))
 
     def test_a_link_to_a_clip_goes_to_the_player(self):
@@ -423,7 +423,7 @@ class BridgeTest(_Base):
     def test_a_cards_menu_and_links(self):
         self.demo()
         got = self.call("open")
-        self.assertEqual(got["me"]["overview"], "tiles")
+        self.assertEqual(got["me"]["overview"], "lanes")
         self.assertEqual(got["me"]["layout"], "auto")
         self.assertIn("expand_cw", got["me"])  # ui.expand_cw / ui.arts_mode: CWs open
         m = self.call("menu", "103")
@@ -469,7 +469,7 @@ class BridgeTest(_Base):
         self.assertEqual(self.call("setting_set", "phone", "overview", '"list"')["value"],
                          "list")
         self.assertEqual(self.call("setting_set", "phone", "overview", "null")["value"],
-                         "tiles")  # the default again
+                         "lanes")  # the default again
         self.assertIs(self.bridge._s["core"], before)  # not remade at every tap…
         self.assertEqual(self.call("settings_apply"), {"restarted": True})  # …but on leaving
         self.assertIsNot(self.bridge._s["core"], before)

@@ -22,10 +22,10 @@ def groups(view, cfg):
 def overview(view, cfg, mode=None):
     """The lanes as tiles, by the sidebar's sections (groups(): the set's "Timelines"
     and "Personal", then lists, tags): [{key, title, names, tiles}] — the phone's
-    overview and the windows' curtain alike. mode (phone.tiles, window.tiles): "lanes"
+    overview and the windows' curtain alike. mode (phone.overview, window.tiles): "lanes"
     — the set's own lanes (its sections) as tiles, lists and tags rows under their
-    titles; "all" — every section; "none" — rows only (None: the phone's)."""
-    mode = mode or (cfg.get("phone") or {}).get("tiles", "lanes")
+    titles; "all" — every section; "none", "list" — rows only (None: the phone's)."""
+    mode = mode or (cfg.get("phone") or {}).get("overview", "lanes")
     out = []
     for g, names in groups(view, cfg):
         if not names:

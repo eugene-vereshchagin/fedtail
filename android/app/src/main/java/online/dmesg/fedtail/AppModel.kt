@@ -85,7 +85,7 @@ data class Announce(
 data class HubSection(val kind: String, val lanes: List<HubLane>)
 
 /** A section of the overview as the sidebar has it (common/sidebar.overview): its title,
- *  its lanes in order, tiles or rows (phone.tiles). */
+ *  its lanes in order, tiles or rows (phone.overview). */
 data class OverviewSection(val key: String, val title: String, val names: List<String>,
                            val tiles: Boolean)
 
@@ -260,7 +260,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var prefetch by mutableStateOf("previews") // feed.prefetch: pictures fetched ahead
     var expandCw by mutableStateOf(false) // config.expand_cw: ui.expand_cw, or ui.arts_mode
     var commandLine by mutableStateOf(false)
-    var overview by mutableStateOf("tiles") // phone.overview: tiles | list
+    var overview by mutableStateOf("lanes") // phone.overview: lanes | all | list
     var layoutPref by mutableStateOf("auto") // phone.layout: auto | one | two | three
     var columns = 1                          // what the screen fits now (Screens.kt says)
     private var startLane: String? = null
@@ -504,7 +504,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         expandCw = me.optBoolean("expand_cw")
         prefetch = me.optString("prefetch", "previews")
         commandLine = me.optBoolean("command_line")
-        overview = me.optString("overview", "tiles")
+        overview = me.optString("overview", "lanes")
         layoutPref = me.optString("layout", "auto")
         merged = me.optBoolean("merged")
         accountCount = me.optInt("accounts", 1)

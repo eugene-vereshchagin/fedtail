@@ -69,9 +69,9 @@
   is a row above the text at a phone's width. `tools/web_check.py` checks the editor at
   that width.
 - **Phone: the overview by the windows' sidebar sections** — the set's own lanes as tiles
-  under "Timelines" and "Personal", lists and tags as rows under theirs (`phone.tiles`:
-  `lanes`, `all` — every section as tiles, `none` — rows only). Tiles chosen by hand
-  ("change") still go first.
+  under "Timelines" and "Personal", lists and tags as rows under theirs (`phone.overview`:
+  `lanes`, `all` — every section as tiles, `list` — the list as before; one switch, its
+  old `tiles` value is gone). Tiles chosen by hand ("change") still go first.
 - **Tiles on the curtain, in the windows and the web page** (`window.tiles`, off by
   default): under the opossum the lanes as tiles by the sidebar's sections, as the phone's
   overview — the set's own lanes as tiles, lists and tags as buttons (`"lanes"`), or all

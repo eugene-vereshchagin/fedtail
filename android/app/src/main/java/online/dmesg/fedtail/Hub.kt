@@ -67,7 +67,7 @@ import androidx.compose.ui.unit.sp
 fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) {
     var menu by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    val tiles = model.overview == "tiles"
+    val tiles = model.overview != "list"
     Scaffold(
         // tiles: grey tiles on white, as the switcher's sheet (mockup "3"); a list: white rows on grey
         containerColor = if (tiles) MaterialTheme.colorScheme.surface
@@ -174,7 +174,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
         return
     }
     // no tiles chosen by hand: the sidebar's sections, as the windows have them — the set's
-    // lanes as tiles under their titles, lists and tags as rows (phone.tiles)
+    // lanes as tiles under their titles, lists and tags as rows (phone.overview)
     if (model.hubPinned.isEmpty() && model.hubOverview.isNotEmpty()) {
         sectionsAsSidebar(model, per)
         return
@@ -320,7 +320,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.laneRows(model: AppMo
     }
 }
 
-/** A lane as a tile — the overview's (phone.overview = "tiles") and the switcher's. */
+/** A lane as a tile — the overview's (phone.overview = "lanes", "all") and the switcher's. */
 @Composable
 fun LaneTile(
     lane: HubLane, mine: Boolean, on: Boolean, modifier: Modifier,
