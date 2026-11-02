@@ -665,6 +665,8 @@ class PollMixin:
                 self.bg.submit(self.derived.run)
             if self.derived.likes_due():  # who liked my recent posts (activity.unlikes)
                 self.bg.submit(self.derived.run_likes)
+            if self.updates_due():  # a newer fedtail out? (updates.check, once a day)
+                self.bg.submit(self.check_updates)
             self._step("requests+activity")
             self._warm_lanes()  # before the window hears: it finds them made
             new_statuses = self._new_statuses(new_by_source)

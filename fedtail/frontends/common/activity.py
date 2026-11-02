@@ -17,14 +17,14 @@ ACT_KINDS = tuple(k[4:] for k in (
     "act_pending.reply", "act_pending.favourite", "act_pending.reblog",
     "act_severed_relationships", "act_moderation_warning", "act_follow_request",
     "act_my_follow", "act_unfollow", "act_gone", "act_lost", "act_moved", "act_unliked",
-    "act_device"))
+    "act_device", "act_release"))
 
 # fedtail.model's kinds → the words for them in i18n (act_<key>)
 _ACT_KEY = {"like": ACT_KINDS[0], "share": ACT_KINDS[1], "follow": ACT_KINDS[2],
             "poll": ACT_KINDS[3], "update": ACT_KINDS[4], "post": ACT_KINDS[5],
             "my_follow": ACT_KINDS[12], "unfollow": ACT_KINDS[13], "gone": ACT_KINDS[14],
             "lost": ACT_KINDS[15], "moved": ACT_KINDS[16], "unliked": ACT_KINDS[17],
-            "device": ACT_KINDS[18]}
+            "device": ACT_KINDS[18], "release": ACT_KINDS[19]}
 _ASKS_KEY = {"reply": ACT_KINDS[6], "like": ACT_KINDS[7], "share": ACT_KINDS[8],
              "follow": ACT_KINDS[11]}
 _NOTICE_KEY = {"severed": ACT_KINDS[9], "warning": ACT_KINDS[10]}
@@ -32,9 +32,12 @@ _NOTICE_KEY = {"severed": ACT_KINDS[9], "warning": ACT_KINDS[10]}
 
 def who_link(acc):
     """Where a name in an event's row goes: the person — or, for a device of mine (a
-    sync event: no one's account), ≡ → Sync."""
+    sync event: no one's account), ≡ → Sync; for a newer fedtail, its release's page."""
     if str(acc.id).startswith("device:"):
         return "fedtail:place/sync"
+    if str(acc.id).startswith("release:"):  # a newer fedtail: its release's page
+        from ...core.updates import release_page
+        return release_page(str(acc.id)[len("release:"):])
     return f"fedtail:account/{acc.id}"
 
 

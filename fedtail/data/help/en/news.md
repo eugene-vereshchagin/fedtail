@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **What's next:**
 
 - "A device joined" in Activity — on it and on the others
+- Update check: a newer version as a row of Activity
 
 **0.22.2:**
 

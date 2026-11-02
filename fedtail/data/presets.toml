@@ -126,7 +126,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -202,7 +202,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -272,7 +272,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -362,7 +362,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -448,7 +448,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 

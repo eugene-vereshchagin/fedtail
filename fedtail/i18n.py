@@ -1024,6 +1024,7 @@ _STRINGS = {
         "lv_event_unfollowed_back": "отписался взаимный",
         "lv_event_unliked": "лайк снят",
         "lv_event_device": "подключилось моё устройство",
+        "lv_event_release": "вышла новая версия fedtail",
         "lv_event_update": "бустнутое изменили",
         "lv_event_warning": "предупреждение модерации",
         "lv_age_of_post": "поста",
@@ -1124,6 +1125,8 @@ _STRINGS = {
         "act_unfollow": "отписался", "act_gone": "пропал (учётки больше нет)",
         "act_moved": "переехал на новую учётку", "act_unliked": "забрал лайк",
         "act_device": "подключилось к синхронизации",
+        "act_release": "вышла новая версия — что в ней и как обновиться",
+        "about_update": "Вышла новая версия: {v}",
         "act_lost": "подписчики этого сервера пропали разом: сервер недоступен или "
                     "отрезал нас",
         "act_poll": "опрос закончился",
@@ -2874,6 +2877,7 @@ _STRINGS = {
         "lv_event_unfollowed_back": "a mutual stopped following",
         "lv_event_unliked": "a like taken back",
         "lv_event_device": "a device of mine joined",
+        "lv_event_release": "a newer fedtail is out",
         "lv_event_update": "a boosted post edited",
         "lv_event_warning": "a moderation warning",
         "lv_age_of_post": "the post",
@@ -2969,6 +2973,8 @@ _STRINGS = {
         "act_unfollow": "stopped following you", "act_gone": "gone (the account is no more)",
         "act_moved": "moved to a new account", "act_unliked": "took the like back",
         "act_device": "joined sync",
+        "act_release": "a new version is out — what's in it and how to update",
+        "about_update": "A new version is out: {v}",
         "act_lost": "this server's followers left at once: it is down or cut us "
                     "off", "act_poll": "poll ended",
         "act_update": "post edited", "act_status": "new post",

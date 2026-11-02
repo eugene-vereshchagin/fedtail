@@ -1651,6 +1651,13 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
                         getattr(self, "toolkit_version", ""))
         page = Page("about", _("about"))
         page.rows.append(Row("heading", "fedtail " + a.version))
+        newer = self.view.update_out()  # updates.check: the website said so
+        if newer:
+            from ...core.updates import release_page
+            page.rows.append(Row("item", _("about_update", v=newer), release_page(newer),
+                                 key="update", buttons=(self._btn(
+                                     _("open_browser"), "url", "open", release_page(newer),
+                                     primary=True),)))
         page.rows.append(Row("text", a.tagline))
         for label, value in a.tiles + a.rows:
             page.rows.append(Row("item", value, label, key="about:" + label))

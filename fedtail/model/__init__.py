@@ -47,6 +47,7 @@ ACTIVITY_KINDS = (
     "moved",           # a follower moved to a new account (it follows by itself)
     "unliked",         # somebody took a like of my post back (activity.unlikes)
     "device",          # a device of mine joined sync (always said: no switch)
+    "release",         # a newer fedtail is out (updates.check)
     "other",
 )
 

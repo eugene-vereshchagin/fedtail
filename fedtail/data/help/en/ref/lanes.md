@@ -368,6 +368,7 @@ program knows it.
 | `quote` | My post was quoted (Mastodon 4.5+). |
 | `quoted_update` | A post I quoted was edited (Mastodon 4.5+). |
 | `reblog` | My post was boosted. |
+| `release` | A newer fedtail is out (`updates.check`). |
 | `removed_follower` | I removed or blocked a follower myself. |
 | `severed` | Connections were cut by a server block (Mastodon 4.3+). |
 | `status` | A new post from an account whose bell I rang. |

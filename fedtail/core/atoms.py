@@ -82,7 +82,9 @@ EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "
           "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
           "deleted", "lost",
           # a device of mine joined sync (core/sync/engine.py)
-          "device"}
+          "device",
+          # a newer fedtail is out (core/updates.py)
+          "release"}
 TEXT_IN = {"text", "cw", "alt", "poll", "name"}  # name: the author's name and @nick
 
 # the server's notification type → our event word
@@ -95,7 +97,7 @@ EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
             "annual_report": "annual_report", "fedtail.followed": "i_followed",
             "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
             "fedtail.moved": "moved", "fedtail.unliked": "unliked",
-            "fedtail.device": "device"}
+            "fedtail.device": "device", "fedtail.release": "release"}
 
 # the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
 # "mutuals_only"; Akkoma's "local" is public that stays home)

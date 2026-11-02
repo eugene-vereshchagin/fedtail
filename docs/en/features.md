@@ -734,6 +734,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.keep_hidden_lanes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |
 | Polling the server and the live stream | has | 0.9.0 | `[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds` | streaming (WebSocket) | Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes |
 | Errors in plain words and without spam | has | 0.13.0 | — | own | — |
+| Update check: a newer version as a row of Activity | has | next | `updates.check`, `updates.url`, `updates.every_hours`; `event = "release"` | own: the project's website, {"version": "X.Y.Z"} | — |
 | A detailed log for bug reports | has | 0.2.0 | `[debug]`, the launch keys `--debug`, `--bug-report` | own | — |
 | A bug report straight into your private repository | has | 0.19.0 | `debug.report_repo`, `tools/selfcheck.py --send` | — | — |
 | Report a bug on GitHub — checked first | has | 0.19.0 | `debug.issue_repo` | — | Fedilab, Tusky (a mail to the developer) |
@@ -768,6 +769,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Polling the server and the live stream.** A poll every `interval_seconds` (at least 30). The live stream (`"auto"`, if the server offers it) wakes the poll at once, but not more often than every `stream_gap_seconds`. The stream only wakes, so if it drops (a laptop asleep, a proxy) nothing is lost.
 
 **Errors in plain words and without spam.** A server behind a proxy is down — instead of Cloudflare's HTML page one line “Bad Gateway — the server is down or not answering”; the same error of every poll is shown and logged once, again only when it changes or ten minutes later.
+
+**Update check: a newer version as a row of Activity.** Once a day fedtail asks the project's website whether a newer version is out. All that goes there is this version's number, the interface and the system — no account, no token, no id of any kind. One is out — a row in Activity, "FedTail 0.22.4 — a new version is out", its name leading to the release's page (what's in it, the files), and a line in About. One version, one row. `updates.check = false` — never asked; a lane of rules takes it as `event = "release"`.
 
 **A detailed log for bug reports.** In the debugging mode (`mode = "auto"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself, but for their last day. `--bug-report` packs two days of it, without the token and the database. The phone: when the app closes on an error, its trace is kept, goes into `crash.log` at the next start, and the app offers to send a report; a config with an error (a value of an older version, say) doesn't stop the start — that run goes with the defaults, and says so. In detail — [debugging.md](/docs/en/dev/debugging.md).
 

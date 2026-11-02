@@ -56,7 +56,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 - [11. Activity](#11-activity) — `[activity]`
 - [12. Several accounts](#12-several-accounts) — `[accounts]`
 - [13. Sync](#13-sync) — `[sync]`
-- [14. The server](#14-the-server) — `[server]`
+- [14. The server](#14-the-server) — `[server]`, `[updates]`
 - [15. Database and logs](#15-database-and-logs) — `[storage]`, `[debug]`
 - [16. In a terminal](#16-in-a-terminal) — `[cli]`, `[tui]`
 - [17. In a browser](#17-in-a-browser) — `[web]`
@@ -442,6 +442,14 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `server.proxy` | `""` | A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login: "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live stream doesn't go through SOCKS, polling does). A user and password — "http://user:pass@host:port". "" — as the system says (HTTPS_PROXY and the like). |
 | `server.proxy_at_login` | `false` | A "Proxy" field in the login window: set it before the first request to the server (when the server can't be reached without it). What you type is written here, in proxy. |
 | `server.signup_url` | `"https://joinmastodon.org/servers"` | "No account?" under the login window's server field, with a link to this page of servers to sign up at (an account is made on a server, not in fedtail). "" — not said. |
+
+### `[updates]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `updates.check` | `true` | Once a day fedtail asks the project's website whether a newer version is out; if so, Activity says it ("FedTail 0.22.4 — a new version is out"), its name leading to the release's page, and About too. What goes there: this version, the interface and the system, nothing else — no account, no token, no id. false — never asked. |
+| `updates.url` | `"https://fedtail.dmesg.online/update"` | Where to ask (the answer: {"version": "X.Y.Z"}). |
+| `updates.every_hours` | `24` | How often, hours. |
 
 ## 15. Database and logs
 

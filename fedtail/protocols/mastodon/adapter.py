@@ -64,6 +64,8 @@ ACTIVITY_KIND = {
     "fedtail.moved": "moved", "fedtail.unliked": "unliked",
     # a device of mine joined sync (core/sync/engine.py: its hello)
     "fedtail.device": "device",
+    # a newer fedtail is out (core/updates.py)
+    "fedtail.release": "release",
 }
 
 QUOTE_DEPTH = 2  # a quote inside a quote inside a post — no deeper

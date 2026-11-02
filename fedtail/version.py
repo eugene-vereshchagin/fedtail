@@ -34,6 +34,9 @@ AUTHOR_URL = "https://dmesg.online/@veresk"
 # finds the icon by it), Qt's desktop file name. Reverse DNS of the project's website,
 # fedtail.dmesg.online — the author's wish, the other place his domain may appear.
 APP_ID = "online.dmesg.fedtail"
+# the project's website: where fedtail asks once a day whether a newer release is out
+# (updates.url's default) — the author's wish, the third place his domain may appear
+SITE = "https://fedtail.dmesg.online"
 
 
 def _git(*args):

@@ -59,11 +59,12 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   `sync_invite.json`, `sync_webdav.json`). No token of the account goes to a sync server: there the journal
   is the key's (an id and a secret derived from it, protocol 2, `core/sync`,
   docs/en/sync.md).
-* The repository never names the author's own server; nothing is hardcoded. Two
+* The repository never names the author's own server; nothing is hardcoded. Three
   exceptions, the author's wish: `version.AUTHOR` / `AUTHOR_URL`, his fediverse address
-  linked from About — nothing else may use them; and `version.APP_ID`
+  linked from About — nothing else may use them; `version.APP_ID`
   (`online.dmesg.fedtail`, from the project's website): the desktop entry's name and the
-  app id of both toolkits, through `desktop.desktop_id()` only.
+  app id of both toolkits, through `desktop.desktop_id()` only; and `version.SITE`, the
+  project's website, as `updates.url`'s default (core/updates.py: once a day, no id).
 * Comments and commit messages in English. User-facing docs come in Russian and English:
   README.md / README.ru.md, `docs/en/` / `docs/ru/`, `fedtail/data/help/en|ru/`.
   The developer docs come in both languages too, `docs/ru/dev/` and `docs/en/dev/` (the

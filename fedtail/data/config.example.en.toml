@@ -51,7 +51,7 @@
 #  11. Activity .................... [activity]
 #  12. Several accounts ............ [accounts]
 #  13. Sync ........................ [sync]
-#  14. The server .................. [server]
+#  14. The server .................. [server] [updates]
 #  15. Database and logs ........... [storage] [debug]
 #  16. In a terminal ............... [cli] [tui]
 #  17. In a browser ................ [web]
@@ -1490,6 +1490,19 @@ proxy_at_login = false
 # "No account?" under the login window's server field, with a link to this page of
 # servers to sign up at (an account is made on a server, not in fedtail). "" — not said.
 signup_url = "https://joinmastodon.org/servers"
+
+[updates]
+# Once a day fedtail asks the project's website whether a newer version is out; if so,
+# Activity says it ("FedTail 0.22.4 — a new version is out"), its name leading to the
+# release's page, and About too. What goes there: this version, the interface and the
+# system, nothing else — no account, no token, no id. false — never asked.
+check = true
+
+# Where to ask (the answer: {"version": "X.Y.Z"}).
+url = "https://fedtail.dmesg.online/update"
+
+# How often, hours.
+every_hours = 24
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════

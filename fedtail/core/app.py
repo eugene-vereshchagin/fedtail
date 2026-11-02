@@ -61,6 +61,7 @@ from .store import Store, now_iso
 from .syncing import SyncMixin
 from .thread_ops import ThreadsMixin
 from .translate import TranslateMixin
+from .updates import UpdatesMixin
 from .writing import WritingMixin
 
 log = logging.getLogger(__name__)
@@ -196,8 +197,8 @@ def _filter_hits(st, filters):
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
            CountsMixin,
-           OriginMixin, SyncMixin, ActivityMixin, ListsMixin, SilenceMixin, TranslateMixin,
-           SocialMixin):
+           OriginMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
+           TranslateMixin, SocialMixin):
     """The core the frontends talk to: one account, its store, its rounds. Its parts
     live in modules of their own, mixed in here — poll.py (the rounds, the stream),
     people.py, thread_ops.py, writing.py, silence.py, lists.py, activity.py, syncing.py,

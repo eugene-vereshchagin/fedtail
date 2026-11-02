@@ -635,6 +635,9 @@ en = "A like was taken off my post (off by default)."
 [word.event.device]
 ru = "К синхронизации подключилось моё устройство — это или другое."
 en = "A device of mine joined sync — this one or another."
+[word.event.release]
+ru = "Вышла новая версия fedtail (`updates.check`)."
+en = "A newer fedtail is out (`updates.check`)."
 [word.event.deleted]
 ru = "Удалён пост, который есть у меня в базе."
 en = "A post I have stored was deleted."

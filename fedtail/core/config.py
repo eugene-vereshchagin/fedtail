@@ -309,6 +309,11 @@ DEFAULTS = {
         "interval_seconds": 60,
         "device_name": "",   # how this device is named to the others; "" — the machine's
     },
+    "updates": {
+        "check": True,       # once a day: is a newer fedtail out? (the website; no id)
+        "url": "https://fedtail.dmesg.online/update",
+        "every_hours": 24,
+    },
     "net": {
         "proxy": "",               # http://host:port, socks5h://host:port; "" — none (or env)
         "proxy_at_login": False,   # a proxy field in the login window
@@ -623,6 +628,7 @@ FILE_LAYOUT = (
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
                              "announcements_minutes")
      + _keys("net", "proxy proxy_at_login signup_url")),
+    ("updates", _keys("updates", "check url every_hours")),
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
                              "watchdog_seconds stall_ms slow_request_seconds rss_warn_mb "
