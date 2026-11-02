@@ -111,6 +111,7 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   links in those docs repo-rooted (`/docs/…`). After a release CI's `site` job runs
   `site.yml` (also nightly and by hand): it pokes the site's deploy hook (secret
   `SITE_DEPLOY_HOOK`) and fails unless the live site's `/version.txt` names the release
+  and its front page links the release's apk and Linux binary
   within 20 minutes. The site's own checks only warn about these docs: keep their RU/EN
   twins equal here (tests do).
 * No shortcut on F1 or Shift+F1, ever: they sit next to Esc.

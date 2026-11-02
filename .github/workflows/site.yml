@@ -58,17 +58,33 @@ jobs:
           if [ -z "$WANT" ]; then
             WANT=$(git ls-remote --tags --refs "$REPO" 'v*' | sed -nE 's#.*refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$#\1#p' | sort -V | tail -1)
           fi
-          echo "waiting for $SITE/version.txt to say $WANT"
-          have=""
+          # the release's files the front page offers: linked once they are in the release —
+          # a site built before the apk was up said "no such file in 0.22.2" (02.11), and
+          # version.txt alone, already right, let that pass
+          files=$(curl -fsS "https://api.github.com/repos/${REPO#*github.com/}/releases/tags/v$WANT" 2>/dev/null \
+            | python3 -c "import json,sys; print(' '.join(a['name'] for a in json.load(sys.stdin)['assets'] if a['name'].endswith(('-android.apk', '-linux-x86_64'))))" || true)
+          echo "waiting for $SITE/version.txt to say $WANT and its front page to link: ${files:-(none)}"
+          have="" missing=""
           for i in $(seq 1 40); do   # 40 × 30 s = 20 minutes
             have=$(curl -fsS -H 'Cache-Control: no-cache' "$SITE/version.txt?run=$GITHUB_RUN_ID-$i" 2>/dev/null | tr -d '[:space:]' || true)
             if [ "$have" = "$WANT" ]; then
-              echo "::notice::the site shows $WANT"
-              exit 0
+              page=$(curl -fsSL -H 'Cache-Control: no-cache' "$SITE/en/?run=$GITHUB_RUN_ID-$i" 2>/dev/null || true)
+              missing=""
+              for f in $files; do
+                case "$page" in *"/v$WANT/$f"*) ;; *) missing="$missing $f";; esac
+              done
+              if [ -z "$missing" ]; then
+                echo "::notice::the site shows $WANT${files:+ and links $files}"
+                exit 0
+              fi
             fi
             sleep 30
           done
-          msg="the site still shows ${have:-nothing} instead of $WANT after 20 minutes: its build failed or never ran"
+          if [ "$have" = "$WANT" ]; then
+            msg="the site shows $WANT but its front page doesn't link$missing after 20 minutes: built before the files were up? Run this workflow again"
+          else
+            msg="the site still shows ${have:-nothing} instead of $WANT after 20 minutes: its build failed or never ran"
+          fi
           echo "::error::$msg — Cloudflare → Workers & Pages → fedtail-site → Deployments${BUILD:+, build $BUILD}"
           {
             echo "### The site did not update"

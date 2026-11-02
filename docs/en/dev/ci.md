@@ -41,7 +41,7 @@ can't always be downloaded).
 
 | job | when | what it does |
 |---|---|---|
-| `rebuild` | every night at 05:37 Tbilisi time, after a release (ci.yml's `site`) and by hand | calls the site's deploy hook (secret `SITE_DEPLOY_HOOK` or `DOCS_UPDATE`), so "coming next" follows `main`; then waits up to 20 minutes for the live site's `/version.txt` to name the release (the given one, else the latest tag) and fails otherwise — the site's build refused something and Cloudflare kept the old version; the run's summary names the Cloudflare build to look at |
+| `rebuild` | every night at 05:37 Tbilisi time, after a release (ci.yml's `site`) and by hand | calls the site's deploy hook (secret `SITE_DEPLOY_HOOK` or `DOCS_UPDATE`), so "coming next" follows `main`; then waits up to 20 minutes for the live site's `/version.txt` to name the release (the given one, else the latest tag) and its front page to link the release's apk and Linux binary, and fails otherwise (a site built before the files were up said there was no such file) — the site's build refused something and Cloudflare kept the old version; the run's summary names the Cloudflare build to look at |
 
 The site lives in a repo of its own and builds itself from this one: the docs of the latest release,
 the developer docs from `main`, the release files' links. A release rebuilds it at once. Its build
