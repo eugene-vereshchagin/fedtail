@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -290,9 +291,11 @@ class FlowTest {
         Thread.sleep(3_000)  // the round bringing them; new ones wait for ⟳ (reading.on_new)
         compose.onAllNodesWithContentDescription("Refresh").onFirst().performClick()
         Thread.sleep(3_000)
-        repeat(40) {
+        // wherever they stand: down the lane first, then up (the order is the config's)
+        for (up in listOf(true, false)) repeat(30) {
             if (shownRequests() >= 3) return@repeat
-            compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
+            compose.onAllNodes(hasScrollAction()).onFirst()
+                .performTouchInput { if (up) swipeUp() else swipeDown() }
             compose.waitForIdle()
             Thread.sleep(300)
         }
