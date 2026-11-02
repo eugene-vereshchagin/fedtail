@@ -311,6 +311,7 @@ DEFAULTS = {
     "net": {
         "proxy": "",               # http://host:port, socks5h://host:port; "" — none (or env)
         "proxy_at_login": False,   # a proxy field in the login window
+        "signup_url": "https://joinmastodon.org/servers",  # "no account?": "" — not said
     },
     "storage": {
         "max_mb": 1024,
@@ -619,7 +620,7 @@ FILE_LAYOUT = (
      + _keys("read", "sync_markers mentions_by_marker")),
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
                              "announcements_minutes")
-     + _keys("net", "proxy proxy_at_login")),
+     + _keys("net", "proxy proxy_at_login signup_url")),
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
                              "watchdog_seconds stall_ms slow_request_seconds rss_warn_mb "
@@ -675,7 +676,25 @@ GONE = {
     "lanes.bots_in_home": f"lanes.bots_in_home is gone (0.21): {_RULES_SAY}",
     "subs.replies_to_me": f"subs.replies_to_me is gone (0.21): {_RULES_SAY}",
     "threads.replies_to_me": f"threads.replies_to_me is gone (0.21): {_RULES_SAY}",
+    "phone.tiles": "phone.tiles is gone (0.22.2): phone.overview = \"lanes\" | \"all\" | "
+                   "\"list\" says it",
 }
+
+# phone.overview's values of 0.22.1 and before, with phone.tiles beside: what they are now.
+# "tiles" was the example's own line, so every file written then has it; a start must not
+# fail on it (the phone's did)
+_OLD_OVERVIEW = {"lanes": "lanes", "all": "all", "none": "list"}
+
+
+def _older_values(user, warnings):
+    """The file's values an older version wrote, read as what they are now."""
+    phone = user.get("phone")
+    if isinstance(phone, dict) and phone.get("overview") == "tiles":
+        now = _OLD_OVERVIEW.get(phone.get("tiles"), "lanes")
+        warnings.append(f'phone.overview = "tiles" is read as "{now}" (0.22.2: lanes | all '
+                        f'| list)')
+        user = {**user, "phone": {**phone, "overview": now}}
+    return user
 
 
 def from_file(user):
@@ -784,6 +803,7 @@ def validate(user):
     """Merge user config over defaults. Returns (config, warnings) or raises ConfigError."""
     cfg = copy.deepcopy(DEFAULTS)
     warnings, errors = [], []
+    user = _older_values(user, warnings)
     user, older, unknown = from_file(user)
     warnings += [GONE.get(name, f"unknown key {name} — ignored") for name in unknown]
     if older:

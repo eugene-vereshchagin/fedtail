@@ -690,6 +690,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 |---|---|---|---|---|---|
 | Profiles and the switcher | has | 0.3.0 | `accounts.switch_closes`, the launch key `--profile` | — | every multi-account client |
 | The main profile ★ | has | 0.14.0 | ≡ → “Account and server” → “Make it the main one”; the mark `~/.config/fedtail/main-profile` | own | — |
+| No account? — where to get one, right on the login screen | has | 0.22.2 | `server.signup_url` | — | Tusky, Ivory, Mona — “Sign up” with a choice of servers |
 | Log in again, log out | has | 0.14.0 | ≡ → “Account and server”, with a question | OAuth | everyone |
 | All accounts in one window | has | 0.3.0 | `accounts.merge` | own | Ivory, Phanpy, Elk, Tokodon, Sengi, Whalebird |
 | An account's colour in the shared window | has | 0.14.0 | `accounts.account_colors` | own | Fedilab |
@@ -700,6 +701,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Profiles and the switcher.** One profile — one account with its own config, theme, database and window. A right click on the avatar (or ≡ → “Account and server”) — the list, “My profile”, “About the server…” (it has the “Edit profile” button), “Add an account…”; `switch_closes` — whether to close the current window when switching. Which profile and account this is — on the left of the status bar: “default: @nick@server ★”.
 
 **The main profile ★.** The one started without `--profile` and from the “fedtail” menu entry. It isn't a folder with a special name but a mark — the `main-profile` file next to the profile folders; without the mark the main one is `default`. “Make it the main one” in the accounts menu moves it; in the list (and in `--profiles`) the main one is marked ★.
+
+**No account? — where to get one, right on the login screen.** Under the server field (the windows, the terminal, the web page, the phone): an account is made on a server, not in fedtail — pick a server, sign up on its site, then type its address here; “Pick a server” opens a list of servers (joinmastodon.org/servers by default). `signup_url = ""` — not said. Not shown when logging in again to the same account.
 
 **Log in again, log out.** Both are in the accounts menu, both ask first. “Log in again…” — for a revoked token or new permissions: the old token lives until you're in, cancelling changes nothing, and you can log in this way only to the same account (another one — “Add an account…”). “Log out…” deletes the token (read marks, drafts and the config stay); if that was the main profile, ★ goes to another one you're logged in to and the window switches to it; if there are none — the login window. In the window of all accounts both items are unavailable.
 
@@ -763,7 +766,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Errors in plain words and without spam.** A server behind a proxy is down — instead of Cloudflare's HTML page one line “Bad Gateway — the server is down or not answering”; the same error of every poll is shown and logged once, again only when it changes or ten minutes later.
 
-**A detailed log for bug reports.** In the debugging mode (`mode = "auto"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself, but for their last day. `--bug-report` packs two days of it, without the token and the database. In detail — [debugging.md](/docs/en/dev/debugging.md).
+**A detailed log for bug reports.** In the debugging mode (`mode = "auto"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself, but for their last day. `--bug-report` packs two days of it, without the token and the database. The phone: when the app closes on an error, its trace is kept, goes into `crash.log` at the next start, and the app offers to send a report; a config with an error (a value of an older version, say) doesn't stop the start — that run goes with the defaults, and says so. In detail — [debugging.md](/docs/en/dev/debugging.md).
 
 **A bug report straight into your private repository.** With `debug.report_repo` set (`"user/repo"` on GitHub or any git address), the report from the Debugging menu, `--bug-report` and the nightly selfcheck's archive go there by themselves over ssh with your own keys: a commit of its own in `reports/YYYY-MM/` (`selfcheck/…`). The older reports aren't downloaded; ssh asks nothing — no key or no access, it says so. The repository must be private: a report holds the logs and the config (never the token or the database).
 

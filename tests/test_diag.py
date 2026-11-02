@@ -39,6 +39,13 @@ class DiagTest(unittest.TestCase):
                 diag._state[f] = None
         self._tmp.cleanup()
 
+    def test_a_crash_told_by_the_next_start(self):
+        """The phone's Kotlin closed the app: its trace, handed over at the next start,
+        lands in crash.log (the bug report takes it) and in the session log."""
+        folder = diag.setup(self.paths, self.cfg)
+        diag.earlier_crash("java.lang.IllegalStateException: boom\n")
+        self.assertIn("IllegalStateException: boom", (folder / "crash.log").read_text())
+
     def test_log_stats_watchdog_report(self):
         folder = diag.setup(self.paths, self.cfg)
         diag.session_header("t")

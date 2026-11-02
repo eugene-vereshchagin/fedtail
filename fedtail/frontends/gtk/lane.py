@@ -273,6 +273,7 @@ class LaneView(Gtk.Box):
         specs = built.specs
         old_sep = self.sep_above[0] if self.sep_above else None
         anchor = self._reading_anchor() if self.positioned and self.order else None
+        anchor = self.strip.kept_anchor(anchor, {sp.key for sp in specs})  # its card going
         self.sep_above = None
         keys, sep = [], False
         for sp in specs:

@@ -104,6 +104,10 @@
     <string name="done">done</string>
     <string name="report_send">Send a report</string>
     <string name="report_making">Making the report…</string>
+    <string name="crashed_title">fedtail closed with an error</string>
+    <string name="crashed_text">Last time the app closed on an error. Its trace is in the logs now: a report hands it over (logs, config, the phone — never the token or the database).</string>
+    <string name="not_now">Not now</string>
+    <string name="config_broken">The settings file has an error — this run goes with the defaults (⋮ → Config fixes it): %1$s</string>
     <string name="selfcheck">Self-check</string>
     <string name="selfcheck_intro">Everything the app does, on this phone with your account — read-only: nothing is posted, liked or marked read. Then share the report: the logs, the config and these steps (never the token or the database).</string>
     <string name="selfcheck_run">Run</string>

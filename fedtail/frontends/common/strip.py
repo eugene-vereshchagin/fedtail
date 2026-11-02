@@ -136,6 +136,22 @@ class Strip:
                 return key, self.ys[key] - top
         return None
 
+    def kept_anchor(self, anchor, staying):
+        """The card holding the place (anchor) is going — a follow request answered, an
+        event's row dismissed: the nearest one that stays, below it first, holding the
+        place where it stands now; None — none. Asked before set_keys (the old order and
+        places); the lane jumped to its start (02.11)."""
+        if not anchor or anchor[0] in staying:
+            return anchor
+        key, off = anchor
+        at = self.index.get(key)
+        if at is None or key not in self.ys or not isinstance(off, (int, float)):
+            return None
+        for k in self.keys[at + 1:] + self.keys[:at][::-1]:
+            if k in staying and k in self.ys and k not in self.hidden:
+                return k, off + self.ys[k] - self.ys[key]
+        return None
+
     def last_whole(self, top, view_h):
         """The key of the last card seen whole on the screen [top, top+view_h) — what
         the reader read last (LaneModel.stood); a card taller than the screen, none

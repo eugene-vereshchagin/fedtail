@@ -2452,6 +2452,10 @@ class LoginScreen(Screen, Ui):
     def compose(self) -> ComposeResult:
         yield Static(_("tui_login_server"), id="ask")
         yield Input(placeholder="example.social", id="answer")
+        signup = self.app.core.signup_url()
+        if signup:  # an account is made on a server: where to find one
+            yield Static(Text.assemble(_("login_no_account") + " ",
+                                       (signup, f"link {signup}")), id="signup")
         if self.app.core.cfg["net"].get("proxy_at_login"):  # before the first request
             yield Static(_("login_proxy") + " " + _("login_proxy_tip"), id="proxy-ask")
             yield Input(str(self.app.core.cfg["net"].get("proxy") or ""),

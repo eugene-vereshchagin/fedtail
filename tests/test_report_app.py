@@ -21,7 +21,8 @@ from .test_custom import FreeBase
 class OffByDefaultTest(unittest.TestCase):
     def test_as_before(self):
         cfg, _w = config.validate({})
-        self.assertEqual(cfg["net"], {"proxy": "", "proxy_at_login": False})
+        self.assertEqual(cfg["net"], {"proxy": "", "proxy_at_login": False,
+                                      "signup_url": "https://joinmastodon.org/servers"})
         self.assertEqual(cfg["ui"]["number_keys"], "alt")
         self.assertFalse(cfg["ui"]["pin_tabs"])
         self.assertEqual(cfg["phone"]["stream"], "always")

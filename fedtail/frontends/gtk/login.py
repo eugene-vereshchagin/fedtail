@@ -1,7 +1,7 @@
 """Login: register the app, open the browser, paste the code (as qt/login.py)."""
 
 from ...i18n import _
-from .gi_setup import Gtk
+from .gi_setup import GLib, Gtk
 
 
 class LoginDialog(Gtk.Window):
@@ -19,6 +19,14 @@ class LoginDialog(Gtk.Window):
             self.server.set_text(expect[0].split("://")[-1].rstrip("/"))
         self.server.connect("activate", lambda _e: self.step1())
         box.append(self.server)
+        signup = self.core.signup_url()
+        if signup and not expect:  # an account is made on a server: where to find one
+            no = Gtk.Label(xalign=0, wrap=True)
+            no.set_markup(f'{GLib.markup_escape_text(_("login_no_account"))} <a href="'
+                          f'{GLib.markup_escape_text(signup)}">'
+                          f'{GLib.markup_escape_text(_("login_signup"))}</a>')
+            no.add_css_class("ft-muted")
+            box.append(no)
         self.proxy = None
         if self.core.cfg["net"].get("proxy_at_login"):  # before the first request
             box.append(Gtk.Label(label=_("login_proxy"), xalign=0))

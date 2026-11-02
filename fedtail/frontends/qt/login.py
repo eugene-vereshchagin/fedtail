@@ -21,6 +21,16 @@ class LoginDialog(QDialog):
         if expect:
             self.server.setText(expect[0].split("://")[-1].rstrip("/"))
         lay.addWidget(self.server)
+        signup = self.core.signup_url()
+        if signup and not expect:  # an account is made on a server: where to find one
+            import html
+            no = QLabel(f'{html.escape(_("login_no_account"))} <a href="{html.escape(signup)}">'
+                        f'{html.escape(_("login_signup"))}</a>')
+            no.setWordWrap(True)
+            no.setObjectName("muted")
+            no.setTextFormat(Qt.TextFormat.RichText)
+            no.linkActivated.connect(self._signup)
+            lay.addWidget(no)
         self.proxy = None
         if self.core.cfg["net"].get("proxy_at_login"):  # before the first request
             lay.addWidget(QLabel(_("login_proxy")))
@@ -47,6 +57,11 @@ class LoginDialog(QDialog):
         lay.addWidget(self.msg)
         self.url = None
         self.resize(480, 260)
+
+    @staticmethod
+    def _signup(url):
+        from .opener import open_link
+        open_link(url)
 
     def step1(self):
         if not self.server.text().strip():

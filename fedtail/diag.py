@@ -443,6 +443,17 @@ def session_header(profile, extra=None):
     log.info("==== session start: %s", json.dumps(lines, ensure_ascii=False))
 
 
+def earlier_crash(text):
+    """A crash this side never saw — the phone's Kotlin (or Python thrown into it) closed
+    the app; it left the trace in a file, told here on the next start: into crash.log and
+    the session log, both in the bug report."""
+    f = _state.get("crash")
+    if f is not None:
+        f.write(f"=== {_stamp()} the run before closed:\n{text.rstrip()}\n")
+        f.flush()
+    logging.getLogger("fedtail.crash").critical("the run before closed\n%s", text.rstrip())
+
+
 def _stamp():
     return datetime.now().strftime(DATEFMT)
 

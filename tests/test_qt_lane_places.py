@@ -322,6 +322,29 @@ class LaneStrayTest(unittest.TestCase):
         self.assertEqual(view._total, before)
         self.assertEqual(len(view.strip.keys), len(set(view.strip.keys)))
 
+    def test_the_card_on_top_going_keeps_the_place(self):
+        """A follow request answered: its row, on top of the screen, goes — the lane
+        jumped up to its start (02.11); the next card holds the place now."""
+        self._pictures(12, 100)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) > 3 and not view._pending)
+        keys = [s.key for s in view.model]
+        mid = keys[len(keys) // 2]
+        sb = view.verticalScrollBar()
+        sb.setValue(view._ys[mid])
+        self.pump()
+        top = view._anchor()[0]
+        below = keys[keys.index(top) + 1]
+        where = view._ys[below] - sb.value()
+        view.set_specs([s for s in view.model if s.key != top])
+        self.pump()
+        self.assertGreater(sb.value(), 0)
+        self.assertAlmostEqual(view._ys[below] - sb.value(), where, delta=4)
+
 
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class HoverTest(unittest.TestCase):

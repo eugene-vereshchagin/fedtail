@@ -326,8 +326,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var loginBusy by mutableStateOf(false)
     var loginFinishing by mutableStateOf(false)    // the code is in: the token being asked
     var loginError by mutableStateOf<String?>(null)  // under the button, till the next try
+    var signup by mutableStateOf<Triple<String, String, String>?>(null)  // url, text, label
     private var loginReady = false    // the core is up: a code coming back can go to it
     private var loginCode: String? = null  // a code that came back before that
+    private val loginNotes = mutableListOf<String>()  // said before the core was up
+
+    /** A step of the login into the session log (a report shows which a phone skips). */
+    fun loginNote(text: String) {
+        if (!loginReady) { loginNotes += text; return }
+        viewModelScope.launch { Core.note(text) }
+    }
 
     private var started = false
     private var version = -1
@@ -361,18 +369,44 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 screen = Screen.Failed(info.optString("error") + "\n\n" + info.optString("trace"))
                 return@launch
             }
+            // the app closed on an exception last time: its trace is in the logs now
+            if (info.optBoolean("crashed") && !demo) {
+                val app = getApplication<Application>()
+                asking = Asking.Confirm(app.getString(R.string.crashed_text), title =
+                    app.getString(R.string.crashed_title), yesLabel = app.getString(R.string.report_send),
+                    noLabel = app.getString(R.string.not_now),
+                    yes = { shareReport(deviceFacts(app)) })
+            }
             afterStart()
         }
     }
 
     private suspend fun afterStart() {
         val st = Core.state()
+        val app = getApplication<Application>()
+        // the file had an error: this run goes with the defaults; Config fixes it
+        st.optString("config_error").takeIf { it.isNotBlank() }?.let {
+            message = app.getString(R.string.config_broken, it)
+        }
         when {
             Core.failed(st) != null -> screen = Screen.Failed(Core.failed(st)!!)
             st.optBoolean("logged_in") -> openMain()
             else -> {
                 loginProxyField = st.optBoolean("proxy_at_login")
                 loginProxy = st.optString("proxy")
+                signup = st.optJSONObject("signup")?.let {
+                    Triple(it.optString("url"), it.optString("text"), it.optString("label"))
+                }
+                // a login begun before the app closed (the phone shut it while the browser
+                // was out): its server and "waiting" again, not an empty form
+                st.optString("login_pending").takeIf { it.isNotBlank() }?.let {
+                    if (loginServer.isBlank()) loginServer = it.substringAfter("://")
+                    loginWaiting = true
+                }
+                loginNotes.forEach { Core.note(it) }
+                loginNotes.clear()
+                Core.note("login screen: begun=${st.optString("login_pending").isNotBlank()} " +
+                    "code=${loginCode != null}")
                 screen = Screen.Login
                 loginReady = true
                 // the browser brought the code back to an app started anew (the phone
@@ -402,23 +436,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun finishLogin(code: String) {
         if (code.isBlank()) return
         if (!loginReady) { loginCode = code; return }
-        if (loginBusy) return
+        if (loginBusy) {
+            viewModelScope.launch { Core.note("login: a code while busy — dropped") }
+            return
+        }
         loginBusy = true
         loginFinishing = true
         loginError = null
         viewModelScope.launch {
             val got = Core.loginFinish(code)
+            Core.failed(got)?.let {
+                loginBusy = false
+                loginFinishing = false
+                Core.note("login: finish failed: $it")
+                loginError = it; return@launch
+            }
+            loginWaiting = false
+            // "finishing…" and no button until the lanes are there: the first round takes
+            // seconds, and the empty form under it was taken for a failed login — a second
+            // one revoked the first's token (02.11)
+            openMain()
             loginBusy = false
             loginFinishing = false
-            Core.failed(got)?.let { loginError = it; return@launch }
-            loginWaiting = false
-            openMain()
         }
     }
 
     /** The server's page said no ("deny", or its error): said under the button. */
     fun loginRefused(text: String) {
         loginError = text
+        viewModelScope.launch { Core.note("login: the server said no: $text") }
     }
 
     // ---- the overview and the lanes ------------------------------------------------------

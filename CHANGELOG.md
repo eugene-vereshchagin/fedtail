@@ -2,6 +2,27 @@
 
 ## 0.22.2 — in progress
 
+- **An update no longer closes the phone's app.** Every config written before 0.22.2 has
+  `phone.overview = "tiles"` (the example's own line), which 0.22.2's `lanes | all | list`
+  refused: the phone closed at every start, the windows offered a run with the defaults.
+  The old value is read as the new one (with `phone.tiles`: `lanes`/`all`/`none` →
+  `lanes`/`all`/`list`), and a config with any error now starts the phone with the
+  defaults, saying so (⋮ → Config fixes it), as the windows do.
+- **Phone: a crash leaves its trace.** An exception that closes the app is written down;
+  the next start puts it into the logs (`crash.log`) and offers to send a report.
+- **Answering a follow request no longer throws the lane to its start** (the windows): the
+  answered row was the card holding the place; the nearest card that stays holds it now.
+- **"No account?" on every login screen**, with "Pick a server" — an account is made on a
+  server, not in fedtail (`server.signup_url`, joinmastodon.org/servers by default; ""
+  — not said).
+- **Phone: logging in, in one go — really.** The login was done, but while the lanes'
+  first round ran (seconds) the screen showed the empty form again; a second login
+  followed, revoking the first's token — and the core kept asking with that one: 401
+  "token not supplied" to everything, "accept" of a follow request among it. "Finishing…"
+  now stays until the lanes are there, and a login anew while connected goes on with the
+  new token (the requests and the live stream). A login begun before the phone closed the
+  app comes back as begun (the server filled in, waiting for the code); its steps go to
+  the log.
 - **Phone: the arrow stays after "Mark all read".** With nothing new it goes to the newest
   end of the lane, as the windows' "To new" does — it vanished, and the end was a long
   scroll away.

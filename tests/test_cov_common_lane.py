@@ -286,6 +286,21 @@ class LastWholeTest(unittest.TestCase):
         self.assertEqual(st.last_whole(st.ys["d"] + 10, 200), "d")  # taller than it
         self.assertIsNone(Strip().last_whole(0, 100))
 
+    def test_a_going_card_hands_the_place_on(self):
+        """The card on top goes (a follow request answered): the next one holds the
+        place where it stands, else the one above; none stays — None (02.11)."""
+        from fedtail.frontends.common.strip import Strip
+        st = Strip(gap=0, margin=0)
+        st.set_keys(["a", "b", "c"])
+        for k in "abc":
+            st.measured(k, 300, 100)
+        st.lay_out(300)
+        self.assertEqual(st.kept_anchor(("b", -20), {"a", "b", "c"}), ("b", -20))
+        self.assertEqual(st.kept_anchor(("b", -20), {"a", "c"}), ("c", 80))
+        self.assertEqual(st.kept_anchor(("c", 5), {"a", "b"}), ("b", -95))
+        self.assertIsNone(st.kept_anchor(("b", 0), set()))
+        self.assertIsNone(st.kept_anchor(None, {"a"}))
+
 
 if __name__ == "__main__":
     unittest.main()

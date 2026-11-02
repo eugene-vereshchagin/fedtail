@@ -2646,6 +2646,20 @@ class CoreTest(TmpDir):
         self.assertEqual(auth.load(core.paths.auth_file)["token"], "tok")
         self.assertEqual(w.revoked, ["old"])  # the new one in: the old one let go
 
+    def test_login_anew_while_connected_goes_on_with_the_new_token(self):
+        """The phone's second login (02.11) revoked the first token while the connected
+        core kept asking with it: 401 "token not supplied" to everything after."""
+        core, w = self.make()
+        auth.save(core.paths.auth_file, dict(auth.load(core.paths.auth_file), token="old",
+                                             acct="mira"))
+        core.auth = auth.load(core.paths.auth_file)
+        core.connect().result()
+        self.assertEqual(core.api.token, "old")
+        core.begin_login("example.test").result()
+        core.finish_login("good").result()
+        self.assertEqual(w.revoked, ["old"])
+        self.assertEqual(core.api.token, "tok")
+
     def test_auth_failure_event(self):
         core, w = self.make()
         core.connect().result()

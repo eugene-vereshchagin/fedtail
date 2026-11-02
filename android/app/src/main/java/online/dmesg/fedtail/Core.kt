@@ -35,6 +35,8 @@ object Core {
     suspend fun state() = obj("state")
     suspend fun loginBegin(server: String, proxy: String?) = obj("login_begin", server, proxy)
     suspend fun loginFinish(code: String) = obj("login_finish", code)
+    /** A line into the session log (the login's steps), for a report. */
+    suspend fun note(text: String) = obj("note", text)
     suspend fun open() = obj("open")
     suspend fun lanes() = JSONArray(call("lanes"))
     suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)

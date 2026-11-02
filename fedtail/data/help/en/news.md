@@ -5,7 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**0.22.2 (in progress):**
+
+- No account? — where to get one, right on the login screen
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

@@ -641,6 +641,7 @@ class FeedView(QScrollArea):
         once = {}
         for sp in specs:  # a key twice: two places, the first blank (LaneModel shows
             once.setdefault(sp.key, sp)  # each once; a thread's cards come here too)
+        anchor = self.strip.kept_anchor(anchor, once)  # its card going: a neighbour's
         self.model = list(once.values())
         self._index = {s.key: i for i, s in enumerate(self.model)}
         self.strip.set_keys(s.key for s in self.model)

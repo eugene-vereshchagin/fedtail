@@ -104,6 +104,51 @@ class BridgeTest(_Base):
         self.assertEqual(got["error"], "OSError: disk gone")
         self.assertIn("error", json.loads(self.bridge.lane("nowhere")))
 
+    def test_a_config_of_an_older_version_starts(self):
+        """phone.overview = "tiles" — the example's own line until 0.22.1, so in every
+        file then — is read as now; a config with an error runs with the defaults and
+        says so: thrown into Kotlin it closed the app at every start (02.11)."""
+        conf = self.files / "config" / "fedtail" / "default"
+        conf.mkdir(parents=True)
+        (conf / "config.toml").write_text('[phone]\noverview = "tiles"\ntiles = "none"\n')
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.assertEqual(self.bridge._core().cfg["phone"]["overview"], "list")
+        self.assertEqual(self.call("state")["config_error"], "")
+        (conf / "config.toml").write_text('[phone]\noverview = "nonsense"\n')
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.assertIn("phone.overview", self.call("state")["config_error"])
+        self.assertEqual(self.bridge._core().cfg["phone"]["overview"], "lanes")
+
+    def test_a_start_that_fails_is_told_not_thrown(self):
+        with mock.patch.object(self.bridge, "_make", side_effect=RuntimeError("boom")):
+            got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False))
+        self.assertEqual(got["error"], "RuntimeError: boom")
+        self.assertIn("trace", got)
+
+    def test_the_crash_of_the_run_before_goes_to_the_logs(self):
+        """FedtailApp.kt leaves the trace of an uncaught exception in crash.txt: the next
+        start puts it into crash.log (the bug report takes it) and says "crashed"."""
+        (self.files / "crash.txt").write_text("java.lang.IllegalStateException: boom\n")
+        from fedtail import diag
+        with mock.patch.object(diag, "setup"), mock.patch.object(diag, "session_header"), \
+                mock.patch.object(diag, "earlier_crash") as told:
+            got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False,
+                                               True))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.assertTrue(got["crashed"])
+        self.assertFalse((self.files / "crash.txt").exists())
+        told.assert_called_once_with("java.lang.IllegalStateException: boom\n")
+
+    def test_where_to_get_an_account(self):
+        self.bridge.start(str(self.files), str(self.cache), "en", False)
+        got = self.call("state")["signup"]
+        self.assertEqual(got["url"], "https://joinmastodon.org/servers")
+        self.assertTrue(got["text"] and got["label"])
+        self.bridge._core().cfg["net"]["signup_url"] = ""
+        self.assertIsNone(self.call("state")["signup"])
+
     def test_login_comes_back_to_the_app(self):
         from fedtail.core import config, paths
         from fedtail.core.app import Core
@@ -118,7 +163,10 @@ class BridgeTest(_Base):
         self.assertTrue(got["redirect"])
         self.assertIn("redirect_uri=fedtail://oauth", got["url"])
         self.assertEqual(fakes.FakeApi.world.redirects, ["fedtail://oauth"])
+        # the phone closed the app while the browser was out: the screen waits again
+        self.assertEqual(self.call("state")["login_pending"], "https://example.test")
         self.assertEqual(self.call("login_finish", "good\n")["acct"], "mira")
+        self.assertEqual(self.call("state")["login_pending"], "")
         self.assertTrue(self.call("state")["logged_in"])
         self.assertIn("error", json.loads(self.bridge.login_begin("  ")))
         # the screen shows it under the button: words for a person, not "ValueError: …"

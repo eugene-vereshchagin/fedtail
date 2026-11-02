@@ -321,6 +321,11 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
                 imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { model.beginLogin(openBrowser) }),
             modifier = Modifier.fillMaxWidth())
+        // an account is made on a server, not here: where to find one (net.signup_url)
+        model.signup?.takeIf { !model.loginWaiting }?.let { (url, text, label) ->
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { openBrowser(url) }) { Text(label) }
+        }
         if (model.loginProxyField) {  // net.proxy_at_login: before the first request
             OutlinedTextField(
                 value = model.loginProxy, onValueChange = { model.loginProxy = it },

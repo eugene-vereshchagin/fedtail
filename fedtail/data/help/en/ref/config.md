@@ -440,6 +440,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `server.announcements_minutes` | `30` | How often fedtail asks the server about its announcements again (for every interface at once). 0 — only at the start. |
 | `server.proxy` | `""` | A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login: "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live stream doesn't go through SOCKS, polling does). A user and password — "http://user:pass@host:port". "" — as the system says (HTTPS_PROXY and the like). |
 | `server.proxy_at_login` | `false` | A "Proxy" field in the login window: set it before the first request to the server (when the server can't be reached without it). What you type is written here, in proxy. |
+| `server.signup_url` | `"https://joinmastodon.org/servers"` | "No account?" under the login window's server field, with a link to this page of servers to sign up at (an account is made on a server, not in fedtail). "" — not said. |
 
 ## 15. Database and logs
 

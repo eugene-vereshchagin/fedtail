@@ -1069,6 +1069,9 @@ _STRINGS = {
         "login_title": "Вход — профиль {profile}", "login_server": "Адрес сервера:",
         "login_step1": "1. Открыть страницу входа в браузере",
         "login_hint": "Залогинься там, разреши доступ и вставь сюда показанный код:",
+        "login_no_account": "Нет аккаунта? Его заводят на сервере, не в fedtail: выбери "
+                            "сервер, зарегистрируйся на его сайте и впиши сюда его адрес.",
+        "login_signup": "Выбрать сервер",
         "login_step2": "2. Войти",
         "login_browser_opened": "Браузер открыт. Если не открылся — вот ссылка:\n{url}",
         # window
@@ -2906,6 +2909,9 @@ _STRINGS = {
         "login_title": "Log in — profile {profile}", "login_server": "Server address:",
         "login_step1": "1. Open the login page in the browser",
         "login_hint": "Log in there, allow access and paste the code you get here:",
+        "login_no_account": "No account? It is made on a server, not in fedtail: pick a "
+                            "server, sign up on its site, then type its address here.",
+        "login_signup": "Pick a server",
         "login_step2": "2. Log in",
         "login_browser_opened": "Browser opened. If it didn't, here's the link:\n{url}",
         "write": "Write", "menu_file": "&File", "menu_help": "&Help",

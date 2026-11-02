@@ -363,6 +363,9 @@ class AccountPlaces:
                                     str(core.cfg["net"].get("proxy") or ""),
                                     tip=_("login_proxy_tip")),)
             page.submit = Btn(_("login_step1"), ("login", "begin", name), primary=True)
+            if core.signup_url() and not server:  # an account is made on a server
+                page.rows.append(Row("text", _("login_no_account"), key="signup", buttons=(
+                    self._btn(_("login_signup"), "login", "signup", name),)))
             return page
         _core, url, _expect = got
         page.rows.append(Row("text", _plain(_("login_browser_opened", url=url)), key="url",
@@ -401,6 +404,11 @@ class AccountPlaces:
         from .places import Out
         got = _LOGINS.get(name)
         return Out(open={"url": got[1]}) if got else Out(refresh=True)
+
+    def _a_login_signup(self, _name, _v, _c, _ans):
+        from .places import Out
+        core, _merged = self._cores()
+        return Out(open={"url": core.signup_url()})
 
     def _a_login_again(self, name, _v, _c, _ans):
         from .places import Out

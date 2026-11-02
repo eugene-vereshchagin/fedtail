@@ -1482,6 +1482,10 @@ proxy = ""
 # (when the server can't be reached without it). What you type is written here, in proxy.
 proxy_at_login = false
 
+# "No account?" under the login window's server field, with a link to this page of
+# servers to sign up at (an account is made on a server, not in fedtail). "" — not said.
+signup_url = "https://joinmastodon.org/servers"
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  15. Database and logs

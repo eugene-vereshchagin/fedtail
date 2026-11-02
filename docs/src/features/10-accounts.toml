@@ -35,6 +35,21 @@ details.ru = "Тот, что запускается без `--profile` и из �
 details.en = "The one started without `--profile` and from the “fedtail” menu entry. It isn't a folder with a special name but a mark — the `main-profile` file next to the profile folders; without the mark the main one is `default`. “Make it the main one” in the accounts menu moves it; in the list (and in `--profiles`) the main one is marked ★."
 
 [[feature]]
+id = "signup-hint"
+status = "has"
+android = "has"
+since = "0.22.2"
+name.ru = "Нет аккаунта? — где его завести, прямо на экране входа"
+name.en = "No account? — where to get one, right on the login screen"
+config = "`server.signup_url`"
+api.ru = "—"
+api.en = "—"
+others.ru = "Tusky, Ivory, Mona — «Зарегистрироваться» с выбором сервера"
+others.en = "Tusky, Ivory, Mona — “Sign up” with a choice of servers"
+details.ru = "Под полем сервера (окна, терминал, веб, телефон): аккаунт заводят на сервере, не в fedtail — выбери сервер, зарегистрируйся на его сайте и впиши сюда его адрес; «Выбрать сервер» открывает список серверов (по умолчанию joinmastodon.org/servers). `signup_url = \"\"` — не писать. При повторном входе в свой же аккаунт не показывается."
+details.en = "Under the server field (the windows, the terminal, the web page, the phone): an account is made on a server, not in fedtail — pick a server, sign up on its site, then type its address here; “Pick a server” opens a list of servers (joinmastodon.org/servers by default). `signup_url = \"\"` — not said. Not shown when logging in again to the same account."
+
+[[feature]]
 id = "relogin-logout"
 status = "has"
 android = "has"

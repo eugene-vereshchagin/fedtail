@@ -62,6 +62,10 @@ class AccountsTest(TmpDir):
         self.assertEqual(out.open, {"page": "login", "arg": "work"})
         login = self.pl.page("login", "work")
         self.assertEqual([f.name for f in login.form], ["server"])
+        # no account yet: where to get one (net.signup_url)
+        self.assertEqual(self.pl.act("login", "signup", "work").open,
+                         {"url": "https://joinmastodon.org/servers"})
+        self.assertIn("signup", [r.key for r in login.rows])
         self.assertTrue(self.pl.act("login", "begin", "work", {"server": ""}).error)
         out = self.pl.act("login", "begin", "work", {"server": "example.test"})
         self.assertIn("/oauth/authorize", out.open["url"])

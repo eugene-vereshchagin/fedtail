@@ -88,15 +88,23 @@ def start(files_dir, cache_dir, lang="", demo=False, logs=False, device_json=Non
         os.makedirs(os.path.join(files_dir, d), exist_ok=True)
     _started = t
     _s["cache_dir"] = cache_dir
+    _s["files_dir"] = files_dir
     _s["logs"] = bool(logs)
     with _lock:
-        _make(bool(demo))
+        try:
+            _make(bool(demo))
+        except Exception as e:  # noqa: BLE001 — thrown into Kotlin it closed the app
+            import logging
+            import traceback
+            logging.getLogger("fedtail.android").exception("start")
+            return json.dumps({"error": f"{e.__class__.__name__}: {e}",
+                               "trace": traceback.format_exc(limit=8)}, ensure_ascii=False)
     return info()
 
 
 def _make(demo):
     from fedtail import i18n
-    from fedtail.core import auth, config, paths
+    from fedtail.core import auth, paths
     from fedtail.core.app import Core
     from fedtail.frontends.web import server as web_server
     from fedtail.frontends.web.server import Web
@@ -110,9 +118,9 @@ def _make(demo):
     profile = "demo" if demo else None
     where = paths.resolve(profile)
     where.ensure()
-    cfg, _warnings = config.load(where.config_file)
+    cfg = _config(where)
     if _phone_defaults(where):
-        cfg, _warnings = config.load(where.config_file)
+        cfg = _config(where)
     i18n.setup(cfg["ui"]["language"])
     kw = {}
     if demo:
@@ -130,6 +138,7 @@ def _make(demo):
         diag.setup(where, cfg)
         diag.session_header(where.profile)
         _s["logging"] = True
+        _earlier_crash(diag)
     core = Core(cfg, where, **kw)
     held = []
     if not demo:  # "all accounts in one window" (ui.merge or the menu): the desktop's way
@@ -164,6 +173,40 @@ def _phone_defaults(where):
     return True
 
 
+CRASH_FILE = "crash.txt"  # FedtailApp.kt writes it when the app closes on an exception
+
+
+def _earlier_crash(diag):
+    """The trace FedtailApp.kt left when the app closed: into the logs (the bug report
+    takes them), the file gone; info()'s "crashed" — the screen offers the report."""
+    from pathlib import Path
+    f = Path(_s.get("files_dir") or "") / CRASH_FILE  # (open() here is the lanes')
+    try:
+        text = f.read_text("utf-8", errors="replace")[-20000:]
+        f.unlink()
+    except OSError:
+        return
+    if text.strip():
+        diag.earlier_crash(text)
+        _s["crashed"] = True
+
+
+def _config(where):
+    """The profile's config; one with an error (a value of an older version, a typo) runs
+    with the defaults, as the desktop's does — the file stays, Config fixes it, and
+    state()'s "config_error" says so. Thrown, it closed the app before any screen."""
+    from fedtail.core import config
+    try:
+        cfg, _warnings = config.load(where.config_file)
+        _s["config_error"] = ""
+    except config.ConfigError as e:
+        import logging
+        logging.getLogger("fedtail.android").warning("config: %s — the defaults", e)
+        cfg, _warnings = config.validate({})
+        _s["config_error"] = str(e)
+    return cfg
+
+
 def _core():
     if _s["core"] is None:
         raise RuntimeError("start() first")
@@ -190,6 +233,7 @@ def info():
         from fedtail.core.sync import crypto
         out["sync"] = crypto.available()
         out["demo"] = _s["demo"]
+        out["crashed"] = bool(_s.get("crashed"))  # this process began after a crash
     except Exception as e:  # noqa: BLE001 — the screen says what broke, the app lives on
         import traceback
         out["error"] = f"{e.__class__.__name__}: {e}"
@@ -201,6 +245,7 @@ def info():
 
 def state():
     def get():
+        from fedtail.i18n import _
         core = _core()
         a = core.auth or {}
         net = core.cfg.get("net") or {}
@@ -209,8 +254,24 @@ def state():
                 "acct": a.get("acct", ""),  # ours: auth.json, not a server's answer
                 # net.proxy_at_login: the login screen's proxy field, and what it holds
                 "proxy_at_login": bool(net.get("proxy_at_login")),
-                "proxy": str(net.get("proxy") or "")}
+                "proxy": str(net.get("proxy") or ""),
+                # the file had an error: this run goes with the defaults (_config)
+                "config_error": _s.get("config_error", ""),
+                # a login begun (the browser out, the app maybe closed meanwhile): its
+                # server, the screen waits for the code again
+                "login_pending": "" if core.logged_in else core.login_pending(),
+                # "no account?" under the server field (net.signup_url), the windows' words
+                "signup": {"url": core.signup_url(), "text": _("login_no_account"),
+                           "label": _("login_signup")} if core.signup_url() else None}
     return _answer(get)
+
+
+def note(text):
+    """A line of the phone's own into the session log (the login's steps: which of
+    them a phone skips shows in a report)."""
+    import logging
+    logging.getLogger("fedtail.android").info("%s", str(text)[:300])
+    return "{}"
 
 
 # ---- logging in -------------------------------------------------------------------------

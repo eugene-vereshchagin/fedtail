@@ -446,8 +446,20 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self._pending_login = (api, app, back)
             auth.save(self.paths.login_file, {"server": api.base, "app": app, "back": back,
                                               "at": time.time()})
+            log.info("login: begun at %s (%s)", host,
+                     "back to the app" if redirect else "a code to paste")
             return api.authorize_url(app["client_id"], **back)
         return self.submit(job)
+
+    def signup_url(self):
+        """Where "no account?" on the login screens leads (net.signup_url), "" — not said."""
+        return str(self.cfg["net"].get("signup_url") or "").strip()
+
+    def login_pending(self):
+        """The server of a login begun and not finished (this run's or, within the hour,
+        an earlier one's), "" — none: the phone's login screen waits for its code anew."""
+        begun = self._login_under_way()
+        return begun[0].base if begun is not None else ""
 
     def _login_under_way(self):
         """(api, app, back) of the login begun — this run's, or one an earlier run began
@@ -484,9 +496,12 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self.auth = data
             self._pending_login = None
             auth.forget(self.paths.login_file)  # done: its secret has no more use
+            log.info("login: done at %s", api.base.split("://", 1)[-1])
             if old and old.get("token") != token and \
                     old.get("server", "").rstrip("/") == api.base.rstrip("/"):
                 self._revoke(old, wait=True)  # logged in anew: the old token is let go
+            if self.api is not None and old and old.get("token") != token:
+                self._new_token(api.base, token)
             return me
         return self.submit(job)
 
@@ -499,6 +514,18 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self.api = None
         if old:
             self._revoke(old)
+
+    def _new_token(self, server, token):
+        """Logged in anew while connected: the requests and the live stream go on with the
+        new token — the old one is revoked, and kept they answered 401 to everything
+        (the phone's second login, 02.11: "token not supplied")."""
+        log.info("login anew: the requests go on with the new token")
+        self.api = self.api_class(server, token)
+        running = getattr(self, "_stream", None)
+        if running is not None:
+            running.stop()
+            self._stream = None
+            self._start_stream()
 
     def _revoke(self, data, wait=False):
         def job():
