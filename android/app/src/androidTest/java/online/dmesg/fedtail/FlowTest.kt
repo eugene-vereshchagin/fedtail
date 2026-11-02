@@ -287,7 +287,9 @@ class FlowTest {
         // a long way down — swiped to (the lane jumping would take them off the screen)
         fun shownRequests() = compose.onAllNodes(hasText("@example.org", substring = true))
             .fetchSemanticsNodes().count { it.boundsInRoot.top > 0f }
-        Thread.sleep(3_000)  // the round bringing them
+        Thread.sleep(3_000)  // the round bringing them; new ones wait for ⟳ (reading.on_new)
+        compose.onAllNodesWithContentDescription("Refresh").onFirst().performClick()
+        Thread.sleep(3_000)
         repeat(40) {
             if (shownRequests() >= 3) return@repeat
             compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
