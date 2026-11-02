@@ -372,7 +372,8 @@ class FolderSyncTest(Devices):
         self.phone.sync_join(self.desk.sync_key())
         self.phone.events_seen.clear()
         self.phone.sync_now()
-        left = [e["id"] for e in self.phone.activity_entries()]
+        left = [e["id"] for e in self.phone.activity_entries()
+                if e.get("type") != "fedtail.device"]  # its own "joined sync" aside
         self.assertEqual(left, ["n2"])
         self.assertIn("n1", self.phone.store.kv_get("activity_hidden"))
         self.assertTrue(any(n == "activity_updated" for n, _ in self.phone.events_seen))
@@ -765,3 +766,100 @@ class LaneRulesSyncTest(Devices):
     def test_off_by_default(self):
         cfg, _ = config.validate({})
         self.assertFalse(cfg["sync"]["lane_rules"])
+
+
+@need_crypto
+class DevicesJoinTest(Devices):
+    """A device joining sync is said in Activity — on it and on the others — under its
+    name (sync.device_name, else the machine's); not for the journal's old news. No switch
+    turns it off: a device nobody expected is what it must tell (02.11)."""
+
+    def rows(self, core):
+        return [e for e in core.activity_entries() if e.get("type") == "fedtail.device"]
+
+    def names(self, core):
+        return [e["account"]["display_name"] for e in self.rows(core)]
+
+    def test_joined_here_and_there(self):
+        self.desk.cfg["sync"]["device_name"] = "Linux · desk"
+        self.phone.cfg["sync"]["device_name"] = "Android · Pixel 7"
+        self.desk.sync_setup()
+        self.phone.sync_setup()
+        self.desk.sync_now()  # the first device: its key, and it says so itself
+        self.assertEqual(self.names(self.desk), ["Linux · desk"])
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        # the phone: its own joining; the desk's from long ago — not news here
+        self.assertEqual(self.names(self.phone), ["Android · Pixel 7"])
+        self.desk.sync_now()
+        self.assertEqual(sorted(self.names(self.desk)), ["Android · Pixel 7", "Linux · desk"])
+        self.assertIn("activity_updated", [n for n, _p in self.desk.events_seen])
+        # once: the next rounds say nothing more
+        self.phone.mark_read(["1"])
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual(len(self.rows(self.desk)), 2)
+        # as a row: "<name> — joined sync", the name leads to ≡ → Sync
+        from fedtail.core.view import View
+        from fedtail.frontends.common import activity
+        v = View(self.desk)
+        rows = activity.rows(v.activity(), "", str)
+        row = next(r for r in rows if r.kind == "device")
+        self.assertEqual(row.what, "joined sync")
+        self.assertEqual(activity.who_link(row.people[0]), "fedtail:place/sync")
+
+    def test_two_of_one_name(self):
+        self.desk.cfg["sync"]["device_name"] = "Android · Pixel 7"
+        self.phone.cfg["sync"]["device_name"] = "Android · Pixel 7"
+        self.desk.sync_setup()
+        self.phone.sync_setup()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.desk.sync_now()
+        got = self.names(self.desk)
+        self.assertIn("Android · Pixel 7", got)
+        self.assertIn(f"Android · Pixel 7 ({self.phone.sync.device[:4]})", got)
+        self.assertNotIn("tell_devices", self.desk.cfg["sync"])  # no way to keep it quiet
+
+    def test_a_device_renamed_is_not_new(self):
+        """A device's name changed: the others take the new one, nothing said."""
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.desk.sync_now()
+        before = len(self.rows(self.desk))
+        self.phone.cfg["sync"]["device_name"] = "renamed"
+        self.phone.sync_setup()  # a name changed: told with its next batch, not "joined"
+        self.phone.mark_read(["7"])
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual(len(self.rows(self.desk)), before)
+        self.assertEqual(
+            self.desk.store.kv_get("sync.devices")[self.phone.sync.device]["name"], "renamed")
+
+    def test_the_name_by_default(self):
+        from unittest import mock
+
+        from fedtail import diag
+        from fedtail.core.sync import engine
+        with mock.patch("platform.system", return_value="Linux"), \
+                mock.patch("platform.node", return_value="desk"):
+            self.assertEqual(engine.device_name({"device_name": ""}), "Linux · desk")
+        with mock.patch.object(diag, "device", return_value={"device": "Google Pixel 7"}):
+            self.assertEqual(engine.device_name({}), "Android · Google Pixel 7")
+        self.assertEqual(engine.device_name({"device_name": " mine "}), "mine")
+
+    def test_a_place_link_opens_the_page(self):
+        """fedtail:place/<name> — a device's name in its row: ≡ → Sync, in every host."""
+        from unittest import mock
+
+        from fedtail.core.view import View
+        from fedtail.frontends.common.links import Links
+        host = mock.Mock()
+        Links(View(self.desk), host).open("fedtail:place/sync")
+        host.open_place.assert_called_once_with("sync")
+        from fedtail.frontends.tui.host import TuiHost
+        from fedtail.frontends.web.server import _WebHost
+        self.assertTrue(callable(getattr(TuiHost, "open_place", None)))
+        self.assertTrue(callable(getattr(_WebHost, "open_place", None)))

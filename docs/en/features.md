@@ -277,6 +277,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Sync: WebDAV spoken directly, the journal packed | has | 0.22.0 | `sync.webdav`, `sync.webdav_user` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
+| "A device joined" in Activity — on it and on the others | has | next | `sync.device_name`; `event = "device"`; can't be turned off | own: the device's name in every batch of the journal (sealed by the key) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
 
 <details><summary>In detail</summary>
@@ -306,6 +307,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
 
 **Sync set up in the window step by step, a new device by a password alone.** Steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), a login — to a WebDAV folder only, and the fork — "this is my first device" (the key made here) or "adding to those set up" (the key from another device — there "Show the key" gives a QR code the phone scans, and the text to paste; with a sync server the QR code carries its address too, so it can be scanned at once, with no first step; or the key taken out of the journal with the password for new devices). Until the setup is done, the page says so: "Sync doesn't work yet". The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone.
+
+**"A device joined" in Activity — on it and on the others.** A device took the key (or the first began the journal) — a row in Activity, "Android · Pixel 7 — joined sync": on it at once, on the others with its first batch. The name is `sync.device_name`, empty — the system and the machine's name (a phone: its model); two of one name — with a bit of the id after it. A click on the name — ≡ → Sync. What is old in the journal (taking the key reads it from its start) is no news; a rename neither. A lane of rules takes it as `event = "device"` (Activity: under "Other"). There is no switch on purpose: a device nobody expected in the journal is exactly what must be said.
 
 **A lane without a seam: older posts come by themselves.** Read nearly to the end of what a lane shows — fedtail fetches a page of older posts itself, as the "older" button does. One page at a time; an empty one — it asks no more by itself (the button stays). The old isn't counted as new.
 

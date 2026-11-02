@@ -206,6 +206,23 @@ details.ru = "Шаги с отметками ✓ / ▶ / ·: где встреч
 details.en = "Steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), a login — to a WebDAV folder only, and the fork — \"this is my first device\" (the key made here) or \"adding to those set up\" (the key from another device — there \"Show the key\" gives a QR code the phone scans, and the text to paste; with a sync server the QR code carries its address too, so it can be scanned at once, with no first step; or the key taken out of the journal with the password for new devices). Until the setup is done, the page says so: \"Sync doesn't work yet\". The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone."
 
 [[feature]]
+id = "sync-devices"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "«Подключилось устройство» в Активности — на нём и на остальных"
+name.en = "\"A device joined\" in Activity — on it and on the others"
+config.ru = "`sync.device_name`; `event = \"device\"`; не выключается"
+config.en = "`sync.device_name`; `event = \"device\"`; can't be turned off"
+api.ru = "своё: имя устройства в каждой пачке журнала (запечатано ключом)"
+api.en = "own: the device's name in every batch of the journal (sealed by the key)"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Устройство взяло ключ (или первое начало журнал) — в «Активности» строка «Android · Pixel 7 — подключилось к синхронизации»: на нём сразу, на остальных — с его первой пачкой. Имя — `sync.device_name`, пусто — система и имя машины (у телефона — модель); два одинаковых — с кусочком id после имени. Щелчок по имени — ≡ → Синхронизация. Старое в журнале (взятие ключа читает его с начала) не новость; переименование — тоже. Лента из правил берёт это как `event = \"device\"` (у «Активности» — в «Прочем»). Выключателя нет нарочно: незнакомое устройство в журнале — как раз то, о чём надо сказать."
+details.en = "A device took the key (or the first began the journal) — a row in Activity, \"Android · Pixel 7 — joined sync\": on it at once, on the others with its first batch. The name is `sync.device_name`, empty — the system and the machine's name (a phone: its model); two of one name — with a bit of the id after it. A click on the name — ≡ → Sync. What is old in the journal (taking the key reads it from its start) is no news; a rename neither. A lane of rules takes it as `event = \"device\"` (Activity: under \"Other\"). There is no switch on purpose: a device nobody expected in the journal is exactly what must be said."
+
+[[feature]]
 id = "older-ahead"
 status = "has"
 android = "has"

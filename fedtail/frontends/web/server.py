@@ -437,6 +437,8 @@ class _WebHost:
     def _place(self, name, arg="", tab=""):
         self.out["open"] = {"page": name, "arg": arg, "tab": tab}
 
+    open_place = _place  # a fedtail:place/<name> link (common/links.py)
+
     # the places a link or a profile button opens: the page draws them (common/places.py)
     def open_tag(self, tag):
         self._place("tag", tag)

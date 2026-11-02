@@ -256,6 +256,7 @@ _STRINGS = {
         "sync_save_where": "Сохранить и включить",
         "sync_what_btn": "Что синхронизировать…",
         "sync_saved_on": "Синхронизация включена",
+        "sync_device_unnamed": "Устройство без имени",
         "sync_saved_where": "Адрес сохранён. Синхронизация заработает, когда у устройства "
                             "будет ключ — следующий шаг",
         "sync_not_yet_title": "Синхронизация ещё не работает",
@@ -1022,6 +1023,7 @@ _STRINGS = {
         "lv_event_unfollow": "отписался",
         "lv_event_unfollowed_back": "отписался взаимный",
         "lv_event_unliked": "лайк снят",
+        "lv_event_device": "подключилось моё устройство",
         "lv_event_update": "бустнутое изменили",
         "lv_event_warning": "предупреждение модерации",
         "lv_age_of_post": "поста",
@@ -1121,6 +1123,7 @@ _STRINGS = {
         "act_follow": "подписка на тебя", "act_my_follow": "ты подписался",
         "act_unfollow": "отписался", "act_gone": "пропал (учётки больше нет)",
         "act_moved": "переехал на новую учётку", "act_unliked": "забрал лайк",
+        "act_device": "подключилось к синхронизации",
         "act_lost": "подписчики этого сервера пропали разом: сервер недоступен или "
                     "отрезал нас",
         "act_poll": "опрос закончился",
@@ -2110,6 +2113,7 @@ _STRINGS = {
         "sync_save_where": "Save and turn on",
         "sync_what_btn": "What to sync…",
         "sync_saved_on": "Sync is on",
+        "sync_device_unnamed": "A device with no name",
         "sync_saved_where": "The address is saved. Sync starts once this device has the "
                             "key — the next step",
         "sync_not_yet_title": "Sync doesn't work yet",
@@ -2869,6 +2873,7 @@ _STRINGS = {
         "lv_event_unfollow": "stopped following",
         "lv_event_unfollowed_back": "a mutual stopped following",
         "lv_event_unliked": "a like taken back",
+        "lv_event_device": "a device of mine joined",
         "lv_event_update": "a boosted post edited",
         "lv_event_warning": "a moderation warning",
         "lv_age_of_post": "the post",
@@ -2963,6 +2968,7 @@ _STRINGS = {
         "act_follow": "followed you", "act_my_follow": "you followed",
         "act_unfollow": "stopped following you", "act_gone": "gone (the account is no more)",
         "act_moved": "moved to a new account", "act_unliked": "took the like back",
+        "act_device": "joined sync",
         "act_lost": "this server's followers left at once: it is down or cut us "
                     "off", "act_poll": "poll ended",
         "act_update": "post edited", "act_status": "new post",

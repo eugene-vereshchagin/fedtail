@@ -307,6 +307,7 @@ DEFAULTS = {
         "lane_rules": False,
         "people": False,
         "interval_seconds": 60,
+        "device_name": "",   # how this device is named to the others; "" — the machine's
     },
     "net": {
         "proxy": "",               # http://host:port, socks5h://host:port; "" — none (or env)
@@ -615,8 +616,9 @@ FILE_LAYOUT = (
                                    "unlikes_days unlikes_posts server_notices "
                                    "server_groups")),
     ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
-    ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds read threads "
-                           "lanes drafts activity tiles lane_rules people")
+    ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds device_name "
+                           "read threads lanes drafts activity tiles lane_rules "
+                           "people")
      + _keys("read", "sync_markers mentions_by_marker")),
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
                              "announcements_minutes")

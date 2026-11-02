@@ -105,6 +105,10 @@ needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
      at hand — "Start again with a new key…" (what was read before won't come here, and
      the other devices will have to take the new key later).
 
+Every device that joins says so in Activity — on it and on the others: "Android · Pixel 7 —
+joined sync" (its name: `sync.device_name`, else the system and the machine's name). It
+can't be turned off: a device nobody expected is exactly what it must tell.
+
 Once it's all done, the same page shows how it goes, "Sync now", "Show the key" (its QR code
 and text) for the next device, what to sync, changing the server, turning it off.
 

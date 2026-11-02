@@ -78,6 +78,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A draft's pictures travel with it | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
 | Sync set up in the window step by step, a new device by a password alone | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| "A device joined" in Activity — on it and on the others | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A lane without a seam: older posts come by themselves | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## The post card
@@ -252,4 +253,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **60** features of the 188 compared.
+Only in fedtail — **61** features of the 189 compared.

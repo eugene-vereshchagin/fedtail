@@ -151,6 +151,8 @@ class Links:
             h.open_thread(arg, "first_unread" if action == "threadnew" else "post")
         elif action == "account":
             self._ask(h, "open_account", arg)
+        elif action == "place":  # one of fedtail's own pages (a device's row: ≡ → Sync)
+            self._ask(h, "open_place", unquote(arg))
         elif action in ("eventyes", "eventno"):  # a follow request, an approval: answered
             ok = action == "eventyes"
             h.call(self.view.answer_event(unquote(arg), ok),

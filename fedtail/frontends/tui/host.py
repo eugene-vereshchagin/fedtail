@@ -83,6 +83,8 @@ class TuiHost:
         from .screens import PlaceScreen
         self.app.push_screen(PlaceScreen(name, arg, tab))
 
+    open_place = _place  # a fedtail:place/<name> link (common/links.py)
+
     def open_tag(self, tag):
         self._place("tag", tag)
 

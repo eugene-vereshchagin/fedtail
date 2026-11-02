@@ -62,6 +62,8 @@ ACTIVITY_KIND = {
     # what fedtail derived itself, comparing snapshots (core/derived.py)
     "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
     "fedtail.moved": "moved", "fedtail.unliked": "unliked",
+    # a device of mine joined sync (core/sync/engine.py: its hello)
+    "fedtail.device": "device",
 }
 
 QUOTE_DEPTH = 2  # a quote inside a quote inside a post — no deeper

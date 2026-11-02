@@ -416,6 +416,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `sync.webdav` | `""` | Or a WebDAV folder, spoken to directly — nothing to mount: Nextcloud, ownCloud, a NAS (say, "https://cloud.example.org/remote.php/dav/files/me/fedtail"; made if it isn't there). The user here; the password is asked once (≡ → Sync → Login, or `fedtail sync login`) and kept in the profile's data folder, readable by you only — never in this file. With Nextcloud, better an app password. |
 | `sync.webdav_user` | `""` |  |
 | `sync.interval_seconds` | `60` | How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after it was made anyway. |
+| `sync.device_name` | `""` | This device's name for the others ("Linux · desk", "Android · Pixel 7"). Empty — the system and the machine's name (a phone: its model); two of one name get a bit of their ids after it. It travels sealed, as everything else. |
 | `sync.read` | `true` | What travels — a switch for each; off keeps it on this device only. Read marks you made (not the first run's "everything read", not older history). |
 | `sync.threads` | `true` | Threads you followed, left or muted by hand. |
 | `sync.lanes` | `true` | Your lanes as you arranged them: the order of lists (servers keep none) and the tag lanes you saved. |

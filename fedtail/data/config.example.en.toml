@@ -1398,6 +1398,11 @@ webdav_user = ""
 # it was made anyway.
 interval_seconds = 60
 
+# This device's name for the others ("Linux · desk", "Android · Pixel 7"). Empty — the
+# system and the machine's name (a phone: its model); two of one name get a bit of their
+# ids after it. It travels sealed, as everything else.
+device_name = ""
+
 # What travels — a switch for each; off keeps it on this device only.
 # Read marks you made (not the first run's "everything read", not older history).
 read = true

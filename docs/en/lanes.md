@@ -355,6 +355,7 @@ program knows it.
 | `admin` | An admin event: a sign-up, a report. |
 | `annual_report` | The server's annual report (Mastodon 4.3+). |
 | `deleted` | A post I have stored was deleted. |
+| `device` | A device of mine joined sync — this one or another. |
 | `favourite` | My post was liked. |
 | `follow` | Someone followed me. |
 | `follow_request` | A follow request waiting for my decision. |

@@ -77,6 +77,7 @@ from pathlib import Path
 
 from ...i18n import _
 from .. import auth
+from ..store import now_iso
 from . import backends, crypto
 
 log = logging.getLogger(__name__)
@@ -179,6 +180,7 @@ class Sync:
         self.paths = core.paths
         self.what = {k for k in WHAT if self.cfg.get(k)}
         self.device = self._device()
+        self.name = device_name(self.cfg)  # in every batch it sends (the others' lists)
         self._wake = threading.Event()
         self._stop = threading.Event()
         # a round, and every change of the key: a round mustn't make a key of its own
@@ -563,6 +565,7 @@ class Sync:
         crypto.save_key(key_path(self.paths), key)
         log.info("sync: a new key made (id %s): carry it to the other devices with "
                  "`fedtail sync key` → `fedtail sync join`", crypto.key_id(key).hex())
+        joined(self.core, self.device, self.name)  # the first device: sync begins here
         return key
 
     def _who(self):
@@ -623,14 +626,24 @@ class Sync:
     # ---- out and in -----------------------------------------------------------------
     def _push(self, backend, key):
         sent = 0
+        new = bool(self.store.kv_get("sync.say_joined"))  # just joined: the others say so
         for _round in range(20):
             rows = self.store.sync_pending(BATCH_OPS)
-            if not rows:
+            if not rows and not new:
                 break
-            payload = {"v": 1, "d": self.device, "at": now_ms(), "ops": [op for _, op in rows]}
+            # every batch names its device ("n"): the others' list of devices (_met)
+            payload = {"v": 1, "d": self.device, "n": self.name, "at": now_ms(),
+                       "ops": [op for _, op in rows]}
+            if new:
+                payload["new"] = True
             blob = crypto.seal(key, payload)
             backend.push(blob, self.device)
             self._grew(len(blob))
+            if new:
+                self.store.kv_set("sync.say_joined", None)
+                new = False
+            if not rows:
+                break
             self.store.sync_sent(rows[-1][0])
             sent += len(rows)
         return sent
@@ -721,6 +734,7 @@ class Sync:
                     got += self.apply(payload)
             self.store.kv_set("sync.cursor", cursor)
             if not more:
+                self.store.kv_set("sync.reading_back", None)  # read through: news from now
                 break
         return got
 
@@ -730,6 +744,7 @@ class Sync:
         people = False
         seen_to = None  # how far events are seen elsewhere, when further than here
         sender = str(payload.get("d") or "")
+        self._met(sender, payload.get("n"), payload.get("new") is True)
         seen = 0
         for op in payload.get("ops") or []:
             if not isinstance(op, dict):
@@ -842,6 +857,25 @@ class Sync:
         return all(isinstance(x, str) for x in value)
 
     # ---- for `fedtail sync status` ---------------------------------------------------
+    def _met(self, device, name, new):
+        """Another device's batch: kept among the known ones with its name (an older
+        fedtail sends none); one that says it has just joined — said in Activity, unless
+        this is the journal read from its start (a join: old news)."""
+        if not device or device == self.device:
+            return
+        known = dict(self.store.kv_get("sync.devices") or {})
+        name = str(name or "").strip()[:60] if isinstance(name, str) else ""
+        had = known.get(device)
+        if had is not None and (not name or had.get("name") == name) and not new:
+            return
+        known[device] = {"name": name or (had or {}).get("name", ""),
+                         "at": (had or {}).get("at") or now_iso()}
+        self.store.kv_set("sync.devices", known)
+        # the journal read from its start after a key was taken: the others' "joined"
+        # there is old news
+        if new and not self.store.kv_get("sync.reading_back"):
+            joined(self.core, device, known[device]["name"])
+
     def status(self):
         key = crypto.load_key(key_path(self.paths))
         login = "invite" if load_invite(self.paths) else ""
@@ -886,7 +920,58 @@ def _take_locked(core, key):
             core.store.kv_set("sync.left_keys", (left + [crypto.key_id(old).hex()])[-20:])
     crypto.save_key(key_path(core.paths), key)
     core.store.kv_set("sync.cursor", None)  # the journal from its start, with this key
+    core.store.kv_set("sync.reading_back", True)  # …its old "joined" are no news
+    if old != key:  # joined (or started) sync: said here, and to the others by its hello
+        sync = getattr(core, "sync", None)
+        core.store.kv_set("sync.say_joined", True)  # the next batch tells the others
+        if sync is not None:
+            joined(core, sync.device, sync.name)
     return crypto.key_id(key).hex()
+
+
+# ---- the devices: their names, and "joined" in Activity -------------------------------
+
+def device_name(cfg):
+    """This device's name for the others: sync.device_name, else the system and the
+    machine's name — a phone's model (diag knows it from the app)."""
+    name = str(cfg.get("device_name") or "").strip()
+    if name:
+        return name[:60]
+    import platform
+
+    from ... import diag
+    phone = diag.device().get("device")
+    if phone:
+        return f"Android · {phone}"[:60]
+    system = {"Darwin": "macOS"}.get(platform.system(), platform.system()) or "?"
+    return f"{system} · {platform.node() or '?'}"[:60]
+
+
+def joined(core, device, name):
+    """A device joined sync — this one or another: a row of Activity, "<name> — joined
+    sync". Two of one name: a bit of the id after it. No switch to keep it quiet, on
+    purpose (the author's word, 02.11): a device nobody expected reading the journal is
+    exactly what it must tell."""
+    from ..store import LOCAL_EVENT
+    store = core.store
+    known = store.kv_get("sync.devices") or {}
+    sync = getattr(core, "sync", None)
+    names = [v.get("name") for d, v in known.items() if d != device]
+    if sync is not None and sync.device != device:
+        names.append(sync.name)
+    shown = name or _("sync_device_unnamed")
+    if name and name in names:
+        shown = f"{name} ({device[:4]})"
+    row = {"id": f"{LOCAL_EVENT}device:{device}", "type": "fedtail.device",
+           "account": {"id": f"device:{device}", "acct": "", "username": shown,
+                       "display_name": shown},
+           "created_at": now_iso()}
+    if store.activity_put([row]):
+        log.info("sync: a device joined: %s", shown)
+        core.emit("activity_updated", 1)
+        lanes_in = {c.name: [] for c in core._event_lanes()}
+        if lanes_in:
+            core.emit("lanes_updated", lanes_in)
 
 
 def join(core, text):

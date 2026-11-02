@@ -15,6 +15,11 @@
   logged in, with no key yet and nothing syncing. Now the address alone says "saved; sync
   starts once this device has the key", the page says "Sync doesn't work yet" until it
   does, and the login step is shown for a WebDAV folder only.
+- **"A device joined sync" in Activity**, on it and on the other devices: "Android · Pixel 7
+  — joined sync". Every batch a device sends carries its name (`sync.device_name`, empty —
+  the system and the machine's name, a phone's model; two of one name get a bit of the id);
+  the name leads to ≡ → Sync. No switch turns it off, on purpose: a device nobody expected
+  is exactly what it must tell. A lane of rules takes it as `event = "device"`.
 - **The key's QR code carries the sync server's address.** A new device scans it — right
   at step 1, too — and sets the server up by itself: nothing to type. A bare key (pasted)
   works as before; a folder's or WebDAV's place stays the device's own.

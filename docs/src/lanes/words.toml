@@ -632,6 +632,9 @@ en = "I follow them, but they no longer follow me."
 [word.event.unliked]
 ru = "С моего поста сняли лайк (по умолчанию выключено)."
 en = "A like was taken off my post (off by default)."
+[word.event.device]
+ru = "К синхронизации подключилось моё устройство — это или другое."
+en = "A device of mine joined sync — this one or another."
 [word.event.deleted]
 ru = "Удалён пост, который есть у меня в базе."
 en = "A post I have stored was deleted."

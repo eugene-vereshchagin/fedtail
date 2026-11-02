@@ -16,16 +16,26 @@ ACT_KINDS = tuple(k[4:] for k in (
     "act_favourite", "act_reblog", "act_follow", "act_poll", "act_update", "act_status",
     "act_pending.reply", "act_pending.favourite", "act_pending.reblog",
     "act_severed_relationships", "act_moderation_warning", "act_follow_request",
-    "act_my_follow", "act_unfollow", "act_gone", "act_lost", "act_moved", "act_unliked"))
+    "act_my_follow", "act_unfollow", "act_gone", "act_lost", "act_moved", "act_unliked",
+    "act_device"))
 
 # fedtail.model's kinds → the words for them in i18n (act_<key>)
 _ACT_KEY = {"like": ACT_KINDS[0], "share": ACT_KINDS[1], "follow": ACT_KINDS[2],
             "poll": ACT_KINDS[3], "update": ACT_KINDS[4], "post": ACT_KINDS[5],
             "my_follow": ACT_KINDS[12], "unfollow": ACT_KINDS[13], "gone": ACT_KINDS[14],
-            "lost": ACT_KINDS[15], "moved": ACT_KINDS[16], "unliked": ACT_KINDS[17]}
+            "lost": ACT_KINDS[15], "moved": ACT_KINDS[16], "unliked": ACT_KINDS[17],
+            "device": ACT_KINDS[18]}
 _ASKS_KEY = {"reply": ACT_KINDS[6], "like": ACT_KINDS[7], "share": ACT_KINDS[8],
              "follow": ACT_KINDS[11]}
 _NOTICE_KEY = {"severed": ACT_KINDS[9], "warning": ACT_KINDS[10]}
+
+
+def who_link(acc):
+    """Where a name in an event's row goes: the person — or, for a device of mine (a
+    sync event: no one's account), ≡ → Sync."""
+    if str(acc.id).startswith("device:"):
+        return "fedtail:place/sync"
+    return f"fedtail:account/{acc.id}"
 
 
 def act_key(a):
@@ -114,7 +124,7 @@ def event_bit(entries, date, names=MAX_NAMES):
         text += " · «" + snippet(first.post, 80) + "»"
         link = f"fedtail:thread/{first.post.id}"
     else:
-        link = f"fedtail:account/{people[0].id}" if people else ""
+        link = who_link(people[0]) if people else ""
     tip = "\n".join(f"{date(a.created) if a.created else ''}  "
                      f"{'@' + a.who.handle if a.who else ''}" for a in entries[:30])
     return Bit(text, link, tip, kind="event:" + kind)
@@ -180,7 +190,7 @@ def event_parts(row, date, dismiss_one=True):
     from ...model.text import snippet
     from .cardtext import name_of
     from .links import thread_url
-    people = [(name_of(p), f"fedtail:account/{p.id}") for p in row.people]
+    people = [(name_of(p), who_link(p)) for p in row.people]
     es = row.entries
     post = row.post
     answers = [(f"fedtail:eventyes/{quote(a.id, safe='')}",
