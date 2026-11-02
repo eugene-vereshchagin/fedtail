@@ -283,12 +283,18 @@ class FlowTest {
         launch("lane" to "activity")
         waitDescription("Switch lane")
         kotlinx.coroutines.runBlocking { Core.demoHappen("requests", "req", "20") }
-        waitFor("the requests", 40_000) {
-            compose.onAllNodes(hasText("@example.org", substring = true)).fetchSemanticsNodes()
-                .size > 2
+        // the requests stand where they come in time: past the demo's posts of 2099, maybe
+        // a long way down — swiped to (the lane jumping would take them off the screen)
+        fun shownRequests() = compose.onAllNodes(hasText("@example.org", substring = true))
+            .fetchSemanticsNodes().count { it.boundsInRoot.top > 0f }
+        Thread.sleep(3_000)  // the round bringing them
+        repeat(40) {
+            if (shownRequests() >= 3) return@repeat
+            compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
+            compose.waitForIdle()
+            Thread.sleep(300)
         }
-        compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
-        compose.waitForIdle()
+        waitFor("the requests", 20_000) { shownRequests() >= 3 }
         Thread.sleep(1_000)
         fun names() = compose.onAllNodes(hasText("@example.org", substring = true))
             .fetchSemanticsNodes()
