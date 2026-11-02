@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.22.2 — in progress
+## 0.22.2 — 2026-11-02
+
+**In short: bug fixes.** The phone no longer closes after an update (a config of an older
+version), logs in in one go and keeps its token (a second login had left it asking with a
+revoked one: "accept" and everything else answered 401), and writes down a crash for the
+next start to send; answering a follow request keeps the lane's place; every login screen
+says where to get an account.
+
+<!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
+     with fedtail-sync 0.22.2 (the same server under the new number; protocol 2). The next
+     version is 0.22.3, not 0.23: "coming next" names 0.22.3. -->
 
 - **An update no longer closes the phone's app.** Every config written before 0.22.2 has
   `phone.overview = "tiles"` (the example's own line), which 0.22.2's `lanes | all | list`

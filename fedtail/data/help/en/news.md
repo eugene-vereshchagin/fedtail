@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.22.2 (in progress):**
+**0.22.2:**
 
 - No account? — where to get one, right on the login screen
 <!-- /include -->
