@@ -407,6 +407,13 @@ class BridgeTest(_Base):
         self.assertIn("error", json.loads(self.bridge.demo_happen("answer", "101", "x")))
         self.bridge._s["demo"] = True
 
+    def test_the_demo_brings_follow_requests(self):
+        """demo_happen "requests": that many come by a round, waiting in the core."""
+        self.demo()
+        self.call("demo_happen", "requests", "req", "3")
+        got = {a["acct"] for a in self.bridge._core().follow_requests}
+        self.assertLessEqual({"req0@example.org", "req2@example.org"}, got)
+
     def test_activity_is_a_lane_of_events(self):
         """Activity is a lane like any (a rule of events only): the lane brings its rows as
         events in their parts, every button a fedtail: link the phone runs through link();

@@ -1011,8 +1011,7 @@ async function selectLane(name, keep) {
   const newestFirst = state.me.order === "newest_first";
   if (newestFirst) data.posts.reverse();
   const box = $("#posts");
-  const anchor = keep ? firstVisible() : null;
-  const oldTop = anchor ? anchor.getBoundingClientRect().top : 0;
+  const holders = keep ? placeHolders() : [];
   const cursorId = keep && state.posts[state.cursor] ? state.posts[state.cursor].id : null;
   state.posts = data.posts;
   state.older = data.older;
@@ -1029,7 +1028,13 @@ async function selectLane(name, keep) {
   if (data.empty_browse && !data.posts.length) box.textContent = w("browse_empty");
   countUnread();
   watchRead(box);
-  const again = anchor && box.querySelector(`[data-id="${CSS.escape(anchor.dataset.id)}"]`);
+  // the row on top held, or — gone (a follow request answered) — its nearest neighbour
+  // that stays: the lane jumped to where reading starts (02.11)
+  let again = null, oldTop = 0;
+  for (const h of holders) {
+    again = box.querySelector(`[data-id="${CSS.escape(h.id)}"]`);
+    if (again) { oldTop = h.top; break; }
+  }
   if (again) {
     box.scrollTop += again.getBoundingClientRect().top - oldTop;
     const ci = state.posts.findIndex((x) => x.id === cursorId);
@@ -1547,6 +1552,14 @@ function countUnread() {  // the lane's posts and its events' rows not seen yet
 function navCount(name, unread) {  // the lane's number in the sidebar, as read goes on
   const a = document.querySelector(`#lanes a[data-lane="${CSS.escape(name || "")}"] .n`);
   if (a) { if (unread) a.textContent = String(unread); else a.remove(); }
+}
+
+function placeHolders() {  // the row on top, then the ones below it, then above: {id, top}
+  const rows = [...document.querySelectorAll("#posts .post, #posts .event")];
+  const on = rows.indexOf(firstVisible());
+  if (on < 0) return [];
+  return rows.slice(on).concat(rows.slice(0, on).reverse())
+    .map((c) => ({ id: c.dataset.id, top: c.getBoundingClientRect().top }));
 }
 
 function firstVisible() {  // the first card or event row in sight: where a redraw stays

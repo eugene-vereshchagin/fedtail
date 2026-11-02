@@ -69,7 +69,7 @@ L = {
         "what": "Что", "status_col": "Статус", "since": "С версии", "config": "Конфиг",
         "api": "API / протокол", "others": "У других", "note": "Заметка",
         "chapter": "Раздел", "size": "Размер", "why": "Почему", "more": "Подробнее",
-        "contents": "Содержание", "in_progress": "в работе",
+        "contents": "Содержание", "and_next": "и то, что сделано после неё", "next": "дальше",
         "ap_title": "ActivityPub напрямую",
         "parity_title": "Пять интерфейсов",
         "parity_intro": "fedtail — это окно Qt (KDE, Windows), окно GTK (GNOME), терминал, "
@@ -108,7 +108,7 @@ L = {
         "cmp_count": "Только в fedtail — **{n}** возможностей из {total} сравнённых.",
         "short_title": "Коротко обо всём, что есть",
         "only_title": "Только в fedtail",
-        "new_in_progress": "**{v} (в работе):**",
+        "new_in_progress": "**Что будет дальше:**",
         "new_release": "**{v}:**",
         "new_none": "Новых возможностей пока нет.",
     },
@@ -118,7 +118,7 @@ L = {
         "what": "What", "status_col": "Status", "since": "Since", "config": "Config",
         "api": "API / protocol", "others": "Others", "note": "Note",
         "chapter": "Chapter", "size": "Size", "why": "Why", "more": "In detail",
-        "contents": "Contents", "in_progress": "in progress",
+        "contents": "Contents", "and_next": "and what is done after it", "next": "next",
         "ap_title": "ActivityPub directly",
         "parity_title": "Five interfaces",
         "parity_intro": "fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a "
@@ -158,7 +158,7 @@ L = {
         "cmp_count": "Only in fedtail — **{n}** features of the {total} compared.",
         "short_title": "Everything there is, in short",
         "only_title": "Only in fedtail",
-        "new_in_progress": "**{v} (in progress):**",
+        "new_in_progress": "**What's next:**",
         "new_release": "**{v}:**",
         "new_none": "No new features yet.",
     },
@@ -190,6 +190,9 @@ def last_release():
     return m.group(1) if m else None
 
 
+NEXT = "next"  # since: done, not released yet — the number comes with the release
+
+
 def _vkey(v):
     return tuple(int(x) for x in v.split("."))
 
@@ -198,7 +201,10 @@ def load_features(folder=FEATURES):
     """[chapter] from docs/src/features/*.toml, checked: every text in every language,
     known statuses and clients, ids unique, "since" only for what exists."""
     chapters, ids, problems = [], set(), []
-    current = version().split(".dev")[0]
+    dev = ".dev" in version()
+    # what is out: since names a release; done after it — "next" (which number the next
+    # one gets, 0.22.3 or 0.23.0, is decided when it comes out)
+    current = (last_release() or "0.0.0") if dev else version()
     for path in sorted(folder.glob("*.toml")):
         data = tomllib.loads(path.read_text("utf-8"))
         where = path.name
@@ -237,10 +243,15 @@ def load_features(folder=FEATURES):
             if f.get("status") in ("has", "partly"):
                 if not since:
                     problems.append(f"{at}: since — which version has it first")
+                elif since == NEXT:
+                    if not dev:
+                        problems.append(f"{at}: since \"next\" in release {current} — "
+                                        f"write {current}")
                 elif not VERSION.match(since):
                     problems.append(f"{at}: since {since!r} is not X.Y.Z")
                 elif _vkey(since) > _vkey(current):
-                    problems.append(f"{at}: since {since} is past this version {current}")
+                    problems.append(f"{at}: since {since} is past the last release {current}"
+                                    + (" — write \"next\"" if dev else ""))
             elif since:
                 problems.append(f"{at}: since — only for what fedtail has")
             for c in f.get("clients", []):
@@ -306,7 +317,8 @@ def render_features(chapters, lang):
     t = L[lang]
     head = (FEATURES / f"head.{lang}.md").read_text("utf-8")
     v = version()
-    shown = v.split(".dev")[0] + (f" ({t['in_progress']})" if ".dev" in v else "")
+    shown = f"{last_release()} {t['and_next']}" if ".dev" in v and last_release() else \
+        v.split(".dev")[0]
     titles = [_t(ch["title"], lang) for ch in chapters]
     titles += [t["parity_title"], t["android_title"], t["ap_title"], t["plans_title"],
                t["wont_title"], t["undecided_title"]]
@@ -319,7 +331,7 @@ def render_features(chapters, lang):
             out += [_t(ch["intro"], lang), ""]
         cols = [k for k in ("config", "api", "others", "note") if any(k in f for f in rows)]
         head_row = [t["what"], t["status_col"], t["since"]] + [t[k] for k in cols]
-        out += _table(head_row, [[_t(f["name"], lang), _status(f, lang), f.get("since")]
+        out += _table(head_row, [[_t(f["name"], lang), _status(f, lang), _since(f, lang)]
                                  + [_t(f.get(k), lang) for k in cols] for f in rows])
         details = [f for f in ch.get("feature", []) if f.get("details")]
         if details:
@@ -585,12 +597,17 @@ def render_only(chapters, lang):
     return "\n".join(out) + "\n"
 
 
+def _since(f, lang):
+    since = f.get("since")
+    return L[lang]["next"] if since == NEXT else since
+
+
 def render_new(chapters, lang):
     t = L[lang]
     v = version()
     groups = []
     if ".dev" in v:
-        groups.append((v.split(".dev")[0], t["new_in_progress"]))
+        groups.append((NEXT, t["new_in_progress"]))
     rel = last_release()
     if rel:
         groups.append((rel, t["new_release"]))

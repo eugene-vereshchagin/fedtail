@@ -37,6 +37,7 @@ from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
 from ..common.cardtext import indent_of
+from ..common.strip import nearest_staying
 from ..richtext import openable
 from . import pictures, termcaps
 from .model import (
@@ -1197,6 +1198,11 @@ class FedtailApp(App, PostsMixin):
         elif m.current_filter() != "all" or m.conversations():
             line += Text("  · " + self.lane_choice_words(m), style="dim")
         self._main("#title", Static).update(line)
+        keys = [k for k, _e, _m in rows]
+        if keep is not None and keep not in keys and not first:
+            # the cursor's row went (a follow request answered): a neighbour's, not the
+            # lane's start (02.11)
+            keep = nearest_staying([k for k, _e, _m in self._rows], keep, set(keys))
         self._rows = rows
         if not rows:
             self._lo = self._hi = 0
@@ -1205,7 +1211,6 @@ class FedtailApp(App, PostsMixin):
                 await lv.append(ListItem(Static(Text(_("activity_none"), style="dim"))))
             self.update_lane_counts()
             return
-        keys = [k for k, _e, _m in rows]
         if keep in keys and not first:
             at = keys.index(keep)
         else:

@@ -206,6 +206,32 @@ class DocsBuildTest(unittest.TestCase):
         self.assertIn("since — only for what fedtail has", msg)
         self.assertIn("name has no en", msg)
 
+    def test_unreleased_is_next(self):
+        """Done since the last release: since = "next", shown as "next" — the next
+        number is not known before it comes out; a version past the last release is
+        asked to say "next", and in a release "next" is asked for its number (02.11)."""
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        feature = ('id = "x"\ntitle.ru = "Икс"\ntitle.en = "X"\n\n[[feature]]\nid = "a"\n'
+                   'status = "has"\nsince = "{}"\nname.ru = "А"\nname.en = "A"\n')
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(self.mod, "last_release", return_value="0.22.2"):
+            Path(d, "01-x.toml").write_text(feature.format("next"), "utf-8")
+            with mock.patch.object(self.mod, "version", return_value="0.22.3.dev0"):
+                ch = self.mod.load_features(Path(d))
+                self.assertIn("**Что будет дальше:**", self.mod.render_new(ch, "ru"))
+                self.assertEqual(self.mod._since(ch[0]["feature"][0], "en"), "next")
+            with mock.patch.object(self.mod, "version", return_value="0.22.3"), \
+                    self.assertRaises(self.mod.DocsError) as e:
+                self.mod.load_features(Path(d))
+            self.assertIn("write 0.22.3", str(e.exception))
+            Path(d, "01-x.toml").write_text(feature.format("0.22.3"), "utf-8")
+            with mock.patch.object(self.mod, "version", return_value="0.22.3.dev0"), \
+                    self.assertRaises(self.mod.DocsError) as e:
+                self.mod.load_features(Path(d))
+            self.assertIn('write "next"', str(e.exception))
+
     def test_includes(self):
         from pathlib import Path
         root = self.mod.ROOT

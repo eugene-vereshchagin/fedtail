@@ -416,6 +416,34 @@ class AppKeysTest(Base):
 
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
+class AnsweredRequestTest(Base):
+    """A follow request answered on the cursor: the cursor goes to its neighbour, not to
+    the lane's start — the lane jumped (02.11)."""
+
+    async def test_the_cursor_goes_to_a_neighbour(self):
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import EventItem
+        core, w = self.make(lanes={"enabled": ["home", "requests"]},
+                            tui={"pictures": "off"})
+        for i, who in enumerate(["ann", "ben", "cat", "dan", "eve"]):
+            w.requests.append(fakes.acct(f"R{i}", f"{who}@example.org"))
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            posts = app.query_one("#posts", ListView)
+            await app.select_lane("requests")
+            await self.wait(pilot, lambda: len(posts.children) == 5, what="five requests")
+            rows = [x.key for x in posts.children if isinstance(x, EventItem)]
+            posts.focus()
+            posts.index = 2
+            await pilot.pause(0.05)
+            await pilot.press("a")
+            await self.wait(pilot, lambda: len(posts.children) == 4, what="answered")
+            await pilot.pause(0.1)
+            self.assertEqual(posts.highlighted_child.key, rows[3])
+
+
 class ActivityRequestsTest(Base):
     """Activity and Requests are lanes like any other (lanes of events only, 0.22): drawn
     by the lane model, an event's row the windows' parts, each action a fedtail: link."""

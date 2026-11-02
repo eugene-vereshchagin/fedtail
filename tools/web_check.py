@@ -117,7 +117,7 @@ def http_checks(base, key):
             ERRORS.append(f"{path}: {e}")
 
 
-def with_playwright(base, key, out):
+def with_playwright(base, key, out, core):
     from playwright.sync_api import sync_playwright
     exe = os.environ.get("FEDTAIL_CHROMIUM")
     with sync_playwright() as pw:
@@ -162,6 +162,7 @@ def with_playwright(base, key, out):
             if label == "desktop":
                 read_by_scrolling(page, base, key)
                 holds_place(browser, base, key)
+                answered_request(browser, base, key, core)
             if label == "phone":
                 page.click("#menu")
                 page.wait_for_timeout(400)
@@ -489,6 +490,41 @@ def holds_place(browser, base, key):
     page.close()
 
 
+def answered_request(browser, base, key, core):
+    """A follow request on top of the screen answered: the row under it takes its place
+    — the lane jumped to where reading starts (02.11)."""
+    if REAL:
+        return
+    from tests import fakes
+    w = fakes.FakeApi.world
+    for i in range(30):
+        w.requests.append(fakes.acct(f"Q{i}", f"q{i}@example.org"))
+    core.poll_once()
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(base + "/?k=" + key)
+    page.wait_for_timeout(1500)
+    page.evaluate("() => goLane('activity')")  # where the requests are, with the rest
+    page.wait_for_selector("#posts .event", timeout=15000)
+    page.wait_for_timeout(800)
+    page.hover("#posts")
+    page.mouse.wheel(0, 900)  # by the reader's hand: the opening place lets go
+    page.wait_for_timeout(800)
+    on_top, under, was = page.evaluate("""() => { const r = firstVisible();
+      const u = r.nextElementSibling;
+      return [r.dataset.id, u.dataset.id, u.getBoundingClientRect().top]; }""")
+    page.click(f'#posts .event[data-id="{on_top}"] .ev-answers button.primary')
+    page.wait_for_function(f"""() => !document.querySelector('#posts [data-id="{on_top}"]')""",
+                           timeout=15000)
+    page.wait_for_timeout(800)
+    now = page.evaluate(f"""() => {{ const u = document.querySelector('#posts [data-id="{under}"]');
+      return u ? u.getBoundingClientRect().top : null; }}""")
+    if now is None or abs(now - was) > 24:  # the click itself moves it a little
+        ERRORS.append(f"answered request: the row under it went from {was:.0f} px to {now}")
+    else:
+        NOTES.append("answered request: the row under it stayed where it stood")
+    page.close()
+
+
 def phone_editor(page, out):
     """The editor at a phone's width, a column of format buttons beside the text: names
     offered as "@mi" is typed stand under the text, not beside it (31.10: the list
@@ -701,7 +737,7 @@ def main():
         http_checks(base, key)
         try:
             import playwright  # noqa: F401
-            with_playwright(base, key, out)
+            with_playwright(base, key, out, core)
             curtain_tiles(base, key, out, core)
         except ImportError:
             with_chromium(base, key, out)

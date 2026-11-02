@@ -301,6 +301,15 @@ class LastWholeTest(unittest.TestCase):
         self.assertIsNone(st.kept_anchor(("b", 0), set()))
         self.assertIsNone(st.kept_anchor(None, {"a"}))
 
+    def test_the_nearest_staying_key(self):
+        """Below first, then above; a key not there, or none staying — None (02.11)."""
+        from fedtail.frontends.common.strip import nearest_staying
+        keys = ["a", "b", "c", "d"]
+        self.assertEqual(nearest_staying(keys, "b", {"a", "d"}), "d")
+        self.assertEqual(nearest_staying(keys, "d", {"a", "b"}), "b")
+        self.assertIsNone(nearest_staying(keys, "x", {"a"}))
+        self.assertIsNone(nearest_staying(keys, "b", set()))
+
 
 if __name__ == "__main__":
     unittest.main()

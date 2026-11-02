@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.22.3 — in progress
+<!-- For the site's builder (an agent): "## What's next" is what is done since the last
+     release and not out yet. Its number is not known before it comes out (a fix release
+     or a bigger one): call that page "What's next" / "Что будет дальше", never by a
+     version number. -->
+
+## What's next
+
+- **Answering a follow request keeps the lane's place in the terminal and on the web page
+  too**, not only in the windows: the row went, and the terminal's cursor (the web page's
+  screen) went to where reading starts. The cursor (the screen) goes to the row under it.
 
 ## 0.22.2 — 2026-11-02
 
@@ -11,8 +20,7 @@ next start to send; answering a follow request keeps the lane's place; every log
 says where to get an account.
 
 <!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
-     with fedtail-sync 0.22.2 (the same server under the new number; protocol 2). The next
-     version is 0.22.3, not 0.23: "coming next" names 0.22.3. -->
+     with fedtail-sync 0.22.2 (the same server under the new number; protocol 2). -->
 
 - **An update no longer closes the phone's app.** Every config written before 0.22.2 has
   `phone.overview = "tiles"` (the example's own line), which 0.22.2's `lanes | all | list`
@@ -58,8 +66,7 @@ reply editor mended; a post of pictures alone goes. Plus the lanes as tiles — 
 overview by the sidebar's sections, and (off by default) on the windows' curtain.
 
 <!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
-     with fedtail-sync 0.22.1 (the same server under the new number; protocol 2). The next
-     version is 0.22.2, not 0.23: "coming next" names 0.22.2. -->
+     with fedtail-sync 0.22.1 (the same server under the new number; protocol 2). -->
 
 - **Logging in on the phone, in one go.** The code the browser brings back is no longer
   lost when the phone closed the app meanwhile (or when it comes before the app is up):

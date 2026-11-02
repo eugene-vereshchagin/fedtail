@@ -15,6 +15,19 @@ Nothing here draws or measures: the toolkit builds a card, measures it and says 
 from __future__ import annotations
 
 
+def nearest_staying(keys, key, staying):
+    """The key nearest to `key` in `keys` (the old order) that is in `staying` — below it
+    first, then above — or None: where reading stands once its card goes (a follow
+    request answered); the lane jumped to its start (02.11)."""
+    at = keys.index(key) if key in keys else None
+    if at is None:
+        return None
+    for k in keys[at + 1:] + keys[:at][::-1]:
+        if k in staying:
+            return k
+    return None
+
+
 class Strip:
     def __init__(self, gap=8, margin=10, first_guess=160):
         self.gap, self.margin, self.first_guess = gap, margin, first_guess
@@ -144,13 +157,11 @@ class Strip:
         if not anchor or anchor[0] in staying:
             return anchor
         key, off = anchor
-        at = self.index.get(key)
-        if at is None or key not in self.ys or not isinstance(off, (int, float)):
+        if key not in self.index or key not in self.ys or not isinstance(off, (int, float)):
             return None
-        for k in self.keys[at + 1:] + self.keys[:at][::-1]:
-            if k in staying and k in self.ys and k not in self.hidden:
-                return k, off + self.ys[k] - self.ys[key]
-        return None
+        k = nearest_staying(self.keys, key, {k for k in staying
+                                             if k in self.ys and k not in self.hidden})
+        return (k, off + self.ys[k] - self.ys[key]) if k is not None else None
 
     def last_whole(self, top, view_h):
         """The key of the last card seen whole on the screen [top, top+view_h) — what

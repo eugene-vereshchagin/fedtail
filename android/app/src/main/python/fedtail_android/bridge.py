@@ -422,7 +422,8 @@ def demo_happen(what, target, text):
     """The demo world only (the UI tests on the emulator, androidTest): something done
     elsewhere while a screen shows it, brought by a round as from a server — "answer":
     someone answers target in its thread (the thread open on screen grows by itself, as
-    tests/scenario.py's watch_thread holds every interface to). → {id}."""
+    tests/scenario.py's watch_thread holds every interface to); "requests": text more
+    follow requests come (target: their names' start). → {id}."""
     def go():
         if not _s.get("demo"):
             raise RuntimeError("the demo world only")
@@ -430,6 +431,12 @@ def demo_happen(what, target, text):
 
         from tests.fakes import FakeApi, status
         w = FakeApi.world
+        if what == "requests":
+            from tests.fakes import acct
+            for i in range(int(text)):
+                w.requests.append(acct(f"{target}{i}", f"{target}{i}@example.org"))
+            _core().poll_once()
+            return {"id": ""}
         if what != "answer" or target not in w.statuses:
             raise ValueError(f"{what} {target}")
         parent = w.statuses[target]

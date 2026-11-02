@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isOff
@@ -22,6 +23,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -272,5 +275,40 @@ class FlowTest {
         waitText("My profile", 15_000)
         compose.onAllNodesWithText("My profile").onFirst().performClick()
         waitText("Posts and replies", 30_000)          // a profile: what of theirs to show
+    }
+
+    @Test
+    fun anAnsweredRequestKeepsThePlace() {
+        // a follow request answered: the lane jumped to its start (02.11)
+        launch("lane" to "activity")
+        waitDescription("Switch lane")
+        kotlinx.coroutines.runBlocking { Core.demoHappen("requests", "req", "20") }
+        waitFor("the requests", 40_000) {
+            compose.onAllNodes(hasText("@example.org", substring = true)).fetchSemanticsNodes()
+                .size > 2
+        }
+        compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
+        compose.waitForIdle()
+        Thread.sleep(1_000)
+        fun names() = compose.onAllNodes(hasText("@example.org", substring = true))
+            .fetchSemanticsNodes()
+            .map { it.boundsInRoot.top to it.config.getOrNull(SemanticsProperties.Text)!!.joinToString() }
+            .filter { it.first > 0f }.sortedBy { it.first }
+        val before = names()
+        val (at, answered) = before[0]  // the topmost request on screen
+        val (was, under) = before[1]    // the row under it
+        val buttons = compose.onAllNodesWithText("✔ approve")
+        val shown = buttons.fetchSemanticsNodes()
+        val i = shown.indices.filter { shown[it].boundsInRoot.top > at }
+            .minBy { shown[it].boundsInRoot.top }  // its yes
+        buttons[i].performClick()
+        waitFor("$answered gone", 30_000) { names().none { it.second == answered } }
+        Thread.sleep(2_000)
+        compose.waitForIdle()
+        val now = names().firstOrNull { it.second == under }
+        assertTrue("$under left the screen: $before → ${names()}", now != null)
+        // it stays, or takes the answered row's place: no more than a row's way
+        assertTrue("the lane jumped: $under $was → ${now!!.first}",
+            kotlin.math.abs(now.first - was) <= was - at + 4f)
     }
 }

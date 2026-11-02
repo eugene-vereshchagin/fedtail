@@ -72,8 +72,10 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   CI job. CHANGELOG.md is English only.
 * Versions: releases are tags `vX.Y.Z`; in the tagged commit `fedtail/__init__.py`
   says `X.Y.Z` and CHANGELOG has `## X.Y.Z — <date>`. Right after, bump to the next
-  `X.Y+1.0.dev0` with `## X.Y+1.0 — in progress`. Every user-visible change gets a
-  CHANGELOG line in the "in progress" section; cut a release when a batch of
+  `X.Y.Z+1.dev0` with a section `## What's next` — no number there: whether the next is a
+  fix release or a bigger one is decided when it comes out (the author's wish), and the
+  features done meanwhile say `since = "next"`. Every user-visible change gets a
+  CHANGELOG line in the "What's next" section; cut a release when a batch of
   features has landed: set the release version and CHANGELOG date and push — CI's
   `release` job tags the commit and publishes a GitHub release once tests are green.
 * The four interfaces offer the same things. A function added to one interface only (or
