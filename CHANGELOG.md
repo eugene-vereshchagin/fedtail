@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.22.3 — in progress
+
 ## 0.22.2 — 2026-11-02
 
 **In short: bug fixes.** The phone no longer closes after an update (a config of an older
