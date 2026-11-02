@@ -73,7 +73,6 @@ _STRINGS = {
         "sync_login_none": "Серверу синхронизации и общей папке вход не нужен: журнал "
                            "определяется ключом (fedtail sync first / join). Вход — только "
                            "для WebDAV",
-        "sync_login_server_short": "не нужен: журнал по ключу",
         "sync_f_invite": "Код приглашения (первому устройству)",
         "sync_f_invite_tip": "Даёт админ сервера синхронизации; нужен, только чтобы завести "
                              "журнал — остальным устройствам хватит ключа",
@@ -173,7 +172,6 @@ _STRINGS = {
         "sync_step_login_what": "одноразовый код со страницы твоего сервера",
         "sync_step_key": "Ключ",
         "sync_step_key_what": "первое устройство — или ключ с уже настроенного",
-        "sync_login_folder_short": "с папкой не нужен",
         "sync_next": "Дальше →",
         "sync_back_where": "← Другой сервер или папка",
         "sync_back_fork": "← Назад",
@@ -258,6 +256,15 @@ _STRINGS = {
         "sync_save_where": "Сохранить и включить",
         "sync_what_btn": "Что синхронизировать…",
         "sync_saved_on": "Синхронизация включена",
+        "sync_saved_where": "Адрес сохранён. Синхронизация заработает, когда у устройства "
+                            "будет ключ — следующий шаг",
+        "sync_not_yet_title": "Синхронизация ещё не работает",
+        "sync_not_yet_line": "Настройка не закончена: ниже — шаг, на котором она стоит",
+        "sync_scan_title": "Синхронизация уже работает на другом устройстве",
+        "sync_scan_line": "Отсканируй QR-код его ключа (там ≡ → Синхронизация → «Показать "
+                          "ключ»): адрес сервера придёт вместе с ключом",
+        "sync_key_scan_server": "QR-код ключа и адреса сервера: новому устройству ничего не "
+                                "надо вводить",
         "sync_cleartext": "{where}: нужен https:// — по http:// пароль и коды пошли бы "
                           "открытым текстом (http:// можно только к этому компьютеру или "
                           "к домашней сети)",
@@ -1932,7 +1939,6 @@ _STRINGS = {
         "sync_login_none": "A sync server and a shared folder need no login: the journal is "
                            "the key's (fedtail sync first / join). Logging in is for WebDAV "
                            "only",
-        "sync_login_server_short": "none needed: the journal is the key's",
         "sync_f_invite": "Invite code (for the first device)",
         "sync_f_invite_tip": "The sync server's admin gives it; needed only to make the "
                              "journal — the other devices need just the key",
@@ -2023,7 +2029,6 @@ _STRINGS = {
         "sync_step_login_what": "a one-time code from your server's page",
         "sync_step_key": "The key",
         "sync_step_key_what": "the first device — or the key from one already set up",
-        "sync_login_folder_short": "a folder needs none",
         "sync_next": "Next →",
         "sync_back_where": "← Another server or folder",
         "sync_back_fork": "← Back",
@@ -2105,6 +2110,15 @@ _STRINGS = {
         "sync_save_where": "Save and turn on",
         "sync_what_btn": "What to sync…",
         "sync_saved_on": "Sync is on",
+        "sync_saved_where": "The address is saved. Sync starts once this device has the "
+                            "key — the next step",
+        "sync_not_yet_title": "Sync doesn't work yet",
+        "sync_not_yet_line": "The setup isn't finished: the step it stands at is below",
+        "sync_scan_title": "Sync works on another device already",
+        "sync_scan_line": "Scan its key's QR code (there: ≡ → Sync → “Show the key”): the "
+                          "server's address comes with the key",
+        "sync_key_scan_server": "The QR code of the key and the server's address: the new "
+                                "device needs nothing typed",
         "sync_cleartext": "{where}: https:// is needed — over http:// the password and the "
                           "codes would go in clear (http:// only to this computer or one "
                           "at home)",

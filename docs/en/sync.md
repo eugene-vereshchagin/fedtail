@@ -87,16 +87,20 @@ needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
    `sync.webdav`) and turns sync on at once, no restart. With a server — also the **invite
    code** its admin gave you (the first device only; kept in the data folder, not the
    config).
+   Until a key is there too, the page says "Sync doesn't work yet". Sync already works on
+   another device with a server? Scan its key's QR code right at this step: the server's
+   address comes with the key, nothing to type.
 2. **Login** — to a WebDAV folder only: its user and password (with Nextcloud, better an
    app password: Settings → Security), checked there at once. A sync server and a folder
-   need none.
+   need none, and the step isn't shown for them.
 3. **The key** — a fork, what this device is:
    * **"This is my first device"** — sync isn't set up anywhere yet: the key is made
      here, and this device starts the journal (on a server — with the invite code). If a
      folder holds someone's journal already, fedtail says so and offers the other way.
    * **"I'm adding this device to those already syncing"** — on the old device
      ≡ → Sync → "Show the key": a QR code and its text — the phone scans the code
-     ("Scan the QR code" by the field), elsewhere paste the text. Or, if a "password for new
+     ("Scan the QR code" by the field), elsewhere paste the text. With a sync server the
+     code carries its address too, so the new device sets it up by itself. Or, if a "password for new
      devices" was set there, that alone, no old device needed. Neither
      at hand — "Start again with a new key…" (what was read before won't come here, and
      the other devices will have to take the new key later).

@@ -78,6 +78,30 @@ def key_from_text(text):
     return key
 
 
+LINK = "fedtail:sync-key/"
+
+
+def key_link(text, server=""):
+    """What the QR code carries: the key's text and the sync server's address, so a new
+    device scanning it needs nothing else typed. The address in the clear is no secret
+    beside the key it rides with (both on the screen of the device that shows it)."""
+    from urllib.parse import quote
+    return LINK + text + (f"?server={quote(server, safe='')}" if server else "")
+
+
+def read_key_link(text):
+    """(the key's text, the server's address or "") from key_link()'s text — or from a
+    bare key (pasted, typed): then no address."""
+    from urllib.parse import parse_qs
+    text = (text or "").strip()
+    if not text.lower().startswith(LINK):
+        return text, ""
+    rest = text[len(LINK):]
+    key, _q, query = rest.partition("?")
+    server = (parse_qs(query).get("server") or [""])[0].strip()
+    return key, server
+
+
 def seal(key, obj):
     plain = zlib.compress(json.dumps(obj, separators=(",", ":")).encode(), 6)
     head = MAGIC + key_id(key)

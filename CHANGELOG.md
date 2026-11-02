@@ -10,6 +10,14 @@
 - **Answering a follow request keeps the lane's place in the terminal and on the web page
   too**, not only in the windows: the row went, and the terminal's cursor (the web page's
   screen) went to where reading starts. The cursor (the screen) goes to the row under it.
+- **Sync no longer looks set up when it isn't.** After the server's address the page said
+  "Sync is on" and showed "✓ 2. Login to the sync server — none needed", which read as
+  logged in, with no key yet and nothing syncing. Now the address alone says "saved; sync
+  starts once this device has the key", the page says "Sync doesn't work yet" until it
+  does, and the login step is shown for a WebDAV folder only.
+- **The key's QR code carries the sync server's address.** A new device scans it — right
+  at step 1, too — and sets the server up by itself: nothing to type. A bare key (pasted)
+  works as before; a folder's or WebDAV's place stays the device's own.
 
 ## 0.22.2 — 2026-11-02
 

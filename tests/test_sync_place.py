@@ -26,7 +26,7 @@ class SyncPlaceTest(Devices):
         p = self.place(core)
         page = p.page("sync")
         self.assertEqual(page.tab, "where")  # step 1 first
-        self.assertEqual(marks(page), ["▶", "·", "·"])
+        self.assertEqual(marks(page), ["▶", "·"])  # login: a WebDAV folder's step only
         self.assertTrue(p.act("sync", "where", "", {}).error)  # nothing named
         out = p.act("sync", "where", "", {"url": "", "folder": str(self.tmp / "meet")})
         self.assertEqual(out.open, {"page": "sync"})
@@ -35,15 +35,17 @@ class SyncPlaceTest(Devices):
         self.assertEqual(written["sync"]["folder"], str(self.tmp / "meet"))
         page = p.page("sync")  # a folder: no login — on to the key, the fork
         self.assertEqual(page.tab, "key")
-        self.assertEqual(marks(page), ["✓", "✓", "▶"])
-        self.assertEqual([r.key for r in page.rows if not r.key.startswith("step:")][:2],
-                         ["first", "join"])  # nothing in the store: the first one first
+        self.assertEqual(marks(page), ["✓", "▶"])
+        rows = [r.key for r in page.rows if not r.key.startswith("step:")]
+        self.assertEqual(rows[0], "not_yet")  # said plainly: nothing syncs yet (02.11)
+        self.assertEqual(rows[1:3], ["first", "join"])  # nothing in the store: the first one first
         self.assertEqual(p.page("sync", "", "first").submit.act[1], "first")
         out = p.act("sync", "first", "")
         self.assertIn("key is ready", out.message)
         page = p.page("sync")
         self.assertEqual(page.tab, "done")
-        self.assertEqual(marks(page), ["✓", "✓", "✓"])
+        self.assertEqual(marks(page), ["✓", "✓"])
+        self.assertNotIn("not_yet", [r.key for r in page.rows])
 
     def test_one_more_device_by_password(self):
         self.desk.mark_read(["101"])
@@ -84,7 +86,8 @@ class SyncPlaceTest(Devices):
         page = p_phone.page("sync")
         self.assertEqual(page.tab, "key")
         # a journal there already: "add to those set up" first, and said why
-        self.assertEqual([r.key for r in page.rows if not r.key.startswith("step:")][:2],
+        self.assertEqual([r.key for r in page.rows
+                          if not r.key.startswith("step:") and r.key != "not_yet"][:2],
                          ["join", "first"])
         self.assertTrue(p_phone.act("sync", "first", "").error)  # not the first device
         page = p_phone.page("sync", "", "join")
@@ -120,3 +123,69 @@ class SyncPlaceTest(Devices):
         p.act("sync", "off", "", confirmed=True)
         self.assertIsNone(self.desk.sync)
         self.assertEqual(p.page("sync").tab, "where")
+
+
+@need_crypto
+class KeyWithTheServerTest(Devices):
+    """The key's QR code carries the sync server's address: a fresh device scanning it
+    needs nothing typed — no step 1 (02.11: "put the address into the QR too")."""
+
+    def setUp(self):
+        super().setUp()
+        import threading
+
+        from .test_sync import load_server, server_file
+        if server_file() is None:
+            self.skipTest("fedtail-syncserver is not checked out here")
+        mod = load_server()
+        self.app = mod.Server({"db": str(self.tmp / "s.db"), "quota_mb": 1,
+                               "listen": "127.0.0.1:0", "max_blob_kb": 64})
+        code = self.app.invite_add("tests")
+        httpd = mod.make_http_server(self.app)
+        self.url = f"http://127.0.0.1:{httpd.server_address[1]}"
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+        self.addCleanup(self.app.db.close)
+        self.desk = self.device("desk", self.world, folder="")
+        self.place(self.desk).act("sync", "where", "", {"url": self.url, "invite": code})
+        self.place(self.desk).act("sync", "first", "")
+
+    def place(self, core):
+        return Places(View(core))
+
+    def test_the_qr_brings_the_address(self):
+        from urllib.parse import quote
+        link = self.desk.sync_key_link()
+        self.assertTrue(link.startswith(crypto.LINK))
+        self.assertIn(quote(self.url, safe=""), link)
+        self.assertEqual(crypto.read_key_link(link), (self.desk.sync_key(), self.url))
+        page = self.place(self.desk).page("sync_key")
+        self.assertIn("server", next(r for r in page.rows if r.key == "qr").line)
+        # a fresh phone: nothing set up; from step 1 straight to the scan
+        phone = self.device("phone", self.world, folder="")
+        p = self.place(phone)
+        page = p.page("sync")
+        self.assertEqual(page.tab, "where")
+        self.assertIn("scan", [r.key for r in page.rows])
+        out = p.act("sync", "take", "", {"key": link})
+        self.assertFalse(out.error)
+        self.assertEqual(phone.cfg["sync"]["url"], self.url)
+        self.assertEqual(phone.sync_key(), self.desk.sync_key())
+        self.assertEqual(p.page("sync").tab, "done")
+
+    def test_a_step_one_without_a_key_does_not_say_on(self):
+        phone = self.device("phone2", self.world, folder="")
+        out = self.place(phone).act("sync", "where", "", {"url": self.url})
+        self.assertEqual(out.message, "The address is saved. Sync starts once this device "
+                                      "has the key — the next step")
+        page = self.place(phone).page("sync")
+        self.assertEqual(marks(page), ["✓", "▶"])  # no "✓ login: none needed"
+        self.assertIn("not_yet", [r.key for r in page.rows])
+
+    def test_a_bad_link_changes_nothing(self):
+        phone = self.device("phone3", self.world, folder="")
+        out = self.place(phone).act("sync", "take", "",
+                                    {"key": crypto.LINK + "NOPE?server=https%3A%2F%2Fx.test"})
+        self.assertTrue(out.error)
+        self.assertEqual(phone.cfg["sync"]["url"], "")

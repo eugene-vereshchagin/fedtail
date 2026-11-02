@@ -5,10 +5,11 @@ web page, the phone).
 The place shows where the setup stands and the one next step:
 
   1. where   — the sync server's address, a shared folder or a WebDAV folder
-               (config.toml, used at once);
-  2. login   — a WebDAV folder's user and password; a sync server needs none (its
-               journal is the key's, made with the invite code given at step 1), nor a
-               folder;
+               (config.toml, used at once) — or, with another device syncing already,
+               its key's QR code scanned: the server's address comes with it;
+  2. login   — a WebDAV folder's user and password; the step is there for WebDAV only
+               (a sync server's journal is the key's, made with the invite code given at
+               step 1; a folder needs none): a "✓ none needed" read as "logged in" (02.11);
   3. key     — the fork: "this is my first device" (the key is made here) or "I'm adding
                this device to those already syncing" (the key pasted from another
                device, or taken out of the journal with its password);
@@ -57,15 +58,15 @@ class SyncPlaces:
             ((st or {}).get("last") or {}).get("error_kind") == "invite"
 
     def _sync_steps(self, page, st, at):
-        """The three steps on top: ✓ done, ▶ now, · later — each with what it holds."""
+        """The steps on top: ✓ done, ▶ now, · later — each with what it holds; the login
+        one for a WebDAV folder only."""
         from .places import Row
-        order = list(STEPS)
-        now = order.index(at) if at in order else len(order)
         s = self.view.cfg["sync"]
+        webdav = (st or {}).get("backend") == "webdav" or (st is None and s.get("webdav"))
+        order = [x for x in STEPS if x != "login" or webdav]
+        now = order.index(at) if at in order else len(order)
         said = {"where": s.get("folder") or s.get("webdav") or s.get("url") or "",
-                "login": {"folder": _("sync_login_folder_short"),
-                          "server": _("sync_login_server_short")}.get(
-                    (st or {}).get("backend"), (st or {}).get("login") or ""),
+                "login": (st or {}).get("login") or "",
                 "key": (st or {}).get("key") or ""}
         for i, step in enumerate(order):
             mark = "✓" if i < now else ("▶" if i == now else "·")
@@ -86,11 +87,20 @@ class SyncPlaces:
                           ("done" if step == "escrow" else at)))
         s = v.cfg["sync"]
 
+        if step != "done" and st is not None and at != "done":
+            # set up partly: said plainly that nothing syncs yet (a ✓ read as "on", 02.11)
+            page.rows.append(Row("text", _("sync_not_yet_title"), _("sync_not_yet_line"),
+                                 key="not_yet"))
+
         if step == "where":
             page.hint = _("sync_where_hint")
             if self._invite_wanted(st):  # why the page stands here: said on top of it
                 page.rows.append(Row("text", _("sync_invite_needed_title"),
                                      _("sync_invite_needed_line"), key="invite"))
+            if not self._invite_wanted(st):  # another device syncs: its QR says where too
+                page.rows.append(Row("item", _("sync_scan_title"), _("sync_scan_line"),
+                                     key="scan", buttons=(self._btn(
+                                         _("sync_join_btn"), "sync", "goto", "join"),)))
             page.form = (Field("url", _("sync_f_url"), str(s.get("url") or ""),
                                tip=_("sync_f_url_tip")),
                          Field("invite", _("sync_f_invite"), "", tip=_("sync_f_invite_tip")),
@@ -206,7 +216,10 @@ class SyncPlaces:
             if done:
                 return Out(message=_("sync_round", sent=done[0], got=done[1]),
                            open={"page": "sync"})
-        return Out(message=_("sync_saved_on"), open={"page": "sync"})
+        # "Sync is on" said with no key yet read as done (02.11): on only once it can run
+        _st, at = self._sync_state()
+        return Out(message=_("sync_saved_on") if at == "done" else _("sync_saved_where"),
+                   open={"page": "sync"})
 
     def _a_sync_dav(self, _d, values, _c, _ans):
         from .places import Out
@@ -270,8 +283,13 @@ class SyncPlaces:
         page = Page("sync_key", _("sync_key_title"), hint=_("sync_key_hint"),
                     empty=_("sync_key_none"))
         if key:
-            page.rows.append(Row("qr", line=_("sync_key_scan_line"), key="qr",
-                                 data=qr.rows(qr.matrix(key))))
+            link = self.view.sync_key_link() or key
+            try:  # the key and the server's address: the new device types nothing
+                code = qr.matrix(link)
+            except qr.TooLong:  # an address too long for it: the key alone
+                link, code = key, qr.matrix(key)
+            page.rows.append(Row("qr", line=_("sync_key_scan_server") if link != key
+                                 else _("sync_key_scan_line"), key="qr", data=qr.rows(code)))
             page.rows.append(Row("pre", key, key="text", buttons=(
                 self._btn(_("sync_key_copy"), "sync", "copykey"),)))
         page.more = Btn(_("sync_back_done"), ("sync", "goto", "done"))

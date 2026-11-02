@@ -16,9 +16,30 @@ class SyncMixin:
         from .sync import engine
         return engine.shown_key(self)
 
+    def sync_key_link(self):
+        """What the key's QR code carries: the key, and the server's address when the
+        devices meet at a sync server (a folder's or a WebDAV folder's place is this
+        device's own business: a path here, a login there) — the new device scanning it
+        needs nothing else. None — no key yet."""
+        from .sync import crypto
+        key = self.sync_key()
+        if not key:
+            return None
+        server = str(self.cfg["sync"].get("url") or "").strip()
+        if not server or self.sync is None or self.sync.kind() != "server":
+            return key  # nothing to bring along: the key as it always was
+        return crypto.key_link(key, server)
+
     def sync_join(self, text):
-        from .sync import engine
-        return engine.join(self, text)
+        """Take the account's key from another device: its text, or what its QR code
+        carries — then with the server's address, set up here first when it differs.
+        → the key's id. ValueError: not a key (nothing changed)."""
+        from .sync import crypto, engine
+        key, server = crypto.read_key_link(text)
+        crypto.key_from_text(key)  # a bad key: refused before anything is changed
+        if server and server != str(self.cfg["sync"].get("url") or "").strip():
+            self.sync_setup(url=server, folder="", webdav="")
+        return engine.join(self, key)
 
     def sync_put_escrow(self, password):
         """This device's key into the journal under a password: another device takes it
