@@ -7,8 +7,8 @@
 
 ## What's next
 
-- **Update check.** Once a day fedtail asks the project's website whether a newer
-  version is out (`updates.check`, `updates.url`, `updates.every_hours`); all that goes
+- **Update check.** At start (the first run after an install too, before any login) and
+  then once a day fedtail asks the project's website whether a newer version is out (`updates.check`, `updates.url`, `updates.every_hours`); all that goes
   there is this version, the interface and the system — no account, no token, no id. A
   newer one is a row in Activity, "FedTail 0.22.4 — a new version is out", its name
   leading to the release's page; a lane of rules takes it as `event = "release"`. About

@@ -319,6 +319,7 @@ def main(argv=None):
     if ui == "tui":
         diag.quiet_console()
     core = Core(cfg, where)
+    core.check_updates_at_start()  # the first run after an install too, before the login
     core.new_options = new_options
     core.open_at_start = open_url  # `fedtail open URL` with no window yet: once it's up
     core, held = merge_accounts(core, where.profile)

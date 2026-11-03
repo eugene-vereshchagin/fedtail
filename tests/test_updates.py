@@ -112,6 +112,21 @@ class CheckTest(Devices):
         self.assertEqual([b.label for b in row.buttons], ["Open in browser", "Check now"])
         self.assertIn("Updates: A new version", about.facts(View(self.desk)).text())
 
+    def test_the_first_start_asks_at_once(self):
+        """The program's start (before any login: no server yet) asks when due, in the
+        background; asked already today, or a made-up world — not."""
+        submitted = []
+        self.desk.bg = mock.Mock(submit=lambda fn: submitted.append(fn))
+        self.desk.store.kv_set("updates.at", None)
+        self.desk.check_updates_at_start()
+        self.assertEqual(submitted, [])  # example.test
+        self.desk._own_hosts = lambda: set()  # a new install: no account yet
+        self.desk.check_updates_at_start()
+        self.assertEqual(submitted, [self.desk.check_updates])
+        self.desk.store.kv_set("updates.at", __import__("time").time())
+        self.desk.check_updates_at_start()
+        self.assertEqual(len(submitted), 1)
+
     def test_once_a_day_and_the_switch(self):
         self.desk.store.kv_set("updates.at", None)
         self.assertFalse(self.desk.updates_due())  # example.test: a made-up world, quiet

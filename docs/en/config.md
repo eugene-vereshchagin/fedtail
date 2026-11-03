@@ -447,7 +447,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
-| `updates.check` | `true` | Once a day fedtail asks the project's website whether a newer version is out; if so, Activity says it ("FedTail 0.22.4 — a new version is out"), its name leading to the release's page, and About too. What goes there: this version, the interface and the system, nothing else — no account, no token, no id. false — never asked. |
+| `updates.check` | `true` | At start and then once a day fedtail asks the project's website whether a newer version is out; if so, Activity says it ("FedTail 0.22.4 — a new version is out"), its name leading to the release's page, and About too. What goes there: this version, the interface and the system, nothing else — no account, no token, no id. false — never asks by itself (About's "Check now" still works). |
 | `updates.url` | `"https://fedtail.dmesg.online/update"` | Where to ask (the answer: {"version": "X.Y.Z"}). |
 | `updates.every_hours` | `24` | How often, hours. |
 

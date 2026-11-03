@@ -140,6 +140,7 @@ def _make(demo):
         _s["logging"] = True
         _earlier_crash(diag)
     core = Core(cfg, where, **kw)
+    core.check_updates_at_start()  # the first run after an install too, before the login
     held = []
     if not demo:  # "all accounts in one window" (ui.merge or the menu): the desktop's way
         from fedtail.__main__ import merge_accounts

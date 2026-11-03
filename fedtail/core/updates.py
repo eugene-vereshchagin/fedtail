@@ -1,6 +1,7 @@
-"""Is a newer fedtail out? Once a day (updates.every_hours) the project's website is
-asked (updates.url): no token, no account, no id of any kind — the version, the
-interface and the system in the address, as the User-Agent says them anyway. A newer
+"""Is a newer fedtail out? At the program's start (the first run too, before the login)
+and then once a day (updates.every_hours) the project's website is asked (updates.url):
+no token, no account, no id of any kind — the version, the interface and the system in
+the address, as the User-Agent says them anyway. A newer
 release is a row of Activity ("FedTail 0.22.4 — a new version is out"), its name leading
 to the release's page; About says what the last answer was and checks at once on its
 button. updates.check = false — never asked by itself."""
@@ -66,6 +67,13 @@ class UpdatesMixin:
             return False
         every = max(1, int(u.get("every_hours") or 24)) * 3600
         return time.time() - float(self.store.kv_get("updates.at") or 0) >= every
+
+    def check_updates_at_start(self):
+        """At the program's start, before any login, when due: the first run after an
+        install asks at once, not after the first round (fedtail/__main__.py, the
+        phone's bridge). In the background."""
+        if self.updates_due():
+            self.bg.submit(self.check_updates)
 
     def check_updates(self):
         """Ask the website once (the poll calls it when due, in the background): → the

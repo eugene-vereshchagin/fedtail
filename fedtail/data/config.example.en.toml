@@ -1492,10 +1492,11 @@ proxy_at_login = false
 signup_url = "https://joinmastodon.org/servers"
 
 [updates]
-# Once a day fedtail asks the project's website whether a newer version is out; if so,
-# Activity says it ("FedTail 0.22.4 — a new version is out"), its name leading to the
-# release's page, and About too. What goes there: this version, the interface and the
-# system, nothing else — no account, no token, no id. false — never asked.
+# At start and then once a day fedtail asks the project's website whether a newer
+# version is out; if so, Activity says it ("FedTail 0.22.4 — a new version is out"), its
+# name leading to the release's page, and About too. What goes there: this version, the
+# interface and the system, nothing else — no account, no token, no id. false — never
+# asks by itself (About's "Check now" still works).
 check = true
 
 # Where to ask (the answer: {"version": "X.Y.Z"}).
