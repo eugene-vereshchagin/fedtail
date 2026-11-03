@@ -209,7 +209,7 @@ details.en = "Steps marked ✓ / ▶ / ·: where the devices meet (a server's ad
 id = "sync-devices"
 status = "has"
 android = "has"
-since = "next"
+since = "0.22.3"
 name.ru = "«Подключилось устройство» в Активности — на нём и на остальных"
 name.en = "\"A device joined\" in Activity — on it and on the others"
 config.ru = "`sync.device_name`; `event = \"device\"`; не выключается"

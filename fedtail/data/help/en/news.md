@@ -5,14 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.22.3:**
 
 - "A device joined" in Activity — on it and on the others
 - Update check: a newer version as a row of Activity; "Check now" in About
-
-**0.22.2:**
-
-- No account? — where to get one, right on the login screen
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

@@ -5,7 +5,18 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.3 — 2026-11-03
+
+**In short: fedtail tells you when a new version is out, and sync is easier to set up.**
+At start and once a day fedtail asks the project's website whether a newer version is out
+(this version, the interface and the system — nothing else; `updates.check`), says so in
+Activity and in About, where "Check now" asks at once. Sync no longer looks set up when it
+isn't, the key's QR code brings the server's address with it (the phone scans it at step
+1 and needs nothing typed), and a device joining sync is said in Activity on every device.
+Answering a follow request keeps the lane's place in the terminal and on the web page too.
+
+<!-- For the site's builder (an agent): a release of the 0.22 branch, together with
+     fedtail-sync 0.22.3 (the same server under the new number; protocol 2). -->
 
 - **Update check.** At start (the first run after an install too, before any login) and
   then once a day fedtail asks the project's website whether a newer version is out (`updates.check`, `updates.url`, `updates.every_hours`); all that goes

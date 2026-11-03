@@ -171,7 +171,7 @@ details.en = "A server behind a proxy is down — instead of Cloudflare's HTML p
 id = "update-check"
 status = "has"
 android = "has"
-since = "next"
+since = "0.22.3"
 name.ru = "Проверка обновлений: новая версия — строкой в Активности; «Проверить сейчас» в «О программе»"
 name.en = "Update check: a newer version as a row of Activity; \"Check now\" in About"
 config = "`updates.check`, `updates.url`, `updates.every_hours`; `event = \"release\"`"

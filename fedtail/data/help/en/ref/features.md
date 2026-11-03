@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.2 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.3**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -277,7 +277,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Sync: WebDAV spoken directly, the journal packed | has | 0.22.0 | `sync.webdav`, `sync.webdav_user` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
-| "A device joined" in Activity — on it and on the others | has | next | `sync.device_name`; `event = "device"`; can't be turned off | own: the device's name in every batch of the journal (sealed by the key) | only in fedtail |
+| "A device joined" in Activity — on it and on the others | has | 0.22.3 | `sync.device_name`; `event = "device"`; can't be turned off | own: the device's name in every batch of the journal (sealed by the key) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
 
 <details><summary>In detail</summary>
@@ -734,7 +734,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.keep_hidden_lanes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |
 | Polling the server and the live stream | has | 0.9.0 | `[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds` | streaming (WebSocket) | Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes |
 | Errors in plain words and without spam | has | 0.13.0 | — | own | — |
-| Update check: a newer version as a row of Activity; "Check now" in About | has | next | `updates.check`, `updates.url`, `updates.every_hours`; `event = "release"` | own: the project's website, {"version": "X.Y.Z"} | — |
+| Update check: a newer version as a row of Activity; "Check now" in About | has | 0.22.3 | `updates.check`, `updates.url`, `updates.every_hours`; `event = "release"` | own: the project's website, {"version": "X.Y.Z"} | — |
 | A detailed log for bug reports | has | 0.2.0 | `[debug]`, the launch keys `--debug`, `--bug-report` | own | — |
 | A bug report straight into your private repository | has | 0.19.0 | `debug.report_repo`, `tools/selfcheck.py --send` | — | — |
 | Report a bug on GitHub — checked first | has | 0.19.0 | `debug.issue_repo` | — | Fedilab, Tusky (a mail to the developer) |
