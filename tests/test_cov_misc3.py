@@ -195,6 +195,20 @@ class ModelTextTest(unittest.TestCase):
         self.assertEqual(mtext.snippet_html("<p>" + "word " * 50 + "</p>", 20)[-1], "…")
         self.assertEqual(mtext.without_quote_fallback(None), "")
 
+    def test_every_servers_quote_fallback_goes(self):
+        """The "RE: <link>" line in each server's shape: gone (the quote drawn under it
+        says it); a "RE:" in the words themselves stays."""
+        link = '<a href="https://x.example/notes/1">https://x.example/notes/1</a>'
+        for html, left in (
+                (f'<p>words</p><p class="quote-inline">RE: {link}</p>', "<p>words</p>"),
+                (f'<p>words<br><br><span class="quote-inline">RE: {link}</span></p>',
+                 "<p>words</p>"),
+                (f"<p>words</p><p>RE: {link}</p>", "<p>words</p>"),
+                (f'<p class="quote-inline">RE: {link}</p>', "")):
+            self.assertEqual(mtext.without_quote_fallback(html), left, html)
+        kept = f"<p>RE: {link} is what I said</p><p>more</p>"
+        self.assertEqual(mtext.without_quote_fallback(kept), kept)
+
     def test_tag_stuffing_without_links_stays(self):
         html = "<p>#a #b #c #d #e</p>"
         self.assertEqual(mtext.collapse_tag_stuffing(html), html)

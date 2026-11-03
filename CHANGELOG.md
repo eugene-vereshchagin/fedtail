@@ -7,6 +7,11 @@
 
 ## What's next
 
+- **A quote no longer says "RE: <link>" twice.** The line servers add for clients that
+  can't show quotes went only in Mastodon's shape; Misskey's and Sharkey's (a span after
+  line breaks) and Mitra's (a plain last paragraph) stayed above the quote drawn under
+  them — in every interface.
+
 - **Phone: the interface's language is the app's too.** `ui.language` switched only the
   core's words; the app's own (its buttons, menus, dialogs) stayed in the phone's
   language. On Android 13+ the app now takes the language set (and offers fedtail's two

@@ -119,13 +119,22 @@ def matches(query, hay):
 
 
 # ---- shaping a post's HTML -----------------------------------------------------------
-_QUOTE_FALLBACK = re.compile(r'<p class="quote-inline">.*?</p>', re.S | re.I)
+# each server's way of it: Mastodon's paragraph, Misskey's and Sharkey's span (after line
+# breaks, inside the last paragraph), Mitra's and others' plain last paragraph "RE: <a>"
+_QUOTE_FALLBACK = (
+    re.compile(r'<p class="quote-inline">.*?</p>', re.S | re.I),
+    re.compile(r'(?:<br\s*/?>\s*)*<span class="quote-inline">.*?</span>', re.S | re.I),
+    re.compile(r'<p>\s*RE:\s*<a\b[^>]*>.*?</a>\s*</p>\s*$', re.S | re.I),
+)
 
 
 def without_quote_fallback(content):
-    """The "RE: <link>" paragraph servers add for clients that can't show quotes: gone
-    when fedtail shows the quote itself."""
-    return _QUOTE_FALLBACK.sub("", content or "")
+    """The "RE: <link>" line servers add for clients that can't show quotes: gone when
+    fedtail shows the quote itself — else the quote is said twice."""
+    content = content or ""
+    for pattern in _QUOTE_FALLBACK:
+        content = pattern.sub("", content)
+    return content.replace("<p></p>", "")
 
 
 _PARA = re.compile(r"<p>(.*?)</p>", re.S)
