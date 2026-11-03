@@ -269,11 +269,18 @@ class LaneStoodTest(unittest.TestCase):
         view._touched_at = __import__("time").monotonic()  # read by hand, as a reader
         view._target = None
         # 116 whole at the screen's bottom, the one over it cut by the top
-        view.verticalScrollBar().setValue(view._ys["116"] + view.strip.height("116")
-                                          - view.viewport().height() + 4)
-        self.pump(0.1)
-        view._emit_seen()
+        # the layout settled first (a picture's height coming in moves the cards under
+        # the scroll: measured mid-way, the card read was off by one under load)
+        for _ in range(20):
+            view.verticalScrollBar().setValue(view._ys["116"] + view.strip.height("116")
+                                              - view.viewport().height() + 4)
+            self.pump(0.1)
+            self.pump(until=lambda: not view._pending)
+            want = view._ys["116"] + view.strip.height("116") - view.viewport().height() + 4
+            if view.verticalScrollBar().value() == want:
+                break
         vtop, vh = view.verticalScrollBar().value(), view.viewport().height()
+        view._emit_seen()
         got = self.core.get_state("stood.home")
         # the last card seen whole, not the one on top, cut: what was read last
         self.assertGreaterEqual(view._ys[got], vtop - 2)
