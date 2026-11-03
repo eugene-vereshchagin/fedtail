@@ -7,6 +7,9 @@
 
 ## What's next
 
+- **The apt repository is in the README**: two lines add it (signed), and fedtail comes
+  with the system's updates on Debian and Ubuntu. It has been there since 0.22, unsaid.
+
 - **A quote no longer says "RE: <link>" twice.** The line servers add for clients that
   can't show quotes went only in Mastodon's shape; Misskey's and Sharkey's (a span after
   line breaks) and Mitra's (a plain last paragraph) stayed above the quote drawn under

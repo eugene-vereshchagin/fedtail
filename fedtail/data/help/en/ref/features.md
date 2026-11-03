@@ -851,7 +851,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Deb packages, one per interface | has | 0.10.0 | built in CI on Debian 13; since 0.22 `fedtail-common` (the program, no toolkit), `fedtail-qt`, `fedtail-gtk`, `fedtail-tui` and `fedtail` (the program and a window: Qt or GTK) — GNOME pulls no Qt, KDE no GTK; each way of installing tried in a clean Debian; with Qt and GTK both, the GTK window is an action of the menu entry (“FedTail (GTK)”, right click) |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
 | A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`window.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
-| An apt repository of its own | partly — CI builds and signs it after every release — once the repository has the key (APT_GPG_KEY) and GitHub Pages is on for the `apt` branch | 0.20.0 | from the releases' deb packages (`packaging/apt_repo.py`) |
+| An apt repository of its own | has | 0.20.0 | CI puts every release's deb packages into it and signs it (`packaging/apt_repo.py`); how to add it — in the README |
 | An installer for Windows (and a signature) | has | 0.20.0 | `fedtail-X.Y.Z-windows-setup.exe` (Inno Setup): for you alone, no administrator, a Start menu entry, an uninstaller; signed once CI has a certificate |
 
 ---

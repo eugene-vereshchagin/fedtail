@@ -18,6 +18,14 @@
 
 **Скачать:** один файл, ничего не надо ставить — [последний релиз](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` для Linux, `fedtail-…-windows.exe` для Windows ([как запустить](#одним-файлом-без-установки)); для Debian 13 и родни — `.deb`: `sudo apt install ./fedtail_…_all.deb ./fedtail-common_…_all.deb ./fedtail-qt_…_all.deb` поставит Qt из Debian и добавит fedtail в меню; в GNOME, без Qt — `./fedtail-common_…_all.deb ./fedtail-gtk_…_all.deb`; `fedtail-tui` добавит терминал. Или [из исходников](#запуск-из-исходников).
 
+**Debian и Ubuntu, с обновлениями вместе с системой:** свой apt-репозиторий fedtail, подписанный (`fedtail` — с Qt; в GNOME — `fedtail-gtk`; `fedtail-tui` — терминал):
+
+```sh
+sudo curl -fsSL https://eugene-vereshchagin.github.io/fedtail/fedtail.gpg -o /usr/share/keyrings/fedtail.gpg
+echo "deb [signed-by=/usr/share/keyrings/fedtail.gpg] https://eugene-vereshchagin.github.io/fedtail stable main" | sudo tee /etc/apt/sources.list.d/fedtail.list
+sudo apt update && sudo apt install fedtail
+```
+
 [English version](README.md)
 
 > **Статус: публичная бета.** Автор пользуется каждый день на GoToSocial; Mastodon, Akkoma и

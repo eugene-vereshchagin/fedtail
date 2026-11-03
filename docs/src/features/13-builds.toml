@@ -65,17 +65,15 @@ note.en = "by itself when a window starts (`window.desktop_entry`), or `--instal
 
 [[feature]]
 id = "apt-repo"
-status = "partly"
+status = "has"
 android = "na"
 android_note.ru = "на телефоне не нужно"
 android_note.en = "not a phone thing"
 since = "0.20.0"
 name.ru = "Свой apt-репозиторий"
 name.en = "An apt repository of its own"
-status_note.ru = "CI собирает и подписывает его после каждого релиза — когда в репозитории будет ключ (APT_GPG_KEY) и включён GitHub Pages для ветки `apt`"
-status_note.en = "CI builds and signs it after every release — once the repository has the key (APT_GPG_KEY) and GitHub Pages is on for the `apt` branch"
-note.ru = "из deb-пакетов релизов (`packaging/apt_repo.py`)"
-note.en = "from the releases' deb packages (`packaging/apt_repo.py`)"
+note.ru = "CI кладёт в него deb-пакеты каждого релиза и подписывает (`packaging/apt_repo.py`); как подключить — в README"
+note.en = "CI puts every release's deb packages into it and signs it (`packaging/apt_repo.py`); how to add it — in the README"
 
 [[feature]]
 id = "windows-installer"

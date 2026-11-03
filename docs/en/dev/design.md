@@ -83,10 +83,10 @@ find. Next, roughly in order:
    private messages as a lane of their own, "My likes", polls, scheduled posts, translation,
    pinned posts, reports, blocking servers, notes, the bell, j/k; ActivityPub —
    the outbox and followers from the author's server, Mastodon-Async-Refresh. Each one is a config flag.
-8. **Frontends:** ~~CLI~~ (0.9) → ~~TUI~~ (0.10) → GTK4 → ~~web~~ (0.10) → Toga.
+8. **Frontends:** ~~CLI~~ (0.9) → ~~TUI~~ (0.10) → ~~GTK4~~ (0.17) → ~~web~~ (0.10) → ~~Android~~ (0.19) → Toga (to try).
 9. ~~A one-file build~~ — done: PyInstaller in CI, `fedtail-X.Y.Z-linux-x86_64` (built on
    Debian 12) and `fedtail-X.Y.Z-windows.exe` in every release; `packaging/build.py`.
-10. **Deb packages** — one per interface since 0.22, so each toolkit comes only with the
+10. ~~**Deb packages**~~ — done: one per interface since 0.22, so each toolkit comes only with the
    package that wants it. Built in CI (a Debian 13 container), each way of installing them
    tried in a clean one (`deb-install`), attached to the release and put into the apt
    repository. `fedtail-common` — the program (all the code, the web page, the menu

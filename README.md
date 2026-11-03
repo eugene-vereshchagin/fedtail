@@ -18,6 +18,14 @@ where you came from; a lane remembers where you stopped and never jumps.
 
 **Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)); for Debian 13 and the like, the `.deb`s: `sudo apt install ./fedtail_…_all.deb ./fedtail-common_…_all.deb ./fedtail-qt_…_all.deb` brings Qt from Debian and puts fedtail in the menu; on GNOME, without Qt — `./fedtail-common_…_all.deb ./fedtail-gtk_…_all.deb`; `fedtail-tui` adds the terminal. Or [run it from the source](#running-from-source).
 
+**Debian and Ubuntu, updated with the system:** fedtail's own apt repository, signed (`fedtail` — with Qt; on GNOME `fedtail-gtk`; `fedtail-tui` — the terminal):
+
+```sh
+sudo curl -fsSL https://eugene-vereshchagin.github.io/fedtail/fedtail.gpg -o /usr/share/keyrings/fedtail.gpg
+echo "deb [signed-by=/usr/share/keyrings/fedtail.gpg] https://eugene-vereshchagin.github.io/fedtail stable main" | sudo tee /etc/apt/sources.list.d/fedtail.list
+sudo apt update && sudo apt install fedtail
+```
+
 [Русскоязычная версия](README.ru.md)
 
 > **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and
