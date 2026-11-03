@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.22.3 — 2026-11-03
 
 **In short: fedtail tells you when a new version is out, and sync is easier to set up.**
