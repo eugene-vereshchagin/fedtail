@@ -444,6 +444,7 @@ class AnsweredRequestTest(Base):
             self.assertEqual(posts.highlighted_child.key, rows[3])
 
 
+@unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
 class ActivityRequestsTest(Base):
     """Activity and Requests are lanes like any other (lanes of events only, 0.22): drawn
     by the lane model, an event's row the windows' parts, each action a fedtail: link."""
