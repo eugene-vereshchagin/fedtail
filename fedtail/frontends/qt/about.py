@@ -103,6 +103,28 @@ QLabel#aboutSmall {{ color: {k('muted')}; font-size: 8.5pt; }}
             r.addWidget(right, 1)
             lay.addWidget(row)
 
+        if a.update[0]:  # what the website said last, "Check now", the release's page
+            row = _card("aboutRow")
+            r = QHBoxLayout(row)
+            r.setContentsMargins(12, 7, 12, 7)
+            left = QLabel(_("about_updates"))
+            left.setObjectName("aboutMuted")
+            left.setMinimumWidth(130)
+            r.addWidget(left)
+            self.update_words = QLabel(a.update[0])
+            self.update_words.setWordWrap(True)
+            r.addWidget(self.update_words, 1)
+            self.release = QPushButton(_("open_browser"))
+            self.release.setObjectName("primary")
+            self.release.clicked.connect(self._release)
+            r.addWidget(self.release)
+            self.check = QPushButton(_("about_check"))
+            self.check.setObjectName("tool")
+            self.check.clicked.connect(self.check_now)
+            r.addWidget(self.check)
+            self._show_update(a.update)
+            lay.addWidget(row)
+
         made = QLabel(a.made_by)
         made.setObjectName("aboutMuted")
         made.setWordWrap(True)
@@ -138,6 +160,26 @@ QLabel#aboutSmall {{ color: {k('muted')}; font-size: 8.5pt; }}
     def copy(self):
         QGuiApplication.clipboard().setText(self.facts.text())
         self.copied.setText(_("about_copied"))
+
+    def _show_update(self, update):
+        self.facts.update = update
+        self.update_words.setText(update[0])
+        self.release.setVisible(bool(update[1]))
+
+    def _release(self):
+        from ...core.updates import release_page
+        self._link(release_page(self.facts.update[1]))
+
+    def check_now(self):
+        """The website asked at once (a worker), the row redrawn with its answer."""
+        view = self.win.ctx.view
+        self.check.setEnabled(False)
+
+        def done(_st):
+            self.check.setEnabled(True)
+            self._show_update(facts_of.update_line(view))
+        self.win.bridge.call(self.win.core.submit(view.check_updates_now), ok=done,
+                             fail=lambda _e: done(None))
 
     def _link(self, url):
         self.accept()

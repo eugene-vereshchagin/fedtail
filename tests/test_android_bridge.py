@@ -593,6 +593,25 @@ class BridgePlacesTest(_Base):
         self.assertTrue(all("text" in p for p in posts))
         self.assertIn("error", json.loads(self.bridge.page("nowhere")))
 
+    def test_about_checks_for_updates(self):
+        """About on the phone (the common place): the "Updates" row, "Check now" asks
+        the website at once — but never from the demo's made-up world."""
+        self.demo()
+        row = next(r for r in self.call("page", "about")["rows"] if r["key"] == "update")
+        self.assertIn("Not checked yet", row["title"])
+        self.assertEqual([b["label"] for b in row["buttons"]], ["Check now"])
+        asked = []
+        with mock.patch("fedtail.core.remote.get_json",
+                        lambda *a, **k: asked.append(a) or {"version": "9.0.0"}):
+            got = self.call("place_act", json.dumps(["about", "check", ""]))
+            self.assertEqual(asked, [])  # example.test: not counted
+            self.assertIn("Not checked yet", got["message"])
+            self.bridge._s["core"]._own_hosts = lambda: {"social.real-server.org"}
+            got = self.call("place_act", json.dumps(["about", "check", ""]))
+        self.assertTrue(got["message"].startswith("A new version is out: 9.0.0"))
+        row = next(r for r in self.call("page", "about")["rows"] if r["key"] == "update")
+        self.assertEqual(len(row["buttons"]), 2)
+
     def test_a_cards_whole_menu(self):
         self.demo()
         m = self.call("post_menu", "103")

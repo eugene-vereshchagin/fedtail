@@ -1335,7 +1335,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def about(self):
         """About fedtail: the same cards as Qt's (gtk/about.py, common/about.py)."""
         from .about import show
-        show(self)
+        return show(self)
 
     # ---- ↔ and ❯ ------------------------------------------------------------------------
     def set_full_width(self, on):

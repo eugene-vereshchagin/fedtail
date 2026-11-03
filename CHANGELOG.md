@@ -11,8 +11,10 @@
   version is out (`updates.check`, `updates.url`, `updates.every_hours`); all that goes
   there is this version, the interface and the system — no account, no token, no id. A
   newer one is a row in Activity, "FedTail 0.22.4 — a new version is out", its name
-  leading to the release's page, and a line in About; a lane of rules takes it as
-  `event = "release"`.
+  leading to the release's page; a lane of rules takes it as `event = "release"`. About
+  has an "Updates" row in every interface: what the website said last and when ("you have
+  the latest version · checked 10:15", a newer one with its page, "couldn't check"),
+  and "Check now", which asks at once even with `updates.check` off.
 - **Answering a follow request keeps the lane's place in the terminal and on the web page
   too**, not only in the windows: the row went, and the terminal's cursor (the web page's
   screen) went to where reading starts. The cursor (the screen) goes to the row under it.

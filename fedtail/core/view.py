@@ -80,6 +80,7 @@ PASS = {
     "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_key_link", "sync_join", "sync_now", "sync_status",
     "update_out",  # a plain version string: a newer fedtail out (core/updates.py)
+    "update_status", "check_updates_now",  # plain dicts: About's "Updates" row
     "pause_polling",  # the phone's app out of sight
     "poll_state",  # plain {"busy", "ok_at", "failing"}: "updating…", "updated at 14:32"
     # the phone's tiles: plain lane names (sync.tiles carries them)

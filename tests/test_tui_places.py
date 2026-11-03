@@ -61,6 +61,30 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                        ].index(sid)
         await pilot.pause(0.1)
 
+    async def test_about_checks_for_updates(self):
+        """About's "Updates" row: its button (key 1) asks the website at once and the
+        row says the answer, as the windows' About does."""
+        from unittest import mock
+
+        from fedtail.frontends.tui.app import FedtailApp
+        from fedtail.frontends.tui.screens import PlaceScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, text="bob's", vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(140, 48)) as pilot:
+            await self.start(pilot, app, core)
+            core._own_hosts = lambda: {"social.real-server.org"}  # not a made-up world
+            app.open_thing({"page": "about"})
+            await self.wait(pilot, lambda: isinstance(app.screen, PlaceScreen) and
+                            app.screen.page is not None, what="about")
+            row = next(r for r in app.screen.page.rows if r.key == "update")
+            self.assertIn("Not checked yet", row.title)
+            with mock.patch("fedtail.core.remote.get_json",
+                            lambda *a, **k: {"version": "9.0.0"}):
+                await app.screen.act(row.buttons[0])
+            await self.wait(pilot, lambda: "9.0.0" in next(
+                r for r in app.screen.page.rows if r.key == "update").title, what="answer")
+
     async def test_post_menu_profile_editor_places(self):
         from fedtail.frontends.tui.app import FedtailApp, ProfileScreen
         from fedtail.frontends.tui.screens import (

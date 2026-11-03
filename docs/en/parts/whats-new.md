@@ -1,7 +1,7 @@
 **What's next:**
 
 - "A device joined" in Activity — on it and on the others
-- Update check: a newer version as a row of Activity
+- Update check: a newer version as a row of Activity; "Check now" in About
 
 **0.22.2:**
 

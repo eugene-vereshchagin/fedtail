@@ -788,6 +788,19 @@ class GtkSmokeTest(_GtkBase):
         self.assertIn(i18n._("made_by_long"), words)
         new[0].close()
 
+    def test_about_checks_for_updates_now(self):
+        """About's "Updates" row: "Check now" asks the website at once, the row says
+        the answer and offers the release's page (as Qt's, as the common place's)."""
+        from unittest import mock
+        self.core._own_hosts = lambda: {"social.real-server.org"}  # not made up
+        dlg = self.win.about()
+        self.assertEqual(dlg._update_words.get_text(), i18n._("about_upd_never"))
+        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "9.0.0"}):
+            dlg._update_check.emit("clicked")
+            self.assertTrue(pump(lambda: "9.0.0" in dlg._update_words.get_text(), 5))
+        self.assertTrue(dlg._update_check.get_sensitive())
+        dlg.close()
+
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
         ed = self.win.edit_profile()

@@ -87,6 +87,23 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.1)
         self._tmp.cleanup()
 
+    def test_about_checks_for_updates_now(self):
+        """About's "Updates" row: "Check now" asks the website at once, the row says
+        the answer and offers the release's page (as GTK's, as the common place's)."""
+        from unittest import mock
+
+        from fedtail.frontends.qt.about import AboutDialog
+        self.core._own_hosts = lambda: {"social.real-server.org"}  # not made up
+        dlg = AboutDialog(self.win)
+        self.assertEqual(dlg.update_words.text(), i18n._("about_upd_never"))
+        self.assertTrue(dlg.release.isHidden())
+        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "9.0.0"}):
+            dlg.check.click()
+            self.pump(until=lambda: "9.0.0" in dlg.update_words.text())
+        self.assertFalse(dlg.release.isHidden())
+        self.assertTrue(dlg.check.isEnabled())
+        dlg.reject()
+
     def pump(self, seconds=0.0, until=None, timeout=5.0):
         end = time.time() + (timeout if until else seconds)
         while time.time() < end:

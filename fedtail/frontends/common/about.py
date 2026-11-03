@@ -11,6 +11,7 @@ from __future__ import annotations
 import platform
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from ...i18n import _
 
@@ -23,12 +24,15 @@ class About:
     rows: list = field(default_factory=list)    # [(label, value)]: one to a row
     made_by: str = ""
     links: list = field(default_factory=list)   # [(words, url)]
+    update: tuple = ("", None)  # the "Updates" row and its button: (words, newer or None)
 
     def text(self):
         """Everything above as plain lines: for the clipboard, a bug report, a chat."""
         from ... import version as _version
         out = [f"{_version.NAME} {self.version}"]
         out += [f"{k}: {v}" for k, v in self.tiles + self.rows if v]
+        if self.update[0]:
+            out.append(f"{_('about_updates')}: {self.update[0]}")
         return "\n".join(out)
 
 
@@ -58,6 +62,37 @@ def _accounts(view):
     from ...core.merged import full_handle
     h = full_handle(core)
     return [h] if h else []
+
+
+def _when(epoch):
+    """Epoch seconds → '10:15' today, '02.11 10:15' before."""
+    t = datetime.fromtimestamp(epoch).astimezone()
+    today = datetime.now().astimezone().date()
+    return t.strftime("%H:%M") if t.date() == today else t.strftime("%d.%m %H:%M")
+
+
+def update_line(view):
+    """About's "Updates" row: (words, the newer version or None) — what the website
+    said last (core/updates.py), when, and whether it is asked by itself."""
+    fn = getattr(view, "update_status", None) or getattr(
+        getattr(view, "_core", None), "update_status", None)
+    try:
+        st = fn() if fn else None
+    except Exception:  # noqa: BLE001 — About must open whatever the store says
+        st = None
+    if not st:
+        return "", None
+    if not st["at"]:
+        words = _("about_upd_never")
+    elif st["newer"]:
+        words = _("about_update", v=st["latest"]) + " · " + _("about_upd_at", time=_when(st["at"]))
+    elif st["ok"]:
+        words = _("about_upd_latest", time=_when(st["at"]))
+    else:
+        words = _("about_upd_failed", time=_when(st["at"]))
+    if not st["on"]:
+        words += " · " + _("about_upd_off")
+    return words, st["latest"] if st["newer"] else None
 
 
 def facts(view, toolkit="", toolkit_version=""):
@@ -99,7 +134,8 @@ def facts(view, toolkit="", toolkit_version=""):
         rows.append((_("about_data"), str(paths.data_dir)))
     a.rows = rows
     a.links = [("GitHub", version.HOMEPAGE), (version.AUTHOR, version.AUTHOR_URL)]
+    a.update = update_line(view)
     return a
 
 
-__all__ = ["About", "facts", "platform_name"]
+__all__ = ["About", "facts", "platform_name", "update_line"]

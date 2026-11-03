@@ -2,7 +2,8 @@
 asked (updates.url): no token, no account, no id of any kind — the version, the
 interface and the system in the address, as the User-Agent says them anyway. A newer
 release is a row of Activity ("FedTail 0.22.4 — a new version is out"), its name leading
-to the release's page, and a line in About. updates.check = false — never asked."""
+to the release's page; About says what the last answer was and checks at once on its
+button. updates.check = false — never asked by itself."""
 
 import logging
 import sys
@@ -27,8 +28,8 @@ def _vkey(v):
     return (*nums, 0 if dev else 1) if len(nums) == 3 else None
 
 
-def newer(theirs, mine=__version__):
-    a, b = _vkey(theirs), _vkey(mine.split("+")[0])
+def newer(theirs, mine=None):
+    a, b = _vkey(theirs), _vkey((mine or __version__).split("+")[0])
     return a is not None and b is not None and a > b
 
 
@@ -80,6 +81,8 @@ class UpdatesMixin:
         got = remote.get_json(f"{url}?{query}", headers={"User-Agent": USER_AGENT},
                               timeout=15)
         latest = str((got or {}).get("version") or "") if isinstance(got, dict) else ""
+        latest = latest if _vkey(latest) else ""  # {"version": 7}: not an answer
+        self.store.kv_set("updates.ok", bool(latest))
         if not latest:
             log.info("updates: no answer")
             return None
@@ -90,6 +93,26 @@ class UpdatesMixin:
         log.info("updates: %s is out (this is %s)", latest, mine)
         self._tell_release(latest)
         return latest
+
+    def check_updates_now(self):
+        """About's "Check now": asked at once, updates.check on or off (the reader asked)
+        → update_status(). Not in a made-up world: the tools press every button."""
+        if _made_up(self._own_hosts()):
+            log.info("updates: a made-up world, not asked")
+        else:
+            self.check_updates()
+        return self.update_status()
+
+    def update_status(self):
+        """Plain data for About: {"mine": this version, "latest": the last answer ("" —
+        none yet), "newer": it is newer than this, "at": when last asked (epoch
+        seconds, 0 — never), "ok": the website answered then, "on": updates.check}."""
+        kv = self.store.kv_get
+        latest = str(kv("updates.latest") or "")
+        return {"mine": __version__.split("+")[0], "latest": latest,
+                "newer": bool(latest) and newer(latest),
+                "at": float(kv("updates.at") or 0), "ok": bool(kv("updates.ok")),
+                "on": bool(self.cfg["updates"].get("check"))}
 
     def update_out(self):
         """The newer release known to be out (the last answer), or None."""

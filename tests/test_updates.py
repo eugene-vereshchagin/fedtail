@@ -74,7 +74,43 @@ class CheckTest(Devices):
         self.assertEqual(self.rows(), [])
         with mock.patch.object(updates, "__version__", "0.22.3"):
             page = Places(View(self.desk)).page("about")
-        self.assertNotIn("update", [r.key for r in page.rows])
+        row = next(r for r in page.rows if r.key == "update")
+        self.assertIn("didn't answer", row.title)  # the last answer was none
+        self.assertEqual([b.label for b in row.buttons], ["Check now"])
+
+    def about_row(self):
+        with mock.patch.object(updates, "__version__", "0.22.3"):
+            return next(r for r in Places(View(self.desk)).page("about").rows
+                        if r.key == "update")
+
+    def test_about_says_the_last_answer_and_checks_now(self):
+        """About: this version, what the website said last and when, "Check now" —
+        asked at once, updates.check on or off; the windows' cards say the same."""
+        from fedtail.frontends.common import about
+        self.desk.cfg["updates"]["check"] = False
+        Places(View(self.desk)).act("about", "check")  # example.test: made up, not asked
+        self.assertEqual(self.about_row().title,
+                         "Not checked yet · doesn't check by itself (updates.check)")
+        self.desk._own_hosts = lambda: {"social.real-server.org"}
+        self.assertEqual(self.about_row().title,
+                         "Not checked yet · doesn't check by itself (updates.check)")
+        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "0.22.3"}), \
+                mock.patch.object(updates, "__version__", "0.22.3"):
+            out = Places(View(self.desk)).act("about", "check")
+        self.assertFalse(out.error)
+        self.assertTrue(out.message.startswith("You have the latest version · checked "))
+        self.assertTrue(out.refresh)
+        self.assertTrue(self.about_row().title.startswith("You have the latest version"))
+        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "0.22.5"}), \
+                mock.patch.object(updates, "__version__", "0.22.3"):
+            st = View(self.desk).check_updates_now()
+            words, newer = about.facts(View(self.desk)).update
+        self.assertEqual((st["latest"], st["newer"], st["ok"]), ("0.22.5", True, True))
+        self.assertEqual(newer, "0.22.5")
+        self.assertTrue(words.startswith("A new version is out: 0.22.5 · checked "))
+        row = self.about_row()
+        self.assertEqual([b.label for b in row.buttons], ["Open in browser", "Check now"])
+        self.assertIn("Updates: A new version", about.facts(View(self.desk)).text())
 
     def test_once_a_day_and_the_switch(self):
         self.desk.store.kv_set("updates.at", None)

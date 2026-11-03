@@ -88,6 +88,46 @@ def show(win):
         row.append(right)
         outer.append(row)
 
+    if a.update[0]:  # what the website said last, "Check now", the release's page
+        row = _card()
+        row.set_orientation(Gtk.Orientation.HORIZONTAL)
+        left = _label(_("about_updates"), "ft-about-muted")
+        left.set_size_request(130, -1)
+        row.append(left)
+        words = _label(a.update[0], wrap=True, select=True)
+        words.set_hexpand(True)
+        row.append(words)
+        release = Gtk.Button(label=_("open_browser"))
+        release.add_css_class("ft-primary")
+        row.append(release)
+        check = Gtk.Button(label=_("about_check"))
+        row.append(check)
+
+        def show_update(update):
+            a.update = update
+            words.set_text(update[0])
+            release.set_visible(bool(update[1]))
+
+        def open_release(_b):
+            from ...core.updates import release_page
+            dlg.close()
+            win.open_url(release_page(a.update[1]))
+
+        def check_now(_b):
+            check.set_sensitive(False)
+
+            def done(_st):
+                check.set_sensitive(True)
+                show_update(facts_of.update_line(win.view))
+            win.call(win.view.bg.submit(win.view.check_updates_now), done,
+                     lambda _e: done(None))
+        release.connect("clicked", open_release)
+        check.connect("clicked", check_now)
+        show_update(a.update)
+        outer.append(row)
+        dlg._update_check = check  # (tests press it)
+        dlg._update_words = words
+
     outer.append(_label(a.made_by, "ft-about-muted", wrap=True))
     from urllib.parse import quote
     def href(u):  # the code in the browser; the author here, with Follow on the page

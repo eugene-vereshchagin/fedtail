@@ -1651,13 +1651,15 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
                         getattr(self, "toolkit_version", ""))
         page = Page("about", _("about"))
         page.rows.append(Row("heading", "fedtail " + a.version))
-        newer = self.view.update_out()  # updates.check: the website said so
-        if newer:
+        words, newer = a.update  # what the website said last (core/updates.py)
+        if words:
             from ...core.updates import release_page
-            page.rows.append(Row("item", _("about_update", v=newer), release_page(newer),
-                                 key="update", buttons=(self._btn(
-                                     _("open_browser"), "url", "open", release_page(newer),
-                                     primary=True),)))
+            check = self._btn(_("about_check"), "about", "check", primary=not newer)
+            buttons = (self._btn(_("open_browser"), "url", "open", release_page(newer),
+                                 primary=True), check) if newer else (check,)
+            page.rows.append(Row("item", words[:1].upper() + words[1:], _("about_updates"),
+                                 key="update",
+                                 buttons=buttons))
         page.rows.append(Row("text", a.tagline))
         for label, value in a.tiles + a.rows:
             page.rows.append(Row("item", value, label, key="about:" + label))
@@ -1671,6 +1673,13 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         page.rows.append(Row("pre", a.text(), key="facts", buttons=(  # for a bug report
             self._btn(_("about_copy"), "about", "copy", primary=True),)))
         return page
+
+    def _a_about_check(self, _d, _v, _c, _ans):
+        """About's "Check now": the website asked at once; the row says the answer."""
+        from . import about
+        self.view.check_updates_now()
+        words = about.update_line(self.view)[0]
+        return Out(message=words[:1].upper() + words[1:], refresh=True)
 
     def _a_about_copy(self, _d, _v, _c, _ans):
         from . import about
