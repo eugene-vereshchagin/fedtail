@@ -279,6 +279,17 @@ class FlowTest {
     }
 
     @Test
+    fun aRefusedTokenSaysSoAndLeadsToLoggingInAgain() {
+        // the server revoked the token: the phone said nothing and every answer was 401
+        launch("lane" to "home")
+        waitDescription("Switch lane")
+        kotlinx.coroutines.runBlocking { Core.demoHappen("token_refused", "", "") }
+        waitText("The token is no longer accepted", 40_000)
+        compose.onAllNodesWithText("Log in again…").onFirst().performClick()
+        waitText("Account and server", 30_000)  // Accounts: "Log in again…" is there
+    }
+
+    @Test
     fun anAnsweredRequestKeepsThePlace() {
         // a follow request answered: the lane jumped to its start (02.11)
         launch("lane" to "activity")

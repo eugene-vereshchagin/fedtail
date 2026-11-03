@@ -424,7 +424,8 @@ def demo_happen(what, target, text):
     elsewhere while a screen shows it, brought by a round as from a server — "answer":
     someone answers target in its thread (the thread open on screen grows by itself, as
     tests/scenario.py's watch_thread holds every interface to); "requests": text more
-    follow requests come (target: their names' start). → {id}."""
+    follow requests come (target: their names' start); "token_refused": the server
+    refuses the token, as a round's 401 says it. → {id}."""
     def go():
         if not _s.get("demo"):
             raise RuntimeError("the demo world only")
@@ -432,6 +433,9 @@ def demo_happen(what, target, text):
 
         from tests.fakes import FakeApi, status
         w = FakeApi.world
+        if what == "token_refused":
+            _core().emit("auth_failed", "HTTP 401: The access token was revoked")
+            return {"id": ""}
         if what == "requests":
             from tests.fakes import acct
             for i in range(int(text)):
@@ -1055,7 +1059,10 @@ def status():
         core = _s["web"].core
         return {"text": _slow_words(core), "busy": sidebar.polling(core),
                 # an open thread grew (replies from other servers) or a post in it changed
-                "threads": getattr(_s["web"], "thread_seq", 0)}
+                "threads": getattr(_s["web"], "thread_seq", 0),
+                # the server refused the token (a poll's 401): {title, text}, as the web
+                # page's — the phone says it once and opens Accounts, "Log in again" there
+                "auth_failed": getattr(_s["web"], "auth_failed", None)}
     return _answer(go)
 
 

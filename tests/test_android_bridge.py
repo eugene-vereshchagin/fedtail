@@ -593,6 +593,17 @@ class BridgePlacesTest(_Base):
         self.assertTrue(all("text" in p for p in posts))
         self.assertIn("error", json.loads(self.bridge.page("nowhere")))
 
+    def test_a_refused_token_is_said(self):
+        """A round's 401: status() carries it ({title, text, button}) for the phone to
+        say once and open Accounts, as the web page does."""
+        self.demo()
+        self.assertIsNone(self.call("status")["auth_failed"])
+        self.call("demo_happen", "token_refused", "", "")
+        got = self.call("status")["auth_failed"]
+        self.assertEqual(set(got), {"title", "text", "button"})
+        self.assertIn("log in again", got["text"])
+        self.assertEqual(got["button"], "Log in again…")
+
     def test_about_checks_for_updates(self):
         """About on the phone (the common place): the "Updates" row, "Check now" asks
         the website at once — but never from the demo's made-up world."""

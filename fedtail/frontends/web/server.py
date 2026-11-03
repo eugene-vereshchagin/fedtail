@@ -607,7 +607,8 @@ class Web:
         """The server no longer takes the token: the page says so (the windows' words)
         and opens Accounts, where "log in again" is."""
         with self.changed:
-            self.auth_failed = {"title": _("auth_failed_title"), "text": _("auth_failed")}
+            self.auth_failed = {"title": _("auth_failed_title"), "text": _("auth_failed"),
+                                "button": _("relogin")}
         self.bump()
 
     def switch_profile(self, name):

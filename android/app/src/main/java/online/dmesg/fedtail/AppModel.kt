@@ -993,6 +993,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     hubSlow = st.optString("text")
                     busy = st.optBoolean("busy")
                 }
+                // the server refused the token: said once, then Accounts ("Log in again"),
+                // as the web page and the terminal do
+                st.optJSONObject("auth_failed")?.takeIf { !authSaid }?.let { a ->
+                    authSaid = true
+                    asking = Asking.Confirm(a.optString("text"), { openPage("accounts") },
+                        a.optString("title"), a.optString("button"))
+                }
                 val grew = st.optInt("threads")
                 if (v != version) {
                     version = v
@@ -1012,6 +1019,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    private var authSaid = false
 
     private var sharedOnStart: String? = null
 

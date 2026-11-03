@@ -7,6 +7,11 @@
 
 ## What's next
 
+- **Phone: a token the server no longer takes is said**, as the windows, the terminal and
+  the web page say it: "Access denied — the token is no longer accepted", and "Log in
+  again…" opens Accounts, where logging in again is. The phone kept silent, and every
+  answer (a follow request's "accept" among them) was 401.
+
 ## 0.22.3 — 2026-11-03
 
 **In short: fedtail tells you when a new version is out, and sync is easier to set up.**
