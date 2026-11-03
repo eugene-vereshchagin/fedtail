@@ -251,6 +251,8 @@ def state():
         a = core.auth or {}
         net = core.cfg.get("net") or {}
         return {"logged_in": bool(core.logged_in), "demo": _s["demo"],
+                # ui.language: the app's own words follow it too ("auto" — the phone's)
+                "language": str(core.cfg["ui"].get("language") or "auto"),
                 "server": a.get("server", ""),
                 "acct": a.get("acct", ""),  # ours: auth.json, not a server's answer
                 # net.proxy_at_login: the login screen's proxy field, and what it holds

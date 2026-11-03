@@ -279,6 +279,31 @@ class FlowTest {
     }
 
     @Test
+    fun theInterfaceLanguageIsTheAppsToo() {
+        // ui.language = "ru" on a phone in English: the core's words went Russian, the
+        // app's own (its buttons, its menus) stayed English
+        launch("lane" to "home")
+        waitDescription("Switch lane")
+        try {
+            kotlinx.coroutines.runBlocking {
+                Core.settingSet("ui", "language", "\"ru\"")
+                Core.settingsApply()
+            }
+            scenario?.close()
+            launch("lane" to "home")
+            waitDescription("Сменить ленту", 60_000)
+        } finally {
+            kotlinx.coroutines.runBlocking {
+                Core.settingSet("ui", "language", "null")
+                Core.settingsApply()
+            }
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            context.getSystemService(android.app.LocaleManager::class.java).applicationLocales =
+                android.os.LocaleList.getEmptyLocaleList()
+        }
+    }
+
+    @Test
     fun aRefusedTokenSaysSoAndLeadsToLoggingInAgain() {
         // the server revoked the token: the phone said nothing and every answer was 401
         launch("lane" to "home")

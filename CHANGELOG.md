@@ -7,6 +7,11 @@
 
 ## What's next
 
+- **Phone: the interface's language is the app's too.** `ui.language` switched only the
+  core's words; the app's own (its buttons, menus, dialogs) stayed in the phone's
+  language. On Android 13+ the app now takes the language set (and offers fedtail's two
+  in the phone's per-app language settings); Android 12 says the rest follows a restart.
+
 - **Phone: a token the server no longer takes is said**, as the windows, the terminal and
   the web page say it: "Access denied — the token is no longer accepted", and "Log in
   again…" opens Accounts, where logging in again is. The phone kept silent, and every

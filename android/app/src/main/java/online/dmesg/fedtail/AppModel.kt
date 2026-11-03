@@ -1,12 +1,15 @@
 package online.dmesg.fedtail
 
 import android.app.Application
+import android.app.LocaleManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build
+import android.os.LocaleList
 import android.webkit.MimeTypeMap
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.getValue
@@ -384,6 +387,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private suspend fun afterStart() {
         val st = Core.state()
         val app = getApplication<Application>()
+        if (Core.failed(st) == null) language(st.optString("language"))
         // the file had an error: this run goes with the defaults; Config fixes it
         st.optString("config_error").takeIf { it.isNotBlank() }?.let {
             message = app.getString(R.string.config_broken, it)
@@ -1588,6 +1592,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (got.optBoolean("restarted")) restartScreens()
         }
     }
+
+    /** ui.language for the app's own words too (the core's follow the file): Android 13+
+     *  sets the app's language and draws it anew; Android 12 can't — it says when. */
+    private fun language(code: String) {
+        val was = languageSet
+        languageSet = code
+        val want = if (code.isBlank() || code == "auto") LocaleList.getEmptyLocaleList()
+            else LocaleList.forLanguageTags(code)
+        val app = getApplication<Application>()
+        if (Build.VERSION.SDK_INT >= 33) {
+            val lm = app.getSystemService(LocaleManager::class.java) ?: return
+            if (lm.applicationLocales != want) lm.applicationLocales = want
+        } else if (was != null && was != code) {  // changed in Settings just now
+            message = app.getString(R.string.language_after_restart)
+        }
+    }
+
+    private var languageSet: String? = null
 
     private suspend fun restartScreens() {
         editorFacts = null
