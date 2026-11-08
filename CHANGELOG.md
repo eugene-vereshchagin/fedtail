@@ -55,6 +55,10 @@
   quote" is a tool over the post of its own (a new picture in every theme's set). In the
   windows and on the web page; the terminal and the phone keep the menu flat.
 
+- **On someone's profile their name is no dead link.** Their name (and face) on their own
+  posts there looked like a link back to the profile and did nothing; it's plain now in
+  the Qt and GTK windows, a link everywhere else as before.
+
 - **A click on a post's #abc opens its thread.** It put the name into the command line
   (point.im's way) — where the hand reached for the thread. `card.code_click = "line"`
   keeps the old way. The tools over the post no longer cover the #abc: they stand left of

@@ -1472,6 +1472,16 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(part.more_btn.get_label(),
                          i18n._("older_from_origin", host=part.host))
 
+    def test_their_name_on_their_profile_is_no_link(self):
+        """As Qt (08.11): their own name on their own profile — plain, not a link back."""
+        from fedtail.frontends.gtk.card import Card
+        there = Card(self.win.ctx, "p", self.view.by_id("011"), profile_of="B")
+        elsewhere = Card(self.win.ctx, "h", self.view.by_id("011"))
+        marks = lambda c: " ".join(w.get_label() or "" for w in _walk(c)  # noqa: E731
+                                   if isinstance(w, Gtk.Label))
+        self.assertNotIn("fedtail:account/B", marks(there))
+        self.assertIn("fedtail:account/B", marks(elsewhere))
+
     def test_profile_pages_by_the_servers_cursor(self):
         """As Qt: the next page after the last post my server gave, not after the last by
         time — a post fetched from their server is old by date, new by id (08.11)."""

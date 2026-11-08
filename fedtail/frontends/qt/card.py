@@ -780,6 +780,25 @@ class PostRow(QWidget):
         self.mark = m
         return m
 
+    def _here(self, acc):
+        """This person's own profile is where the card is (spec.extra "profile_of"): their
+        name and face lead nowhere new — no link, no hand (08.11: a link that did
+        nothing)."""
+        return acc is not None and acc.id == self.spec.extra.get("profile_of")
+
+    def _who(self, acc, label, color, bold=True):
+        """A person's name as a link to their profile — or plain, on their own profile."""
+        if self._here(acc):
+            weight = "font-weight:700;" if bold else ""
+            return f'<span style="color:{color};{weight}">{label}</span>'
+        return link("account", acc.id, label, color, bold=bold)
+
+    def _face_click(self, avatar, acc):
+        if self._here(acc):
+            return
+        avatar.setCursor(Qt.CursorShape.PointingHandCursor)
+        avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
+
     def _header_rich(self, p):
         acc = p.author
         h = QHBoxLayout()
@@ -788,10 +807,9 @@ class PostRow(QWidget):
         if self.theme.shape["card_avatars"] and size:
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
-            avatar.setCursor(Qt.CursorShape.PointingHandCursor)
             avatar.setToolTip(plain_tip("@" + acc.handle))
             avatar.setAccessibleName(_("a11y_avatar", acct=acc.handle))
-            avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
+            self._face_click(avatar, acc)
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
             self.ctx.images.face(acc.avatar_static, size,
                                  lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
@@ -809,12 +827,11 @@ class PostRow(QWidget):
             num.setObjectName("num")
             top.addWidget(num)
         named = acc.color or self.theme.css("name")  # people.nick_colors: mine for them
-        top.addWidget(self._emoji_label(link("account", acc.id, display_name(acc),
-                                             named, bold=True),
+        top.addWidget(self._emoji_label(self._who(acc, display_name(acc), named),
                                         acc.emojis, "name", wrap=False,
-                                        fallback=link("account", acc.id,
-                                                      esc(acc.username or acc.handle),
-                                                      named, bold=True)))
+                                        fallback=self._who(acc,
+                                                           esc(acc.username or acc.handle),
+                                                           named)))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc.handle)}{esc(bot)} · '
@@ -883,7 +900,7 @@ class PostRow(QWidget):
         color = self.theme.css("chat_me" if mine else "chat_them")
         when = self.theme.date(p.created, self.theme.words.get("chat_date")) \
             if p.created else ""
-        name = link("account", acc.id, display_name(acc), acc.color or color, bold=True)
+        name = self._who(acc, display_name(acc), acc.color or color)
         stamp = link("thread", p.id, esc(when), color, bold=True)
         line = _fill_html(self.theme.words.get("chat", "{name} ({when})"),
                           name=name, when=stamp)
@@ -916,16 +933,15 @@ class PostRow(QWidget):
         if self.theme.shape["card_avatars"] and size:
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
-            avatar.setCursor(Qt.CursorShape.PointingHandCursor)
             avatar.setToolTip(plain_tip("@" + acc.handle))
-            avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
+            self._face_click(avatar, acc)
             h.addWidget(avatar)
             self.ctx.images.face(acc.avatar_static, size,
                                  lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
                                  owner=avatar)
         user, _sep, host = acc.handle.partition("@")
-        h.addWidget(self._label(link("account", acc.id, "@" + esc(user),
-                                     acc.color or self.theme.css("text"), bold=True),
+        h.addWidget(self._label(self._who(acc, "@" + esc(user),
+                                          acc.color or self.theme.css("text")),
                                 "name", wrap=False))
         vis = p.visibility
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""

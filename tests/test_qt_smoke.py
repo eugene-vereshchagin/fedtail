@@ -1477,6 +1477,29 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(tab.view.order[0], "pin:011")
         self.assertNotIn("011", tab.view.rows)  # not twice
 
+    def test_their_name_on_their_profile_is_no_link(self):
+        """08.11: on someone's profile their name on their own posts was a link back to
+        the same profile — doing nothing; now plain (and the face no hand), elsewhere a
+        link as before."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        self.pump(until=lambda: any(k.endswith("011") for k in tab.view.rows))
+        row = next(r for k, r in tab.view.rows.items() if k.endswith("011"))
+        texts = " ".join(lab.text() for lab in row.findChildren(QLabel))
+        self.assertNotIn("fedtail:account/B", texts)
+        self.win.select_lane("home")
+        home = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: "011" in home.rows)
+        texts = " ".join(lab.text() for lab in home.rows["011"].findChildren(QLabel))
+        self.assertIn("fedtail:account/B", texts)
+
     def test_profile_pages_by_the_servers_cursor(self):
         """The next page starts after the last post my server gave, not after the last
         by time: a post fetched from the author's server is old by date and new by id

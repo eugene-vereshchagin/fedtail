@@ -1017,11 +1017,15 @@ class AccountWidget(_PagedTab):
         pinned = self.shown(self.pinned)
         short = self.core.short_ids(pinned + rest)
         parents = self.core.parents(pinned + rest)
+        # their own name on their own profile: no link (it led back here, 08.11)
+        here = self.acc_id
         specs = [make_spec(self.core, "pin:" + e.id, e, parent=parents.get(e.id),
-                           extra={"short_id": short.get(real_entry(e).id), "pinned": True})
+                           extra={"short_id": short.get(real_entry(e).id), "pinned": True,
+                                  "profile_of": here})
                  for e in pinned]
         specs += [make_spec(self.core, e.id, e, parent=parents.get(e.id),
-                            extra={"short_id": short.get(real_entry(e).id)}) for e in rest]
+                            extra={"short_id": short.get(real_entry(e).id),
+                                   "profile_of": here}) for e in rest]
         self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):

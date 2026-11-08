@@ -107,7 +107,8 @@ class Card(Gtk.Box):
     Post or Share; parent: the Post it answers, "missing" or None."""
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
-                 depth=0, number=None, my_replies=(), via=None, open_at=None):
+                 depth=0, number=None, my_replies=(), via=None, open_at=None,
+                 profile_of=None):
         # vertical, the face laid over the column's left margin: GTK 4.18 takes a
         # horizontal box's least height as its children's at their least width — the
         # text wrapped word by word — above the natural one at the width it has, and
@@ -119,6 +120,9 @@ class Card(Gtk.Box):
         view = getattr(ctx, "view", None)
         self.open_at = open_at or (view.open_at() if hasattr(view, "open_at") else "post")
         self.short_id = short_id
+        # on this person's own profile: their name and face lead nowhere new — no link
+        # (as Qt's; 08.11: a link that did nothing)
+        self.profile_of = profile_of
         self.via = via  # all accounts in one window: which of mine got it
         self.add_css_class("ft-card")
         self.unread = None
@@ -137,10 +141,12 @@ class Card(Gtk.Box):
             face.set_valign(Gtk.Align.START)
             # as Qt's: a click on the face opens the profile; a screen reader says so
             acc_id = self.post.author.id
-            press = Gtk.GestureClick()
-            press.connect("released", lambda *_a: ctx.on_link(f"fedtail:account/{acc_id}"))
-            face.add_controller(press)
-            face.set_cursor_from_name("pointer")
+            if acc_id != profile_of:
+                press = Gtk.GestureClick()
+                press.connect("released",
+                              lambda *_a: ctx.on_link(f"fedtail:account/{acc_id}"))
+                face.add_controller(press)
+                face.set_cursor_from_name("pointer")
             try:  # set once, before it's shown: no round trip to the accessibility bus
                 face.update_property([Gtk.AccessibleProperty.LABEL],
                                      [_("a11y_avatar", acct=self.post.author.handle)])
@@ -299,10 +305,14 @@ class Card(Gtk.Box):
             if p.created else ""
 
         def part(url, text):
-            return (f'<a href="{GLib.markup_escape_text(url)}"><span foreground="{color}" '
-                    f'weight="bold">{GLib.markup_escape_text(text)}</span></a>')
+            span = (f'<span foreground="{color}" weight="bold">'
+                    f'{GLib.markup_escape_text(text)}</span>')
+            if url is None:  # their own name on their own profile
+                return span
+            return f'<a href="{GLib.markup_escape_text(url)}">{span}</a>'
         line = GLib.markup_escape_text(ctx.theme.words.get("chat", "{name} ({when})"))
-        name = part(f"fedtail:account/{p.author.id}", name_of(p.author))
+        here = p.author.id == self.profile_of
+        name = part(None if here else f"fedtail:account/{p.author.id}", name_of(p.author))
         if p.author.color:  # people.nick_colors
             name = name.replace(f'foreground="{color}"', f'foreground="{p.author.color}"', 1)
         line = line.replace("{name}", name)
@@ -362,7 +372,9 @@ class Card(Gtk.Box):
             if isinstance(name, Gtk.Label):
                 name.set_ellipsize(Pango.EllipsizeMode.END)
             head.append(name)
-            handle = _label(link_markup(f"fedtail:account/{p.author.id}", "@" + p.author.handle),
+            at = "@" + p.author.handle
+            handle = _label(GLib.markup_escape_text(at) if p.author.id == self.profile_of
+                            else link_markup(f"fedtail:account/{p.author.id}", at),
                             ("ft-muted",), markup=True)
             handle.connect("activate-link", self._link)
             handle.set_ellipsize(Pango.EllipsizeMode.END)

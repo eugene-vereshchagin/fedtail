@@ -101,7 +101,7 @@ class ProfilePosts:
         for i, e in enumerate(everything):
             pin = i < len(self.pinned)
             card = Card(self.win.ctx, ("pin:" if pin else "") + e.id, e,
-                        short_id=short.get(real(e).id))
+                        short_id=short.get(real(e).id), profile_of=self.acc.id)
             if pin:
                 card.mark("📌 " + _("pinned"))
             self.box.insert(card, at + i)
