@@ -87,6 +87,10 @@ data class Announce(
 /** kind: you | reading | lists | browse (bridge.hub) */
 data class HubSection(val kind: String, val lanes: List<HubLane>)
 
+/** A lane in the strip over a lane (common/sidebar.strip): main — your tiles / the set's
+ *  lanes with a picture of their own, before the line; icon — iconpack's name, "" — none. */
+data class StripLane(val name: String, val icon: String, val main: Boolean)
+
 /** A section of the overview as the sidebar has it (common/sidebar.overview): its title,
  *  its lanes in order, tiles or rows (phone.overview). */
 data class OverviewSection(val key: String, val title: String, val names: List<String>,
@@ -278,6 +282,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)  // a poll round on: the empty lane's opossum swings
     var hubWithNews by mutableStateOf(0)
     var hubPinned by mutableStateOf(listOf<String>()) // phone.pinned, as lanes here
+    var strip by mutableStateOf(listOf<StripLane>()) // the strip over a lane: the core's rule
+    var stripIcons by mutableStateOf(true)  // phone.lane_strip = "icons": the main ones so
+    var offline by mutableStateOf(false)    // no network: said in the lane's line and pill
 
     var current by mutableStateOf<String?>(null) // null: the overview of lanes
     var title by mutableStateOf("")
@@ -607,6 +614,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         hubOrder = (0 until order.length()).map { order.getString(it) }
         val pin = got.optJSONArray("pinned") ?: JSONArray()
         hubPinned = (0 until pin.length()).map { pin.getString(it) }
+        val st = got.optJSONArray("strip") ?: JSONArray()
+        strip = (0 until st.length()).map { st.getJSONObject(it) }
+            .map { StripLane(it.optString("name"), it.optString("icon"), it.optBoolean("main")) }
+        stripIcons = got.optString("lane_strip", "icons") != "names"
         val ov = got.optJSONArray("overview") ?: JSONArray()
         hubOverview = (0 until ov.length()).map { i ->
             val o = ov.getJSONObject(i)
@@ -895,13 +906,32 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** "Mark all read", as the windows' button: the whole lane in the core, not only
      *  the posts loaded here; the overview's counts follow. */
+    /** "Mark all read": the posts read at once here, and to the core in 5 s — "Undo"
+     *  meanwhile takes it all back (read marks are never taken back once they go: sync
+     *  only adds them up). */
+    private var readLater: kotlinx.coroutines.Job? = null
+    var readUndo by mutableStateOf<String?>(null)  // the lane whose "all read" may be undone
+    private var readBefore: List<PostItem> = emptyList()
+
     fun markLaneRead() {
         val name = current ?: return
+        readLater?.cancel()
+        readBefore = posts
         posts = posts.map { if (it.unread) it.copy(unread = false) else it }
-        viewModelScope.launch {
+        readUndo = name
+        readLater = viewModelScope.launch {
+            delay(5000)
+            readUndo = null
             Core.laneRead(name)
             loadHub()
         }
+    }
+
+    fun undoLaneRead() {
+        readLater?.cancel()
+        readLater = null
+        if (readUndo == current) posts = readBefore
+        readUndo = null
     }
 
     private var stoodKey: String? = null
@@ -1097,9 +1127,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
                 val wifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                     caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                offline = false
                 viewModelScope.launch { Core.network(wifi) }
             }
             override fun onLost(network: Network) {
+                offline = connectivity()?.activeNetwork == null  // said over the lane
                 viewModelScope.launch { Core.network(onWifi()) }
             }
         }

@@ -115,6 +115,19 @@
   with the name and the text goes under it, edge to edge — as the windows and the web page
   draw a card.
 
+- **Phone: one bar over a lane, folding while you read.** The bar took a quarter of the
+  screen in four rows (the lane's name and five buttons, the lanes with news, the quick
+  filters, a line). Now it is one row: ⊞ — the overview of lanes; the strip of lanes —
+  first the main ones (your tiles, or the set's lanes with a picture: Home, mentions,
+  replies, threads…) as their picture and count, after a line the others with news by
+  name, the open one as picture, name and count (it is the title; a tap on it — every
+  lane); the filters as one button (lit when one is on, a sheet of them) and ⋮ (find,
+  mark all read — undone within 5 s, refresh, every lane, the lane's rule). Reading on,
+  it folds into a pill with the lane's name; a little scroll back, or a tap, brings it
+  whole — laid over the posts, so nothing moves under the finger. "↓ N" shows only when
+  the first new post is off the screen; "offline" is said in the bar's line and the
+  pill (`phone.lane_strip`: `"icons"`, `"names"`).
+
 - **Phone: "↓ N new" by the thumb.** The button to the new posts was a small arrow at the
   top, hard to see and to reach; it now floats over the "write" button, and the lane's
   end leaves room enough under the last post to read it past both (`phone.to_new`,

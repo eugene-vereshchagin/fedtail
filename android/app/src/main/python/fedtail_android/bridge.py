@@ -753,7 +753,13 @@ def hub():
         # within a section the lanes stand as the set has them (lanes.preset)
         walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
         every = [x for v in sections.values() for x in v]
+        every_in_order = sorted(every, key=lambda x: x["pos"])
+        # the strip over a lane (common/sidebar.strip: the main lanes, then those with news)
+        strip = sidebar.strip(view, core.cfg, [x["name"] for x in every_in_order],
+                              {x["name"]: x["unread"] for x in every})
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
+                "strip": strip,
+                "lane_strip": core.cfg["phone"].get("lane_strip", "icons"),
                 "pinned": [n for n in core.pinned_tiles() if any(x["name"] == n for x in every)],
                 # the sidebar's sections and which are tiles (phone.overview, common/sidebar)
                 "overview": sidebar.overview(view, core.cfg),
@@ -920,18 +926,24 @@ def pictures():
             theme, _w = themefile.load(web.theme_name())
         except Exception:  # noqa: BLE001 — the phone's icons
             return {}
-        if not iconpack.uses_set(iconpack.mode(_core().cfg, theme.get("shape"))):
-            return {}
+        own = iconpack.uses_set(iconpack.mode(_core().cfg, theme.get("shape")))
         pset = iconpack.for_theme(SimpleNamespace(icon_dirs=theme.get("icon_dirs") or (),
                                                   pictures=theme.get("pictures") or {}))
         colors, _light, _f = web.theme_colors()
         accent = colors.get("accent") or "#1f5fa8"
         out = {}
-        for word, name in PICTURES.items():
+
+        def put(word, name):
             pic = iconpack.picture(pset, name, accent, True, colors.get("card"))
-            if pic is None:
-                continue
-            out[word] = {"svg": pic.text} if pic.kind == "svg" else {"png": pic.path}
+            if pic is not None:
+                out[word] = {"svg": pic.text} if pic.kind == "svg" else {"png": pic.path}
+        if own:
+            for word, name in PICTURES.items():
+                put(word, name)
+        # the lanes' pictures for the strip over a lane (phone.lane_strip): always — a
+        # theme without a set of its own (system) has the fallback set's, in its accent
+        for name in sorted(set(iconpack.LANE.values())):
+            put("lane." + name, name)
         return out
     return _answer(go)
 

@@ -161,4 +161,11 @@
     <string name="edit_lane">Изменить ленту</string>
     <string name="lanes_editor">Ленты…</string>
     <string name="mark_all_read">Всё прочитано</string>
+    <string name="lane_filters">Фильтры</string>
+    <string name="lane_filters_on">Фильтры (включены)</string>
+    <string name="offline">нет сети</string>
+    <string name="undo">Отменить</string>
+    <string name="show_header">%1$s — показать шапку</string>
+    <string name="lane_more">Ещё: найти, прочитано, обновить, лента</string>
+    <string name="lane_current">%1$s, открыта сейчас</string>
 </resources>

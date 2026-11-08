@@ -1,5 +1,32 @@
 package online.dmesg.fedtail
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -88,8 +115,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * A lane (mockups "2" and "3"): the title opens the switcher; under it, the lanes with news
- * as chips; at the end of the lane, "read — next: …"; a swipe to the left goes there.
+ * A lane (the mockups "E", 09.11): one bar over it — ⊞ the home screen, the strip of lanes
+ * (the open one its title; a tap on it — the switcher), filters, ⋮ — folding into a pill
+ * while reading; at the end of the lane, "read — next: …"; a swipe to the left goes there.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,89 +129,57 @@ fun LaneScreen(
     val scope = rememberCoroutineScope()
     val name = model.current ?: return
     val act = model.cardActions(openBrowser)
+    // the bar over the lane (09.11, the mockups "E"): one row — ⊞ the home screen, the
+    // strip of lanes (the open one is the title), filters, ⋮ — laid over the list, not
+    // above it: reading on it folds into a pill, a little scroll back brings it whole,
+    // and the posts never move under the finger as it comes and goes
+    var collapsed by remember(name) { mutableStateOf(false) }
+    var filterSheet by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    var headerPx by remember { mutableIntStateOf(0) }
+    val collapse = remember(name) {
+        object : NestedScrollConnection {
+            var run = 0f
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y  // < 0: the finger goes up — reading on
+                run = if ((dy < 0) == (run < 0)) run + dy else dy
+                if (run < -with(density) { 24.dp.toPx() }) collapsed = true
+                else if (run > with(density) { 12.dp.toPx() }) collapsed = false
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(state, name) {  // the list's very top: the bar whole
+        snapshotFlow { state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0 }
+            .collect { if (it) collapsed = false }
+    }
+    // "mark all read" goes to the core in 5 s: "Undo" meanwhile
+    val allReadWords = stringResource(R.string.all_read)
+    val undoWords = stringResource(R.string.undo)
+    LaunchedEffect(model.readUndo) {
+        if (model.readUndo == null) return@LaunchedEffect
+        val got = snack.showSnackbar(allReadWords, actionLabel = undoWords,
+            duration = SnackbarDuration.Short)
+        if (got == SnackbarResult.ActionPerformed) model.undoLaneRead()
+    }
+    val unread = model.posts.count { it.unread }
+    val firstUnread = model.posts.firstOrNull { it.unread }?.key
+    // "↓ N" only where it leads somewhere: the first new post off the screen (or, none
+    // new, the newest end away)
+    val toNewWanted by remember(firstUnread, unread, model.newestFirst) {
+        derivedStateOf {
+            if (unread > 0) state.layoutInfo.visibleItemsInfo.none { it.key == firstUnread }
+            else if (model.newestFirst) state.firstVisibleItemIndex > 0 else state.canScrollForward
+        }
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Surface(color = MaterialTheme.colorScheme.surface) {
-                Column {
-                    TopAppBar(
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface),
-                        navigationIcon = {
-                            if (!pane) IconButton(onClick = { model.toOverview() }) {
-                                Icon(Glyphs.Grid, stringResource(R.string.hub_title))
-                            }
-                        },
-                        title = {
-                            Column(Modifier.clickable { switcher = true }.padding(vertical = 4.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(model.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f, fill = false))
-                                    Icon(Icons.Filled.KeyboardArrowDown,
-                                        stringResource(R.string.switch_lane), Modifier.size(20.dp))
-                                }
-                                // how fresh: "⟳ updating the lanes…" / "updated at 14:32" — an
-                                // empty lane reads as nothing new, not as a dead network
-                                if (model.hubSlow.isNotBlank()) {
-                                    Text(model.hubSlow, fontSize = 12.sp, maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        },
-                        actions = {
-                            // "to the new" with how many there are, and "mark all read" — the
-                            // windows' lane buttons (a bare arrow told nothing). Nothing new: the
-                            // arrow stays and goes to the newest end, as the windows' does — after
-                            // "mark all read" the end was a long scroll away (02.11)
-                            // phone.to_new = "bottom": it floats over "write", by the thumb
-                            // (08.11: up here it was small, hard to see and to reach)
-                            val unread = model.posts.count { it.unread }
-                            if (!model.toNewBottom) ToNewButton(model, state, scope, unread)
-                            if (unread > 0) {
-                                val allRead = stringResource(R.string.mark_all_read)
-                                IconButton(onClick = { model.markLaneRead() },
-                                    modifier = Modifier.semantics { contentDescription = allRead }) {
-                                    Icon(Glyphs.Done, allRead)
-                                }
-                            }
-                            IconButton(onClick = { model.findOpen = !model.findOpen }) {
-                                Icon(Icons.Filled.Search, stringResource(R.string.find))
-                            }
-                            // the lane's rule: the windows' "Edit the lane…" (common/lanesplace.py);
-                            // a list's or a tag group's lane stands in the editor's list of lanes
-                            val editLane = stringResource(R.string.edit_lane)
-                            IconButton(onClick = { model.editLane(name) },
-                                modifier = Modifier.semantics { contentDescription = editLane }) {
-                                Text("⚙", fontSize = 20.sp)
-                            }
-                            IconButton(onClick = { model.refresh() }) {
-                                ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
-                            }
-                        })
-                    if (!pane) AnnounceBar(model)
-                    if (!pane) NewsStrip(model, name)
-                    if (model.findOpen) FindBar(model)
-                    model.laneSwitches?.let { Switches(model, it) }
-                    // what the lane holds now ("a filter on: 12 of 40"); when empty, the
-                    // empty lane says it itself
-                    model.laneSwitches?.info?.takeIf { it.isNotBlank() && model.posts.isNotEmpty() }?.let {
-                        Text(it, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
-                    }
-                    if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    else HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                }
-            }
-        },
         bottomBar = { if (model.commandLine) CommandBar(model) },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (model.toNewBottom) ToNewButton(model, state, scope,
-                    model.posts.count { it.unread }, floating = true)
+                if (model.toNewBottom && toNewWanted) ToNewButton(model, state, scope, unread,
+                    floating = true)
                 if (!model.commandLine) {
                     FloatingActionButton(onClick = { model.compose(null) },
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -195,11 +191,10 @@ fun LaneScreen(
         },
         snackbarHost = { SnackbarHost(snack) },
     ) { pad ->
-        val density = LocalDensity.current
         var dragged by remember { mutableFloatStateOf(0f) }
         // the pull where the newest posts are: at the top, newest first; at the bottom,
         // read "as a forum" (oldest first) — there one drags up past the end
-        val swipe = Modifier.padding(pad).fillMaxSize()
+        val swipe = Modifier.fillMaxSize()
                 .pointerInput(name) {
                     val far = with(density) { 120.dp.toPx() }
                     detectHorizontalDragGestures(
@@ -210,6 +205,7 @@ fun LaneScreen(
                         },
                         onHorizontalDrag = { _, dx -> dragged += dx })
                 }
+        val topRoom = with(density) { headerPx.toDp() } + 8.dp
         val body: @Composable () -> Unit = {
             // a match found (in the lane, or picked from every lane): the list stands on it
             LaunchedEffect(model.aimKey, model.posts) {
@@ -241,7 +237,7 @@ fun LaneScreen(
                     seen = { model.loadOlder(ahead = true) }) { model.loadOlder() }
             }
             PostList(model.posts, state, model.divider, act, model.hideSensitive,
-                prefetch = model.prefetch,
+                prefetch = model.prefetch, topRoom = topRoom,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 busy = model.busy,
                 // the last post's end readable above the floating buttons: "write" and,
@@ -255,12 +251,39 @@ fun LaneScreen(
                     }
                 })
         }
-        if (model.newestFirst) {
-            PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
-                modifier = swipe) { body() }
-        } else {
-            BottomPullToRefresh(refreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
-                modifier = swipe) { body() }
+        Box(Modifier.padding(pad).fillMaxSize().nestedScroll(collapse)) {
+            if (model.newestFirst) {
+                PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
+                    modifier = swipe) { body() }
+            } else {
+                BottomPullToRefresh(refreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
+                    modifier = swipe) { body() }
+            }
+            AnimatedVisibility(!collapsed, Modifier.align(Alignment.TopCenter),
+                enter = slideInVertically { -it } + fadeIn(),
+                exit = slideOutVertically { -it } + fadeOut()) {
+                Box(Modifier.onSizeChanged { headerPx = it.height }) {
+                    LaneHeader(model, name, pane, state, scope, { switcher = true },
+                        { filterSheet = true })
+                }
+            }
+            AnimatedVisibility(collapsed, Modifier.align(Alignment.TopCenter).padding(top = 6.dp),
+                enter = fadeIn(), exit = fadeOut()) {
+                LanePill(model, name, { collapsed = false }, { switcher = true })
+            }
+        }
+    }
+    if (filterSheet) model.laneSwitches?.let { sw ->
+        ModalBottomSheet(onDismissRequest = { filterSheet = false }) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                Text(stringResource(R.string.lane_filters), fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Switches(model, sw)
+                sw.info.takeIf { it.isNotBlank() }?.let {
+                    Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+            }
         }
     }
     if (switcher) Switcher(model) { switcher = false }
@@ -271,6 +294,194 @@ fun LaneScreen(
                 Text(stringResource(R.string.yes_do)) } },
             dismissButton = { TextButton(onClick = { model.cmdConfirm = null }) {
                 Text(stringResource(R.string.cancel)) } })
+    }
+}
+
+/** Is a lane's filter on (a quick filter not the first, the funnel, talks only)? */
+private fun filtering(sw: LaneSwitches): Boolean =
+    sw.mediaActive || sw.convOn || (sw.filters.isNotEmpty() && sw.filter != sw.filters.first().first)
+
+private fun hasFilters(sw: LaneSwitches): Boolean =
+    sw.filters.isNotEmpty() || sw.convOffered || sw.media.isNotEmpty() || sw.clear != null
+
+/** The bar over a lane: ⊞ (the home screen; not in a pane beside it), the strip of lanes,
+ *  the filters (a dot when one is on), ⋮; under them a thin line — how fresh, what the
+ *  filters hide, "offline". */
+@Composable
+private fun LaneHeader(model: AppModel, name: String, pane: Boolean, state: LazyListState,
+                       scope: kotlinx.coroutines.CoroutineScope, onSwitcher: () -> Unit,
+                       onFilter: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                if (!pane) IconButton(onClick = { model.toOverview() },
+                    modifier = Modifier.size(48.dp)) {
+                    Icon(Glyphs.Grid, stringResource(R.string.hub_title))
+                }
+                LaneStrip(model, name, Modifier.weight(1f), onSwitcher)
+                val sw = model.laneSwitches
+                if (sw != null && hasFilters(sw)) {
+                    val on = filtering(sw)
+                    val words = stringResource(if (on) R.string.lane_filters_on else R.string.lane_filters)
+                    Box(Modifier.size(48.dp).clip(CircleShape)
+                        .background(if (on) MaterialTheme.colorScheme.tertiaryContainer
+                                    else Color.Transparent)
+                        .clickable(onClick = onFilter)
+                        .semantics { contentDescription = words; role = Role.Button },
+                        contentAlignment = Alignment.Center) {
+                        Icon(Glyphs.Filter, null, Modifier.size(22.dp),
+                            tint = if (on) MaterialTheme.colorScheme.onTertiaryContainer
+                                   else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                LaneMore(model, name, state, scope, onSwitcher)
+            }
+            val unseen = stringResource(R.string.offline)
+            val line = listOf(if (model.offline) unseen else "", model.hubSlow,
+                model.laneSwitches?.info?.takeIf { model.posts.isNotEmpty() } ?: "")
+                .filter { it.isNotBlank() }.joinToString(" · ")
+            if (line.isNotBlank()) {
+                Text(line, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = if (model.offline) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp))
+            }
+            if (!pane) AnnounceBar(model)
+            if (model.findOpen) FindBar(model)
+            if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
+            else HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+    }
+}
+
+/** The strip (common/sidebar.strip): the main lanes — a picture and the count
+ *  (phone.lane_strip = "icons") — a line, the others with news by name; the open one
+ *  with its picture, name and count, kept in sight: it is the title. Its tap — the
+ *  switcher (every lane). */
+@Composable
+private fun LaneStrip(model: AppModel, name: String, modifier: Modifier, onSwitcher: () -> Unit) {
+    val byName = remember(model.hub) { model.hub.flatMap { it.lanes }.associateBy { it.name } }
+    val items = remember(model.strip, name) {
+        val s = model.strip
+        if (s.any { it.name == name }) s
+        else {  // a lane out of the strip (a browsed one): itself, after the main ones
+            val main = s.takeWhile { it.main }
+            main + StripLane(name, "", false) + s.drop(main.size)
+        }
+    }
+    val listState = rememberLazyListState()
+    LaunchedEffect(name, items.size) {
+        val i = items.indexOfFirst { it.name == name }
+        if (i >= 0) listState.animateScrollToItem(maxOf(0, i - 1))
+    }
+    LazyRow(state = listState, modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        itemsIndexed(items, key = { _, it -> it.name }) { i, s ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (i > 0 && !s.main && items[i - 1].main) {
+                    Box(Modifier.padding(end = 6.dp).width(1.dp).height(24.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant))
+                }
+                val lane = byName[s.name]
+                val on = s.name == name
+                LaneChip(title = lane?.title ?: model.title,
+                    count = lane?.takeIf { it.unread > 0 }?.count ?: "",
+                    icon = s.icon, main = s.main,
+                    iconOnly = model.stripIcons && s.main && !on && s.icon.isNotBlank(), on = on,
+                    onClick = { if (on) onSwitcher() else model.showLane(s.name) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun LaneChip(title: String, count: String, icon: String, main: Boolean,
+                     iconOnly: Boolean, on: Boolean, onClick: () -> Unit) {
+    val bg = when {
+        on -> MaterialTheme.colorScheme.onSurface
+        main -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    }
+    val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
+    val said = if (on) stringResource(R.string.lane_current, title) else title
+    Row(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(22.dp)).background(bg)
+        .clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) {
+            contentDescription = if (count.isBlank()) said else "$said, $count"
+            role = Role.Tab; selected = on
+        }
+        .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (icon.isNotBlank()) ThemedIcon("lane.$icon", Glyphs.Grid, null, Modifier.size(20.dp), tint = fg)
+        if (!iconOnly || icon.isBlank()) {
+            Text(title, fontSize = 14.sp, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.widthIn(max = 150.dp))
+        }
+        if (count.isNotBlank()) Text(count, fontSize = 14.sp, color = fg,
+            fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+/** ⋮ over a lane: find, mark all read (undone within 5 s), refresh, the lane's rule, the
+ *  switcher — and "to the new" when it isn't floating by the thumb (phone.to_new). */
+@Composable
+private fun LaneMore(model: AppModel, name: String, state: LazyListState,
+                     scope: kotlinx.coroutines.CoroutineScope, onSwitcher: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val words = stringResource(R.string.lane_more)
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(48.dp)
+            .semantics { contentDescription = words }) {
+            Icon(Icons.Filled.MoreVert, null)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val unread = model.posts.count { it.unread }
+            if (!model.toNewBottom) DropdownMenuItem(text = { Text(stringResource(R.string.to_new)) },
+                onClick = { open = false; scope.launch {
+                    aim(state, model.posts, model.newestFirst,
+                        before = if (model.newestFirst) 0 else 1, divider = model.divider?.first) } })
+            DropdownMenuItem(text = { Text(stringResource(R.string.find)) },
+                onClick = { open = false; model.findOpen = !model.findOpen })
+            if (unread > 0) DropdownMenuItem(text = { Text(stringResource(R.string.mark_all_read)) },
+                onClick = { open = false; model.markLaneRead() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.refresh)) },
+                onClick = { open = false; model.refresh() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.switch_lane)) },
+                onClick = { open = false; onSwitcher() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.edit_lane)) },
+                onClick = { open = false; model.editLane(name) })
+        }
+    }
+}
+
+/** The bar folded while reading: the lane's picture and name, a filter's mark, "offline";
+ *  a tap — the bar whole; a long press — the switcher. The count stays on "↓ N". */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun LanePill(model: AppModel, name: String, onExpand: () -> Unit, onSwitcher: () -> Unit) {
+    val icon = model.strip.firstOrNull { it.name == name }?.icon ?: ""
+    val sw = model.laneSwitches
+    val words = stringResource(R.string.show_header, model.title)
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = 3.dp,
+        modifier = Modifier.heightIn(min = 44.dp)
+            .combinedClickable(onClick = onExpand, onLongClick = onSwitcher)
+            .semantics { contentDescription = words; role = Role.Button }) {
+        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (icon.isNotBlank()) ThemedIcon("lane.$icon", Glyphs.Grid, null, Modifier.size(18.dp))
+            Text(model.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp))
+            if (model.offline) Text(stringResource(R.string.offline), fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.error)
+            if (sw != null && filtering(sw)) Icon(Glyphs.Filter, null, Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.tertiary)
+        }
     }
 }
 
@@ -313,35 +524,6 @@ private fun Earlier(busy: Boolean, seen: () -> Unit = {}, onClick: () -> Unit) {
     Box(Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
         if (busy) CircularProgressIndicator(Modifier.size(28.dp))
         else TextButton(onClick = onClick) { Text(stringResource(R.string.earlier)) }
-    }
-}
-
-/** The lanes with news, this one first: a tap is a lane. */
-@Composable
-private fun NewsStrip(model: AppModel, name: String) {
-    val others = model.hub.filter { it.kind != "browse" }.flatMap { it.lanes }
-        .filter { it.unread > 0 && it.name != name }
-    if (others.isEmpty()) return
-    LazyRow(contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        item(key = name) { StripChip(model.title, "", on = true) {} }
-        items(others, key = { it.name }) { l ->
-            StripChip(l.title, l.count, on = false) { model.showLane(l.name) }
-        }
-    }
-}
-
-@Composable
-private fun StripChip(title: String, count: String, on: Boolean, onClick: () -> Unit) {
-    Row(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp))
-        .background(if (on) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.surfaceVariant)
-        .clickable(onClick = onClick).padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
-        Text(title, fontSize = 13.sp, color = fg, maxLines = 1,
-            fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
-        if (count.isNotBlank()) Text("  $count", fontSize = 13.sp, color = fg.copy(alpha = 0.8f))
     }
 }
 

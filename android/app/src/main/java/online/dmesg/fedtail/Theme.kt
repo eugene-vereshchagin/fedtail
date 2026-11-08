@@ -135,6 +135,12 @@ object Glyphs {
         arcTo(4f, 4f, 0f, false, true, 17f, 18f); horizontalLineTo(3f)
     }
 
+    /** A funnel: what a lane lets through (its filters). */
+    val Filter: ImageVector = stroke("filter") {
+        moveTo(4f, 5f); horizontalLineTo(20f); lineTo(14f, 13f); verticalLineTo(19f)
+        lineTo(10f, 17f); verticalLineTo(13f); close()
+    }
+
     val Grid: ImageVector = stroke("lanes") {
         moveTo(4f, 4f); horizontalLineTo(10f); verticalLineTo(10f); horizontalLineTo(4f); close()
         moveTo(14f, 4f); horizontalLineTo(20f); verticalLineTo(10f); horizontalLineTo(14f); close()

@@ -372,6 +372,7 @@ DEFAULTS = {
         "layout": "auto",
         "to_new": "bottom",  # the "↓ N new" button: "bottom" (by the thumb), "top"
         "free_memory": "background",  # caches let go: "background", "low", "off"
+        "lane_strip": "icons",  # the strip over a lane: main lanes "icons" or "names"
         "push": "auto",
         "stream": "always",        # the live stream: "always", "wifi" (Wi-Fi only), "off"
     },
@@ -441,6 +442,7 @@ CHOICES = {
     ("phone", "layout"): {"auto", "one", "two", "three"},
     ("phone", "to_new"): {"bottom", "top"},
     ("phone", "free_memory"): {"background", "low", "off"},
+    ("phone", "lane_strip"): {"icons", "names"},
     ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "fonts"): {"theme", "system", "custom"},
@@ -650,7 +652,7 @@ FILE_LAYOUT = (
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout to_new free_memory push stream")),
+    ("phone", _keys("phone", "overview layout to_new free_memory lane_strip push stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}

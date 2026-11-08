@@ -162,4 +162,11 @@
     <string name="edit_lane">Edit the lane</string>
     <string name="lanes_editor">Lanes…</string>
     <string name="mark_all_read">Mark all read</string>
+    <string name="lane_filters">Filters</string>
+    <string name="lane_filters_on">Filters (on)</string>
+    <string name="offline">offline</string>
+    <string name="undo">Undo</string>
+    <string name="show_header">%1$s — show the bar</string>
+    <string name="lane_more">More: find, mark read, refresh, the lane</string>
+    <string name="lane_current">%1$s, open now</string>
 </resources>

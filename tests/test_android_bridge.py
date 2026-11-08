@@ -333,6 +333,24 @@ class BridgeTest(_Base):
         # reading in a row: only lanes with news, yours first
         self.assertEqual(hub["order"], [x for x in hub["order"] if lanes[x]["unread"]])
         self.assertLess(hub["order"].index("to_me"), hub["order"].index("home"))
+        # the strip over a lane (09.11, common/sidebar.strip): the main lanes with their
+        # pictures first, in the set's order; then, after them, the others with news
+        strip = hub["strip"]
+        main = [x["name"] for x in strip if x["main"]]
+        self.assertIn("home", main)
+        self.assertTrue(all(x["icon"] for x in strip if x["main"]))
+        self.assertNotIn("federated", [x["name"] for x in strip])  # browsed: out
+        rest = [x for x in strip if not x["main"]]
+        self.assertTrue(all(lanes[x["name"]]["unread"] for x in rest))
+        self.assertEqual(strip, [x for x in strip if x["main"]] + rest)
+        self.assertEqual(hub["lane_strip"], "icons")
+        # your tiles first when you chose them
+        self.call("pin", json.dumps(["to_me", "home"]))
+        main = [x["name"] for x in self.call("hub")["strip"] if x["main"]]
+        self.assertEqual(main, ["to_me", "home"])
+        # the lanes' pictures for it: always, a theme's set or the fallback one
+        pics = self.call("pictures")
+        self.assertIn("lane.home", pics)
         self.assertEqual(hub["unread"], sum(lanes[x]["unread"] for x in hub["order"]))
         # where the set puts each lane, under which of its sections (lanes.preset)
         every = sorted(lanes.values(), key=lambda x: x["pos"])
@@ -768,7 +786,9 @@ class BridgeThemeTest(_Base):
     def test_a_theme_paints_the_phone(self):
         self.demo()
         self.assertEqual(self.call("theme")["colors"], {})  # system: nothing of its own
-        self.assertEqual(self.call("pictures"), {})  # the desktop's icons: the phone's then
+        pics = self.call("pictures")  # the desktop's icons: the phone's then — but the
+        self.assertEqual([k for k in pics if not k.startswith("lane.")], [])  # lanes'
+        self.assertIn("lane.home", pics)  # pictures (the strip, 09.11): the fallback set
         names = [o["key"] for c in self.call("settings")["chapters"] for o in c["options"]]
         self.assertIn("theme", names)  # chosen on the phone's settings page
         self.assertIn("when_focused", names)  # and when the shade says what

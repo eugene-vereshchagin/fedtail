@@ -403,6 +403,7 @@ fun PostList(
     prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
     busy: Boolean = false,     // a poll round on: the opossum swings
     bottomRoom: Int = 96,      // dp under the last post: the buttons floating there clear it
+    topRoom: androidx.compose.ui.unit.Dp = 8.dp, // over the first post: a bar laid over the list
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -417,7 +418,7 @@ fun PostList(
     if (prefetch != "off") Ahead(state, posts, prefetch)
     LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = if (thread) 0.dp else 8.dp,
-            end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = bottomRoom.dp),
+            end = if (thread) 0.dp else 8.dp, top = topRoom, bottom = bottomRoom.dp),
         verticalArrangement = Arrangement.spacedBy(if (thread) 0.dp else 8.dp)) {
         header?.let { h -> item(key = "header") { h() } }
         // "new below" is an item of its own: it comes and goes without moving the post

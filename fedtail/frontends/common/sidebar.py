@@ -249,3 +249,31 @@ def fold(view, group, on=None):
     (now.add if on else now.discard)(group)
     view.set_state("folded_groups", sorted(now))
     return on
+
+
+def strip(view, cfg, names, unread):
+    """The phone's strip of lanes over a lane (phone.lane_strip): [{"name", "icon",
+    "main"}] in order — first the main ones: your tiles (phone's pinned, sync.tiles) in
+    their order, or, none pinned, the set's lanes that have a picture of their own (Home,
+    mentions, replies, threads… — iconpack.lane_picture), in the set's order; then, after
+    a line, every other lane read through that has news now. names: every lane in the
+    set's order; unread: {name: count}. One rule for the strip, the tiles and the counts
+    (09.11: tags in sight, Home a few gestures away). Browsed lanes stay out (nothing to
+    catch up on), except a tile you pinned."""
+    from .. import iconpack
+    pinned = [n for n in (view.pinned_tiles() if hasattr(view, "pinned_tiles") else ())
+              if n in names]
+
+    def picture(name):
+        icon = view.lane_icon(name) if hasattr(view, "lane_icon") else None
+        return iconpack.lane_picture(name, icon) or ""
+    if pinned:
+        main = pinned
+    else:
+        main = [n for n in names if hub_kind(view, n) != "browse"
+                and picture(n) not in ("", "list")]
+    shown = set(main)
+    rest = [n for n in names if n not in shown and hub_kind(view, n) != "browse"
+            and (unread.get(n) or 0) > 0]
+    return ([{"name": n, "icon": picture(n), "main": True} for n in main] +
+            [{"name": n, "icon": picture(n), "main": False} for n in rest])
