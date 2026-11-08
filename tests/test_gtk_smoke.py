@@ -1361,6 +1361,25 @@ class GtkSmokeTest(_GtkBase):
                  if isinstance(w, Gtk.Button)]
         self.assertIn(i18n._("open_browser"), words)  # no tools: the menu whole
 
+    def test_the_tools_in_a_theme_tried(self):
+        """As Qt (08.11): a theme tried from the menu — chat (psi), compact (juick) — the
+        lanes drawn anew, each card with its tools over the corner, the menu without them."""
+        for name in ("psi", "juick"):
+            self.win.try_theme(name)
+            pump(timeout=0.3)
+            lane = self._lane("home")
+            card = next(c for c in lane.rows.values() if c.post.id == "011")
+            self.assertIsNotNone(card.own_tools, name)
+            card._show_tools(True)
+            tools = [b.tool for b in _walk(card.own_tools) if isinstance(b, Gtk.Button)]
+            self.assertEqual(tools[:2], ["open", "copy_link"], name)
+            self.assertTrue(card.own_tools.get_visible(), name)
+            card._fill_menu(card.more)
+            words = [w.get_label() for w in _walk(card.more.get_popover())
+                     if isinstance(w, Gtk.Button)]
+            self.assertNotIn(i18n._("open_browser"), words, name)
+        self.win.try_theme("system")
+
     def test_messenger_themes_head_the_card_as_a_chat(self):
         """shape.card_header = "chat" (qip, mra, icq): "Name (time)" in one line, as Qt's —
         not the name, the @address and the time apart (the night of 23.10)."""
