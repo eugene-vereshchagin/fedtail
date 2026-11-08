@@ -348,14 +348,14 @@ android = "has"
 since = "0.18.0"
 name.ru = "Короткие имена постов одинаковые на всех устройствах"
 name.en = "Short post names the same on every device"
-config = "`card.code_click` (`thread`)"
+config = "`card.code_click` (`auto`)"
 api.ru = "своё"
 api.en = "own"
 others.ru = "только в fedtail (на Point — номера постов сервера)"
 others.en = "only in fedtail (Point had the server's post numbers)"
 clients = []
-details.ru = "Имя вроде `#kq3zt` выводится из id поста, поэтому один и тот же пост зовётся одинаково на десктопе, ноутбуке и телефоне — можно продиктовать с одного и открыть на другом. Пять знаков; если два известных поста начинаются одинаково, их имена показываются длиннее. Имена, которые fedtail раздал раньше (три-четыре знака, счётчиком), остаются за своими постами и по-прежнему открываются. Клик по имени поста открывает его тред, на этом посте (`code_click = \"line\"` — в командную строку, как на point.im)."
-details.en = "A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them. A click on a post's name opens its thread at the post (`code_click = \"line\"` — into the command line, as on point.im)."
+details.ru = "Имя вроде `#kq3zt` выводится из id поста, поэтому один и тот же пост зовётся одинаково на десктопе, ноутбуке и телефоне — можно продиктовать с одного и открыть на другом. Пять знаков; если два известных поста начинаются одинаково, их имена показываются длиннее. Имена, которые fedtail раздал раньше (три-четыре знака, счётчиком), остаются за своими постами и по-прежнему открываются. Клик по имени поста — в командную строку, когда она включена (как на point.im), а без неё открывает тред поста (`code_click = \"auto\"`; `\"thread\"`, `\"line\"` — всегда так)."
+details.en = "A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them. A click on a post's name puts it into the command line when that's on (as on point.im), and without it opens the post's thread (`code_click = \"auto\"`; `\"thread\"`, `\"line\"` — always that)."
 
 [[feature]]
 id = "comment-ids"

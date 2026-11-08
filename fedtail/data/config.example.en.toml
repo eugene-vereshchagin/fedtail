@@ -717,9 +717,10 @@ hover_tools = ["open", "copy_link", "translate", "quote", "reply_quote", "sub_th
 # windows and on the web page; the terminal and the phone keep it flat. false — one list.
 menu_groups = true
 
-# A click on a post's short number (#abc): "thread" — open its thread, at the post; "line"
-# — put it into the command line (point.im's way), to type a command for it.
-code_click = "thread"
+# A click on a post's short number (#abc): "auto" — with point.im's command line on
+# (window.command_line) into it, to type a command for it, without it — the post's thread;
+# "thread" — always its thread, at the post; "line" — always into the command line.
+code_click = "auto"
 
 # Open @mentions, #hashtags and links to fediverse posts and profiles inside
 # fedtail (a profile, a tag's lane, a thread), not in the browser. Not found — the browser.

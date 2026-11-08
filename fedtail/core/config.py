@@ -48,7 +48,7 @@ DEFAULTS = {
         # the tools over a post, under the mouse (common/actions.TOOLS): out of its menu
         "hover_tools": ["open", "copy_link", "translate", "quote", "reply_quote",
                         "sub_thread", "mute_thread", "read_upto", "edit", "delete"],
-        "code_click": "thread",  # a click on a post's #abc: "thread" — open it; "line"
+        "code_click": "auto",  # a post's #abc clicked: "auto", "thread" — open it; "line"
         "menu_groups": True,  # a post's menu in submenus: Author, Thread, More
         "arts_mode": True,
         "max_width": 760,
@@ -389,7 +389,7 @@ CHOICES = {
     ("feed", "open_at"): {"post", "first_unread"},
     ("feed", "comment_ids"): {"post", "own"},
     ("feed", "tag_click"): {"menu", "author", "everywhere"},
-    ("ui", "code_click"): {"thread", "line"},
+    ("ui", "code_click"): {"auto", "thread", "line"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
     ("phone", "stream"): {"always", "wifi", "off"},

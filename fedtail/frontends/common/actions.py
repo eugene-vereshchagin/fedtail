@@ -160,10 +160,17 @@ TOOLS = {"open": ("open", "↗"), "copy_link": ("copy", "⧉"), "translate": ("t
 SEP = Item("separator")
 
 
+def code_to_line(cfg):
+    """Does a click on a post's #abc put it into the command line (ui.code_click "line",
+    or "auto" with point.im's command line on: ui.command_line) — or open its thread?"""
+    ui = cfg.get("ui") or {}
+    how = ui.get("code_click", "auto")
+    return how == "line" or (how == "auto" and bool(ui.get("command_line", True)))
+
+
 def short_id_tip(cfg):
     """What a post's #abc says under the mouse: what a click on it does (ui.code_click)."""
-    line = (cfg.get("ui") or {}).get("code_click", "thread") == "line"
-    return _("short_id_tip_line" if line else "short_id_tip")
+    return _("short_id_tip_line" if code_to_line(cfg) else "short_id_tip")
 
 
 def hover_tools(cfg):

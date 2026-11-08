@@ -1363,6 +1363,42 @@ class GtkSmokeTest(_GtkBase):
                  if isinstance(w, Gtk.Button)]
         self.assertIn(i18n._("open_browser"), words)  # no tools: the menu whole
 
+    def test_the_tools_alike_in_every_theme(self):
+        """As Qt (08.11): in every built-in theme the tools over a post seen at its top
+        right, over neither the #abc, nor the name, nor the face."""
+        from pathlib import Path
+        names = sorted(f.stem for f in (Path(__file__).resolve().parent.parent /
+                                        "fedtail" / "data" / "themes").glob("*.toml"))
+        self.win.set_default_size(1100, 800)
+        for name in names:
+            self.win.try_theme(name)
+            pump(timeout=0.3)
+            lane = self._lane("home")
+            card = next(c for c in lane.rows.values() if c.post.id == "011")
+            card._show_tools(True)
+            pump(timeout=0.2)
+            tools = card.own_tools
+            self.assertTrue(tools.get_visible(), name)
+            ok, box = tools.compute_bounds(card)
+            self.assertTrue(ok, name)
+            width = card.get_width()
+            self.assertLessEqual(box.get_x() + box.get_width(), width + 1, name)
+            # who wrote it — the face, the name, the @address as far as its text goes
+            for w in [card.face, *card.who]:
+                if w is None or not w.get_mapped():
+                    continue
+                ok, at = w.compute_bounds(card)
+                text = w.get_layout().get_pixel_size()[0] if isinstance(w, Gtk.Label) \
+                    else at.get_width()
+                self.assertLess(at.get_x() + min(text, at.get_width()), box.get_x(),
+                                f"{name}: the tools over who wrote it")
+            sid = getattr(card, "sid_label", None)
+            if sid is not None and sid.get_mapped():
+                ok, code = sid.compute_bounds(card)
+                self.assertFalse(ok and box.intersection(code)[0], f"{name}: over #abc")
+            card._show_tools(False)
+        self.win.try_theme("system")
+
     def test_the_tools_in_a_theme_tried(self):
         """As Qt (08.11): a theme tried from the menu — chat (psi), compact (juick) — the
         lanes drawn anew, each card with its tools over the corner, the menu without them."""

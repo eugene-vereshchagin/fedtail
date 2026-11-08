@@ -360,6 +360,53 @@ class HoverTest(unittest.TestCase):
     tearDown = smoke.QtSmokeTest.tearDown
     pump = smoke.QtSmokeTest.pump
 
+    def test_the_tools_alike_in_every_theme(self):
+        """08.11: point puts #abc under the post, and the tools moved left of it — over
+        the name and the face. In every built-in theme: the tools seen, at the top right,
+        over neither the #abc, nor the name, nor the face."""
+        from pathlib import Path
+
+        from PySide6.QtCore import QEvent, QPointF, QRect
+        from PySide6.QtGui import QEnterEvent
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import ClickLabel
+        self.win.resize(1100, 800)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        names = sorted(f.stem for f in (Path(__file__).resolve().parent.parent /
+                                        "fedtail" / "data" / "themes").glob("*.toml"))
+        self.assertIn("point", names)
+        p = QPointF(5, 5)
+        for name in names:
+            self.win.try_theme(name)
+            self.pump(until=lambda: "011" in view.rows)
+            self.pump(0.05)
+            row = view.rows["011"]
+            row.enterEvent(QEnterEvent(p, p, p))
+            box = row.own_tools
+            self.assertIsNotNone(box, name)
+            self.assertTrue(box.isVisible(), name)
+            host = box.parentWidget()
+            tools = box.geometry()
+            self.assertGreater(tools.left(), host.width() // 2, name)  # the right half
+            self.assertLessEqual(tools.right(), host.width(), name)
+
+            def place(w, host=host):
+                return QRect(w.mapTo(host, w.rect().topLeft()), w.size())
+            others = [w for w in host.findChildren(QLabel)
+                      if w.isVisible() and (w.objectName() in ("shortId", "name")
+                                            or isinstance(w, ClickLabel))
+                      and not box.isAncestorOf(w)]
+            for w in others:
+                self.assertFalse(tools.intersects(place(w)),
+                                 f"{name}: the tools over {w.objectName() or 'the face'}")
+            row.leaveEvent(QEvent(QEvent.Type.Leave))
+        self.win.try_theme("system")
+
     def test_the_post_under_the_mouse_is_lit(self):
         """ui.additional_highlight (point.im): the post under the mouse has its buttons lit;
         its tools (ui.hover_tools) at the top right — someone's: open, copy…; my own one's

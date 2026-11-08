@@ -143,9 +143,8 @@ class Links:
         if action == "copyhandle":  # someone's @user@server, to call them anywhere
             self._ask(h, "copy_handle", unquote(arg))
         elif action == "alias":  # a post's #abc: its thread, or into the command line
-            post = self.view.by_alias(arg) \
-                if (self.view.cfg.get("ui") or {}).get("code_click", "thread") == "thread" \
-                else None
+            from .actions import code_to_line
+            post = None if code_to_line(self.view.cfg) else self.view.by_alias(arg)
             if post is not None:  # (the hand reaches for it to open the post, 08.11)
                 h.open_thread(post.id, "post")
             else:

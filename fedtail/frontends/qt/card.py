@@ -727,12 +727,17 @@ class PostRow(QWidget):
         if host is None:
             return
         box.adjustSize()
-        # left of the post's #abc, not over it: it stays to be clicked (08.11)
+        # the top right corner; left of the post's #abc when it stands in that row, not
+        # over it: it stays to be clicked (08.11). Under the post (point's footer) the
+        # #abc is no matter: the corner stays — measured, not by the theme's name: a
+        # move to the left of a #abc down there put the tools over the name and face
         right = host.width() - 6
         code = host.findChild(QLabel, "shortId")
         if code is not None and code.isVisible():
             from PySide6.QtCore import QPoint
-            right = code.mapTo(host, QPoint(0, 0)).x() - 4
+            at = code.mapTo(host, QPoint(0, 0))
+            if at.y() < box.height() + 12:  # in the top row
+                right = at.x() - 4
         box.move(max(0, right - box.width()), 4)
         box.raise_()
 

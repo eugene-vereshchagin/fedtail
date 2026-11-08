@@ -184,19 +184,25 @@ class CommonTest(TmpDir):
                          len(actions.menu(self.view.by_id("001"), none)))
 
     def test_a_click_on_the_code(self):
-        """ui.code_click (08.11): "thread" — the post's thread opens (the hand reaches for
-        it); "line" — into the command line, as point.im; the tip says which."""
+        """ui.code_click (08.11): "auto" — with point.im's command line on (ui.command_line)
+        #abc goes into it, without it the post's thread opens; "thread", "line" — always
+        that; the tip says which."""
         h = Host()
         ls = links.Links(self.view, h)
         alias = self.view.short_ids([self.view.by_id("001")])[self.view.by_id("001").id]
-        ls.open("fedtail:alias/" + alias)
-        self.assertEqual(h.did[-1][:2], ("open_thread", ("001", "post")))
-        self.core.cfg["ui"]["code_click"] = "line"
-        ls.open("fedtail:alias/" + alias)
-        self.assertEqual(h.did[-1][:2], ("put_alias", (alias,)))
-        self.assertEqual(actions.short_id_tip(self.core.cfg), i18n._("short_id_tip_line"))
-        self.core.cfg["ui"]["code_click"] = "thread"
-        self.assertEqual(actions.short_id_tip(self.core.cfg), i18n._("short_id_tip"))
+        ui = self.core.cfg["ui"]
+        cases = (("auto", True, "put_alias"), ("auto", False, "open_thread"),
+                 ("thread", True, "open_thread"), ("line", False, "put_alias"))
+        for how, line_on, want in cases:
+            ui["code_click"], ui["command_line"] = how, line_on
+            ls.open("fedtail:alias/" + alias)
+            self.assertEqual(h.did[-1][0], want, (how, line_on))
+            if want == "open_thread":
+                self.assertEqual(h.did[-1][1], ("001", "post"))
+            self.assertEqual(actions.short_id_tip(self.core.cfg),
+                             i18n._("short_id_tip_line" if want == "put_alias"
+                                    else "short_id_tip"))
+        ui["code_click"], ui["command_line"] = "auto", True
 
     def test_the_menu_in_submenus(self):
         """ui.menu_groups (08.11): Author ▸ (the address, a list, mute, block, report…),

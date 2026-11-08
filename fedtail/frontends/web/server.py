@@ -799,7 +799,8 @@ class Web:
                 "highlight": bool(c["ui"].get("additional_highlight", True)),
                 # the tools over a post, under the mouse (ui.hover_tools; /api/post_menu)
                 "hover_tools": bool(actions.hover_tools(c)),
-                "code_click": c["ui"].get("code_click", "thread"),  # #abc: thread or line
+                # #abc clicked: into the command line, or its thread (actions.code_to_line)
+                "code_click": "line" if actions.code_to_line(c) else "thread",
                 "visibility": self.core.default_visibility(),
                 # when a picture that didn't come is asked again: the windows' times
                 "picture_later": list(_picture_later()),

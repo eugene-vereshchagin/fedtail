@@ -59,10 +59,13 @@
   posts there looked like a link back to the profile and did nothing; it's plain now in
   the Qt and GTK windows, a link everywhere else as before.
 
-- **A click on a post's #abc opens its thread.** It put the name into the command line
-  (point.im's way) — where the hand reached for the thread. `card.code_click = "line"`
-  keeps the old way. The tools over the post no longer cover the #abc: they stand left of
-  it.
+- **A click on a post's #abc opens its thread — unless the command line is there.** With
+  point.im's command line on (`window.command_line`) the #abc goes into it, as before, to
+  type a command for it; without it the post's thread opens, where the hand reached for it
+  (`card.code_click`: `"auto"`; `"thread"`, `"line"` — always that). The tools over the
+  post no longer cover the #abc: they stand left of it where it shares their row, and keep
+  the corner where it doesn't (point's #abc under the post: the tools went over the name
+  and the face) — every built-in theme checked, in Qt and in GTK.
 
 - **The same lanes on every device, the same numbers.** With `sync.lane_rules` the lanes
   travelled only when they changed: lanes set up before sync never reached the other

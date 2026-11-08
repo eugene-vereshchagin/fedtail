@@ -136,7 +136,7 @@ class Card(Gtk.Box):
         body.set_child(self.column)
         if shape.get("card_avatars", True) and ctx.images is not None:
             size = int(shape.get("avatar", 40))
-            face = Avatar(ctx, self.post.author, size)
+            face = self.face = Avatar(ctx, self.post.author, size)
             face.set_halign(Gtk.Align.START)
             face.set_valign(Gtk.Align.START)
             # as Qt's: a click on the face opens the profile; a screen reader says so
@@ -210,12 +210,20 @@ class Card(Gtk.Box):
                 tip(b, it.label)
                 b.connect("clicked", lambda _b, i=it: self._do(i))
                 tools.append(b)
-        # left of the post's #abc, not over it: it stays to be clicked (08.11)
-        sid = getattr(self, "sid_label", None)
-        tools.set_margin_end((sid.get_width() + 8) if sid is not None and on else 0)
+        # the top right corner; left of the post's #abc when it stands in that row, not
+        # over it: it stays to be clicked (08.11) — measured where it is, as Qt's
+        margin = 0
+        sid, holder = getattr(self, "sid_label", None), tools.get_parent()
+        if on and sid is not None and holder is not None and sid.get_mapped():
+            ok, code = sid.compute_bounds(holder)
+            if ok and code.get_y() < 40:  # in the top row
+                margin = max(0, int(holder.get_width() - code.get_x()) + 4)
+        tools.set_margin_end(margin)
         tools.set_visible(on and tools.get_first_child() is not None)
 
     own_tools = None
+    face = None
+    who = ()
 
     def _booster_menu(self, anchor, acc):
         """Their profile, their @address, a list of mine — for whoever boosted."""
@@ -323,6 +331,7 @@ class Card(Gtk.Box):
             lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
         tip(lab, "@" + p.author.handle + " · " + actions.vis_word(p.visibility))
         head.append(lab)
+        self.who = [lab]  # who wrote it, as drawn: the tools stay off it (tests)
         if p.edited:
             ed = _label(link_markup(f"fedtail:history/{p.id}", _("edited_mark")),
                         ("ft-muted",), markup=True)
@@ -372,6 +381,7 @@ class Card(Gtk.Box):
             if isinstance(name, Gtk.Label):
                 name.set_ellipsize(Pango.EllipsizeMode.END)
             head.append(name)
+            self.who = [name]  # who wrote it, as drawn: the tools stay off it (tests)
             at = "@" + p.author.handle
             handle = _label(GLib.markup_escape_text(at) if p.author.id == self.profile_of
                             else link_markup(f"fedtail:account/{p.author.id}", at),
@@ -380,6 +390,7 @@ class Card(Gtk.Box):
             handle.set_ellipsize(Pango.EllipsizeMode.END)
             handle.set_hexpand(True)
             head.append(handle)
+            self.who.append(handle)
             if self.via:  # → @account, in a colour of its own (ui.account_colors), as Qt's
                 from ..common.lane import account_color
                 text = GLib.markup_escape_text("→ " + self.via)
