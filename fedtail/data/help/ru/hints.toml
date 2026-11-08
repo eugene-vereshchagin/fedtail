@@ -313,3 +313,7 @@ help = "writing.md#markdown-cw-язык"
 text = "Список: «- » перед каждой строкой выделенного; ещё раз — снять."
 config = "post.format_bar"
 help = "writing.md#markdown-cw-язык"
+
+[sync_lanes_push_tip]
+text = "Ленты этого устройства — какие, в каком порядке, их языки и окно счёта — уходят на остальные устройства и заменяют их ленты там, где включён sync.lane_rules: одинаковые ленты — одинаковые числа."
+config = "sync.lane_rules"

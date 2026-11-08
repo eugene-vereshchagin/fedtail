@@ -80,6 +80,8 @@ PASS = {
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_key_link", "sync_join", "sync_now", "sync_status",
+    # the lanes between devices (sync.lane_rules): sent by hand, turned on, who has it
+    "push_lane_rules", "sync_lane_rules_on", "sync_devices",
     "update_out",  # a plain version string: a newer fedtail out (core/updates.py)
     "update_status", "check_updates_now",  # plain dicts: About's "Updates" row
     "pause_polling",  # the phone's app out of sight

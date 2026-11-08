@@ -149,11 +149,56 @@ class SyncMixin:
     def sync_status(self):
         return self.sync.status() if self.sync else None
 
-    # the lanes' settings that travel with sync.lane_rules (core/sync)
-    LANE_RULES = ("preset", "enabled", "custom", "posts_only")
+    # the lanes' settings that travel with sync.lane_rules (core/sync): which lanes, and
+    # what makes their content and their counts — two devices with the same lanes but
+    # other languages or another window counted differently (08.11). (section, key);
+    # named in the value by key alone for [lanes] (as fedtail 0.22 sent them, which
+    # takes those and leaves the rest), "<section>.<key>" for the others
+    LANE_RULE_KEYS = (("lanes", "preset"), ("lanes", "enabled"), ("lanes", "custom"),
+                      ("lanes", "posts_only"), ("lanes", "languages"),
+                      ("lanes", "languages_in"), ("lanes", "detect_language"),
+                      ("feed", "repeat_boosts"), ("feed", "render_limit"),
+                      ("feed", "count_filtered"))
+    LANE_RULES = tuple(k for s, k in LANE_RULE_KEYS if s == "lanes")
+
+    @staticmethod
+    def _rule_name(section, key):
+        return key if section == "lanes" else f"{section}.{key}"
 
     def _lane_rules(self):
-        return {k: self.cfg["lanes"].get(k) for k in self.LANE_RULES}
+        return {self._rule_name(s, k): self.cfg[s].get(k) for s, k in self.LANE_RULE_KEYS}
+
+    def push_lane_rules(self):
+        """"Send my lanes to the other devices" (≡ → Sync): this device's lanes go out as
+        a change, the newest — they win on every device with sync.lane_rules, the way an
+        edit would. Without the switch here: False (nothing goes)."""
+        if not self.sync or not self.cfg["sync"].get("lane_rules", False):
+            return False
+        self.store.kv_set("lane_rules", self._lane_rules())
+        self.sync.record_setting("lane_rules")
+        log.info("sync: my lanes sent to the other devices")
+        return True
+
+    def sync_lane_rules_on(self):
+        """sync.lane_rules turned on from ≡ → Sync: into config.toml, and sync goes on
+        with it at once (no restart)."""
+        from . import config_edit
+        config_edit.save(self.paths.config_file, {("sync", "lane_rules"): True})
+        self.cfg["sync"]["lane_rules"] = True
+        if self.sync is not None:
+            self.sync.what.add("lane_rules")
+        log.info("sync: the lanes travel now (sync.lane_rules)")
+
+    def sync_devices(self):
+        """The other devices of this key, as the journal met them: [{"id", "name", "at",
+        "lane_rules": True / False / None (an older fedtail: not said)}]."""
+        known = self.store.kv_get("sync.devices") or {}
+        out = []
+        for dev, v in sorted(known.items(), key=lambda kv: str(kv[1].get("name") or "")):
+            what = v.get("what")
+            out.append({"id": dev, "name": v.get("name") or "", "at": v.get("at") or "",
+                        "lane_rules": None if what is None else "lane_rules" in what})
+        return out
 
     def _note_lane_rules(self):
         """The lanes as config.toml has them now, kept (kv "lane_rules"); changed since
@@ -171,8 +216,8 @@ class SyncMixin:
     def lanes_saved(self, cfg):
         """The lanes were written into config.toml here (the lane editor): this run takes
         them at once, and they travel (sync.lane_rules)."""
-        for k in self.LANE_RULES:
-            self.cfg["lanes"][k] = cfg["lanes"][k]
+        for s, k in self.LANE_RULE_KEYS:
+            self.cfg[s][k] = cfg[s][k]
         self._note_lane_rules()
         self._apply_lists(list(self.lists), self.list_members)
 
@@ -182,11 +227,15 @@ class SyncMixin:
         got = self.store.kv_get("lane_rules")
         if not isinstance(got, dict):
             return
-        changes = {("lanes", k): got[k] if got.get(k) is not None else config_edit.UNSET
-                   for k in self.LANE_RULES if k in got}
+        changes = {}
+        for s, k in self.LANE_RULE_KEYS:
+            name = self._rule_name(s, k)
+            if name in got:  # (an older device sends [lanes]' own only: the rest stays)
+                changes[(s, k)] = got[name] if got[name] is not None else config_edit.UNSET
         cfg, _w = config_edit.save(self.paths.config_file, changes)
-        for k in self.LANE_RULES:
-            self.cfg["lanes"][k] = cfg["lanes"][k]
+        for s, k in self.LANE_RULE_KEYS:
+            self.cfg[s][k] = cfg[s][k]
+        self._lane_cache.clear()  # other languages, another window: every lane anew
         self.store.kv_set("lane_rules", self._lane_rules())  # as this file reads them
 
     def apply_lanes_state(self, keys):

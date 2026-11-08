@@ -767,6 +767,71 @@ class LaneRulesSyncTest(Devices):
         cfg, _ = config.validate({})
         self.assertFalse(cfg["sync"]["lane_rules"])
 
+    def test_sent_by_hand_with_what_makes_the_counts(self):
+        """08.11: lanes set before sync never went (a start isn't a change); "Send my
+        lanes" sends them — with their languages and the counting window, so the same
+        lanes count the same; each device says whether it takes the lanes."""
+        import tomllib
+
+        from fedtail.core import config_edit
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        cfg, _w = config_edit.save(self.desk.paths.config_file, {
+            ("lanes", "languages"): ["ru", "en"], ("feed", "render_limit"): 120,
+            ("feed", "count_filtered"): False})
+        for s_, k in (("lanes", "languages"), ("feed", "render_limit"),
+                      ("feed", "count_filtered")):
+            self.desk.cfg[s_][k] = cfg[s_][k]  # set by hand, before: never sent
+        self.assertTrue(self.desk.push_lane_rules())
+        self.desk.sync_now()
+        self.phone.sync_now()
+        got = tomllib.loads(self.phone.paths.config_file.read_text("utf-8"))
+        self.assertEqual(got["lanes"]["languages"], ["ru", "en"])
+        self.assertEqual(got["reading"]["render_limit"], 120)  # [reading] in the file
+        self.assertFalse(got["reading"]["count_filtered"])
+        self.assertEqual(self.phone.cfg["feed"]["render_limit"], 120)  # in use at once
+        # who takes the lanes: the desk said so in its batch; the phone says it with its
+        self.assertEqual([d["lane_rules"] for d in self.phone.sync_devices()], [True])
+        self.phone.mark_read(["1"])
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual([d["lane_rules"] for d in self.desk.sync_devices()], [True])
+
+    def test_the_sync_page_shows_and_sends_them(self):
+        """≡ → Sync, every interface (common/syncplace.py): the lanes' row, "Send my
+        lanes" (asked first), each other device — whether it takes the lanes."""
+        from fedtail import i18n
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.mark_read(["1"])
+        self.phone.sync_now()
+        self.desk.sync_now()
+        p = Places(View(self.desk))
+        page = p.page("sync")
+        self.assertEqual(page.tab, "done")
+        lanes = next(r for r in page.rows if r.key == "lanes")
+        self.assertEqual([b.act for b in lanes.buttons], [("sync", "pushlanes", "")])
+        dev = [r for r in page.rows if r.key.startswith("dev:")]
+        self.assertEqual([r.line for r in dev], [i18n._("sync_device_lanes_yes")])
+        out = p.act("sync", "pushlanes", "")
+        self.assertTrue(out.confirm)  # replaces the others' lanes: asked
+        out = p.act("sync", "pushlanes", "", confirmed=True)
+        self.assertFalse(out.error, out.error)
+        self.assertEqual(self.desk.store.sync_pending_count(), 0)  # gone at once
+
+    def test_turned_on_from_the_sync_page(self):
+        import tomllib
+        self.desk.cfg["sync"]["lane_rules"] = False
+        self.desk.sync_setup()
+        self.assertFalse(self.desk.push_lane_rules())  # off here: nothing goes
+        self.desk.sync_lane_rules_on()
+        got = tomllib.loads(self.desk.paths.config_file.read_text("utf-8"))
+        self.assertTrue(got["sync"]["lane_rules"])
+        self.desk.sync_now()
+        self.assertTrue(self.desk.push_lane_rules())
+
 
 @need_crypto
 class DevicesJoinTest(Devices):

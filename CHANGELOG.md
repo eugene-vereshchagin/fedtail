@@ -38,6 +38,15 @@
   again with the next rounds until the server answers; `/api/v2/instance` speaks for them
   when v1 doesn't say.
 
+- **The same lanes on every device, the same numbers.** With `sync.lane_rules` the lanes
+  travelled only when they changed: lanes set up before sync never reached the other
+  devices, and what made their counts (their languages, the counting window, repeated
+  boosts, news behind the filters) never travelled at all. Now ≡ → Sync has "Send my
+  lanes to the other devices" (asked first: theirs are replaced), "Sync the lanes" where
+  it's off, and, for each of the other devices, whether it takes the lanes; and the lanes
+  carry `lanes.languages`, `languages_in`, `detect_language`, `reading.repeat_boosts`,
+  `render_limit` and `count_filtered` with them — in every interface.
+
 - **Where the memory lies, in the log.** A night's growth said only "rss_mb 337->938";
   every stats line now also says which part it is (`debug.memory_map`, on): the process's
   own pages by kind — the heap, the rest of the anonymous memory, stacks, libraries,

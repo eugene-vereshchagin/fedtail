@@ -187,7 +187,45 @@ class SyncPlaces:
                 buttons=(self._btn(_("sync_what_btn"), "sync", "what"),
                          self._btn(_("sync_change_where"), "sync", "goto", "where"))),
         ]
+        page.rows += self._lane_rows()
         return page
+
+    def _lane_rows(self):
+        """The lanes between the devices (sync.lane_rules): on here or not, "send my
+        lanes" — and each other device, whether it takes them. The same lanes everywhere
+        is the same counts everywhere (08.11)."""
+        from .places import Row
+        v = self.view
+        on = bool(v.cfg["sync"].get("lane_rules", False))
+        if on:
+            row = Row("item", _("sync_lanes_title"), _("sync_lanes_on_line"), key="lanes",
+                      buttons=(self._btn(_("sync_lanes_push"), "sync", "pushlanes",
+                                         tip=_("sync_lanes_push_tip")),))
+        else:
+            row = Row("item", _("sync_lanes_title"), _("sync_lanes_off_line"), key="lanes",
+                      buttons=(self._btn(_("sync_lanes_turn_on"), "sync", "laneson"),))
+        rows = [row]
+        for d in v.sync_devices() or ():
+            name = d["name"] or _("sync_device_unnamed")
+            said = {True: _("sync_device_lanes_yes"), False: _("sync_device_lanes_no"),
+                    None: _("sync_device_lanes_unknown")}[d["lane_rules"]]
+            rows.append(Row("text", "· " + name, said, key="dev:" + d["id"]))
+        return rows
+
+    def _a_sync_laneson(self, _d, _v, _c, _ans):
+        from .places import Out
+        self.view.sync_lane_rules_on()
+        return Out(message=_("sync_lanes_now_on"), open={"page": "sync"})
+
+    def _a_sync_pushlanes(self, _d, _v, confirmed, _ans):
+        from .places import Out
+        if not confirmed:
+            return Out(confirm=_("sync_lanes_push_sure"))
+        if not self.view.push_lane_rules():
+            return Out(error=_("sync_lanes_off_line"))
+        done = self.view.sync_now()
+        return Out(message=_("sync_lanes_sent") if done else _("sync_lanes_queued"),
+                   refresh=True)
 
     # ---- the buttons ---------------------------------------------------------------
     def _a_sync_goto(self, step, _v, _c, _ans):

@@ -254,6 +254,27 @@ _STRINGS = {
         "sync_f_folder_tip": "Папка, которую видят все твои устройства; если указана, сервер не "
                              "нужен",
         "sync_save_where": "Сохранить и включить",
+        "sync_lanes_title": "Ленты на всех устройствах",
+        "sync_lanes_on_line": "Состав лент, их языки и окно счёта ездят между устройствами "
+                              "(sync.lane_rules): одинаковые ленты — одинаковые числа.",
+        "sync_lanes_off_line": "Состав лент не синхронизируется (sync.lane_rules выключен): "
+                               "на каждом устройстве свои ленты — и свои числа.",
+        "sync_lanes_push": "Отправить мои ленты на другие устройства",
+        "sync_lanes_push_tip": "Ленты этого устройства, их языки и окно счёта заменят "
+                               "ленты на остальных устройствах, где включён sync.lane_rules",
+        "sync_lanes_push_sure": "Ленты этого устройства заменят ленты на остальных "
+                                "устройствах (где включён sync.lane_rules). Отправить?",
+        "sync_lanes_turn_on": "Синхронизировать ленты",
+        "sync_lanes_now_on": "Ленты теперь синхронизируются. Чтобы остальные устройства "
+                             "получили эти — «Отправить мои ленты».",
+        "sync_lanes_sent": "Ленты отправлены — устройства возьмут их при следующей "
+                           "синхронизации",
+        "sync_lanes_queued": "Ленты ждут отправки — уйдут со следующим кругом "
+                             "синхронизации",
+        "sync_device_lanes_yes": "берёт ленты",
+        "sync_device_lanes_no": "ленты не берёт — включи там «Синхронизировать ленты»",
+        "sync_device_lanes_unknown": "не сказало (старая версия fedtail или ещё ничего "
+                                     "не присылало)",
         "sync_what_btn": "Что синхронизировать…",
         "sync_saved_on": "Синхронизация включена",
         "sync_device_unnamed": "Устройство без имени",
@@ -2125,6 +2146,26 @@ _STRINGS = {
         "sync_f_folder": "…or a shared folder",
         "sync_f_folder_tip": "A folder all your devices see; with one, no server is needed",
         "sync_save_where": "Save and turn on",
+        "sync_lanes_title": "The lanes on every device",
+        "sync_lanes_on_line": "Which lanes, their languages and the counting window travel "
+                              "between the devices (sync.lane_rules): the same lanes, the "
+                              "same numbers.",
+        "sync_lanes_off_line": "The lanes don't travel (sync.lane_rules is off): each device "
+                               "has lanes of its own — and numbers of its own.",
+        "sync_lanes_push": "Send my lanes to the other devices",
+        "sync_lanes_push_tip": "This device's lanes, their languages and the counting window "
+                               "replace the lanes on the other devices that have "
+                               "sync.lane_rules on",
+        "sync_lanes_push_sure": "This device's lanes will replace the lanes on the other "
+                                "devices (those with sync.lane_rules on). Send them?",
+        "sync_lanes_turn_on": "Sync the lanes",
+        "sync_lanes_now_on": "The lanes travel now. For the other devices to get these — "
+                             "\"Send my lanes\".",
+        "sync_lanes_sent": "The lanes are sent — the devices take them with their next sync",
+        "sync_lanes_queued": "The lanes wait to go — with the next round of sync",
+        "sync_device_lanes_yes": "takes the lanes",
+        "sync_device_lanes_no": "doesn't take the lanes — turn on \"Sync the lanes\" there",
+        "sync_device_lanes_unknown": "hasn't said (an older fedtail, or nothing sent yet)",
         "sync_what_btn": "What to sync…",
         "sync_saved_on": "Sync is on",
         "sync_device_unnamed": "A device with no name",

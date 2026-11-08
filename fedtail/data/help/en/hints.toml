@@ -313,3 +313,7 @@ help = "writing.md#markdown-cw-language"
 text = "A list: \"- \" before every line of the selection; again — off."
 config = "post.format_bar"
 help = "writing.md#markdown-cw-language"
+
+[sync_lanes_push_tip]
+text = "This device's lanes — which, in what order, their languages and the counting window — go to the other devices and replace theirs, where sync.lane_rules is on: the same lanes, the same numbers."
+config = "sync.lane_rules"

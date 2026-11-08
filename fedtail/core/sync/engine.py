@@ -632,8 +632,10 @@ class Sync:
             if not rows and not new:
                 break
             # every batch names its device ("n"): the others' list of devices (_met)
+            # …and what it syncs ("w"): the others show it — lanes travel only between
+            # devices that both have sync.lane_rules (08.11); an older one sends none
             payload = {"v": 1, "d": self.device, "n": self.name, "at": now_ms(),
-                       "ops": [op for _, op in rows]}
+                       "w": sorted(self.what), "ops": [op for _, op in rows]}
             if new:
                 payload["new"] = True
             blob = crypto.seal(key, payload)
@@ -744,7 +746,7 @@ class Sync:
         people = False
         seen_to = None  # how far events are seen elsewhere, when further than here
         sender = str(payload.get("d") or "")
-        self._met(sender, payload.get("n"), payload.get("new") is True)
+        self._met(sender, payload.get("n"), payload.get("new") is True, payload.get("w"))
         seen = 0
         for op in payload.get("ops") or []:
             if not isinstance(op, dict):
@@ -857,19 +859,24 @@ class Sync:
         return all(isinstance(x, str) for x in value)
 
     # ---- for `fedtail sync status` ---------------------------------------------------
-    def _met(self, device, name, new):
+    def _met(self, device, name, new, what=None):
         """Another device's batch: kept among the known ones with its name (an older
-        fedtail sends none); one that says it has just joined — said in Activity, unless
-        this is the journal read from its start (a join: old news)."""
+        fedtail sends none) and what it syncs (`what`, WHAT's words; None — not said);
+        one that says it has just joined — said in Activity, unless this is the journal
+        read from its start (a join: old news)."""
         if not device or device == self.device:
             return
         known = dict(self.store.kv_get("sync.devices") or {})
         name = str(name or "").strip()[:60] if isinstance(name, str) else ""
+        what = sorted(w for w in what if w in WHAT) if isinstance(what, list) else None
         had = known.get(device)
-        if had is not None and (not name or had.get("name") == name) and not new:
+        if had is not None and (not name or had.get("name") == name) and not new and \
+                (what is None or had.get("what") == what):
             return
         known[device] = {"name": name or (had or {}).get("name", ""),
                          "at": (had or {}).get("at") or now_iso()}
+        if what is not None or (had or {}).get("what") is not None:
+            known[device]["what"] = what if what is not None else had.get("what")
         self.store.kv_set("sync.devices", known)
         # the journal read from its start after a key was taken: the others' "joined"
         # there is old news
