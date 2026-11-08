@@ -70,6 +70,14 @@ class FlowTest {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /** An item of the lane's ⋮ (09.11: refresh, find, mark all read live there). */
+    private fun laneMenu(item: String) {
+        compose.onAllNodesWithContentDescription("More: find", substring = true).onFirst()
+            .performClick()
+        waitText(item)
+        compose.onAllNodesWithText(item).onFirst().performClick()
+    }
+
     private fun waitDescription(text: String, ms: Long = 30_000, substring: Boolean = false) =
         waitFor("description \"$text\"", ms) {
             compose.onAllNodesWithContentDescription(text, substring = substring)
@@ -229,7 +237,8 @@ class FlowTest {
         launch("thread" to "101")
         waitText("/1")
         compose.onAllNodesWithContentDescription("More").onFirst().performClick()
-        waitText("Reply with quote", 30_000)           // common/actions.menu's items
+        compose.waitForIdle()  // the sheet slides up (09.11: a sheet, not a drop-down)
+        waitText("Reply with quote", 60_000)           // common/actions.menu's items
         compose.onAllNodesWithText("Profile of @", substring = true).onFirst()
             .performScrollTo().performClick()
         waitText("Posts and replies", 30_000)          // a profile: what of theirs to show
@@ -244,7 +253,7 @@ class FlowTest {
         // what stands on screen now, and where: after ⟳ the same card, the same place
         val before = compose.onAllNodes(card).fetchSemanticsNodes()
             .map { it.boundsInRoot.top to it.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
-        compose.onAllNodesWithContentDescription("Refresh").onFirst().performClick()
+        laneMenu("Refresh")
         Thread.sleep(4_000)  // a round (the demo's server answers at once) and its reload
         compose.waitForIdle()
         val after = compose.onAllNodes(card).fetchSemanticsNodes()
@@ -267,6 +276,14 @@ class FlowTest {
             .performClick()
         val all = compose.onAllNodesWithText("Mark all read")
         if (all.fetchSemanticsNodes().isNotEmpty()) all.onFirst().performClick()
+        else compose.onAllNodesWithText("Find").onFirst().performClick()  // (menu closed)
+        // the arrow shows where it leads somewhere (09.11): away from the newest end
+        val newestUp = compose.onAllNodesWithContentDescription("Nothing new: to the newest")
+        repeat(8) {
+            if (newestUp.fetchSemanticsNodes().isNotEmpty()) return@repeat
+            compose.onAllNodes(card).onFirst().performTouchInput { swipeDown() }
+            compose.waitForIdle()
+        }
         waitDescription("Nothing new: to the newest")
         compose.onAllNodesWithContentDescription("Nothing new: to the newest").onFirst().performClick()
         waitDescription("open now", substring = true)
@@ -296,7 +313,7 @@ class FlowTest {
             }
             scenario?.close()
             launch("lane" to "home")
-            waitDescription("Сменить ленту", 60_000)
+            waitDescription("открыта сейчас", 60_000, substring = true)  // the lane's chip
         } finally {
             kotlinx.coroutines.runBlocking {
                 Core.settingSet("ui", "language", "null")
@@ -330,7 +347,7 @@ class FlowTest {
         fun shownRequests() = compose.onAllNodes(hasText("@example.org", substring = true))
             .fetchSemanticsNodes().count { it.boundsInRoot.top > 0f }
         Thread.sleep(3_000)  // the round bringing them; new ones wait for ⟳ (reading.on_new)
-        compose.onAllNodesWithContentDescription("Refresh").onFirst().performClick()
+        laneMenu("Refresh")
         Thread.sleep(3_000)
         // wherever they stand: down the lane first, then up (the order is the config's)
         for (up in listOf(true, false)) repeat(30) {
