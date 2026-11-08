@@ -186,8 +186,22 @@ class LanePlaces:
         which condition, or what kept it out (common to every interface)."""
         from .places import Page, Row
         got = self.view.explain_post(sid) if hasattr(self.view, "explain_post") else []
-        page = Page("why", _("why_here"), arg=sid, hint=_("why_hint"),
-                    empty=_("why_none"))
+        page = Page("why", _("why_here"), arg=sid, empty=_("why_none"))
+        # first in plain words (09.11: the lanes' conditions alone told nothing): what of
+        # yours brought it, and which lanes show it now — the conditions after, for those
+        # setting lanes up
+        plain = self.view.why_plain(sid) if hasattr(self.view, "why_plain") else None
+        if plain is not None:
+            page.rows.append(Row("heading", _("why_p_title")))
+            for reason in plain["reasons"] or [_("why_p_none")]:
+                page.rows.append(Row("text", "• " + reason))
+            page.rows.append(Row("text", _("why_p_lanes", lanes=", ".join(plain["lanes"]))
+                                 if plain["lanes"] else _("why_p_nowhere")))
+            if got:
+                page.rows.append(Row("heading", _("why_details")))
+                page.rows.append(Row("text", _("why_hint")))
+        elif got:
+            page.hint = _("why_hint")
         for g in got:
             title = g["title"] or _("lane_" + g["lane"])
             if title == "lane_" + g["lane"]:

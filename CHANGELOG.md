@@ -139,6 +139,13 @@
   by the thumb; a tap opens the editor with the post answered above the text. A comment is
   answered from its own ↩, as before.
 
+- **"Why is it here?" in plain words.** It listed the lanes of rules and their
+  conditions ("condition 2: …") and never said why. Now it starts with the answer: you
+  follow its author, someone you follow boosted it, it mentions you, a reply to your post,
+  a tag you follow, its author in your list "…", a thread you follow, your own — or, none
+  of these, that a lane you read whole brought it — and which lanes show it now. The
+  conditions come after, under "In detail — for setting the lanes up". Every interface.
+
 - **One picture, one meaning.** "Follow the thread" has a flag of its own (it wore the
   eye of the Threads lane), in every theme's set; the editor's preview is a word, not the
   eye; "Read it whole" lost its 📄 among the menu's plain lines.

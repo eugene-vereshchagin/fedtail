@@ -946,6 +946,54 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self.emit("notify", out)
         self.sound_news(fresh)
 
+    def why_plain(self, status_id):
+        """"Why is it here?" for people (09.11: the lanes' conditions alone told nothing):
+        {"reasons": [sentences — you follow its author, it mentions you, a reply to you,
+        a tag you follow, a boost by someone you follow, its author in a list of yours,
+        a thread you follow, your own, a private message], "lanes": [the titles of the
+        lanes it is in now]}. No reason of yours: the lanes say where it came by."""
+        from ..i18n import _
+        st = self.store.get_status(status_id)
+        if st is None:
+            return {"reasons": [], "lanes": []}
+        p = real(st)
+        me = (self.me or {}).get("id")
+        author = p.get("account") or {}
+        aid, acct = author.get("id"), "@" + str(author.get("acct") or "")
+        following = self._following or set()
+        out = []
+        if aid and aid == me:
+            out.append(_("why_p_mine"))
+        if st.get("reblog") and (st.get("account") or {}).get("id") in following:
+            out.append(_("why_p_boosted", who="@" + st["account"].get("acct", "")))
+        if aid and aid != me and aid in following:
+            out.append(_("why_p_follow", who=acct))
+        if p.get("visibility") == "direct" and aid != me:
+            out.append(_("why_p_direct"))
+        elif me and aid != me and any((m or {}).get("id") == me for m in p.get("mentions") or ()):
+            out.append(_("why_p_mention"))
+        if me and aid != me and p.get("in_reply_to_account_id") == me:
+            out.append(_("why_p_reply"))
+        followed = {t.lower() for t in (getattr(self, "_followed_tag_names", None) or ())}
+        tags = {str(t.get("name") or "").lower() for t in p.get("tags") or ()}
+        for tag in sorted(tags & followed):
+            out.append(_("why_p_tag", tag=tag))
+        for lid, members in (self.list_members or {}).items():
+            if aid in members:
+                title = next((x["title"] for x in self.lists if x["id"] == lid), "?")
+                out.append(_("why_p_list", who=acct, list=title))
+        try:
+            if self.subscribed(st):
+                out.append(_("why_p_thread"))
+        except Exception:  # noqa: BLE001 — a thread's state is a nicety here
+            pass
+        sources = self.store.sources_of(status_id)
+        ctx = self._ctx()
+        lanes_in = [self.lane_title(lane.name) or lane.name for lane in self.lanes
+                    if lane.source in sources and lanes.keeps(lane, st, ctx)
+                    and not self.silenced(st)]
+        return {"reasons": out, "lanes": lanes_in}
+
     def explain_post(self, status_id):
         """Why this post is in each lane of rules shown, or not (feeds.md §8: "Why is it
         here?"): [{"lane", "title", "in_lane", "taken", "by", "out", "conds",

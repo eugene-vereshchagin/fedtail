@@ -126,6 +126,38 @@ class WhyTest(FreeBase):
         self.assertTrue(rows["bots"].title.startswith("✓"))
         self.assertIn("author", rows["home"].line)
 
+    def test_why_in_plain_words(self):
+        """09.11: "Why is it here?" said lanes and conditions, not why. Now first in plain
+        words: you follow its author, it mentions you, a tag you follow… and the lanes it
+        is in; the conditions after, under "In detail"."""
+        from fedtail import i18n
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+
+        from .fakes import ME
+        i18n.setup("en")
+        core, w = self.make([])
+        st = status("702", BOB, minute=1, text="hi #cats")
+        st["tags"] = [{"name": "cats"}]
+        st["mentions"] = [{"id": ME["id"], "acct": ME["acct"], "username": "me", "url": ""}]
+        w.add(st, home=True)
+        core.connect().result()
+        core.poll_once()
+        core._following = {BOB["id"]}
+        core._followed_tag_names = {"Cats"}
+        got = core.why_plain("702")
+        bob = "@" + BOB["acct"]
+        self.assertIn(i18n._("why_p_follow", who=bob), got["reasons"])
+        self.assertIn(i18n._("why_p_mention"), got["reasons"])
+        self.assertIn(i18n._("why_p_tag", tag="cats"), got["reasons"])
+        self.assertIn(core.lane_title("home") or "home", got["lanes"])
+        page = Places(View(core)).page("why", "702")
+        texts = [(r.kind, r.title) for r in page.rows]
+        self.assertEqual(texts[0], ("heading", i18n._("why_p_title")))
+        self.assertIn(("text", "• " + i18n._("why_p_follow", who=bob)), texts)
+        self.assertIn(("heading", i18n._("why_details")), texts)
+        self.assertEqual(core.why_plain("nope"), {"reasons": [], "lanes": []})
+
     def test_explain_lane(self):
         from .fakes import NEWS
         core, w = self.make([])
