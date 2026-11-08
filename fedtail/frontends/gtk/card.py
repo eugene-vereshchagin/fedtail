@@ -951,13 +951,42 @@ class Card(Gtk.Box):
         """The ⋯ menu, made when it opens: what's in it is common/actions.py's."""
         pop = Gtk.Popover()
         pop.set_has_arrow(False)
+        # the tools over the post (ui.hover_tools) are there, not here; Author ▸,
+        # Thread ▸, More ▸ (ui.menu_groups) — each a popover of its own beside its line
+        items = actions.menu(self.entry, self._actx(), short_id=self.short_id,
+                             unread=bool(self.unread),
+                             without_tools=self.own_tools is not None, nested=True)
+        pop.set_child(self._menu_box(items, [pop]))
+        button.set_popover(pop)
+
+    def _menu_box(self, items, pops):
+        """A column of the menu's lines; pops: the popovers open (all close on a pick)."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        # the tools over the post (ui.hover_tools) are there, not here
-        for it in actions.menu(self.entry, self._actx(), short_id=self.short_id,
-                               unread=bool(self.unread),
-                               without_tools=self.own_tools is not None):
+
+        def close_all():
+            for p in pops:
+                p.popdown()
+        for it in items:
             if it.kind == "separator":
                 box.append(Gtk.Separator())
+                continue
+            if it.kind == "submenu":
+                b = Gtk.Button(label=it.label + "  ›")
+                b.add_css_class("flat")
+                b.get_child().set_xalign(0)
+
+                def open_sub(btn, it=it):
+                    sub = Gtk.Popover()
+                    sub.set_has_arrow(False)
+                    sub.set_position(Gtk.PositionType.RIGHT)
+                    sub.set_child(self._menu_box(it.data, pops + [sub]))
+                    sub.set_parent(btn)
+                    sub.connect("closed", lambda p: p.unparent())
+                    self._sub_pop = sub  # (tests)
+                    sub.popup()
+                b.connect("clicked", open_sub)
+                b.submenu = it  # (tests)
+                box.append(b)
                 continue
             if it.kind not in ("link", "open", "copy", "long_form", "translate", "lists",
                                "quote_reply"):
@@ -965,10 +994,9 @@ class Card(Gtk.Box):
             b = Gtk.Button(label=it.label)
             b.add_css_class("flat")
             b.get_child().set_xalign(0)
-            b.connect("clicked", lambda _b, it=it, pop=pop: (pop.popdown(), self._do(it)))
+            b.connect("clicked", lambda _b, it=it: (close_all(), self._do(it)))
             box.append(b)
-        pop.set_child(box)
-        button.set_popover(pop)
+        return box
 
     def _menu_at(self, x, y):
         self._fill_menu(self.more)

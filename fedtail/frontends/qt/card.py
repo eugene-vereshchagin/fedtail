@@ -1104,10 +1104,14 @@ class PostRow(QWidget):
         # the tools over the post (ui.hover_tools) are there, not here — in every
         # theme's card: they float over its corner, whatever its header (the chat and
         # compact ones had no row for them, and the tools never showed: 08.11)
-        for it in actions.menu(entry, self._actions_ctx(),
-                               short_id=self.spec.extra.get("short_id"),
-                               unread=self.spec.unread,
-                               without_tools=self.card is not None):
+        self._fill_items(menu, actions.menu(entry, self._actions_ctx(),
+                                            short_id=self.spec.extra.get("short_id"),
+                                            unread=self.spec.unread,
+                                            without_tools=self.card is not None,
+                                            nested=True))
+
+    def _fill_items(self, menu, items):
+        for it in items:
             if it.kind == "separator":
                 menu.addSeparator()
             elif it.kind in ("link", "open", "copy", "translate", "quote_reply",
@@ -1122,6 +1126,8 @@ class PostRow(QWidget):
                 for label, e, tag, action in it.data:
                     sub.addAction(label, lambda e=e, t=tag, a=action:
                                   self.ctx.do_act_as(e, t, a))
+            elif it.kind == "submenu":  # Author ▸, Thread ▸, More ▸ (ui.menu_groups)
+                self._fill_items(menu.addMenu(it.label), it.data)
 
     def _do_item(self, it):
         """One item of the post's menu (or a tool over it) done: common/actions.Item."""

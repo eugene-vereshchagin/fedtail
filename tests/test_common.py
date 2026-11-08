@@ -180,6 +180,33 @@ class CommonTest(TmpDir):
         self.assertEqual(len(actions.menu(self.view.by_id("001"), none, without_tools=True)),
                          len(actions.menu(self.view.by_id("001"), none)))
 
+    def test_the_menu_in_submenus(self):
+        """ui.menu_groups (08.11): Author ▸ (the address, a list, mute, block, report…),
+        Thread ▸, More ▸ (why here, who liked…) after the top items; a group of one stays
+        on top; flat for whoever doesn't ask for nesting (the phone, the terminal)."""
+        ctx = self.ctx()
+        p = self.view.by_id("001")
+        nested = actions.menu(p, ctx, unread=True, without_tools=True, nested=True)
+        subs = {it.label: it.data for it in nested if it.kind == "submenu"}
+        author = subs[i18n._("menu_author", acct="@" + p.author.handle)]
+        self.assertIn("fedtail:block/001", [it.url for it in author])
+        more = subs[i18n._("menu_more")]
+        self.assertIn("fedtail:why/001", [it.url for it in more])
+        top = [it.url for it in nested if it.kind == "link"]
+        self.assertNotIn("fedtail:block/001", top)
+        self.assertIn(nested[-1].kind, ("submenu",))
+        flat = actions.menu(p, ctx, unread=True, without_tools=True)
+        self.assertFalse([it for it in flat if it.kind == "submenu"])
+        self.assertEqual(sorted(it.label for it in flat if it.kind != "separator"),
+                         sorted([it.label for it in nested
+                                 if it.kind not in ("separator", "submenu")] +
+                                [x.label for d in subs.values() for x in d
+                                 if x.kind != "separator"]))  # nothing lost
+        ui = dict(self.core.cfg["ui"], menu_groups=False)
+        off = actions.Ctx(cfg=dict(self.core.cfg, ui=ui), me_id="ME")
+        self.assertFalse([it for it in actions.menu(p, off, nested=True)
+                          if it.kind == "submenu"])
+
     # ---- writing ------------------------------------------------------------------------
     def test_a_reply_starts_with_the_mentions_and_the_warning(self):
         st = status("003", BOB, minute=3, vis="public", text="careful")

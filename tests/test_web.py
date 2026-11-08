@@ -476,6 +476,11 @@ class WebTest(TmpDir):
             self.req("/api/post_menu?id=002&hover=1")[2])["items"]]
         self.assertIn(i18n._("open_browser"), whole)
         self.assertNotIn(i18n._("open_browser"), short)
+        # Author ▸, Thread ▸, More ▸: the page asks for them (nested); the phone doesn't
+        subs = [i for i in json.loads(self.req("/api/post_menu?id=002&hover=1&nested=1")[2])
+                ["items"] if i["kind"] == "submenu"]
+        self.assertTrue(subs and all(s["items"] for s in subs))
+        self.assertFalse([i for i in got["items"] if i["kind"] == "submenu"])
         self.assertLess(len(short), len(whole))
         # a right click on a #tag: the windows' menu of it (common/links.tag_menu, 02.11)
         url = urllib.parse.quote("fedtail:tag/cats%20by%3A7", safe="")

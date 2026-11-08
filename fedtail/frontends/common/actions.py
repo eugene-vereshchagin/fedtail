@@ -145,6 +145,7 @@ class Item:
     data: object = None
     tool: str = ""    # its name among the tools over a post (TOOLS), "" — the menu's only
     on: bool = False  # a toggle's state (a thread followed, muted): the tool's look
+    group: str = ""   # its submenu (GROUPS) with ui.menu_groups; "" — the menu's top
 
 
 # the tools over a post (ui.hover_tools): seen while the mouse is on it, at its top
@@ -174,15 +175,36 @@ def tools(entry, ctx, short_id=None, unread=False):
     return [(have[t], *TOOLS[t]) for t in wanted if t in have]
 
 
-def menu(entry, ctx, short_id=None, unread=False, without_tools=False):
+# the submenus of a post's menu (ui.menu_groups), in this order, after its top items
+GROUPS = ("author", "thread", "more")
+
+
+def _group_label(group, entry):
+    if group == "author":
+        return _("menu_author", acct="@" + real(entry).author.handle)
+    return _("menu_" + group)
+
+
+def menu(entry, ctx, short_id=None, unread=False, without_tools=False, nested=False):
     """The ⋯ menu of a post, top to bottom. without_tools: the window shows the tools
     over the post (ui.hover_tools) — those items are there, not here (08.11: a menu of
-    thirty lines)."""
+    thirty lines). nested: the window draws submenus — with ui.menu_groups the items
+    about the author, the thread and the rest go into "Author ▸", "Thread ▸", "More ▸"
+    (Item kind "submenu", its items in data); a group of one stays in the top."""
     out = _menu(entry, ctx, short_id, unread)
-    if not without_tools:
-        return out
-    shown = set(hover_tools(ctx.cfg))
-    out = [it for it in out if it.tool not in shown]
+    if without_tools:
+        shown = set(hover_tools(ctx.cfg))
+        out = [it for it in out if it.tool not in shown]
+    if nested and (ctx.cfg.get("ui") or {}).get("menu_groups", True):
+        groups = {g: [it for it in out if it.group == g] for g in GROUPS}
+        top = [it for it in out if it.group not in groups or len(groups[it.group]) < 2]
+        subs = [Item("submenu", _group_label(g, entry), data=_tidy(groups[g]))
+                for g in GROUPS if len(groups[g]) >= 2]
+        out = top + ([SEP] if subs else []) + subs
+    return _tidy(out)
+
+
+def _tidy(out):
     tidy = []  # no line first, last or twice
     for it in out:
         if it.kind == "separator" and (not tidy or tidy[-1].kind == "separator"):
@@ -206,7 +228,8 @@ def _menu(entry, ctx, short_id=None, unread=False):
     # @user@server of who wrote it (and who boosted it): to call them anywhere
     for acc in [author] + ([booster] if booster else []):
         out.append(Item("link", _("copy_handle_of", acct="@" + acc.handle),
-                        url="fedtail:copyhandle/" + urlquote(acc.handle, safe="")))
+                        url="fedtail:copyhandle/" + urlquote(acc.handle, safe=""),
+                        group="author"))
     if ctx.lists:
         # a boost has two people: the one who wrote it and the one who boosted it (a
         # relay bot, say) — each by name, so it's clear who goes into the list
@@ -217,7 +240,7 @@ def _menu(entry, ctx, short_id=None, unread=False):
             if acc.id == ctx.me_id:
                 continue
             out.append(Item("lists", _(key, acct="@" + acc.handle) if len(who) > 1
-                            else _("add_to_list"), data=acc))
+                            else _("add_to_list"), data=acc, group="author"))
     approval = p.policy.can_quote if p.policy else ""
     if ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
         out.append(Item("link", _("quote") if approval == "automatic" else _("quote_ask"),
@@ -239,61 +262,67 @@ def _menu(entry, ctx, short_id=None, unread=False):
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote")))
     if ctx.cfg["post"].get("invite", True):
-        out.append(Item("link", _("invite"), url=make("invite", sid)))
+        out.append(Item("link", _("invite"), url=make("invite", sid), group="thread"))
     out.append(Item("link", _("unbookmark") if p.mine.bookmarked else _("bookmark"),
                     url=make("bookmark", sid)))
     if unread:  # by hand, whatever read.mark_read says
         out.append(Item("link", _("mark_one_read"), url=make("readone", sid)))
         out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid),
-                        tool="read_upto"))
+                        tool="read_upto", group="thread"))
     # who liked, who boosted; quotes of my post; my post out of someone's quote
     sup = ctx.supports
     if sup("reactions") or p.reactions:  # an emoji of mine on it (Akkoma, Misskey…)
         out.append(Item("link", _("react_menu") + "…", url=make("react", sid)))
     for kind, count in (("favourited_by", p.counts.likes), ("reblogged_by", p.counts.shares)):
         if sup(kind) and count:
-            out.append(Item("link", _("who_" + kind + "_n", n=count), url=make(kind, sid)))
+            out.append(Item("link", _("who_" + kind + "_n", n=count), url=make(kind, sid),
+                            group="more"))
     if p.card and p.card.url.startswith("https://") and sup("link_timeline"):
-        out.append(Item("link", _("link_posts"), url=make("linkposts", sid)))
+        out.append(Item("link", _("link_posts"), url=make("linkposts", sid), group="more"))
     if author.id == ctx.me_id and sup("quotes") and p.visibility in ("public", "unlisted"):
-        out.append(Item("link", _("quotes_of"), url=make("quotes", sid)))
+        out.append(Item("link", _("quotes_of"), url=make("quotes", sid), group="more"))
     quoted_post = p.quote.post if p.quote else None
     if quoted_post is not None and quoted_post.author.id == ctx.me_id and \
             sup("quotes") and author.id != ctx.me_id:
-        out.append(Item("link", _("revoke_quote"), url=make("revokequote", sid)))
+        out.append(Item("link", _("revoke_quote"), url=make("revokequote", sid),
+                        group="more"))
     # always offered: a server that can't mute a thread (GoToSocial) gets it done here
     if ctx.thread_quiet is not None or sup("mute_thread"):
         muted = bool(p.mine.muted) or bool(ctx.thread_quiet and ctx.thread_quiet(entry))
         out.append(Item("link", _("unmute_thread" if muted else "mute_thread"),
                         url=make("unmutethread" if muted else "mutethread", sid),
-                        tool="mute_thread", on=muted))
+                        tool="mute_thread", on=muted, group="thread"))
     if ctx.subscribed is not None:
         out.append(SEP)
         on = ctx.subscribed(entry)
         out.append(Item("link", _("unsub_thread" if on else "sub_thread"),
-                        url=make("unsub" if on else "sub", sid), tool="sub_thread", on=on))
+                        url=make("unsub" if on else "sub", sid), tool="sub_thread", on=on,
+                        group="thread"))
     if sup("filter_status"):
-        out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
+        out.append(Item("link", _("hide_post"), url=make("hidepost", sid), group="more"))
     if ctx.cfg.get("lanes") is not None:  # which lanes take it, and by which rule
-        out.append(Item("link", _("why_here"), url=make("why", sid)))
+        out.append(Item("link", _("why_here"), url=make("why", sid), group="more"))
     if (ctx.cfg.get("debug") or {}).get("raw_json"):  # the post as the server gave it
-        out.append(Item("link", _("raw_json"), url=make("raw", sid)))
+        out.append(Item("link", _("raw_json"), url=make("raw", sid), group="more"))
     if (ctx.cfg.get("feed") or {}).get("around_post"):  # what came just before and after it
-        out.append(Item("link", _("around_post"), url=make("around", sid)))
+        out.append(Item("link", _("around_post"), url=make("around", sid), group="more"))
     if author.id != ctx.me_id:
         out.append(SEP)
-        out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))
+        out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid),
+                        group="author"))
         # its hashtags, each muted in one click (into the filter of muted hashtags)
         most = int((ctx.cfg.get("feed") or {}).get("mute_tags_shown", MUTE_TAGS_SHOWN))
         for tag in list(dict.fromkeys(t.lower() for t in p.tags or ()))[:most]:
-            out.append(Item("link", _("tag_mute", tag=tag), url=make("mutetag", urlquote(tag))))
-        out.append(Item("link", _("block_acct", acct=author.handle), url=make("block", sid)))
+            out.append(Item("link", _("tag_mute", tag=tag), url=make("mutetag", urlquote(tag)),
+                            group="author"))
+        out.append(Item("link", _("block_acct", acct=author.handle), url=make("block", sid),
+                        group="author"))
         domain = author.handle.partition("@")[2]
         if domain:
             out.append(Item("link", _("block_domain", domain=domain),
-                            url=make("blockdomain", sid)))
+                            url=make("blockdomain", sid), group="author"))
         if not ctx.cfg["ui"]["arts_mode"]:
-            out.append(Item("link", _("report"), url=make("report", sid)))
+            out.append(Item("link", _("report"), url=make("report", sid), group="author"))
     mine = (entry.by if isinstance(entry, Share) else author).id == ctx.me_id
     if mine:
         out.append(SEP)

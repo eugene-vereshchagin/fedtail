@@ -383,7 +383,7 @@ class HoverTest(unittest.TestCase):
         self.assertNotIn("edit", tools)
         self.assertTrue(theirs.own_tools.isVisible())
         self.assertEqual(theirs.actions_box.property("hover"), "true")
-        menu = [a.text() for a in theirs.ensure_menu().actions()]
+        menu = [a.text() for a in smoke.every_action(theirs.ensure_menu())]
         from fedtail import i18n
         self.assertNotIn(i18n._("open_browser"), menu)  # it's over the post now
         self.assertIn(i18n._("why_here"), menu)
@@ -406,7 +406,7 @@ class HoverTest(unittest.TestCase):
             self.assertIsNotNone(row.own_tools, name)
             self.assertTrue(row.own_tools.isVisible(), name)
             self.assertNotIn(i18n._("open_browser"),
-                             [a.text() for a in row.ensure_menu().actions()])
+                             [a.text() for a in smoke.every_action(row.ensure_menu())])
             row.leaveEvent(QEvent(QEvent.Type.Leave))
         self.win.try_theme("system")
         self.pump(until=lambda: "011" in view.rows)

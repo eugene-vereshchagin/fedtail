@@ -1643,7 +1643,7 @@ class Web:
         return {"items": [{"label": words, "url": link}
                           for words, link in tag_menu(str(url or ""), self.core)]}
 
-    def post_menu(self, sid, hover=False):
+    def post_menu(self, sid, hover=False, nested=False):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
         what is offered, when, in which order) — the page only lays them out; a list's
         submenu, the whole text and the translation open as places (common/places.py).
@@ -1678,6 +1678,9 @@ class Web:
             if it.kind in ("long_form", "translate"):
                 return {"kind": it.kind, "label": it.label, "url": "", "text": "",
                         "page": {"page": it.kind, "arg": p.id}}
+            if it.kind == "submenu":  # Author ▸, Thread ▸, More ▸ (nested: the page asks)
+                return {"kind": "submenu", "label": it.label, "url": "", "text": "",
+                        "items": [x for x in map(as_json, it.data) if x is not None]}
             return None
         # the tools over the post (ui.hover_tools): seen under the mouse, out of the menu
         tools = []
@@ -1688,7 +1691,8 @@ class Web:
         # hover: the page shows them over the post — out of the menu then; the phone
         # (no mouse, no hover) keeps its menu whole
         items = [x for x in (as_json(it) for it in actions.menu(
-            p, ctx, short, unread, without_tools=hover and bool(tools))) if x is not None]
+            p, ctx, short, unread, without_tools=hover and bool(tools), nested=nested))
+                 if x is not None]
         while items and items[0]["kind"] == "separator":
             items.pop(0)
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
@@ -2348,7 +2352,8 @@ class Handler(BaseHTTPRequestHandler):
                       q.get("id", ""), q.get("show") or None, q.get("max_id", ""),
                       q.get("cursor", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", ""),
-                                                               q.get("hover") == "1"),
+                                                               q.get("hover") == "1",
+                                                               q.get("nested") == "1"),
                   "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", ""),
                                                              q.get("click") == "1"),
                   "/api/places": lambda: self.web.place_menu(),

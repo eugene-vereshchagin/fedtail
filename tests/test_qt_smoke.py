@@ -38,6 +38,14 @@ def gone(w):
 
 
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
+
+def every_action(menu):
+    """A menu's actions, its submenus' too (Author ▸, Thread ▸, More ▸)."""
+    for a in menu.actions():
+        yield a
+        if a.menu() is not None:
+            yield from every_action(a.menu())
+
 class QtSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -3092,11 +3100,11 @@ class QtSmokeTest(unittest.TestCase):
         self.win.ctx.cfg["post"]["invite"] = False  # off: not in the menu
         row = PostRow(CardSpec(key="011b", entry=E(st)), self.win.ctx)
         row.ensure_menu()
-        self.assertNotIn(_("invite"), [a.text() for a in row._menu.actions()])
+        self.assertNotIn(_("invite"), [a.text() for a in every_action(row._menu)])
         self.win.ctx.cfg["post"]["invite"] = True
         # @user@server of the author into the clipboard: the ⋯ menu, the profile
         from PySide6.QtGui import QGuiApplication
-        handle = next(a for a in row._menu.actions() if a.text().startswith(
+        handle = next(a for a in every_action(row._menu) if a.text().startswith(
             _("copy_handle_of", acct="")))
         handle.trigger()
         from fedtail.core.model import full_handle

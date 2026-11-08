@@ -709,6 +709,13 @@ additional_highlight = true
 # [] — none: the whole menu in ⋯, as before.
 hover_tools = ["open", "copy_link", "translate", "quote", "sub_thread", "mute_thread", "read_upto", "edit", "delete"]
 
+# A post's ⋯ menu in submenus: what's about its author ("Author @…" — the address, a
+# list, mute, block, the server, report, its tags), the thread ("Thread" — call someone
+# in, follow, mute, read up to here) and the rest ("More" — who liked and boosted, the
+# link's posts, quotes, hide, why it's here…); the frequent ones stay on top. In the
+# windows and on the web page; the terminal and the phone keep it flat. false — one list.
+menu_groups = true
+
 # Open @mentions, #hashtags and links to fediverse posts and profiles inside
 # fedtail (a profile, a tag's lane, a thread), not in the browser. Not found — the browser.
 links_in_app = true

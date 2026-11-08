@@ -2189,10 +2189,16 @@ class GtkBigLaneTest(unittest.TestCase):
         self.assertLess(self.worst, self.STEP_MAX)
 
 def _walk(widget):
-    """widget and everything inside it."""
+    """widget and everything inside it — a post's menu's submenus (Author ▸, Thread ▸,
+    More ▸) too: their lines as buttons of their own words."""
     if widget is None:
         return
     yield widget
+    sub = getattr(widget, "submenu", None)
+    if sub is not None:
+        for it in sub.data:
+            if it.kind != "separator":
+                yield Gtk.Button(label=it.label)
     child = widget.get_first_child()
     while child is not None:
         yield from _walk(child)

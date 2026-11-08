@@ -546,7 +546,27 @@ function itemAct(it, p) {
 
 function menuInfo(p) {
   const hover = state.me.hover_tools ? "&hover=1" : "";
-  return api("/api/post_menu?id=" + encodeURIComponent(p.sid) + hover);
+  // Author ▸, Thread ▸, More ▸ (ui.menu_groups): the page draws submenus
+  return api("/api/post_menu?id=" + encodeURIComponent(p.sid) + hover + "&nested=1");
+}
+
+// a post's menu lines as popup() takes them; a submenu — the same popup with its lines
+// and "‹" back to where it came from
+function menuLines(list, p, anchor, back) {
+  const items = [];
+  if (back) items.push(["‹ " + w("tui_back"), back]);
+  for (const it of list) {
+    if (it.kind === "separator") items.push("-");
+    else if (it.kind === "submenu") {
+      const again = () => popup(anchor, menuLines(list, p, anchor, back));
+      items.push([it.label + " ›", () => popup(anchor, menuLines(it.items || [], p, anchor, again))]);
+    } else if (it.kind === "quote_reply") items.push(["❝ " + it.label, itemAct(it, p)]);
+    // all accounts in one: ★ ♻ ↩ as another of them — one item a choice
+    else if (it.kind === "act_as") for (const c of it.choices || []) items.push([c.label, () => actAs(p, c)]);
+    else if (it.page) items.push([it.label + " …", itemAct(it, p)]);
+    else if (itemAct(it, p)) items.push([it.label, itemAct(it, p)]);
+  }
+  return items;
 }
 
 // the tools over a post (ui.hover_tools): open, copy the link, translate, quote, follow or
@@ -572,17 +592,10 @@ async function postMenu(p, anchor) {
   let info = { subscribed: false, muted: false, own: p.own };
   try { info = await menuInfo(p); }
   catch (e) { /* the rest of the menu still works */ }
-  const items = [];
+  let items = [];
   if (info.items) {
     // the same items as the Qt and GTK windows' ⋯, in the same order (common/actions)
-    for (const it of info.items) {
-      if (it.kind === "separator") items.push("-");
-      else if (it.kind === "quote_reply") items.push(["❝ " + it.label, itemAct(it, p)]);
-      // all accounts in one: ★ ♻ ↩ as another of them — one item a choice
-      else if (it.kind === "act_as") for (const c of it.choices || []) items.push([c.label, () => actAs(p, c)]);
-      else if (it.page) items.push([it.label + " …", itemAct(it, p)]);
-      else if (itemAct(it, p)) items.push([it.label, itemAct(it, p)]);
-    }
+    items = menuLines(info.items, p, anchor, null);
     items.push("-");
   }
   items.push([w("tui_profile") + " @" + p.account.handle, () => openAccount(p.account.id)]);
