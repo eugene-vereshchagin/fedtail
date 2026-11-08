@@ -169,4 +169,6 @@
     <string name="lane_more">Ещё: найти, прочитано, обновить, лента</string>
     <string name="lane_current">%1$s, открыта сейчас</string>
     <string name="share">Поделиться…</string>
+    <string name="reply_in_thread">Ответить @%1$s…</string>
+    <string name="vis_as_parent_short">видят: как у оригинала</string>
 </resources>

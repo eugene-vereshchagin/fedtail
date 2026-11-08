@@ -135,6 +135,14 @@
   windows' menu, "Author ▸" and "More ▸" opening in place. The phone's long drop-down
   list ran off the screen.
 
+- **Phone: a reply bar under a thread.** "Reply to @author… · who sees it: as the post",
+  by the thumb; a tap opens the editor with the post answered above the text. A comment is
+  answered from its own ↩, as before.
+
+- **One picture, one meaning.** "Follow the thread" has a flag of its own (it wore the
+  eye of the Threads lane), in every theme's set; the editor's preview is a word, not the
+  eye; "Read it whole" lost its 📄 among the menu's plain lines.
+
 - **Phone: "↓ N new" by the thumb.** The button to the new posts was a small arrow at the
   top, hard to see and to reach; it now floats over the "write" button, and the lane's
   end leaves room enough under the last post to read it past both (`phone.to_new`,

@@ -153,7 +153,7 @@ class Item:
 # windows); name → (the picture, iconpack's name; the glyph without pictures)
 TOOLS = {"open": ("open", "↗"), "copy_link": ("copy", "⧉"), "translate": ("translate", "文"),
          "quote": ("quote", "❝"), "reply_quote": ("reply_quote", "↩❝"),
-         "sub_thread": ("subs", "◉"), "mute_thread": ("mute", "🔇"),
+         "sub_thread": ("follow_thread", "⚑"), "mute_thread": ("mute", "🔇"),
          "read_upto": ("mark_read", "✓"), "edit": ("edit", "✎"), "delete": ("delete", "✕")}
 
 

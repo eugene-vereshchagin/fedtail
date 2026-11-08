@@ -2056,7 +2056,7 @@ class QtSmokeTest(unittest.TestCase):
         row = PostRow(CardSpec(key="098", entry=E(st)), self.win.ctx)
         row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
-        self.assertIn("📄 Читать целиком (с сервера автора)", texts)
+        self.assertIn("Читать целиком (с сервера автора)", texts)
         self.assertIn("От другого аккаунта", texts)
         sub = next(m for m in row.findChildren(QMenu) if m.title() == "От другого аккаунта")
         next(a for a in sub.actions() if a.text() == "★ Лайк от @w").trigger()

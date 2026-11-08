@@ -1,5 +1,7 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
@@ -417,6 +419,28 @@ private fun ThreadPlace(
                 thread = true, focus = focus,
                 header = head?.let { h -> @Composable {
                     ThreadHead(h, model.threadProgress) { model.toggleThreadSub() } } })
+            // a reply to the thread, by the thumb (09.11): whom it answers and who will see
+            // it said; a tap — the editor, the post answered above its text. Any comment is
+            // answered from its own ↩.
+            root?.let { r ->
+                val words = stringResource(R.string.reply_in_thread, r.handle)
+                Surface(Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        Column(Modifier.weight(1f).heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { act.reply(r) }
+                            .semantics(mergeDescendants = true) { role = Role.Button }
+                            .padding(horizontal = 18.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.Center) {
+                            Text(words, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.vis_as_parent_short), fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -482,9 +506,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             Icon(Icons.Filled.Delete, stringResource(R.string.discard))
         }
         val previewWords = stringResource(R.string.preview)
-        IconButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank(),
-            modifier = Modifier.semantics { contentDescription = previewWords }) {
-            Text("👁", fontSize = 18.sp)
+        // a word, not an eye: the eye is the threads' lane (09.11)
+        TextButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank()) {
+            Text(previewWords)
         }
         IconButton(onClick = { model.send() },
             enabled = !model.sending && model.uploading == 0 && model.canSend()) {
