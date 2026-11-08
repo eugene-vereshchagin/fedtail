@@ -40,6 +40,11 @@ class View:
     def supports(self, what):
         return what not in self.answers.get("unsupported", ())
 
+    @staticmethod
+    def next_page(page, before=None):  # the core's own rule, not a call to note
+        from fedtail.core.view import View as Real
+        return Real.next_page(page, before)
+
     def __getattr__(self, name):
         if name.startswith("__"):
             raise AttributeError(name)

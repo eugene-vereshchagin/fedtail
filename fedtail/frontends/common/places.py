@@ -828,7 +828,8 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         posts = _wait(v.tag_timeline(name, cursor or None)) or []
         page.rows += [Row("post", data=p, key=p.id) for p in posts]
         if posts and len(posts) >= v.cfg["feed"]["page_size"]:
-            page.more = self._btn(_("more"), "tag", "more", f"{name} {posts[-1].id}")
+            page.more = self._btn(_("more"), "tag", "more",
+                                  f"{name} {self.view.next_page(posts)}")
         page.empty = "—"
         return page
 
@@ -853,7 +854,8 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         posts = _wait(v.account_posts(acc_id, cursor or None, show="tag:" + name)) or []
         page.rows += [Row("post", data=p, key=p.id) for p in posts]
         if posts and len(posts) >= v.cfg["feed"]["page_size"]:
-            page.more = self._btn(_("more"), "tag", "more", f"{arg} {posts[-1].id}")
+            page.more = self._btn(_("more"), "tag", "more",
+                                  f"{arg} {self.view.next_page(posts)}")
         page.empty = "—"
         return page
 
@@ -1555,7 +1557,8 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         posts = _wait(self.view.link_timeline(url, cursor or None)) or []
         page.rows += [Row("post", data=p, key=p.id) for p in posts]
         if posts and len(posts) >= self.view.cfg["feed"]["page_size"]:
-            page.more = self._btn(_("more"), "link", "more", f"{posts[-1].id} {url}")
+            page.more = self._btn(_("more"), "link", "more",
+                                  f"{self.view.next_page(posts)} {url}")
         return page
 
     # ---- another server's public lane (core.remote_public) ------------------------------

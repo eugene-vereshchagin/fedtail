@@ -934,7 +934,10 @@ class Compose(QDialog):
 
     # ---- sending --------------------------------------------------------------------
     def _count(self):
-        c = rules.count(self.text.toPlainText(), self.cw.text(), self.core.caps.max_characters,
+        # the server's limit — of the account it goes from (all accounts in one, 08.11)
+        limit = self.core.post_limit(
+            self.from_box.currentData() if self.from_box is not None else None, self.reply_to)
+        c = rules.count(self.text.toPlainText(), self.cw.text(), limit,
                         self.core.cfg, reply_to=self.reply_to,
                         visibility=self.vis.currentData() or "", me=self.core.me)
         self.newcomer.setVisible(bool(c.newcomers))
@@ -991,6 +994,7 @@ class Compose(QDialog):
         if self.from_box is None:
             return
         handle = self.from_box.currentText()
+        self._count()  # another server: its limit
         base = self.windowTitle().split(" · ")[0]
         self.setWindowTitle(f"{base} · {handle}")
         key = self.from_box.currentData()

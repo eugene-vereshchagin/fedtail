@@ -147,8 +147,7 @@ class ProfilePosts:
         page = list(page or ())
         if self.first_page is None:
             self.first_page = page
-        if page:
-            self.max_id = page[-1].id
+        self.max_id = self.view.next_page(page, self.max_id)
         self._merge(page)
         self.more_btn.set_visible(True)
         self.more_btn.set_sensitive(True)

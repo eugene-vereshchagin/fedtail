@@ -717,7 +717,7 @@ class InputDock(Gtk.Box):
             return
         self._say()
         try:
-            limit = self.win.view.caps.max_characters or 500
+            limit = self.win.view.post_limit(None, self.target)
         except Exception:  # noqa: BLE001
             limit = 500
         n = len(self._text())

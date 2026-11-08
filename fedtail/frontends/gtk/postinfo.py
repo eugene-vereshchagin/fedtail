@@ -187,7 +187,7 @@ def open_link_posts(win, url):
         if not shown[0]:
             info.set_text(_("link_posts_none"))
         if posts:
-            last[0] = posts[-1].id
+            last[0] = win.view.next_page(posts)
             more.set_sensitive(True)
             box.append(more)
 

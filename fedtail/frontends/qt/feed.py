@@ -936,8 +936,7 @@ class _PagedTab(QWidget):
                              fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
 
     def _page(self, page):
-        if page:
-            self._max_id = page[-1].id
+        self._max_id = self.core.next_page(page, self._max_id)
         known = {e.id for e in self.items}
         self.items += [e for e in page if e.id not in known]
         self.btn_more.setEnabled(bool(page))

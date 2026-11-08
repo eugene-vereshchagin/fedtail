@@ -325,7 +325,7 @@ def _paged(win, box, fetch):
         for p in posts:
             box.append(Card(win.ctx, p.id, p, short_id=short.get(real(p).id)))
         if posts:
-            last[0] = posts[-1].id
+            last[0] = win.view.next_page(posts)
             older.set_sensitive(True)
             box.append(older)
 

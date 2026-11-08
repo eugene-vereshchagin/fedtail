@@ -956,6 +956,9 @@ class Web:
                 # all accounts in one window: whom a post may go from, whole @name@server
                 "accounts": [[k, _("post_from", acct=h)] for k, h in accounts]
                 if len(accounts) > 1 else [],
+                # …and each one's limit: a post from another goes to its server (08.11)
+                "limits": {k: self.core.post_limit(k) for k, _h in accounts}
+                if len(accounts) > 1 else {},
                 "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES],
                 "preview": bool(self.core.cfg["post"].get("preview", True)),
                 # spell checking: the browser's own (post.spellcheck), in the post's
@@ -1434,7 +1437,7 @@ class Web:
                 "moved": extra.get("moved"),
                 # the next page: my server's, then (remote_profiles) theirs, further back
                 "older": self._older_offer(acc, page),
-                "max_id": page[-1].id if page else ""}
+                "max_id": core.next_page(page, "")}
 
     def _profile_extras(self, acc, own, show):
         """What the windows add to a profile, asked at once: the pinned posts on top
@@ -1516,7 +1519,7 @@ class Web:
             page = core.account_posts(acc_id, one_id(max_id) if max_id else None,
                                       show=show).result()
             if page:
-                return {"posts": self._posts(page), "max_id": page[-1].id,
+                return {"posts": self._posts(page), "max_id": core.next_page(page),
                         "older": self._older_offer(acc, page)}
             return {"posts": [], "max_id": max_id, "older": self._older_offer(acc, [])}
         if cursor == "end" or not self._remote_host(acc):
@@ -1831,11 +1834,13 @@ class Web:
         windows'): characters of the limit, how many posts a chain makes, the #CamelCase
         hint for screen readers (post.camelcase_hint)."""
         from ..common import compose as cc
-        caps = self.core.caps
         sid = str(body.get("reply_to") or "")
         reply_to = self.core.by_id(sid) if sid else None
+        account = body.get("account")  # the editor's "From": its server's limit
+        limit = self.core.post_limit(None if account is None else str(account),
+                                     reply_to if reply_to is not None else (sid or None))
         c = cc.count(str(body.get("text") or ""), str(body.get("cw") or ""),
-                     int(getattr(caps, "max_characters", 500) or 500), self.core.cfg,
+                     limit, self.core.cfg,
                      reply_to=reply_to, visibility=str(body.get("visibility") or ""),
                      me=self.core.me)
         return {"n": c.n, "limit": c.limit, "over": c.over, "parts": c.parts,

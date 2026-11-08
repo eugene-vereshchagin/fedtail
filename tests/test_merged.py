@@ -69,6 +69,15 @@ class MergedRoutingTest(TmpDir):
                                               ("work", "@w@work.example")], ""))
         self.assertEqual(m.post_accounts("work~501")[1], "work")
         self.assertEqual(m.post_accounts({"id": "010"})[1], "")
+        # a post from another account: its server's limit, not the main one's (08.11)
+        from fedtail.core.view import View
+        self.w.caps.max_characters = 9000
+        view = View(m)
+        self.assertEqual(view.post_limit(), self.p.caps.max_characters)
+        self.assertEqual(view.post_limit("work"), 9000)
+        self.assertEqual(view.post_limit("", "work~501"), self.p.caps.max_characters)
+        self.assertEqual(view.post_limit(None, "work~501"), 9000)  # whose post answered
+        self.assertEqual(View(self.p).post_limit("work"), self.p.caps.max_characters)
         self.assertEqual(m.split("nope~1"), (self.p, None, "nope~1"))  # not a profile
         self.assertEqual(m.split(None), (self.p, None, None))
         self.assertIsNone(m.wrap("work", None))

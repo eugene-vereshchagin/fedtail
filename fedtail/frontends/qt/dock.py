@@ -292,7 +292,7 @@ class InputDock(QWidget):
             self.send_btn.setEnabled(True)
             return
         self._say()
-        limit = getattr(self.win.ctx.view.caps, "max_characters", None) or 500
+        limit = self.win.ctx.view.post_limit(None, self.target)
         n = len(self.text.toPlainText())
         self.count.setText(f"{n}/{limit}")
         self.send_btn.setEnabled(0 < n <= limit and

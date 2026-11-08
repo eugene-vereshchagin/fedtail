@@ -843,7 +843,16 @@ class ComposeScreen(Screen):
             vis = self.query_one("#c-vis", Select).value
         except Exception:  # noqa: BLE001 — not composed yet
             vis = ""
-        c = cc.count(text, cw, int(getattr(core.caps, "max_characters", 500) or 500),
+        # the server's limit — of the account it goes from (all accounts in one, 08.11)
+        account = None
+        if self.accounts:
+            try:
+                account = self.query_one("#c-from", Select).value or ""
+            except Exception:  # noqa: BLE001 — not composed yet
+                account = None
+        limit = core.post_limit(account, self.reply_to) if hasattr(core, "post_limit") \
+            else int(getattr(core.caps, "max_characters", 500) or 500)
+        c = cc.count(text, cw, limit,
                      core.cfg, reply_to=self.reply_to, visibility=vis if isinstance(vis, str)
                      else "", me=getattr(core, "me", None))
         line = Text(f"{c.n} / {c.limit}", style="bold red" if c.over else "")
@@ -867,7 +876,10 @@ class ComposeScreen(Screen):
         if getattr(e.select, "id", "") == "c-vis":  # made private: whom it adds
             self.show_count()
             return
-        if getattr(e.select, "id", "") != "c-from" or self.reply_to is None:
+        if getattr(e.select, "id", "") != "c-from":
+            return
+        self.show_count()  # another server: its limit
+        if self.reply_to is None:
             return
         chosen = e.value or ""
         acct = dict(self.accounts).get(chosen, "")

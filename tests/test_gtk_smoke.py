@@ -1454,7 +1454,8 @@ class GtkSmokeTest(_GtkBase):
             fut = Future()
             fut.set_result([])
             return fut
-        part.view = types.SimpleNamespace(account_posts=account_posts)
+        part.view = types.SimpleNamespace(account_posts=account_posts,
+                                          next_page=part.view.next_page)
         part.more()
         self.assertEqual(asked, [last])
 

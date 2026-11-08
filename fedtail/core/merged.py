@@ -76,6 +76,16 @@ class MergedCore:
             first = tag or ""
         return out, first
 
+    def caps_for(self, account=None, reply_to=None):
+        """The capabilities of the server a post goes to: account — the editor's "From"
+        ("" the main one, a tag another); None — the account that got reply_to (the main
+        one for a new post). Its limits, not the main account's (08.11)."""
+        if account is None:
+            core = self.split(reply_to)[0] if reply_to else self.primary
+        else:
+            core = self.others.get(account) if account else self.primary
+        return (core or self.primary).caps
+
     def split(self, x):
         """A (possibly prefixed) id → (core, tag or None, the id on that core)."""
         if isinstance(x, str) and SEP in x:

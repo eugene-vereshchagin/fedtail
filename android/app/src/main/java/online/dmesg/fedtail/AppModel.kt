@@ -1996,6 +1996,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // a reply's own visibility is the core's call at sending: a private one stays so
         (composeVisibility ?: answered?.visibility?.takeIf { it.isNotBlank() })
             ?.let { body.put("visibility", it) }
+        composeFrom?.let { body.put("account", it) }
         val got = Core.composeCheck(body)
         if (Core.failed(got) != null) return
         composeNewcomers = got.optString("newcomers")
@@ -2037,7 +2038,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun maxMedia(): Int = editorFacts?.optInt("max_media", 4) ?: 4
     fun maxOptions(): Int = editorFacts?.optInt("max_options", 4) ?: 4
-    fun charLimit(): Int = editorFacts?.optInt("limit", 500) ?: 500
+    // the server's limit — of the account it goes from, all accounts in one (08.11)
+    fun charLimit(): Int {
+        val facts = editorFacts ?: return 500
+        val from = composeFrom
+        val own = facts.optJSONObject("limits")
+        return if (from != null && own != null && own.has(from)) own.optInt(from, 500)
+               else facts.optInt("limit", 500)
+    }
 
     /** The editor as a link asked: my post to correct, a quote, a reply, a redraft. */
     private fun composeFrom(c: JSONObject) {

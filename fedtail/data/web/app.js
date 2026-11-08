@@ -2636,7 +2636,10 @@ function showCw(on) {
 
 function counter() {
   const n = [...$("#text").value].length + [...$("#cw").value].length;
-  const limit = (state.me.editor || {}).limit;  // the server's (max_characters), as told
+  // the server's (max_characters), as told — of the account it goes from (all in one)
+  const ed = state.me.editor || {};
+  const from = $("#from").hidden ? null : $("#from").value;
+  const limit = (from !== null && ed.limits && ed.limits[from]) || ed.limit;
   $("#chars").textContent = n && limit ? n + " / " + limit : "";
   $("#chars").classList.toggle("over", !!limit && n > limit);
   const key = state.replyTo ? "draft." + state.replyTo.sid : "draft.new";
@@ -2658,7 +2661,8 @@ async function checkText() {
   if (!text.trim()) { hint(""); return; }
   try {
     const r = await api("/api/compose_check", { text, cw: $("#cw").hidden ? "" : $("#cw").value,
-      reply_to: state.replyTo ? state.replyTo.sid : "", visibility: $("#vis").value });
+      reply_to: state.replyTo ? state.replyTo.sid : "", visibility: $("#vis").value,
+      account: $("#from").hidden ? null : $("#from").value });
     hint([r.newcomers, r.chain, r.camel].filter(Boolean).join(" · "));
     $("#compose-hint").classList.toggle("newcomer", !!r.newcomers);
   } catch (e) { /* the local counter stands */ }
@@ -3385,6 +3389,7 @@ async function start() {
   });
   $("#cw").addEventListener("input", counter);
   $("#vis").addEventListener("change", counter);  // made private: whom it adds (checkText)
+  $("#from").addEventListener("change", counter);  // another account: its server's limit
   $("#cw").placeholder = w("cw_placeholder");
   $("#cw-toggle").textContent = "⚠";
   $("#cw-toggle").title = w("cw_add_tip");

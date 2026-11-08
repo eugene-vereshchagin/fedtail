@@ -158,6 +158,7 @@ class ComposeWindow(Gtk.Box):
 
             def said(*_a):
                 k = self.from_keys[self.from_drop.get_selected()]
+                self._count()  # another server: its limit
                 if self.reply_to is not None and k != self._from_first:
                     self.win.status(_("post_from_other", acct=accounts[
                         self.from_drop.get_selected()][1]))
@@ -780,8 +781,11 @@ class ComposeWindow(Gtk.Box):
             self.hint.set_text(_("draft_saved"))
 
     def _count(self):
+        # the server's limit — of the account it goes from (all accounts in one, 08.11)
         try:
-            limit = self.view.caps.max_characters
+            limit = self.view.post_limit(
+                self.from_keys[self.from_drop.get_selected()] if self.from_keys else None,
+                self.reply_to)
         except Exception:  # noqa: BLE001
             limit = 500
         c = rules.count(self._text(), self.cw.get_text(), limit, self.cfg,

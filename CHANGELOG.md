@@ -38,6 +38,12 @@
   again with the next rounds until the server answers; `/api/v2/instance` speaks for them
   when v1 doesn't say.
 
+- **All accounts in one window: a post counts to its own server's limit.** The editor
+  counted every post against the main account's server, whichever account it went from
+  ("From"): a post from an account on a server allowing more was cut short, one on a
+  stricter server was let through to be refused. Now the count follows the account
+  chosen — in every interface.
+
 - **Qt: no more "dictionary changed size during iteration".** A lane refreshing while a
   card made anew moved the scroll bar let cards go mid-loop: an error in the log each
   time (seven in one night) and the refresh left half done. GTK's lane is guarded the same

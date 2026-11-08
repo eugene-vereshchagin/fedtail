@@ -504,6 +504,16 @@ class View:
     def account(self, acc_id):
         return _then(self._core.account(acc_id), self.acc)
 
+    @staticmethod
+    def next_page(page, before=None):
+        """Where the server's next page (older) starts after this one: its last entry's
+        own id, in the server's order — not the last of a list sorted by time, nor the
+        boosted post's id. Posts fetched from their author's server stand among the
+        server's pages with ids as new as the fetch (GoToSocial's ULIDs), and from such
+        a one the pages went round in a circle (08.11). An empty page: before stays."""
+        page = list(page or ())
+        return page[-1].id if page else before
+
     def account_posts(self, acc_id, max_id=None, show="all"):
         """A page of someone's posts as entries; show: "all", "posts" (no replies),
         "media" (core.PROFILE_SHOWS)."""
@@ -865,6 +875,16 @@ class View:
         rid = None if reply_to is None else reply_to if isinstance(reply_to, str) \
             else real(reply_to).id
         return pick(rid)
+
+    def post_limit(self, account=None, reply_to=None):
+        """How many characters a post may be — the server's it goes to: account as the
+        editor's "From" gives it ("" the main one, a tag another; None — the account
+        the post replied to got it from, the main one for a new post)."""
+        pick = getattr(self._core, "caps_for", None)
+        rid = None if reply_to is None else reply_to if isinstance(reply_to, str) \
+            else real(reply_to).id
+        caps = pick(account, rid) if pick is not None else self.caps
+        return int(getattr(caps, "max_characters", 500) or 500)
 
     def post(self, text, visibility, reply_to=None, warning="", language=None, quote=None,
              **kw):
