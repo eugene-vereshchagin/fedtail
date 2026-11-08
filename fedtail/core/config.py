@@ -342,6 +342,7 @@ DEFAULTS = {
         "leak_samples": 12,
         "object_census": True,
         "tracemalloc": False,
+        "memory_map": True,
         "report_repo": "",
         "issue_repo": "",
         "raw_json": False,
@@ -365,6 +366,7 @@ DEFAULTS = {
         "overview": "lanes",
         "layout": "auto",
         "to_new": "bottom",  # the "↓ N new" button: "bottom" (by the thumb), "top"
+        "free_memory": "background",  # caches let go: "background", "low", "off"
         "push": "auto",
         "stream": "always",        # the live stream: "always", "wifi" (Wi-Fi only), "off"
     },
@@ -432,6 +434,7 @@ CHOICES = {
     ("ui", "tiles"): {"lanes", "all", "none"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
     ("phone", "to_new"): {"bottom", "top"},
+    ("phone", "free_memory"): {"background", "low", "off"},
     ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "fonts"): {"theme", "system", "custom"},
@@ -635,13 +638,13 @@ FILE_LAYOUT = (
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
                              "watchdog_seconds stall_ms slow_request_seconds rss_warn_mb "
-                             "leak_samples object_census tracemalloc report_repo "
+                             "leak_samples object_census tracemalloc memory_map report_repo "
                              "issue_repo raw_json")),
     ("cli", _keys("cli", "enabled color max_lines tail_lanes")),
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout to_new push stream")),
+    ("phone", _keys("phone", "overview layout to_new free_memory push stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}

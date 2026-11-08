@@ -1620,6 +1620,13 @@ object_census = true
 # there too.
 tracemalloc = false
 
+# Where the memory lies, with every stats line: the process's own pages by kind (the main
+# heap, the rest of the anonymous memory, stacks, libraries, files, the graphics driver;
+# on the phone also the Java heap and the native heap), the libraries holding the most,
+# what the C allocator hands out and holds freed, Python's own blocks — so a night's
+# growth says which part grew. Reads /proc/self/smaps once in stats_minutes.
+memory_map = true
+
 # Where bug reports go (≡ → "Debugging" → "Collect a report", `--bug-report`, the
 # nightly tools/selfcheck.py): a private git repository, over ssh, with your own keys.
 # "user/repo" — on GitHub, or a full address: "git@host:user/repo.git", "ssh://…".
@@ -1752,6 +1759,12 @@ layout = "auto"
 # The lane's "↓ N" button (to the new posts, how many): "bottom" — over the "write" button,
 # by the thumb; "top" — in the lane's bar, beside its name.
 to_new = "bottom"
+
+# Memory given back when the phone asks (Android's onTrimMemory): "background" — as soon
+# as the app goes out of sight, the lanes' made lists and counts let go (made again when
+# you come back; the posts stay stored) and the freed memory back to the system; "low" —
+# only when the phone runs short; "off" — never.
+free_memory = "background"
 
 # Notifications at once, with the app closed: "auto" — through UnifiedPush when the phone
 # has a distributor for it (ntfy, Sunup, NextPush…): your server pushes to it, the app

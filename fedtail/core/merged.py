@@ -76,6 +76,10 @@ class MergedCore:
             first = tag or ""
         return out, first
 
+    def lighten(self):
+        """Every account's lanes let go (Core.lighten)."""
+        return sum(core.lighten() for core in [self.primary, *self.others.values()])
+
     def caps_for(self, account=None, reply_to=None):
         """The capabilities of the server a post goes to: account — the editor's "From"
         ("" the main one, a tag another); None — the account that got reply_to (the main

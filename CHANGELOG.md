@@ -38,6 +38,20 @@
   again with the next rounds until the server answers; `/api/v2/instance` speaks for them
   when v1 doesn't say.
 
+- **Where the memory lies, in the log.** A night's growth said only "rss_mb 337->938";
+  every stats line now also says which part it is (`debug.memory_map`, on): the process's
+  own pages by kind — the heap, the rest of the anonymous memory, stacks, libraries,
+  files, the graphics driver; on the phone the Java heap and the native heap — the
+  libraries holding the most, what the C allocator hands out and what it holds freed,
+  Python's own blocks; the trend line says how each part grew.
+
+- **Phone: memory given back.** The phone kept every byte it ever took: the freed memory
+  went back to the system only with glibc's call, which Android hasn't. Now it goes back
+  there too (bionic's purge), the stats and the trend are written in the phone's log as
+  on the desktop, and when the phone asks to spare memory — the app out of sight, or the
+  phone short of it — the lanes' made lists let go as well, made again when you come
+  back (`phone.free_memory`: `"background"`, `"low"`, `"off"`).
+
 - **All accounts in one window: a post counts to its own server's limit.** The editor
   counted every post against the main account's server, whichever account it went from
   ("From"): a post from an account on a server allowing more was cut short, one on a

@@ -539,18 +539,58 @@ def _fd_kinds():
     return kinds
 
 
+_LIBC = {}
+
+
+def _libc():
+    """The C library (glibc's libc.so.6, Android's bionic libc.so), or None."""
+    if "lib" not in _LIBC:
+        _LIBC["lib"] = None
+        try:
+            import ctypes
+        except ImportError:
+            return None
+        for name in ("libc.so.6", "libc.so"):
+            try:
+                _LIBC["lib"] = ctypes.CDLL(name)
+                break
+            except OSError:
+                continue
+    return _LIBC["lib"]
+
+
+M_PURGE, M_PURGE_ALL = -101, -104  # bionic's mallopt: free pages back (Android 10+, 12+)
+
+
+def _give_back(libc):
+    """The allocator's free memory back to the system: glibc's malloc_trim, bionic's
+    mallopt(M_PURGE_ALL / M_PURGE) — the phone held all it ever took (08.11). True
+    when there was such a call."""
+    try:
+        libc.malloc_trim(0)
+        return True
+    except AttributeError:
+        pass
+    try:
+        mallopt = libc.mallopt
+    except AttributeError:
+        return False
+    if not mallopt(M_PURGE_ALL, 0):  # Android 12+; before it, M_PURGE
+        mallopt(M_PURGE, 0)
+    return True
+
+
 def trim_memory():
     """Memory Python and Qt freed back to the system (glibc keeps it otherwise: after a
     night of lanes built and let go, the process stays at its peak). Returns the MB the
-    resident size went down by, or None where there's no such call (not glibc)."""
-    try:
-        import ctypes
-        libc = ctypes.CDLL("libc.so.6")
-    except (OSError, AttributeError):
+    resident size went down by, or None where there's no such call."""
+    libc = _libc()
+    if libc is None:
         return None
     before = _proc_status().get("VmRSS") or 0
     gc.collect()
-    libc.malloc_trim(0)
+    if not _give_back(libc):
+        return None
     after = _proc_status().get("VmRSS") or 0
     return round((before - after) / 1024, 1)
 
@@ -602,14 +642,14 @@ def _trim_waiter():
 
 
 def _malloc_trim():
-    """malloc_trim alone (no gc pass): the MB the resident size went down by, or None."""
-    try:
-        import ctypes
-        libc = ctypes.CDLL("libc.so.6")
-    except (OSError, AttributeError):
+    """The allocator's trim alone (no gc pass): the MB the resident size went down by,
+    or None."""
+    libc = _libc()
+    if libc is None:
         return None
     before = _proc_status().get("VmRSS") or 0
-    libc.malloc_trim(0)
+    if not _give_back(libc):
+        return None
     after = _proc_status().get("VmRSS") or 0
     return round((before - after) / 1024, 1)
 
@@ -654,6 +694,98 @@ def smaps():
     return out
 
 
+# where a mapping of /proc/self/smaps goes in the breakdown (memory_map), by its name
+_MAP_NAMED = (("[heap]", "heap"), ("[stack", "stack"), ("[anon:stack", "stack"),
+              ("[anon:dalvik", "java"), ("[anon:art", "java"), ("/dev/ashmem/dalvik", "java"),
+              ("[anon:scudo", "native"), ("[anon:libc_malloc", "native"),
+              ("[anon:jemalloc", "native"), ("[anon:thread", "stack"),
+              ("/dev/dri", "gpu"), ("/dev/kgsl", "gpu"), ("/dev/mali", "gpu"),
+              ("/dmabuf", "gpu"), ("/memfd:", "memfd"), ("/dev/shm", "memfd"))
+_CODE_ENDS = (".odex", ".oat", ".art", ".vdex", ".apk", ".jar", ".dex")
+
+
+def _map_kind(name):
+    if not name:
+        return "anon"  # malloc's other arenas, its big blocks, Python's arenas, Qt's
+    for start, kind in _MAP_NAMED:
+        if name.startswith(start):
+            return kind
+    if name.startswith("[anon:"):
+        return "anon"
+    if name.startswith("["):
+        return "other"  # [vdso], [vvar]…
+    base = name.rsplit("/", 1)[-1]
+    if ".so" in base:
+        return "libs"
+    if base.endswith(_CODE_ENDS):
+        return "code"
+    return "files"  # the database's pages, fonts, icon themes…
+
+
+def memory_map(text=None, top=6):
+    """Where this process's own memory lies (debug.memory_map): the private pages (USS)
+    of each kind of mapping in /proc/self/smaps — the main heap, the other anonymous
+    memory (malloc's other arenas and big blocks, Python's arenas, Qt's), stacks, the
+    libraries' own pages, files, the graphics driver's; on Android also ART's Java heap
+    and the native heap — and the libraries with the most of it. {} where there is no
+    smaps (not Linux, not Android). A night's growth said only "rss_mb 337->938"
+    (08.11): this says which part grew."""
+    if text is None:
+        try:
+            text = Path("/proc/self/smaps").read_text()
+        except OSError:
+            return {}
+    kinds, libs, kind, lib = {}, {}, None, None
+    for line in text.splitlines():
+        head = line.split(None, 5)
+        if head and "-" in head[0] and len(head) >= 5 and ":" not in head[0]:
+            name = head[5].strip() if len(head) > 5 else ""
+            kind = _map_kind(name)
+            lib = name.rsplit("/", 1)[-1] if kind == "libs" else None
+            continue
+        if kind is None or not line.startswith(("Private_Clean:", "Private_Dirty:")):
+            continue
+        kb = int(line.split()[1])
+        kinds[kind] = kinds.get(kind, 0) + kb
+        if lib:
+            libs[lib] = libs.get(lib, 0) + kb
+    out = {f"mem.{k}_mb": round(v / 1024, 1) for k, v in sorted(kinds.items())}
+    if libs:
+        out["mem_libs"] = {k: round(v / 1024, 1) for k, v in
+                           sorted(libs.items(), key=lambda kv: -kv[1])[:top]
+                           if v >= 512}  # half a MB and more: the ones that matter
+    return out
+
+
+def malloc_info():
+    """The C allocator's own account (glibc's mallinfo2, bionic's mallinfo), MB: used —
+    handed out now; free — freed but still held (what a trim can give back, and what
+    fragmentation keeps); mmap — big blocks of their own; arena — the heap it grew.
+    {} where it can't say."""
+    libc = _libc()
+    if libc is None:
+        return {}
+    import ctypes
+
+    class Info(ctypes.Structure):
+        _fields_ = [(f, ctypes.c_size_t) for f in (
+            "arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks",
+            "uordblks", "fordblks", "keepcost")]
+    fn = getattr(libc, "mallinfo2", None)
+    if fn is None and (sys.platform == "android" or "ANDROID_ROOT" in os.environ):
+        fn = getattr(libc, "mallinfo", None)  # bionic's: size_t fields already
+    if fn is None:
+        return {}
+    fn.restype = Info
+    try:
+        m = fn()
+    except Exception:  # noqa: BLE001 — a nicety
+        return {}
+    mb = lambda n: round(n / 1024 / 1024, 1)  # noqa: E731
+    return {"malloc.used_mb": mb(m.uordblks), "malloc.free_mb": mb(m.fordblks),
+            "malloc.mmap_mb": mb(m.hblkhd), "malloc.arena_mb": mb(m.arena)}
+
+
 def stats():
     """One snapshot: memory, CPU since the last snapshot, threads, files, providers."""
     now = time.monotonic()
@@ -672,6 +804,13 @@ def stats():
         "cpu_pct": round(100 * (cpu - prev[1]) / max(now - prev[0], 1e-6), 1) if prev else None,
         "threads": threading.active_count(),
     }
+    if _state.get("map_on", True):  # which part of it (debug.memory_map)
+        try:
+            out.update(memory_map())
+            out.update(malloc_info())
+            out["py.blocks"] = sys.getallocatedblocks()  # Python's own allocations
+        except Exception as e:  # noqa: BLE001 — stats are a nicety
+            out["mem.error"] = str(e)[:80]
     from . import leaks
     for k, v in leaks.gc_stats().items():
         out[f"gc.{k}"] = v
@@ -836,6 +975,7 @@ def start_stats(cfg):
     _state["trend"] = leaks.Trend(int(d.get("leak_samples", 12)))
     _state["census_on"] = bool(d.get("object_census", True)) and is_on()
     _state["trim_on"] = bool(d.get("trim_memory", True))
+    _state["map_on"] = bool(d.get("memory_map", True))
     if d.get("tracemalloc", False):
         leaks.start_tracing()
     if minutes <= 0 or not _state.get("on", True):

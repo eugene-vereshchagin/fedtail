@@ -46,7 +46,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Window, tray, keys | · | a phone has no window, tray or keys |
-| Leak hunting: trends, an object census, memory snapshots | · | a desktop tool |
+| Leak hunting: trends, an object census, memory snapshots | ◐ | the stats, trends and memory breakdown in the phone's logs; snapshots and the census on the desktop |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |

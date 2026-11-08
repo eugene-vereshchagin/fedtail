@@ -111,4 +111,11 @@ class MainActivity : ComponentActivity() {
         model.onBackground()
         super.onStop()
     }
+
+    // the phone asks to spare memory (out of sight, or short of it): the core decides
+    // what goes (phone.free_memory); Coil's picture cache trims itself
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        model.trimMemory(level)
+    }
 }

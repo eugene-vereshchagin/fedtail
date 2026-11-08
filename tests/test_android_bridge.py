@@ -475,6 +475,27 @@ class BridgeTest(_Base):
         self.assertTrue(got["ok"])
         self.assertIn("thread", got["open"])
 
+    def test_the_phone_asks_to_spare_memory(self):
+        """08.11: onTrimMemory — phone.free_memory says when: "background" once out of
+        sight, "low" only when short, "off" never; the lanes come back as they were."""
+        self.demo()
+        core = self.bridge._core()
+        before = self.call("lane", "home")
+        core.lane_entries("home")
+        self.assertTrue(core._lane_cache)
+        self.assertEqual(self.call("trim_memory", 5)["lanes"], 0)  # running, moderate
+        self.assertGreater(self.call("trim_memory", 20)["lanes"], 0)  # out of sight
+        self.assertFalse(core._lane_cache)
+        self.assertEqual([p["id"] for p in self.call("lane", "home")["posts"]],
+                         [p["id"] for p in before["posts"]])
+        core.cfg["phone"]["free_memory"] = "low"
+        core.lane_entries("home")
+        self.assertEqual(self.call("trim_memory", 20)["lanes"], 0)
+        self.assertGreater(self.call("trim_memory", 15)["lanes"], 0)  # running critical
+        core.cfg["phone"]["free_memory"] = "off"
+        core.lane_entries("home")
+        self.assertEqual(self.call("trim_memory", 80)["lanes"], 0)
+
     def test_a_cards_menu_and_links(self):
         self.demo()
         got = self.call("open")

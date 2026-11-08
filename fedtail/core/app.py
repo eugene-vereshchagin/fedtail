@@ -1612,6 +1612,16 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         cache[name] = (key, n)
         return n
 
+    def lighten(self):
+        """Every lane's made list and count let go — made again when next asked (the
+        phone in the background, asked to spare memory: phone.free_memory). The posts
+        they held, parsed, go with them; the store keeps every one. → how many lanes."""
+        n = len(self._lane_cache)
+        self._lane_cache.clear()
+        self.__dict__.pop("_unread_cache", None)
+        self._filter_out.clear()
+        return n
+
     def _warm_lanes(self):
         """The lanes and their unread counts worked out here, in the poll thread, before
         the window hears of news: it then finds them made, instead of reading thousands

@@ -35,7 +35,11 @@ WATCH = {"rss_mb": 20, "py_objects": 20_000, "threads": 2, "fds": 5,
          "qt.images_mb": 20, "core.lane_cache": 20, "core.pool_queue": 20,
          "core.bg_queue": 20, "core.parents_inflight": 20, "core.replies_inflight": 20,
          "core.honest_checked": 500, "gc.uncollectable": 1}
-SUMMARY_ONLY = ("core.statuses", "core.items", "core.read", "core.db_mb")
+SUMMARY_ONLY = ("core.statuses", "core.items", "core.read", "core.db_mb",
+                # where the memory lies (diag.memory_map, malloc_info): which part grew
+                "mem.heap_mb", "mem.anon_mb", "mem.stack_mb", "mem.libs_mb", "mem.files_mb",
+                "mem.gpu_mb", "mem.memfd_mb", "mem.java_mb", "mem.native_mb",
+                "malloc.used_mb", "malloc.free_mb", "malloc.mmap_mb", "py.blocks")
 WARMUP_S = 30 * 60  # lanes fill, caches warm up: no verdicts in the first half hour
 
 

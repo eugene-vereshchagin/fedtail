@@ -137,6 +137,7 @@ def _make(demo):
         from fedtail import diag
         diag.setup(where, cfg)
         diag.session_header(where.profile)
+        diag.start_stats(cfg)  # memory and its breakdown in the log, as the desktop's
         _s["logging"] = True
         _earlier_crash(diag)
     core = Core(cfg, where, **kw)
@@ -836,6 +837,35 @@ def refresh():
     windows' words)."""
     def go():
         return _s["web"].refresh()
+    return _answer(go)
+
+
+# Android's onTrimMemory levels (ComponentCallbacks2)
+TRIM_RUNNING_LOW, TRIM_RUNNING_CRITICAL, TRIM_UI_HIDDEN = 10, 15, 20
+
+
+def trim_memory(level):
+    """The phone asks to spare memory (onTrimMemory, level): by phone.free_memory —
+    "background": once the app is out of sight (and whenever the phone runs short),
+    "low": only when it runs short — the lanes' made lists let go (Core.lighten) and
+    the freed memory back to the system (bionic's purge). → {"lanes", "freed_mb"}."""
+    def go():
+        core = _core()
+        how = (core.cfg.get("phone") or {}).get("free_memory", "background")
+        level_ = int(level)
+        short = level_ in (TRIM_RUNNING_LOW, TRIM_RUNNING_CRITICAL) or level_ > TRIM_UI_HIDDEN
+        if how == "off" or (how == "low" and not short) or \
+                (how == "background" and level_ < TRIM_UI_HIDDEN and not short):
+            return {"lanes": 0, "freed_mb": 0}
+        import logging
+
+        from fedtail import diag
+        lanes = core.lighten()
+        freed = diag.trim_memory() or 0
+        logging.getLogger("fedtail.android").info(
+            "memory: the phone asked (level %d) — %d lanes let go, %.1f MB back", level_,
+            lanes, freed)
+        return {"lanes": lanes, "freed_mb": freed}
     return _answer(go)
 
 

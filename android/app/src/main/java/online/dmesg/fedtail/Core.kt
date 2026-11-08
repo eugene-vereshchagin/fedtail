@@ -128,6 +128,8 @@ object Core {
     suspend fun laneClear(name: String, confirmed: Boolean) = obj("lane_clear", name, confirmed)
     suspend fun refresh() = obj("refresh")
     suspend fun pause(on: Boolean) = obj("pause", on)
+    /** The phone asks to spare memory (onTrimMemory): phone.free_memory says what goes. */
+    suspend fun trimMemory(level: Int) = obj("trim_memory", level)
     suspend fun network(wifi: Boolean) = obj("network", wifi)
     suspend fun thread(id: String, at: String = "post") = obj("thread", id, at)
     suspend fun threadProgress(id: String) = obj("thread_progress", id)

@@ -1118,6 +1118,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
     }
 
+    fun trimMemory(level: Int) {
+        if (screen != Screen.Main) return
+        viewModelScope.launch { Core.trimMemory(level) }
+    }
+
     fun onBackground() {
         if (screen != Screen.Main) return
         watcher?.cancel()

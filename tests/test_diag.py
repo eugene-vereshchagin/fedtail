@@ -373,3 +373,71 @@ class SmapsTest(unittest.TestCase):
             self.assertIn("uss_mb", diag.stats())
         with mock.patch.object(diag.Path, "read_text", side_effect=OSError):
             self.assertEqual(diag.smaps(), {})
+
+
+SMAPS = """\
+55d0-55d1 rw-p 00000000 00:00 0                          [heap]
+Rss:                2048 kB
+Private_Clean:         0 kB
+Private_Dirty:      2048 kB
+VmFlags: rd wr mr mw me ac
+7f00-7f10 rw-p 00000000 00:00 0
+Private_Clean:         0 kB
+Private_Dirty:      4096 kB
+7f10-7f20 r-xp 00000000 08:01 42   /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.8.2
+Private_Clean:       512 kB
+Private_Dirty:       512 kB
+7f20-7f30 rw-s 00000000 00:05 7                          /dev/dri/renderD128
+Private_Dirty:      1024 kB
+7f30-7f40 rw-p 00000000 00:00 0                          [anon:dalvik-main space]
+Private_Dirty:      3072 kB
+7f40-7f50 rw-p 00000000 00:00 0                          [anon:scudo:primary]
+Private_Dirty:      1024 kB
+7f50-7f60 r--p 00000000 08:01 43                         /data/app/x/oat/arm64/base.odex
+Private_Clean:       256 kB
+7ffe-7fff rw-p 00000000 00:00 0                          [stack]
+Private_Dirty:       128 kB
+"""
+
+
+class MemoryMapTest(unittest.TestCase):
+    """08.11: a night's growth said only "rss_mb 337->938"; the breakdown says which
+    part grew — the desktop's mappings and the phone's (ART's Java heap, scudo)."""
+
+    def test_the_kinds(self):
+        got = diag.memory_map(SMAPS)
+        self.assertEqual(got["mem.heap_mb"], 2.0)
+        self.assertEqual(got["mem.anon_mb"], 4.0)
+        self.assertEqual(got["mem.libs_mb"], 1.0)
+        self.assertEqual(got["mem.gpu_mb"], 1.0)
+        self.assertEqual(got["mem.java_mb"], 3.0)
+        self.assertEqual(got["mem.native_mb"], 1.0)
+        self.assertEqual(got["mem.code_mb"], 0.2)
+        self.assertEqual(got["mem.stack_mb"], 0.1)
+        self.assertEqual(got["mem_libs"], {"libQt6Gui.so.6.8.2": 1.0})
+
+    def test_this_process_and_the_allocator(self):
+        if not os.path.exists("/proc/self/smaps"):
+            self.skipTest("no /proc")
+        got = diag.memory_map()
+        self.assertGreater(got.get("mem.heap_mb", 0) + got.get("mem.anon_mb", 0), 0)
+        info = diag.malloc_info()
+        if info:  # glibc 2.33+
+            self.assertGreater(info["malloc.used_mb"], 0)
+        s = diag.stats()
+        self.assertIn("py.blocks", s)
+
+    def test_given_back_on_the_phone(self):
+        """bionic has no malloc_trim: mallopt(M_PURGE_ALL), M_PURGE before Android 12."""
+        calls = []
+
+        class Bionic:
+            def mallopt(self, what, value):
+                calls.append(what)
+                return 0  # M_PURGE_ALL not known (Android 10, 11)
+        self.assertTrue(diag._give_back(Bionic()))
+        self.assertEqual(calls, [diag.M_PURGE_ALL, diag.M_PURGE])
+
+        class Nothing:
+            pass
+        self.assertFalse(diag._give_back(Nothing()))

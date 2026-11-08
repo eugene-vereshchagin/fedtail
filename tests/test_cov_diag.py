@@ -147,7 +147,8 @@ class DiagMoreTest(unittest.TestCase):
             self.assertEqual(diag._proc_status(), {})  # (on Windows too: as on Linux)
 
     def test_trim_memory_without_glibc(self):
-        with mock.patch.object(ctypes, "CDLL", side_effect=OSError):
+        with mock.patch.dict(diag._LIBC, {}, clear=True), \
+                mock.patch.object(ctypes, "CDLL", side_effect=OSError):
             self.assertIsNone(diag.trim_memory())
 
     def test_trim_soon_once_things_settle(self):
