@@ -548,7 +548,8 @@ body.lit .post:hover .acts button, body.lit .post:hover .acts a { color: var(--a
 /* in the head's row, before the time and the code: over them, they covered both */
 .post .own-tools { visibility: hidden; display: flex; gap: 2px; flex: none; margin-left: auto; }
 .post .own-tools + .meta { margin-left: 4px; }
-body.lit .post:hover .own-tools { visibility: visible; }
+.post:hover .own-tools { visibility: visible; }
 .post .own-tools button { background: none; border: 0; color: var(--muted); cursor: pointer;
   padding: 2px 6px; font-size: 1em; }
 .post .own-tools button:hover { color: var(--text); }
+.post .own-tools button.on { background: var(--accent); color: var(--accent-text); border-radius: 4px; }

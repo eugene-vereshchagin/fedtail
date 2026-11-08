@@ -317,3 +317,65 @@ help = "writing.md#markdown-cw-язык"
 [sync_lanes_push_tip]
 text = "Ленты этого устройства — какие, в каком порядке, их языки и окно счёта — уходят на остальные устройства и заменяют их ленты там, где включён sync.lane_rules: одинаковые ленты — одинаковые числа."
 config = "sync.lane_rules"
+
+# ── Инструменты над постом (card.hover_tools) ──
+
+[open_browser]
+text = "Открыть пост в браузере, на его сервере."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[copy_link]
+text = "Скопировать адрес поста."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[translate]
+text = "Перевести пост (сервер переводит; оригинал — ещё одним нажатием). Есть у поста на другом языке."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[quote]
+text = "Цитировать пост в своём (где автор разрешает)."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[quote_ask]
+text = "Цитировать пост: автор одобряет цитаты вручную — спросим его."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[sub_thread]
+text = "Следить за тредом: новые ответы — в ленте «Треды»."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[unsub_thread]
+text = "Перестать следить за тредом (кнопка подсвечена, пока следишь)."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[mute_thread]
+text = "Заглушить тред: его ответы не уведомляют и не считаются."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[unmute_thread]
+text = "Снова слышать тред (кнопка подсвечена, пока он заглушён)."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[mark_read_upto]
+text = "Всё в ленте до этого поста — прочитано."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[edit]
+text = "Изменить свой пост (сервер хранит историю правок)."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"
+
+[delete]
+text = "Удалить свой пост — спросим перед этим."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"

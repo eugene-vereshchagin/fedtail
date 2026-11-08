@@ -45,6 +45,9 @@ DEFAULTS = {
         "expand_cw": True,
         "bookmark_button": True,
         "additional_highlight": True,
+        # the tools over a post, under the mouse (common/actions.TOOLS): out of its menu
+        "hover_tools": ["open", "copy_link", "translate", "quote", "sub_thread",
+                        "mute_thread", "read_upto", "edit", "delete"],
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
@@ -586,7 +589,7 @@ FILE_LAYOUT = (
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
-             "links_in_app")
+             "hover_tools links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
              "counters_via_accounts "
              "translate "
@@ -813,6 +816,11 @@ def _type_name(v):
     return {bool: "true/false", int: "number", str: "string", list: "list"}.get(type(v), "value")
 
 
+# the tools over a post a window may show (ui.hover_tools; common/actions.TOOLS draws them)
+HOVER_TOOLS = ("open", "copy_link", "translate", "quote", "sub_thread", "mute_thread",
+               "read_upto", "edit", "delete")
+
+
 def validate(user):
     """Merge user config over defaults. Returns (config, warnings) or raises ConfigError."""
     cfg = copy.deepcopy(DEFAULTS)
@@ -933,6 +941,10 @@ def validate(user):
     if bad_types:
         errors.append(f"activity.types: unknown {bad_types}; "
                       f"known: {', '.join(sorted(ACTIVITY_TYPES))}")
+    bad_tools = [x for x in cfg["ui"]["hover_tools"] if x not in HOVER_TOOLS]
+    if bad_tools:
+        errors.append(f"card.hover_tools: unknown {bad_tools}; "
+                      f"known: {', '.join(HOVER_TOOLS)}")
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")

@@ -171,6 +171,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-card .ft-muted link, .ft-card .ft-mono link {{ color: {c['muted']}; }}
 .ft-card .ft-ctx link {{ color: {c['muted']}; }}
 .ft-action.ft-active {{ background: {c['active']}; color: {c['on_active']}; }}
+.ft-own .ft-action.ft-on {{ background: {c['active']}; color: {c['on_active']}; }}
 .ft-primary {{ background: {c['primary']}; color: {c['on_primary']}; border-radius: {br}px; }}
 .ft-sidebar button.ft-primary {{ color: {c['on_primary']}; }}
 .ft-status {{ color: {c['text']}; padding: 2px 8px; font-size: smaller; }}

@@ -158,33 +158,53 @@ class Card(Gtk.Box):
         self.add_controller(click)
 
     def _highlight(self, body):
-        """ui.additional_highlight (point.im): the card under the mouse has its buttons
-        lit (the stylesheet's .ft-lit:hover) and, on my own post, ✎ and ✕ at the top
-        right — the menu's Edit and Delete (common/actions.py links); as Qt's."""
-        if not self.ctx.cfg["ui"].get("additional_highlight", True):
+        """The card under the mouse (as Qt's): with ui.additional_highlight (point.im) its
+        buttons lit (the stylesheet's .ft-lit:hover); and its tools at the top right
+        (ui.hover_tools; common/actions.tools) — items of its ⋯ menu, out of the menu
+        then. Made anew at each hover: a thread followed, a post read meanwhile."""
+        if self.ctx.cfg["ui"].get("additional_highlight", True):
+            self.add_css_class("ft-lit")
+        if not actions.hover_tools(self.ctx.cfg):
             return
-        self.add_css_class("ft-lit")
-        me, author = self.ctx.me_id, self.post.author
-        if not me or author is None or author.id != me:
-            return
-        from ..common.links import make
         tools = Gtk.Box(spacing=2, halign=Gtk.Align.END, valign=Gtk.Align.START)
         tools.add_css_class("ft-own")
-        for action, glyph, words in (("edit", "✎", _("edit")), ("delete", "✕", _("delete"))):
-            b = Gtk.Button(label=glyph)
-            b.add_css_class("flat")
-            b.add_css_class("ft-action")
-            tip(b, words)
-            url = make(action, self.entry.id)
-            b.connect("clicked", lambda _b, u=url: self.ctx.on_link(u))
-            tools.append(b)
         tools.set_visible(False)
         body.add_overlay(tools)
         motion = Gtk.EventControllerMotion()
-        motion.connect("enter", lambda *_a: tools.set_visible(True))
-        motion.connect("leave", lambda *_a: tools.set_visible(False))
+        motion.connect("enter", lambda *_a: self._show_tools(True))
+        motion.connect("leave", lambda *_a: self._show_tools(False))
         self.add_controller(motion)
         self.own_tools = tools
+
+    def _show_tools(self, on):
+        tools = self.own_tools
+        if tools is None:
+            return
+        if on:
+            from . import icons
+            child = tools.get_first_child()
+            while child is not None:
+                nxt = child.get_next_sibling()
+                tools.remove(child)
+                child = nxt
+            for it, picture, glyph in actions.tools(self.entry, self._actx(),
+                                                    short_id=self.short_id,
+                                                    unread=bool(self.unread)):
+                b = Gtk.Button()
+                img = icons.image(picture, self.ctx.theme)
+                if img is not None:
+                    b.set_child(img)
+                else:
+                    b.set_label(glyph)
+                b.add_css_class("flat")
+                b.add_css_class("ft-action")
+                if it.on:
+                    b.add_css_class("ft-on")
+                b.tool = it.tool  # (tests)
+                tip(b, it.label)
+                b.connect("clicked", lambda _b, i=it: self._do(i))
+                tools.append(b)
+        tools.set_visible(on and tools.get_first_child() is not None)
 
     own_tools = None
 
@@ -932,8 +952,10 @@ class Card(Gtk.Box):
         pop = Gtk.Popover()
         pop.set_has_arrow(False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # the tools over the post (ui.hover_tools) are there, not here
         for it in actions.menu(self.entry, self._actx(), short_id=self.short_id,
-                               unread=bool(self.unread)):
+                               unread=bool(self.unread),
+                               without_tools=self.own_tools is not None):
             if it.kind == "separator":
                 box.append(Gtk.Separator())
                 continue

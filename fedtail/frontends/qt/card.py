@@ -675,49 +675,62 @@ class PostRow(QWidget):
             h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop if place == "header"
                         else Qt.AlignmentFlag.AlignVCenter)
 
-    own_tools = None  # ✎ ✕ on my own post, under the mouse (ui.additional_highlight)
+    own_tools = None  # the tools over the post, under the mouse (ui.hover_tools)
+    # (named so since ✎ ✕ on my own post were all it had)
 
     _tools_row = None
 
     def _own_tools(self):
-        """ui.additional_highlight (point.im): on my own post ✎ and ✕ at the top right,
-        seen only while the mouse is over it — the menu's Edit and Delete (common/actions.py
-        links). Made at the first hover: who I am may come after the card (drawn from the
-        store)."""
-        p, row = self.spec.post, self._tools_row
-        if self.own_tools is not None or row is None or not self.ctx.me_id or \
-                p.author is None or p.author.id != self.ctx.me_id:
+        """The tools over the post (ui.hover_tools; common/actions.tools): at its top
+        right, seen only while the mouse is over it — items of its ⋯ menu, out of the
+        menu then (08.11: thirty lines of menu). Made anew at each hover: whether the
+        thread is followed, the post read, may have changed meanwhile."""
+        row = self._tools_row
+        if row is None or self.spec.entry is None:
             return
-
-        from ..common.links import make
-        box = QWidget()
+        got = actions.tools(self.spec.entry, self._actions_ctx(),
+                            short_id=self.spec.extra.get("short_id"), unread=self.spec.unread)
+        if self.own_tools is not None:
+            drop(self.own_tools)
+            self.own_tools = None
+        if not got:
+            return
+        # over the card's top right corner, not in its row: in the row, kept room for
+        # nine pictures squeezed the name and the time away even while hidden
+        host = self.card if self.card is not None else self
+        box = QWidget(host)
         box.setObjectName("ownTools")
+        box.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         lay = QHBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(2)
         from . import icons as pictures
-        sid = self.spec.entry.id
-        for action, glyph, words in (("edit", "✎", _("edit")), ("delete", "✕", _("delete"))):
+        for it, picture, glyph in got:
             b = QToolButton()
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
-            b.setToolTip(words)
-            b.setAccessibleName(words)
-            ic = pictures.icon(action, self.theme)
+            b.setToolTip(plain_tip(it.label))
+            b.setAccessibleName(it.label)
+            b.setProperty("tool", it.tool)  # (tests, stylesheets)
+            b.setProperty("on", "true" if it.on else "false")
+            ic = pictures.icon(picture, self.theme)
             if ic.isNull():
                 b.setText(glyph)
             else:
                 b.setIcon(ic)
-            url = make(action, sid)
-            b.clicked.connect(lambda _c=False, u=url: self.ctx.on_link(u))
+            b.clicked.connect(lambda _c=False, i=it: self._do_item(i))
             lay.addWidget(b)
-        keep = box.sizePolicy()
-        keep.setRetainSizeWhenHidden(True)  # shown and hidden, nothing beside it moves
-        box.setSizePolicy(keep)
         box.setVisible(False)
         self.own_tools = box
-        row.addWidget(box, 0, Qt.AlignmentFlag.AlignTop)
-        row.invalidate()
+
+    def _place_tools(self):
+        box = self.own_tools
+        host = box.parentWidget() if box is not None else None
+        if host is None:
+            return
+        box.adjustSize()
+        box.move(max(0, host.width() - box.width() - 6), 4)
+        box.raise_()
 
     def enterEvent(self, e):  # noqa: N802 — Qt's name
         super().enterEvent(e)
@@ -728,8 +741,17 @@ class PostRow(QWidget):
         self._lit(False)
 
     def _lit(self, on):
-        """ui.additional_highlight: the post under the mouse — its buttons brighter (the
-        stylesheet's [hover="true"]), my own one's ✎ ✕ seen."""
+        """The post under the mouse: its tools seen (ui.hover_tools) and, with
+        ui.additional_highlight, its buttons brighter (the stylesheet's [hover="true"])."""
+        if on:
+            self._own_tools()
+        if self.own_tools is not None:
+            try:
+                if on:
+                    self._place_tools()
+                self.own_tools.setVisible(on)
+            except RuntimeError:
+                self.own_tools = None
         if not self.ctx.cfg["ui"].get("additional_highlight", True):
             return
         box = getattr(self, "actions_box", None)
@@ -741,10 +763,6 @@ class PostRow(QWidget):
             for b in box.findChildren(QToolButton):  # their colour is the box's: anew
                 b.style().unpolish(b)
                 b.style().polish(b)
-        if on:
-            self._own_tools()
-        if self.own_tools is not None:
-            self.own_tools.setVisible(on)
 
     def _unread_mark(self):
         if self.theme.shape["unread_mark"] == "star":
@@ -1086,19 +1104,17 @@ class PostRow(QWidget):
     def _fill_more(self, menu, entry):
         """The post's ⋯ menu: what's in it comes from common/actions.py."""
         menu.clear()
-        from .opener import open_link
+        # the tools over the post (ui.hover_tools) are there, not here — unless the
+        # card has no top row to show them in (then the menu keeps them)
         for it in actions.menu(entry, self._actions_ctx(),
                                short_id=self.spec.extra.get("short_id"),
-                               unread=self.spec.unread):
+                               unread=self.spec.unread,
+                               without_tools=self._tools_row is not None):
             if it.kind == "separator":
                 menu.addSeparator()
-            elif it.kind == "link":
-                menu.addAction(it.label, lambda u=it.url: self.ctx.on_link(u))
-            elif it.kind == "open":
-                menu.addAction(it.label, lambda u=it.url: open_link(u))
-            elif it.kind == "copy":
-                menu.addAction(it.label,
-                               lambda t=it.text: QGuiApplication.clipboard().setText(t))
+            elif it.kind in ("link", "open", "copy", "translate", "quote_reply",
+                             "long_form"):
+                menu.addAction(it.label, lambda i=it: self._do_item(i))
             elif it.kind == "lists":
                 lists = menu.addMenu(it.label)
                 lists.aboutToShow.connect(lambda m=lists, a=it.data:
@@ -1108,12 +1124,22 @@ class PostRow(QWidget):
                 for label, e, tag, action in it.data:
                     sub.addAction(label, lambda e=e, t=tag, a=action:
                                   self.ctx.do_act_as(e, t, a))
-            elif it.kind == "long_form":
-                menu.addAction(it.label, lambda e=it.data: self.ctx.long_form(e))
-            elif it.kind == "translate":
-                menu.addAction(it.label, self._translate)
-            elif it.kind == "quote_reply":
-                menu.addAction(it.label, lambda: self._quote_reply())
+
+    def _do_item(self, it):
+        """One item of the post's menu (or a tool over it) done: common/actions.Item."""
+        if it.kind == "link":
+            self.ctx.on_link(it.url)
+        elif it.kind == "open":
+            from .opener import open_link
+            open_link(it.url)
+        elif it.kind == "copy":
+            QGuiApplication.clipboard().setText(it.text)
+        elif it.kind == "long_form":
+            self.ctx.long_form(it.data)
+        elif it.kind == "translate":
+            self._translate()
+        elif it.kind == "quote_reply":
+            self._quote_reply()
 
     # ---- media --------------------------------------------------------------------
     # ---- polls --------------------------------------------------------------------

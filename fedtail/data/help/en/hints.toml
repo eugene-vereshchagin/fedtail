@@ -317,3 +317,65 @@ help = "writing.md#markdown-cw-language"
 [sync_lanes_push_tip]
 text = "This device's lanes — which, in what order, their languages and the counting window — go to the other devices and replace theirs, where sync.lane_rules is on: the same lanes, the same numbers."
 config = "sync.lane_rules"
+
+# ── The tools over a post (card.hover_tools) ──
+
+[open_browser]
+text = "Open the post in the browser, on its server."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[copy_link]
+text = "Copy the post's address."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[translate]
+text = "Translate the post (the server translates; the original one more click away). On a post in another language."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[quote]
+text = "Quote the post in one of yours (where the author allows)."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[quote_ask]
+text = "Quote the post: the author approves quotes by hand — they'll be asked."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[sub_thread]
+text = "Follow the thread: new replies come to the Threads lane."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[unsub_thread]
+text = "Stop following the thread (the button is lit while you follow)."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[mute_thread]
+text = "Mute the thread: its replies neither notify nor count."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[unmute_thread]
+text = "Hear the thread again (the button is lit while it's muted)."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[mark_read_upto]
+text = "Everything in the lane up to this post — read."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[edit]
+text = "Edit your post (the server keeps the history of edits)."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"
+
+[delete]
+text = "Delete your post — asked first."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"

@@ -465,6 +465,18 @@ class WebTest(TmpDir):
         self.assertEqual({k: got[k] for k in ("subscribed", "muted", "own")},
                          {"subscribed": False, "muted": False, "own": False})
         self.assertEqual(self.req("/api/post_menu?id=../x")[0], 400)
+        # the tools over a post (ui.hover_tools, 08.11): the page shows them under the
+        # mouse and asks for its menu without them; the phone (no hover) keeps it whole
+        self.assertTrue(me["hover_tools"])
+        tools = [t["tool"] for t in got["tools"]]
+        self.assertEqual(tools[:2], ["open", "copy_link"])
+        self.assertTrue(all(t["glyph"] for t in got["tools"]))
+        whole = [i["label"] for i in got["items"]]
+        short = [i["label"] for i in json.loads(
+            self.req("/api/post_menu?id=002&hover=1")[2])["items"]]
+        self.assertIn(i18n._("open_browser"), whole)
+        self.assertNotIn(i18n._("open_browser"), short)
+        self.assertLess(len(short), len(whole))
         # a right click on a #tag: the windows' menu of it (common/links.tag_menu, 02.11)
         url = urllib.parse.quote("fedtail:tag/cats%20by%3A7", safe="")
         tag = json.loads(self.req("/api/tag_menu?url=" + url)[2])["items"]

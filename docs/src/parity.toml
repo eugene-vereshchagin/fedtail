@@ -59,6 +59,18 @@ note.ru = "Окна на Qt и GTK и веб рисуют :blobcat: картин
 note.en = "The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text."
 
 [[capability]]
+id = "hover-tools"
+area = "reading"
+tui = "na"
+android = "na"
+android_note.ru = "у телефона нет мышки: всё в меню ⋯ карточки"
+android_note.en = "a phone has no mouse: all of it in the card's ⋯ menu"
+name.ru = "Инструменты над постом под мышкой"
+name.en = "Tools over the post under the mouse"
+note.ru = "ui.hover_tools: в окнах Qt и GTK и на веб-странице у поста под мышкой справа вверху — открыть в браузере, копировать ссылку, перевести, цитировать, следить за тредом, заглушить его, прочитано до сюда, а у своего — изменить и удалить; в меню ⋯ их там уже нет. В терминале мышки нет — всё в меню поста."
+note.en = "ui.hover_tools: in the Qt and GTK windows and on the web page the post under the mouse has at its top right — open in the browser, copy the link, translate, quote, follow the thread, mute it, read up to here, and on my own one edit and delete; its ⋯ menu has them no more there. The terminal has no mouse — all of it in the post's menu."
+
+[[capability]]
 id = "pin-tabs"
 area = "window"
 tui = "na"

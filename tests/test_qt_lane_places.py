@@ -361,9 +361,9 @@ class HoverTest(unittest.TestCase):
     pump = smoke.QtSmokeTest.pump
 
     def test_the_post_under_the_mouse_is_lit(self):
-        """ui.additional_highlight (point.im): the post under the mouse has its buttons lit
-        and, on
-        my own post, ✎ ✕ at the top right; off the mouse, gone; other posts have none."""
+        """ui.additional_highlight (point.im): the post under the mouse has its buttons lit;
+        its tools (ui.hover_tools) at the top right — someone's: open, copy…; my own one's
+        ✎ ✕ too — and out of its ⋯ menu (08.11); off the mouse, gone."""
         from PySide6.QtCore import QEvent, QPointF
         from PySide6.QtGui import QEnterEvent
 
@@ -376,12 +376,22 @@ class HoverTest(unittest.TestCase):
         self.assertTrue(view.ctx.cfg["ui"]["additional_highlight"])  # on by default
         mine, theirs = view.rows["010"], view.rows["011"]
         p = QPointF(5, 5)
+        from PySide6.QtWidgets import QToolButton
         theirs.enterEvent(QEnterEvent(p, p, p))
-        self.assertIsNone(theirs.own_tools)
+        tools = [b.property("tool") for b in theirs.own_tools.findChildren(QToolButton)]
+        self.assertEqual(tools[:2], ["open", "copy_link"])
+        self.assertNotIn("edit", tools)
+        self.assertTrue(theirs.own_tools.isVisible())
         self.assertEqual(theirs.actions_box.property("hover"), "true")
+        menu = [a.text() for a in theirs.ensure_menu().actions()]
+        from fedtail import i18n
+        self.assertNotIn(i18n._("open_browser"), menu)  # it's over the post now
+        self.assertIn(i18n._("why_here"), menu)
         theirs.leaveEvent(QEvent(QEvent.Type.Leave))
         mine.enterEvent(QEnterEvent(p, p, p))
         self.assertTrue(mine.own_tools.isVisible())
+        self.assertIn("delete", [b.property("tool")
+                                 for b in mine.own_tools.findChildren(QToolButton)])
         self.assertEqual(mine.actions_box.property("hover"), "true")
         mine.leaveEvent(QEvent(QEvent.Type.Leave))
         self.assertFalse(mine.own_tools.isVisible())

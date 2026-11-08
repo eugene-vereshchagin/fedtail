@@ -796,6 +796,8 @@ class Web:
                 "max_width": int(c["ui"].get("max_width") or 0),
                 "full_width": bool(self.core.get_state("full_width")),
                 "highlight": bool(c["ui"].get("additional_highlight", True)),
+                # the tools over a post, under the mouse (ui.hover_tools; /api/post_menu)
+                "hover_tools": bool(actions.hover_tools(c)),
                 "visibility": self.core.default_visibility(),
                 # when a picture that didn't come is asked again: the windows' times
                 "picture_later": list(_picture_later()),
@@ -1641,7 +1643,7 @@ class Web:
         return {"items": [{"label": words, "url": link}
                           for words, link in tag_menu(str(url or ""), self.core)]}
 
-    def post_menu(self, sid):
+    def post_menu(self, sid, hover=False):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
         what is offered, when, in which order) — the page only lays them out; a list's
         submenu, the whole text and the translation open as places (common/places.py).
@@ -1662,25 +1664,36 @@ class Web:
                           if self.merged_core() and cfg["ui"].get("act_as", True) else None)
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])
-        items = []
-        for it in actions.menu(p, ctx, short, unread):
+
+        def as_json(it):
             if it.kind in ("link", "open", "copy", "separator", "quote_reply"):
-                items.append({"kind": it.kind, "label": it.label, "url": it.url,
-                              "text": it.text})
-            elif it.kind == "lists":  # a place: the lists, ticked where they are
-                items.append({"kind": "lists", "label": it.label, "url": "", "text": "",
-                              "page": {"page": "list_of", "arg": it.data.id}})
-            elif it.kind == "act_as":  # one item a choice: the page has no submenus
-                items.append({"kind": "act_as", "label": it.label, "url": "", "text": "",
-                              "choices": [{"label": label, "tag": tag or "", "action": action}
-                                          for label, _e, tag, action in it.data]})
-            elif it.kind in ("long_form", "translate"):
-                items.append({"kind": it.kind, "label": it.label, "url": "", "text": "",
-                              "page": {"page": it.kind, "arg": p.id}})
+                return {"kind": it.kind, "label": it.label, "url": it.url, "text": it.text}
+            if it.kind == "lists":  # a place: the lists, ticked where they are
+                return {"kind": "lists", "label": it.label, "url": "", "text": "",
+                        "page": {"page": "list_of", "arg": it.data.id}}
+            if it.kind == "act_as":  # one item a choice: the page has no submenus
+                return {"kind": "act_as", "label": it.label, "url": "", "text": "",
+                        "choices": [{"label": label, "tag": tag or "", "action": action}
+                                    for label, _e, tag, action in it.data]}
+            if it.kind in ("long_form", "translate"):
+                return {"kind": it.kind, "label": it.label, "url": "", "text": "",
+                        "page": {"page": it.kind, "arg": p.id}}
+            return None
+        # the tools over the post (ui.hover_tools): seen under the mouse, out of the menu
+        tools = []
+        for it, _picture, glyph in actions.tools(p, ctx, short, unread):
+            one = as_json(it)
+            if one is not None:
+                tools.append(dict(one, tool=it.tool, glyph=glyph, on=it.on))
+        # hover: the page shows them over the post — out of the menu then; the phone
+        # (no mouse, no hover) keeps its menu whole
+        items = [x for x in (as_json(it) for it in actions.menu(
+            p, ctx, short, unread, without_tools=hover and bool(tools))) if x is not None]
         while items and items[0]["kind"] == "separator":
             items.pop(0)
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
-                "own": bool(me and real(p).author.id == me.id), "items": items}
+                "own": bool(me and real(p).author.id == me.id), "items": items,
+                "tools": tools}
 
     def link(self, url, confirmed=False, chosen=None, shown=()):
         """A fedtail: link from the ⋯ menu, done the way every window does it
@@ -2334,7 +2347,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/account_more": lambda: self.web.account_more(
                       q.get("id", ""), q.get("show") or None, q.get("max_id", ""),
                       q.get("cursor", "")),
-                  "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
+                  "/api/post_menu": lambda: self.web.post_menu(q.get("id", ""),
+                                                               q.get("hover") == "1"),
                   "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", ""),
                                                              q.get("click") == "1"),
                   "/api/places": lambda: self.web.place_menu(),

@@ -143,17 +143,62 @@ class Item:
     url: str = ""
     text: str = ""
     data: object = None
+    tool: str = ""    # its name among the tools over a post (TOOLS), "" — the menu's only
+    on: bool = False  # a toggle's state (a thread followed, muted): the tool's look
+
+
+# the tools over a post (ui.hover_tools): seen while the mouse is on it, at its top
+# right, each one of the ⋯ menu's items — out of the menu then, where they show (the
+# windows); name → (the picture, iconpack's name; the glyph without pictures)
+TOOLS = {"open": ("open", "↗"), "copy_link": ("copy", "⧉"), "translate": ("translate", "文"),
+         "quote": ("quote", "❝"), "sub_thread": ("subs", "◉"), "mute_thread": ("mute", "🔇"),
+         "read_upto": ("mark_read", "✓"), "edit": ("edit", "✎"), "delete": ("delete", "✕")}
 
 
 SEP = Item("separator")
 
 
-def menu(entry, ctx, short_id=None, unread=False):
-    """The ⋯ menu of a post, top to bottom."""
+def hover_tools(cfg):
+    """The tools over a post the config asks for (ui.hover_tools), in its order."""
+    return [t for t in (cfg.get("ui") or {}).get("hover_tools") or () if t in TOOLS]
+
+
+def tools(entry, ctx, short_id=None, unread=False):
+    """The tools over a post (ui.hover_tools), in the config's order: [(item, picture,
+    glyph)] — the menu's own items (what each does, when it's offered: the menu's
+    rules), only those this post has now."""
+    wanted = hover_tools(ctx.cfg)
+    if not wanted:
+        return []
+    have = {it.tool: it for it in _menu(entry, ctx, short_id, unread) if it.tool}
+    return [(have[t], *TOOLS[t]) for t in wanted if t in have]
+
+
+def menu(entry, ctx, short_id=None, unread=False, without_tools=False):
+    """The ⋯ menu of a post, top to bottom. without_tools: the window shows the tools
+    over the post (ui.hover_tools) — those items are there, not here (08.11: a menu of
+    thirty lines)."""
+    out = _menu(entry, ctx, short_id, unread)
+    if not without_tools:
+        return out
+    shown = set(hover_tools(ctx.cfg))
+    out = [it for it in out if it.tool not in shown]
+    tidy = []  # no line first, last or twice
+    for it in out:
+        if it.kind == "separator" and (not tidy or tidy[-1].kind == "separator"):
+            continue
+        tidy.append(it)
+    while tidy and tidy[-1].kind == "separator":
+        tidy.pop()
+    return tidy
+
+
+def _menu(entry, ctx, short_id=None, unread=False):
     p = real(entry)
     sid = entry.id
     url = p.url or p.uri
-    out = [Item("open", _("open_browser"), url=url), Item("copy", _("copy_link"), text=url)]
+    out = [Item("open", _("open_browser"), url=url, tool="open"),
+           Item("copy", _("copy_link"), text=url, tool="copy_link")]
     if short_id:
         out.append(Item("copy", _("copy_id", id="#" + short_id), text="#" + short_id))
     author = p.author
@@ -176,7 +221,7 @@ def menu(entry, ctx, short_id=None, unread=False):
     approval = p.policy.can_quote if p.policy else ""
     if ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
         out.append(Item("link", _("quote") if approval == "automatic" else _("quote_ask"),
-                        url=make("quote", p.id)))
+                        url=make("quote", p.id), tool="quote"))
     if ctx.act_as is not None:
         others = ctx.act_as(entry)
         if others:
@@ -190,7 +235,7 @@ def menu(entry, ctx, short_id=None, unread=False):
     every = ctx.cfg.get("feed", {}).get("translate_all", False)  # Fedilab's way: any post at all
     if ctx.translate and p.text and (every or (lang and lang != current_language())) and \
             can_translate(ctx.translates, lang):
-        out.append(Item("translate", _("translate")))
+        out.append(Item("translate", _("translate"), tool="translate"))
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote")))
     if ctx.cfg["post"].get("invite", True):
@@ -199,7 +244,8 @@ def menu(entry, ctx, short_id=None, unread=False):
                     url=make("bookmark", sid)))
     if unread:  # by hand, whatever read.mark_read says
         out.append(Item("link", _("mark_one_read"), url=make("readone", sid)))
-        out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid)))
+        out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid),
+                        tool="read_upto"))
     # who liked, who boosted; quotes of my post; my post out of someone's quote
     sup = ctx.supports
     if sup("reactions") or p.reactions:  # an emoji of mine on it (Akkoma, Misskey…)
@@ -219,12 +265,13 @@ def menu(entry, ctx, short_id=None, unread=False):
     if ctx.thread_quiet is not None or sup("mute_thread"):
         muted = bool(p.mine.muted) or bool(ctx.thread_quiet and ctx.thread_quiet(entry))
         out.append(Item("link", _("unmute_thread" if muted else "mute_thread"),
-                        url=make("unmutethread" if muted else "mutethread", sid)))
+                        url=make("unmutethread" if muted else "mutethread", sid),
+                        tool="mute_thread", on=muted))
     if ctx.subscribed is not None:
         out.append(SEP)
         on = ctx.subscribed(entry)
         out.append(Item("link", _("unsub_thread" if on else "sub_thread"),
-                        url=make("unsub" if on else "sub", sid)))
+                        url=make("unsub" if on else "sub", sid), tool="sub_thread", on=on))
     if sup("filter_status"):
         out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
     if ctx.cfg.get("lanes") is not None:  # which lanes take it, and by which rule
@@ -250,11 +297,11 @@ def menu(entry, ctx, short_id=None, unread=False):
     mine = (entry.by if isinstance(entry, Share) else author).id == ctx.me_id
     if mine:
         out.append(SEP)
-        out.append(Item("link", _("edit"), url=make("edit", sid)))
+        out.append(Item("link", _("edit"), url=make("edit", sid), tool="edit"))
         if p.visibility in ("public", "unlisted"):
             out.append(Item("link", _("unpin") if p.mine.pinned else _("pin"),
                             url=make("unpin" if p.mine.pinned else "pin", p.id)))
-        out.append(Item("link", _("delete"), url=make("delete", sid)))
+        out.append(Item("link", _("delete"), url=make("delete", sid), tool="delete"))
         if ctx.cfg["post"].get("redraft", True):
             out.append(Item("link", _("redraft"), url=make("redraft", sid)))
     return out

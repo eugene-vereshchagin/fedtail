@@ -155,6 +155,31 @@ class CommonTest(TmpDir):
                                  actions.Ctx(cfg=arts, me_id="ME"))
         self.assertNotIn("fedtail:report/001", urls(no_report))
 
+    def test_the_tools_over_a_post(self):
+        """ui.hover_tools (08.11): the menu's own items over the post, in the config's
+        order, only those the post has now; out of the menu where they show."""
+        from fedtail.core import config
+        self.assertEqual(tuple(actions.TOOLS), config.HOVER_TOOLS)
+        ctx = self.ctx()
+        theirs = actions.tools(self.view.by_id("001"), ctx, unread=True)
+        names = [it.tool for it, _pic, _glyph in theirs]
+        self.assertEqual(names[:2], ["open", "copy_link"])
+        self.assertIn("read_upto", names)  # unread: read up to here
+        self.assertNotIn("edit", names)  # someone else's
+        mine = [it.tool for it, _p, _g in actions.tools(self.view.by_id("002"), ctx)]
+        self.assertIn("delete", mine)
+        whole = actions.menu(self.view.by_id("001"), ctx, unread=True)
+        short = actions.menu(self.view.by_id("001"), ctx, unread=True, without_tools=True)
+        self.assertLess(len(short), len(whole))
+        self.assertFalse({it.tool for it in short} & set(names))
+        self.assertNotEqual(short[0].kind, "separator")
+        self.assertNotEqual(short[-1].kind, "separator")
+        ui = dict(self.core.cfg["ui"], hover_tools=[])
+        none = actions.Ctx(cfg=dict(self.core.cfg, ui=ui), me_id="ME")
+        self.assertEqual(actions.tools(self.view.by_id("001"), none), [])
+        self.assertEqual(len(actions.menu(self.view.by_id("001"), none, without_tools=True)),
+                         len(actions.menu(self.view.by_id("001"), none)))
+
     # ---- writing ------------------------------------------------------------------------
     def test_a_reply_starts_with_the_mentions_and_the_warning(self):
         st = status("003", BOB, minute=3, vis="public", text="careful")

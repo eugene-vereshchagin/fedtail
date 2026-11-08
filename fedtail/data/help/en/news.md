@@ -9,6 +9,7 @@ What's new in the latest versions, and the plans.
 
 - A tag's menu on a click
 - News behind the filters still counts
+- Tools over the post instead of a long menu
 
 **0.22.3:**
 

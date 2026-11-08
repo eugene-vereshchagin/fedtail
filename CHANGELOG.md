@@ -38,6 +38,15 @@
   again with the next rounds until the server answers; `/api/v2/instance` speaks for them
   when v1 doesn't say.
 
+- **Tools over the post, a shorter menu.** A post's ⋯ menu ran to thirty lines. Now the
+  post under the mouse has the theme's icons at its top right — open in the browser, copy
+  the link, translate, quote, follow the thread, mute it (lit when on), read up to here,
+  and on your own post edit and delete — and they are out of the menu there. Which and
+  in what order: `card.hover_tools` (`[]` — none, the menu whole). In the Qt and GTK
+  windows and on the web page; the terminal and the phone keep the whole menu. Every
+  built-in theme's set has the new pictures (open, copy, translate, quote, mute, delete
+  — the last was a ✕ glyph till now).
+
 - **The same lanes on every device, the same numbers.** With `sync.lane_rules` the lanes
   travelled only when they changed: lanes set up before sync never reached the other
   devices, and what made their counts (their languages, the counting window, repeated

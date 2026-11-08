@@ -479,7 +479,7 @@ class GtkSmokeTest(_GtkBase):
         card._fill_menu(card.more)
         labels = [b.get_label() for b in _walk(card.more.get_popover())
                   if isinstance(b, Gtk.Button)]
-        self.assertIn(i18n._("open_browser"), labels)
+        self.assertNotIn(i18n._("open_browser"), labels)  # over the post now (hover_tools)
         self.assertIn(i18n._("block_acct", acct="bob@social.example"), labels)
         self.assertNotIn(i18n._("delete"), labels)  # not mine
 
@@ -1325,23 +1325,41 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(account_color("@w"), account_color("@W"))
 
     def test_the_card_under_the_mouse_is_lit(self):
-        """ui.additional_highlight, as Qt's: every card lit under the mouse (.ft-lit), my
-        own one with ✎ ✕ at the top right, seen only then; off — none of it."""
+        """As Qt's: every card lit under the mouse (.ft-lit, ui.additional_highlight); its
+        tools (ui.hover_tools) at the top right, seen only then — someone's: open, copy…;
+        my own one's ✎ ✕ too — and out of the ⋯ menu (08.11); [] — none, the menu whole."""
         from fedtail.frontends.gtk.card import Card
         mine = Card(self.win.ctx, "m", self.view.by_id("010"))
         theirs = Card(self.win.ctx, "t", self.view.by_id("011"))
         self.assertTrue(mine.has_css_class("ft-lit") and theirs.has_css_class("ft-lit"))
-        self.assertIsNotNone(mine.own_tools)
         self.assertFalse(mine.own_tools.get_visible())
-        self.assertIsNone(theirs.own_tools)
+        theirs._show_tools(True)
+        tools = [b.tool for b in _walk(theirs.own_tools) if isinstance(b, Gtk.Button)]
+        self.assertEqual(tools[:2], ["open", "copy_link"])
+        self.assertNotIn("delete", tools)
+        mine._show_tools(True)
+        self.assertTrue(mine.own_tools.get_visible())
+        self.assertIn("delete", [b.tool for b in _walk(mine.own_tools)
+                                 if isinstance(b, Gtk.Button)])
+        mine._show_tools(False)
+        self.assertFalse(mine.own_tools.get_visible())
+        theirs._fill_menu(theirs.more)
+        words = [w.get_label() for w in _walk(theirs.more.get_popover())
+                 if isinstance(w, Gtk.Button)]
+        self.assertNotIn(i18n._("open_browser"), words)
         cfg = self.win.ctx.cfg["ui"]
-        cfg["additional_highlight"] = False
+        cfg["additional_highlight"], was = False, cfg["hover_tools"]
+        cfg["hover_tools"] = []
         try:
             off = Card(self.win.ctx, "o", self.view.by_id("010"))
         finally:
-            cfg["additional_highlight"] = True
+            cfg["additional_highlight"], cfg["hover_tools"] = True, was
         self.assertFalse(off.has_css_class("ft-lit"))
         self.assertIsNone(off.own_tools)
+        off._fill_menu(off.more)
+        words = [w.get_label() for w in _walk(off.more.get_popover())
+                 if isinstance(w, Gtk.Button)]
+        self.assertIn(i18n._("open_browser"), words)  # no tools: the menu whole
 
     def test_messenger_themes_head_the_card_as_a_chat(self):
         """shape.card_header = "chat" (qip, mra, icq): "Name (time)" in one line, as Qt's —

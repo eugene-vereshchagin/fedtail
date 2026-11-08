@@ -247,8 +247,25 @@ api.en = "own"
 others.ru = "point.im"
 others.en = "point.im"
 clients = []
-details.ru = "Как на point.im: у поста под мышкой кнопки ярче, а на своём посте справа вверху ✎ и ✕ — «Редактировать» и «Удалить» из меню ⋯. Во всех темах; Qt, GTK и веб, в терминале — подкраска поста под мышкой. На телефоне мышки нет."
-details.en = "As on point.im: the post under the mouse has its buttons brighter, and my own one ✎ and ✕ at the top right — Edit and Delete of its ⋯ menu. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse."
+details.ru = "Как на point.im: у поста под мышкой кнопки ярче. Во всех темах; Qt, GTK и веб, в терминале — подкраска поста под мышкой. На телефоне мышки нет."
+details.en = "As on point.im: the post under the mouse has its buttons brighter. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse."
+
+[[feature]]
+id = "hover-tools"
+status = "has"
+android = "na"
+android_note.ru = "у телефона нет мышки: всё в меню ⋯"
+android_note.en = "a phone has no mouse: all of it in the ⋯ menu"
+since = "next"
+name.ru = "Инструменты над постом вместо длинного меню"
+name.en = "Tools over the post instead of a long menu"
+config = "`card.hover_tools`"
+api.ru = "своё"
+api.en = "own"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "У поста под мышкой справа вверху — иконки темы: открыть в браузере, копировать ссылку, перевести (пост на другом языке), цитировать (где автор разрешает), следить за тредом и заглушить его (подсвечены, когда включены), прочитано до сюда (непрочитанный пост), а у своего — изменить и удалить. Каждая — пункт меню ⋯, и из меню она уходит: меню короче на треть. Какие и в каком порядке — `hover_tools`; `[]` — никаких, меню целиком. Qt, GTK и веб; в терминале и на телефоне мышки нет — всё в меню."
+details.en = "The post under the mouse has the theme's icons at its top right: open in the browser, copy the link, translate (a post in another language), quote (where the author allows), follow the thread and mute it (lit when on), read up to here (an unread post), and on my own one edit and delete. Each is an item of the ⋯ menu and leaves it: the menu a third shorter. Which and in what order — `hover_tools`; `[]` — none, the whole menu. Qt, GTK and the web page; the terminal and the phone have no mouse — all of it in the menu."
 
 [[feature]]
 id = "fresh-counters"

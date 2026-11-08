@@ -415,8 +415,12 @@ QLabel#eventLine {{ color: {k('muted')}; border-left: 3px solid {k('ctx_bar')};
 QWidget#actions QToolButton {{ color: {k('muted')}; border: 0; border-radius: 6px; padding: 5px 9px; }}
 QWidget#actions QToolButton:hover {{ background: {k('ctx')}; color: {k('text')}; }}
 QWidget#actions[hover="true"] QToolButton {{ color: {k('link')}; }}
+QWidget#ownTools {{ background: {k('card')}; border: 1px solid {k('card_border')};
+    border-radius: 6px; }}
 QWidget#ownTools QToolButton {{ color: {k('muted')}; border: 0; padding: 2px 4px; }}
 QWidget#ownTools QToolButton:hover {{ color: {k('text')}; }}
+QWidget#ownTools QToolButton[on="true"] {{ background: {k('active')}; color: {k('on_active')};
+    border-radius: 4px; }}
 QWidget#actions QToolButton[active="true"] {{ background: {k('active')}; color: {k('on_active')};
     font-weight: 600; }}
 QWidget#actions QToolButton::menu-indicator {{ image: none; width: 0; }}

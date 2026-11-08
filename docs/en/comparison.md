@@ -103,6 +103,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Honest counters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The post under the mouse lit | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Tools over the post instead of a long menu | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | The numbers under the posts on screen kept fresh | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
@@ -255,4 +256,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **62** features of the 191 compared.
+Only in fedtail — **62** features of the 192 compared.

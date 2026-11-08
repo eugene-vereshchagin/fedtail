@@ -150,17 +150,12 @@ function renderPost(p, inThread) {
   who.onclick = (e) => { e.preventDefault(); openAccount(p.account.id); };
   names.append(who, el("span", "acct", "@" + p.account.handle));
   head.append(names);
-  if (p.own && state.me.highlight) {  // ui.additional_highlight: ✎ ✕, seen under the mouse
+  if (state.me.hover_tools) {  // ui.hover_tools: the post's tools, seen under the mouse
     const tools = el("span", "own-tools");
-    for (const [glyph, word, what] of [["✎", w("edit"), "edit"], ["✕", w("delete"), "delete"]]) {
-      const b = el("button", "", glyph);
-      b.type = "button";
-      b.title = word;
-      b.setAttribute("aria-label", word);
-      b.onclick = (e) => { e.stopPropagation(); linkAct("fedtail:" + what + "/" + p.id, p); };
-      tools.append(b);
-    }
     head.append(tools);
+    // asked of the server at each hover (common/actions.tools: a thread followed, a
+    // post read meanwhile) — the same items the windows show over a post
+    card.addEventListener("mouseenter", () => fillTools(p, tools));
   }
   const meta = el("div", "meta");
   if (inThread) meta.append(el("span", "num", p.number ? "/" + p.number : "#"));
@@ -539,22 +534,54 @@ function popup(anchor, items) {
 
 function closePopup() { $("#pop").hidden = true; }
 
+// one item of a post's menu, or a tool over it (common/actions.Item as the server says it)
+function itemAct(it, p) {
+  if (it.kind === "open") return () => window.open(it.url, "_blank", "noopener");
+  if (it.kind === "copy") return () => copyText(it.text);
+  if (it.kind === "quote_reply") return () => quoteReply(p);
+  if (it.kind === "link") return () => linkAct(it.url, p);
+  if (it.page) return () => openThing(it.page);
+  return null;
+}
+
+function menuInfo(p) {
+  const hover = state.me.hover_tools ? "&hover=1" : "";
+  return api("/api/post_menu?id=" + encodeURIComponent(p.sid) + hover);
+}
+
+// the tools over a post (ui.hover_tools): open, copy the link, translate, quote, follow or
+// mute the thread, read up to here, edit and delete mine — out of its ⋯ menu here
+async function fillTools(p, box) {
+  let info;
+  try { info = await menuInfo(p); } catch (e) { return; }
+  box.textContent = "";
+  for (const t of info.tools || []) {
+    const go = itemAct(t, p);
+    if (!go) continue;
+    const b = el("button", t.on ? "on" : "", t.glyph);
+    b.type = "button";
+    b.title = t.label;
+    b.dataset.tool = t.tool;
+    b.setAttribute("aria-label", t.label);
+    b.onclick = (e) => { e.stopPropagation(); go(); };
+    box.append(b);
+  }
+}
+
 async function postMenu(p, anchor) {
   let info = { subscribed: false, muted: false, own: p.own };
-  try { info = await api("/api/post_menu?id=" + encodeURIComponent(p.sid)); }
+  try { info = await menuInfo(p); }
   catch (e) { /* the rest of the menu still works */ }
   const items = [];
   if (info.items) {
     // the same items as the Qt and GTK windows' ⋯, in the same order (common/actions)
     for (const it of info.items) {
       if (it.kind === "separator") items.push("-");
-      else if (it.kind === "open") items.push([it.label, () => window.open(it.url, "_blank", "noopener")]);
-      else if (it.kind === "copy") items.push([it.label, () => copyText(it.text)]);
-      else if (it.kind === "quote_reply") items.push(["❝ " + it.label, () => quoteReply(p)]);
-      else if (it.kind === "link") items.push([it.label, () => linkAct(it.url, p)]);
+      else if (it.kind === "quote_reply") items.push(["❝ " + it.label, itemAct(it, p)]);
       // all accounts in one: ★ ♻ ↩ as another of them — one item a choice
       else if (it.kind === "act_as") for (const c of it.choices || []) items.push([c.label, () => actAs(p, c)]);
-      else if (it.page) items.push([it.label + " …", () => openThing(it.page)]);
+      else if (it.page) items.push([it.label + " …", itemAct(it, p)]);
+      else if (itemAct(it, p)) items.push([it.label, itemAct(it, p)]);
     }
     items.push("-");
   }

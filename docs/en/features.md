@@ -342,6 +342,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | The post under the mouse lit | has | 0.22.0 | `card.additional_highlight` (true) | own | point.im |
+| Tools over the post instead of a long menu | has | next | `card.hover_tools` | own | Mastodon web |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
@@ -380,7 +381,9 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Honest counters.** Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server.
 
-**The post under the mouse lit.** As on point.im: the post under the mouse has its buttons brighter, and my own one ✎ and ✕ at the top right — Edit and Delete of its ⋯ menu. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse.
+**The post under the mouse lit.** As on point.im: the post under the mouse has its buttons brighter. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse.
+
+**Tools over the post instead of a long menu.** The post under the mouse has the theme's icons at its top right: open in the browser, copy the link, translate (a post in another language), quote (where the author allows), follow the thread and mute it (lit when on), read up to here (an unread post), and on my own one edit and delete. Each is an item of the ⋯ menu and leaves it: the menu a third shorter. Which and in what order — `hover_tools`; `[]` — none, the whole menu. Qt, GTK and the web page; the terminal and the phone have no mouse — all of it in the menu.
 
 **The numbers under the posts on screen kept fresh.** A lane keeps each post as it came — with the numbers of that moment, mostly none. Every `counts_minutes` minutes the posts that were on screen are asked of your server again in one request, and replies, boosts and likes change in place (only the row of buttons is redrawn). With `honest_counters`, the authors' servers are asked too. A post with more replies in a thread you follow: that thread is checked at the very next round, and "Commented posts" learn of the new at once. Every interface and the phone.
 
@@ -882,6 +885,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | Servers' emoji as pictures | ✓ | ✓ | · | ✓ | ✓ | The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text. |
+| Tools over the post under the mouse | ✓ | ✓ | · | ✓ | · | ui.hover_tools: in the Qt and GTK windows and on the web page the post under the mouse has at its top right — open in the browser, copy the link, translate, quote, follow the thread, mute it, read up to here, and on my own one edit and delete; its ⋯ menu has them no more there. The terminal has no mouse — all of it in the post's menu. Android: a phone has no mouse: all of it in the card's ⋯ menu |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
 
 ### Pictures and video
@@ -941,6 +945,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | No emoji at all | ◐ | the setting is there; the phone's own emoji are drawn by its font |
 | The post under the mouse lit | · | a phone has no mouse |
+| Tools over the post instead of a long menu | · | a phone has no mouse: all of it in the ⋯ menu |
 
 ### Pictures and video
 
