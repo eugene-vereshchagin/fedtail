@@ -65,7 +65,8 @@
   (`card.code_click`: `"auto"`; `"thread"`, `"line"` — always that). The tools over the
   post no longer cover the #abc: they stand left of it where it shares their row, and keep
   the corner where it doesn't (point's #abc under the post: the tools went over the name
-  and the face) — every built-in theme checked, in Qt and in GTK.
+  and the face) — every built-in theme checked, in Qt and in GTK. And point's #abc is
+  back where every theme has it, at the top right.
 
 - **The same lanes on every device, the same numbers.** With `sync.lane_rules` the lanes
   travelled only when they changed: lanes set up before sync never reached the other
