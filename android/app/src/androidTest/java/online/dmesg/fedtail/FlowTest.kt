@@ -70,9 +70,10 @@ class FlowTest {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
-    private fun waitDescription(text: String, ms: Long = 30_000) =
+    private fun waitDescription(text: String, ms: Long = 30_000, substring: Boolean = false) =
         waitFor("description \"$text\"", ms) {
-            compose.onAllNodesWithContentDescription(text).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription(text, substring = substring)
+                .fetchSemanticsNodes().isNotEmpty()
         }
 
     /** Waits; on a timeout says what it waited for and what the screen held instead. */
@@ -113,7 +114,7 @@ class FlowTest {
         launch()
         overview()
         compose.onAllNodesWithText("Home").onFirst().performClick()
-        waitDescription("Switch lane")                 // a lane's title bar
+        waitDescription("open now", substring = true)                 // a lane's title bar
         // a card — whichever stands first: the screenshots before have read some already,
         // and a lane opens on its first unread post
         waitFor("a card", 90_000) {
@@ -132,7 +133,7 @@ class FlowTest {
         waitText("/1")                                  // the thread, numbered as a tree
         waitText("Thread")
         back()
-        waitDescription("Switch lane")                 // back in the lane…
+        waitDescription("open now", substring = true)                 // back in the lane…
         back()
         overview()                                      // …and back on the overview
     }
@@ -165,8 +166,9 @@ class FlowTest {
     @Test
     fun theSwitcherFindsALaneByName() {
         launch("lane" to "home")
-        waitDescription("Switch lane")
-        compose.onAllNodesWithContentDescription("Switch lane").onFirst().performClick()
+        waitDescription("open now", substring = true)  // the open lane's chip: its title
+        compose.onAllNodesWithContentDescription("open now", substring = true).onFirst()
+            .performClick()
         waitText("lane, list or #tag")                  // the switcher's search
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Fed")
         waitText("Federated")
@@ -236,7 +238,7 @@ class FlowTest {
     @Test
     fun aRefreshKeepsThePlaceInTheLane() {
         launch("lane" to "home")
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
         waitFor("a card", 90_000) { compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         // what stands on screen now, and where: after ⟳ the same card, the same place
@@ -258,13 +260,16 @@ class FlowTest {
     fun theArrowStaysAfterMarkAllRead() {
         // "Mark all read" left no arrow: the newest end was a long scroll away (02.11)
         launch("lane" to "home")
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
         waitFor("a card", 90_000) { compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty() }
-        val all = compose.onAllNodesWithContentDescription("Mark all read")
+        // "Mark all read" is in the lane's ⋮ now (09.11), undone within 5 s
+        compose.onAllNodesWithContentDescription("More: find", substring = true).onFirst()
+            .performClick()
+        val all = compose.onAllNodesWithText("Mark all read")
         if (all.fetchSemanticsNodes().isNotEmpty()) all.onFirst().performClick()
         waitDescription("Nothing new: to the newest")
         compose.onAllNodesWithContentDescription("Nothing new: to the newest").onFirst().performClick()
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
     }
 
     @Test
@@ -283,7 +288,7 @@ class FlowTest {
         // ui.language = "ru" on a phone in English: the core's words went Russian, the
         // app's own (its buttons, its menus) stayed English
         launch("lane" to "home")
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
         try {
             kotlinx.coroutines.runBlocking {
                 Core.settingSet("ui", "language", "\"ru\"")
@@ -307,7 +312,7 @@ class FlowTest {
     fun aRefusedTokenSaysSoAndLeadsToLoggingInAgain() {
         // the server revoked the token: the phone said nothing and every answer was 401
         launch("lane" to "home")
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
         kotlinx.coroutines.runBlocking { Core.demoHappen("token_refused", "", "") }
         waitText("The token is no longer accepted", 40_000)
         compose.onAllNodesWithText("Log in again…").onFirst().performClick()
@@ -318,7 +323,7 @@ class FlowTest {
     fun anAnsweredRequestKeepsThePlace() {
         // a follow request answered: the lane jumped to its start (02.11)
         launch("lane" to "activity")
-        waitDescription("Switch lane")
+        waitDescription("open now", substring = true)
         kotlinx.coroutines.runBlocking { Core.demoHappen("requests", "req", "20") }
         // the requests stand where they come in time: past the demo's posts of 2099, maybe
         // a long way down — swiped to (the lane jumping would take them off the screen)

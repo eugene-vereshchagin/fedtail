@@ -128,6 +128,13 @@
   the first new post is off the screen; "offline" is said in the bar's line and the
   pill (`phone.lane_strip`: `"icons"`, `"names"`).
 
+- **Phone: a post's menu is a sheet.** ⋯ on a card opens a sheet from the bottom: a grid
+  of its tools on top — reply, open in the browser, copy the link, translate, quote, reply
+  quoting it, follow the thread, mute it (lit when on), read up to here, edit and delete
+  your own, the phone's Share…, boost — then the author's profile and the rest of the
+  windows' menu, "Author ▸" and "More ▸" opening in place. The phone's long drop-down
+  list ran off the screen.
+
 - **Phone: "↓ N new" by the thumb.** The button to the new posts was a small arrow at the
   top, hard to see and to reach; it now floats over the "write" button, and the lane's
   end leaves room enough under the last post to read it past both (`phone.to_new`,

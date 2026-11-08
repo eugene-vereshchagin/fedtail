@@ -533,6 +533,16 @@ class BridgeTest(_Base):
                          ["fedtail:tagall", "fedtail:followtag", "fedtail:place",
                           "fedtail:mutetag"])
         self.assertIn("message", self.call("link", items[-1]["url"]))  # muted, said so
+        # the phone's sheet (09.11): the tools on top (with their pictures), the rest grouped
+        sheet = self.call("post_menu", "103", True)
+        self.assertTrue(sheet["tools"])
+        self.assertTrue(all(t["picture"] for t in sheet["tools"]))
+        tools = {t["url"] or t["text"] for t in sheet["tools"]} - {""}
+        self.assertFalse([i for i in sheet["items"] if (i["url"] or i["text"]) in tools])
+        self.assertTrue([i for i in sheet["items"] if i["kind"] == "submenu"])
+        flat = self.call("post_menu", "103")  # as before: everything, one list
+        self.assertFalse([i for i in flat["items"] if i["kind"] == "submenu"])
+        self.assertIn("tool.open", self.call("pictures"))
         # a tap: the menu too (reading.tag_click = "menu"); else none — the tag opens
         self.assertTrue(self.call("tag_menu", "fedtail:tag/cats", True)["items"])
 
@@ -787,8 +797,9 @@ class BridgeThemeTest(_Base):
         self.demo()
         self.assertEqual(self.call("theme")["colors"], {})  # system: nothing of its own
         pics = self.call("pictures")  # the desktop's icons: the phone's then — but the
-        self.assertEqual([k for k in pics if not k.startswith("lane.")], [])  # lanes'
-        self.assertIn("lane.home", pics)  # pictures (the strip, 09.11): the fallback set
+        self.assertEqual([k for k in pics if not k.startswith(("lane.", "tool."))], [])
+        self.assertIn("lane.home", pics)  # the lanes' and the tools' pictures (the strip,
+        self.assertIn("tool.open", pics)  # the post's sheet, 09.11): the fallback set
         names = [o["key"] for c in self.call("settings")["chapters"] for o in c["options"]]
         self.assertIn("theme", names)  # chosen on the phone's settings page
         self.assertIn("when_focused", names)  # and when the shade says what

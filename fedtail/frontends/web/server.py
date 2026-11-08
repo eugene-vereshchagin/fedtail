@@ -1688,10 +1688,10 @@ class Web:
             return None
         # the tools over the post (ui.hover_tools): seen under the mouse, out of the menu
         tools = []
-        for it, _picture, glyph in actions.tools(p, ctx, short, unread):
+        for it, picture, glyph in actions.tools(p, ctx, short, unread):
             one = as_json(it)
             if one is not None:
-                tools.append(dict(one, tool=it.tool, glyph=glyph, on=it.on))
+                tools.append(dict(one, tool=it.tool, glyph=glyph, picture=picture, on=it.on))
         # hover: the page shows them over the post — out of the menu then; the phone
         # (no mouse, no hover) keeps its menu whole
         items = [x for x in (as_json(it) for it in actions.menu(

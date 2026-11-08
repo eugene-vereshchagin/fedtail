@@ -1,5 +1,15 @@
 package online.dmesg.fedtail
 
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
@@ -1023,87 +1033,154 @@ private fun Actions(p: PostItem, act: CardActions) {
     }
 }
 
-/** A card's ⋯: boost and bookmark first, then the windows' own items (common/actions:
- *  edit, delete, pin, mute, report, translate, lists…), the author's profile on top. */
+/** A card's ⋯ (09.11, the mockup "Menu"): a sheet from the bottom — on top a grid of
+ *  its tools (reply; the windows' tools over a post: open, copy the link, translate,
+ *  quote, reply quoting, follow / mute the thread (lit when on), read up to here, edit,
+ *  delete — common/actions.tools; the phone's share; boost), then the author's profile
+ *  and the rest of the windows' menu, "Author ▸", "Thread ▸", "More ▸" opening in place. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CardMenu(p: PostItem, act: CardActions) {
     var open by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<JSONObject?>(null) }
-    val clipboard = LocalClipboardManager.current
     // asked anew at each opening (last time's items stand till the answer: clearing them
     // first made the UI test of this menu fail on CI's slow emulator, 31.10)
     LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    IconButton(onClick = { open = true }, modifier = Modifier.size(48.dp)) {
+        ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (open) ModalBottomSheet(onDismissRequest = { open = false }) {
+        PostSheet(p, act, info) { open = false }
+    }
+}
+
+/** One cell of the sheet's grid: a picture and its words (two lines at most). */
+@Composable
+private fun SheetTool(word: String, picture: String, fallback: ImageVector, on: Boolean = false,
+                      onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().heightIn(min = 76.dp).clip(RoundedCornerShape(12.dp))
+        .background(if (on) MaterialTheme.colorScheme.secondaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant)
+        .clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) { contentDescription = word; role = Role.Button; selected = on }
+        .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)) {
+        ThemedIcon(picture, fallback, null, Modifier.size(24.dp),
+            tint = if (on) MaterialTheme.colorScheme.onSecondaryContainer
+                   else MaterialTheme.colorScheme.onSurface)
+        Text(word, fontSize = 12.sp, lineHeight = 14.sp, maxLines = 2, textAlign = TextAlign.Center,
+            overflow = TextOverflow.Ellipsis,
+            color = if (on) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun PostSheet(p: PostItem, act: CardActions, info: JSONObject?, close: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val shareWords = stringResource(R.string.share)
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+        .padding(start = 12.dp, end = 12.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // the grid: the reply, the tools the core offers this post now, share, boost
+        val cells = mutableListOf<@Composable () -> Unit>()
+        cells += { SheetTool(stringResource(R.string.reply), "reply", Glyphs.Reply) {
+            close(); act.reply(p) } }
+        val tools = info?.optJSONArray("tools")
+        if (tools != null) for (i in 0 until tools.length()) {
+            val t = tools.getJSONObject(i)
+            cells += { SheetTool(t.optString("label"), "tool." + t.optString("picture"),
+                Glyphs.Grid, on = t.optBoolean("on")) { close(); runItem(t, p, act, clipboard) } }
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            // the author first: on a phone the long menu's end is a scroll away
-            if (p.accountId.isNotBlank()) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.profile_of, p.handle)) },
-                    onClick = { open = false; act.profile(p.accountId) })
+        if (p.url.isNotBlank()) cells += { SheetTool(shareWords, "share", Icons.Filled.Share) {
+            close()
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, p.url)
             }
-            if (p.canBoost) DropdownMenuItem(
-                text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
-                onClick = { open = false; act.share(p) })
-            val items = info?.optJSONArray("items")
-            if (items == null) {  // the windows' menu has its own (and says when it's done)
-                DropdownMenuItem(text = { Text(stringResource(if (p.bookmarked) R.string.unbookmark
-                                                              else R.string.bookmark)) },
-                    onClick = { open = false; act.bookmark(p) })
+            context.startActivity(android.content.Intent.createChooser(send, shareWords))
+        } }
+        if (p.canBoost) cells += { SheetTool(stringResource(if (p.shared) R.string.unboost
+                                                            else R.string.boost),
+            "boost", Glyphs.Boost, on = p.shared) { close(); act.share(p) } }
+        cells.chunked(4).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { cell -> Box(Modifier.weight(1f)) { cell() } }
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
-            if (items != null) {
-                for (i in 0 until items.length()) {
-                    val item = items.getJSONObject(i)
-                    val label = item.optString("label")
-                    when (item.optString("kind")) {
-                        "separator" -> HorizontalDivider()
-                        "link" -> DropdownMenuItem(text = { Text(label) },
-                            onClick = { open = false; act.runLink(item.optString("url")) })
-                        "open" -> DropdownMenuItem(text = { Text(label) },
-                            onClick = { open = false; act.browser(item.optString("url")) })
-                        "copy" -> DropdownMenuItem(text = { Text(label) },
-                            onClick = { open = false; clipboard.setText(AnnotatedString(item.optString("text"))) })
-                        "quote_reply" -> DropdownMenuItem(text = { Text("❝ $label") },
-                            onClick = { open = false; act.quoteReply(p) })
-                        // all accounts in one: ★ ♻ ↩ as another of them, one item a choice
-                        "act_as" -> {
-                            val cs = item.optJSONArray("choices") ?: org.json.JSONArray()
-                            for (k in 0 until cs.length()) {
-                                val c = cs.getJSONObject(k)
-                                DropdownMenuItem(text = { Text(c.optString("label")) }, onClick = {
-                                    open = false
-                                    act.actAs(p, c.optString("tag"), c.optString("action"))
-                                })
-                            }
-                        }
-                        else -> item.optJSONObject("page")?.let { pg ->
-                            DropdownMenuItem(text = { Text("$label …") }, onClick = {
-                                open = false; act.page(pg.optString("page"), pg.optString("arg"))
-                            })
-                        }
+        }
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+        if (p.accountId.isNotBlank()) SheetLine(stringResource(R.string.profile_of, p.handle)) {
+            close(); act.profile(p.accountId)
+        }
+        val items = info?.optJSONArray("items")
+        if (items == null) {  // the windows' menu on its way (or failed): the short one
+            SheetLine(stringResource(if (p.bookmarked) R.string.unbookmark else R.string.bookmark)) {
+                close(); act.bookmark(p)
+            }
+        } else SheetItems(items, p, act, close, clipboard)
+    }
+}
+
+/** The menu's lines as the windows have them; a submenu opens in place. */
+@Composable
+private fun SheetItems(items: org.json.JSONArray, p: PostItem, act: CardActions, close: () -> Unit,
+                       clipboard: androidx.compose.ui.platform.ClipboardManager, depth: Int = 0) {
+    for (i in 0 until items.length()) {
+        val item = items.getJSONObject(i)
+        val label = item.optString("label")
+        when (item.optString("kind")) {
+            "separator" -> HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            "submenu" -> {
+                var unfolded by remember(label) { mutableStateOf(false) }
+                SheetLine(label, trailing = if (unfolded) "▾" else "▸") { unfolded = !unfolded }
+                if (unfolded) Column(Modifier.padding(start = 16.dp)) {
+                    SheetItems(item.optJSONArray("items") ?: org.json.JSONArray(), p, act, close,
+                        clipboard, depth + 1)
+                }
+            }
+            // all accounts in one: ★ ♻ ↩ as another of them, one line a choice
+            "act_as" -> {
+                val cs = item.optJSONArray("choices") ?: org.json.JSONArray()
+                for (k in 0 until cs.length()) {
+                    val c = cs.getJSONObject(k)
+                    SheetLine(c.optString("label")) {
+                        close(); act.actAs(p, c.optString("tag"), c.optString("action"))
                     }
                 }
-            } else {
-                // the old short menu, while the windows' one is on its way (or failed)
-                info?.let { i ->
-                    val subbed = i.optBoolean("subscribed")
-                    DropdownMenuItem(text = { Text(stringResource(if (subbed) R.string.unsub_thread
-                                                                  else R.string.sub_thread)) },
-                        onClick = { open = false; act.thread(p, if (subbed) "unsub" else "sub") })
-                }
-                if (p.url.isNotBlank()) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.copy_link)) },
-                        onClick = { open = false; clipboard.setText(AnnotatedString(p.url)) })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.open_browser)) },
-                        onClick = { open = false; act.browser(p.url) })
-                }
+            }
+            "quote_reply" -> SheetLine("❝ $label") { close(); act.quoteReply(p) }
+            else -> SheetLine(if (item.optJSONObject("page") != null) "$label …" else label) {
+                close(); runItem(item, p, act, clipboard)
             }
         }
     }
 }
 
+@Composable
+private fun SheetLine(words: String, trailing: String = "", onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp))
+        .clickable(onClick = onClick).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(words, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        if (trailing.isNotBlank()) Text(trailing, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** An item of the menu (or a tool) done: the windows' kinds (common/actions.Item). */
+private fun runItem(item: JSONObject, p: PostItem, act: CardActions,
+                    clipboard: androidx.compose.ui.platform.ClipboardManager) {
+    when (item.optString("kind")) {
+        "link" -> act.runLink(item.optString("url"))
+        "open" -> act.browser(item.optString("url"))
+        "copy" -> clipboard.setText(AnnotatedString(item.optString("text")))
+        "quote_reply" -> act.quoteReply(p)
+        else -> item.optJSONObject("page")?.let { pg -> act.page(pg.optString("page"), pg.optString("arg")) }
+    }
+}
 
 /** people.nick_colors: "#rrggbb" → its colour; "" — the text's own. */
 internal fun nickColor(hex: String): Color =

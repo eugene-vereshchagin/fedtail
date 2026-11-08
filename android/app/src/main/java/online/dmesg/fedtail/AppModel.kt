@@ -1788,7 +1788,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** A card's ⋯ as the windows have it (common/actions.menu). */
-    suspend fun postMenu(p: PostItem): JSONObject = Core.postMenu(p.sid)
+    suspend fun postMenu(p: PostItem): JSONObject = Core.postMenu(p.sid, sheet = true)
 
     /** A fedtail: link of the ⋯ menu (edit, delete, mute, report…), done the windows' way. */
     fun runLink(url: String, confirmed: Boolean = false, chosen: JSONObject? = null) {

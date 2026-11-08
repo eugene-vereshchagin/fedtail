@@ -513,10 +513,13 @@ def page(name, arg="", tab="", cursor=""):
 
 # ---- a card's ⋯ as the windows have it, a profile ----------------------------------------
 
-def post_menu(post_id):
+def post_menu(post_id, sheet=False):
     """{subscribed, muted, own, items: [{kind: link|open|copy|separator|quote_reply|lists|
-    long_form|translate, label, url, text, page?}]} — common/actions.menu, in its order."""
-    return _answer(lambda: _s["web"].post_menu(post_id))
+    long_form|translate|submenu, label, url, text, page?, items?}], tools: [{tool, glyph,
+    on, …}]} — common/actions.menu, in its order. sheet: the phone's sheet (09.11) shows
+    the tools as a grid on top and the rest grouped (Author ▸, Thread ▸, More ▸): the
+    items then without the tools, and with their submenus."""
+    return _answer(lambda: _s["web"].post_menu(post_id, hover=bool(sheet), nested=bool(sheet)))
 
 
 def link(url, confirmed=False, chosen_json=None, shown_json=None):
@@ -940,6 +943,10 @@ def pictures():
         if own:
             for word, name in PICTURES.items():
                 put(word, name)
+        # the tools over a post (common/actions.TOOLS): the post's sheet, always
+        from fedtail.frontends.common import actions
+        for name in sorted({pic for pic, _glyph in actions.TOOLS.values()}):
+            put("tool." + name, name)
         # the lanes' pictures for the strip over a lane (phone.lane_strip): always — a
         # theme without a set of its own (system) has the fallback set's, in its accent
         for name in sorted(set(iconpack.LANE.values())):
