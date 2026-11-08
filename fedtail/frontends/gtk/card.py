@@ -542,6 +542,7 @@ class Card(Gtk.Box):
                                     on_select=self._selection_menu,
                                     emojis=emoji_urls(self.ctx, p.emojis),
                                     load=picture_loader(self.ctx))
+        self.body_block.view = self.ctx.view  # a tag's menu: followed, muted — as now
         return self.body_block
 
     def _selection_menu(self, text, _x, _y):

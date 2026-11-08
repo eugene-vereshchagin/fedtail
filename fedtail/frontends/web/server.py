@@ -1626,13 +1626,17 @@ class Web:
         got = fn(p).result() or core.by_id(p.id) or p
         return post_json(core, got, core.short_ids([got]).get(got.id))
 
-    def tag_menu(self, url):
+    def tag_menu(self, url, click=False):
         """A long press or a right click on a post's #tag: the windows' menu of it
-        (common/links.tag_menu) — as its author writes it, everywhere, muted —
-        {"items": [{label, url}]}; each a fedtail: link /api/link does."""
+        (common/links.tag_menu) — as its author writes it, everywhere, followed, into
+        the lanes, muted — {"items": [{label, url}]}; each a fedtail: link /api/link
+        does. click: a plain click — the menu only with feed.tag_click = "menu" (no items:
+        the page opens the tag itself, as before)."""
         from ..common.links import tag_menu
+        if click and self.core.cfg["feed"].get("tag_click", "menu") != "menu":
+            return {"items": []}
         return {"items": [{"label": words, "url": link}
-                          for words, link in tag_menu(str(url or ""))]}
+                          for words, link in tag_menu(str(url or ""), self.core)]}
 
     def post_menu(self, sid):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
@@ -2326,7 +2330,8 @@ class Handler(BaseHTTPRequestHandler):
                       q.get("id", ""), q.get("show") or None, q.get("max_id", ""),
                       q.get("cursor", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
-                  "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", "")),
+                  "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", ""),
+                                                             q.get("click") == "1"),
                   "/api/places": lambda: self.web.place_menu(),
                   "/api/themes": lambda: self.web.themes(),
                   "/api/push": lambda: self.web.push_state(),

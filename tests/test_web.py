@@ -469,7 +469,8 @@ class WebTest(TmpDir):
         url = urllib.parse.quote("fedtail:tag/cats%20by%3A7", safe="")
         tag = json.loads(self.req("/api/tag_menu?url=" + url)[2])["items"]
         self.assertEqual([x["url"].split("/")[0] for x in tag],
-                         ["fedtail:tagby", "fedtail:tagall", "fedtail:mutetag"])
+                         ["fedtail:tagby", "fedtail:tagall", "fedtail:followtag",
+                          "fedtail:place", "fedtail:mutetag"])
         self.assertIn("cats", tag[1]["label"])
         self.assertEqual(json.loads(self.req("/api/tag_menu?url=https%3A%2F%2Fx")[2]),
                          {"items": []})

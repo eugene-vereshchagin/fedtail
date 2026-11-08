@@ -68,20 +68,34 @@ def thread_url(pid, at="post"):
     return make(THREAD_AT.get(at, "thread"), pid)
 
 
-def tag_menu(url):
-    """A right click on a post's tag (fedtail:tag/…): [(words, link)] — the tag as the
-    post's author writes it (when the link names them), the tag everywhere, muted in
-    one click. [] for any other link."""
+def tag_menu(url, view=None):
+    """A post's tag (fedtail:tag/…), right-clicked — or clicked, feed.tag_click = "menu":
+    [(words, link)] — the tag as the post's author writes it (when the link names them),
+    the tag everywhere; with the view: followed or not, into the lanes, muted or shown
+    again (each as it stands now — Mastodon's own menu of a tag, 08.11); without, muted
+    in one click. [] for any other link."""
     link = parse(url)
     if link is None or link.action != "tag":
         return []
     name, _s, by = unquote(link.arg).partition(" by:")
+    q = quote(name, safe="")
     out = []
     if by:
         out.append((_("tag_by_author", tag=name), make("tagby", quote(f"{name} by:{by}",
                                                                    safe=""))))
-    out.append((_("tag_everywhere_n", tag=name), make("tagall", quote(name, safe=""))))
-    out.append((_("tag_mute_n", tag=name), make("mutetag", quote(name, safe=""))))
+    out.append((_("tag_everywhere_n", tag=name), make("tagall", q)))
+    followed = getattr(view, "tag_followed", None)
+    followed = followed(name) if callable(followed) else None
+    if followed is not None:  # known (whom and what I follow is kept): its state
+        out.append((_("tag_unfollow_n" if followed else "tag_follow_n", tag=name),
+                    make("unfollowtag" if followed else "followtag", q)))
+    if view is not None:
+        out.append((_("tag_to_lanes_n", tag=name), make("place", quote(f"taglanes {name}",
+                                                                     safe=""))))
+    muted = getattr(view, "tag_muted", None)
+    muted = bool(muted(name)) if callable(muted) else False
+    out.append((_("tag_unmute_n" if muted else "tag_mute_n", tag=name),
+                make("unmutetag" if muted else "mutetag", q)))
     return out
 
 
@@ -130,9 +144,12 @@ class Links:
             self._ask(h, "copy_handle", unquote(arg))
         elif action == "alias":  # a post's #abc: into the command line
             self._ask(h, "put_alias", arg)
-        elif action == "tag":  # a post's tag: as its author writes it, or everywhere
+        elif action == "tag":  # a post's tag: its menu, as its author writes it, everywhere
             name, _s, by = unquote(arg).partition(" by:")
-            if by and self.view.cfg["feed"].get("tag_click", "author") == "author":
+            how = self.view.cfg["feed"].get("tag_click", "menu")
+            if how == "menu":
+                self._tag_menu(h, url, name)
+            elif by and how == "author":
                 self._ask(h, "open_tag", f"{name} by:{by}")
             else:
                 self._ask(h, "open_tag", name)
@@ -140,6 +157,11 @@ class Links:
             self._ask(h, "open_tag", unquote(arg).partition(" by:")[0])
         elif action == "tagby":  # …and as the post's author writes it
             self._ask(h, "open_tag", unquote(arg))
+        elif action in ("followtag", "unfollowtag"):  # from the tag's menu
+            tag, on = unquote(arg).lstrip("#"), action == "followtag"
+            h.call(self.view.follow_tag(tag, on), fail=h.error,
+                   ok=lambda _r: h.status(_("tag_followed_msg" if on else
+                                            "tag_unfollowed_msg", tag=tag)))
         elif action in ("mutetag", "unmutetag"):  # a hashtag, in one click (Fedilab's way)
             tag, on = unquote(arg).lstrip("#"), action == "mutetag"
             h.call(self.view.mute_tag(tag, on), fail=h.error,
@@ -152,7 +174,8 @@ class Links:
         elif action == "account":
             self._ask(h, "open_account", arg)
         elif action == "place":  # one of fedtail's own pages (a device's row: ≡ → Sync)
-            self._ask(h, "open_place", unquote(arg))
+            name, _s, parg = unquote(arg).partition(" ")  # "<place> <its arg>"
+            self._ask(h, "open_place", *((name, parg) if parg else (name,)))
         elif action in ("eventyes", "eventno"):  # a follow request, an approval: answered
             ok = action == "eventyes"
             h.call(self.view.answer_event(unquote(arg), ok),
@@ -168,6 +191,16 @@ class Links:
                 h.error(_("not_in_cache"))
             else:
                 self.post_action(action, arg, post)
+
+    def _tag_menu(self, h, url, name):
+        """feed.tag_click = "menu": the tag's menu (tag_menu) — by the pointer where the
+        window has one (tag_menu_here → True), else as a choice of its items."""
+        items = tag_menu(url, self.view)
+        here = getattr(h, "tag_menu_here", None)
+        if here is not None and here(items):
+            return
+        h.choose("#" + name, "", [(link, words) for words, link in items],
+                 lambda key, _ticked: self.open(key))
 
     @staticmethod
     def _ask(host, name, *args):

@@ -906,6 +906,11 @@ class _PagedTab(QWidget):
         self.win, self.core = win, win.ctx.view
         self.title = title
         self.items = []  # Post | Share, newest first
+        # where my server's next page starts: the last of its last page, in the server's
+        # order — not the last of items, sorted by time with posts fetched from the
+        # author's server among them, whose ids (GoToSocial's ULIDs) are as new as the
+        # fetch: the pages went round in a circle from there (08.11)
+        self._max_id = None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -927,11 +932,12 @@ class _PagedTab(QWidget):
 
     def more(self):
         self.btn_more.setEnabled(False)
-        max_id = self.items[-1].id if self.items else None
-        self.win.bridge.call(self.fetch(max_id), ok=self._page,
+        self.win.bridge.call(self.fetch(self._max_id), ok=self._page,
                              fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
 
     def _page(self, page):
+        if page:
+            self._max_id = page[-1].id
         known = {e.id for e in self.items}
         self.items += [e for e in page if e.id not in known]
         self.btn_more.setEnabled(bool(page))
@@ -1052,7 +1058,7 @@ class AccountWidget(_PagedTab):
         if show == self.show:
             return
         self.show = show
-        self.items, self._first_page = [], None
+        self.items, self._first_page, self._max_id = [], None, None
         self._origin_asked = self._older_origin = self._mine_done = False
         self._origin_next = None
         self.btn_more.setText(_("older_down"))
@@ -1092,7 +1098,7 @@ class AccountWidget(_PagedTab):
     def more(self):
         if not self._older_origin:
             self.btn_more.setEnabled(False)
-            max_id = self.items[-1].id if self.items else None
+            max_id = self._max_id
             want = self.show  # a page for a kind switched away from meanwhile: dropped
             self.win.bridge.call(self.fetch(max_id),
                                  ok=lambda page: want == self.show and self._page(page),

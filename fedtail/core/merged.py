@@ -267,7 +267,14 @@ class MergedCore:
         if getattr(lane, "view", "") == "threads":
             return sum(core.unread_count(own) for core, _t, own in self._own_lane(name)
                        if own in core.lane_by_name)
-        return len(self.unread_ids(self.lane_entries(name)))
+        return len(self.unread_ids(self.lane_entries(name))) + \
+            len(self.filter_hidden_unread(name))
+
+    def filter_hidden_unread(self, name):
+        """Every account's unread posts the lane's filters keep out of sight (ids in this
+        window's terms; Core.filter_hidden_unread)."""
+        return [self._p(tag, i) for core, tag, own in self._own_lane(name)
+                if own in core.lane_by_name for i in core.filter_hidden_unread(own)]
 
     def fresh_count(self, name):
         """"Of them new": every account's share of the lane's last update."""

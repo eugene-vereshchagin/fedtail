@@ -631,7 +631,7 @@ class QtSmokeTest(unittest.TestCase):
                     f" card {prof.info.width()} window {self.win.width()}")
             self.assertGreaterEqual(b.width(), b.sizeHint().width(), said)
             self.assertLessEqual(right, prof.info.width(), said)  # and none sticks out
-        self.win.on_link("fedtail:tag/linux")
+        self.win.on_link("fedtail:tagall/linux")  # the tag's menu: "#linux everywhere"
         tag_tab = self.win.tabs.currentWidget()
         self.assertIsInstance(tag_tab, TagWidget)
         # muted in one click, and shown again (into the filter of muted hashtags)
@@ -1468,6 +1468,51 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "pin:011" in tab.view.rows)
         self.assertEqual(tab.view.order[0], "pin:011")
         self.assertNotIn("011", tab.view.rows)  # not twice
+
+    def test_profile_pages_by_the_servers_cursor(self):
+        """The next page starts after the last post my server gave, not after the last
+        by time: a post fetched from the author's server is old by date and new by id
+        (GoToSocial's ULIDs), and from it the pages went round in a circle (08.11)."""
+        import dataclasses
+        from concurrent.futures import Future
+
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        self.pump(until=lambda: tab._first_page is not None)
+        page = tab._first_page
+        self.assertTrue(page)
+        last = page[-1].id
+        old = page[-1]  # as one fetched from their server: older, its id the newest
+        far = dataclasses.replace(old, ref=dataclasses.replace(old.ref, id="zzz"), sort="0")
+        tab.items = sorted(tab.items + [far], key=lambda e: e.sort, reverse=True)
+        asked = []
+
+        def fetch(max_id):
+            asked.append(max_id)
+            fut = Future()
+            fut.set_result([])
+            return fut
+        tab.fetch = fetch
+        tab.more()
+        self.assertEqual(asked, [last])
+
+    def test_a_tag_clicked_gives_its_menu(self):
+        """08.11: a click on a #tag (feed.tag_click = "menu", the default) — the tag's
+        menu by the mouse: by the author, everywhere, followed, into the lanes, muted."""
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:tag/cats%20by%3AB")
+        menu = getattr(self.win, "_tag_menu", None)
+        self.assertIsNotNone(menu)
+        words = [a.text() for a in menu.actions()]
+        self.assertEqual(words[:2], [i18n._("tag_by_author", tag="cats"),
+                                     i18n._("tag_everywhere_n", tag="cats")])
+        self.assertIn(i18n._("tag_mute_n", tag="cats"), words)
+        menu.close()
 
     def test_collections_in_a_place_window(self):
         """Collections (Mastodon 4.6): the shared place in a window of its own (qt/place.py)
@@ -3107,6 +3152,28 @@ class QtSmokeTest(unittest.TestCase):
             view.set_specs([CardSpec(key="rb9", entry=E(boost))])
             self.win.on_event("status_updated", dict(st, reblogged=True))
             self.assertTrue(view.model[0].entry.post.mine.shared)
+
+    def test_set_specs_cards_going_meanwhile(self):
+        """A card made anew in set_specs moved the scroll bar, and _realize let cards go
+        mid-loop: "dictionary changed size during iteration" (the log of 07.11)."""
+        import dataclasses
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
+        self.core.poll_once()
+        view = self.win.lane_widgets["home"].view
+        self.pump(until=lambda: len(view.rows) >= 3)
+        keys = list(view.rows)
+        first = view.rows[keys[0]]
+        real = first.update_spec
+
+        def update_spec(spec):  # as the scroll bar's move would: others let go
+            real(spec)
+            for k in keys[1:]:
+                if k in view.rows:
+                    view._let_go(k)
+        first.update_spec = update_spec
+        view.set_specs([dataclasses.replace(s) for s in view.model], keep_position=True)
+        self.assertIs(view.rows.get(keys[0]), first)
 
     def test_split_layout_roster(self):
         """ui.layout = "split": the lanes in a roster window of their own, the main window

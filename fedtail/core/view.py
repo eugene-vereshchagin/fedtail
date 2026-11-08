@@ -71,6 +71,7 @@ def _then(fut, fn):
 PASS = {
     "caps", "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
     "set_active_lane", "set_state", "own_hosts", "language_hidden", "on_screen",
+    "filter_hidden_unread", "tag_followed",
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
     "open_at",
     # lanes by what their rules do, never by their names: plain lists of lane names
@@ -388,6 +389,9 @@ class View:
     def mark_lane_read(self, lane):
         """Every post of the lane read — and its events seen, if it takes any."""
         ids = sorted(self.unread(self.entries(lane)))
+        # and those the filters hide, counted all the same (feed.count_filtered): the
+        # lane's number would never go otherwise
+        ids += self.filter_hidden_unread(lane)
         self.mark_read(ids)
         if getattr(self.lane_by_name.get(lane), "events", False):
             self._core.mark_activity_seen()

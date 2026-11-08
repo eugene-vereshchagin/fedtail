@@ -1186,6 +1186,26 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
+    def test_a_tag_clicked_gives_its_menu(self):
+        """As Qt (08.11): a click on a #tag (feed.tag_click = "menu") — the tag's menu by
+        the pointer in the post's text; by the author, everywhere… as it stands now."""
+        import time
+        import weakref
+
+        from fedtail.frontends.gtk import textblock
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        block = card.body_block
+        textblock._last_click = (weakref.ref(block), 4, 4, time.monotonic())
+        self.win.on_link("fedtail:tag/cats%20by%3AB")
+        pop = getattr(block, "_tag_pop", None)
+        self.assertIsNotNone(pop)
+        labels = [w.get_label() for w in _walk(pop) if isinstance(w, Gtk.Button)]
+        self.assertEqual(labels[:2], [i18n._("tag_by_author", tag="cats"),
+                                      i18n._("tag_everywhere_n", tag="cats")])
+        self.assertIn(i18n._("tag_mute_n", tag="cats"), labels)
+        pop.popdown()
+
     def test_select_text_and_quote_it_in_a_reply(self):
         """As Qt: text selected in a post — right click: Quote in reply, Copy; the
         quote goes into the reply already open, where its cursor is."""
@@ -1412,6 +1432,31 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(part.older_origin)
         self.assertEqual(part.more_btn.get_label(),
                          i18n._("older_from_origin", host=part.host))
+
+    def test_profile_pages_by_the_servers_cursor(self):
+        """As Qt: the next page after the last post my server gave, not after the last by
+        time — a post fetched from their server is old by date, new by id (08.11)."""
+        import dataclasses
+        import types
+        from concurrent.futures import Future
+        self.win.open_account("B")
+        self.assertTrue(pump(lambda: getattr(self.win.accounts.get("B"), "posts_part",
+                                             None) is not None, 5))
+        part = self.win.accounts["B"].posts_part
+        self.assertTrue(pump(lambda: part.first_page, 5))
+        last, old = part.first_page[-1].id, part.first_page[-1]
+        far = dataclasses.replace(old, ref=dataclasses.replace(old.ref, id="zzz"), sort="0")
+        part.items = sorted(part.items + [far], key=lambda e: e.sort, reverse=True)
+        asked = []
+
+        def account_posts(_acc, max_id, show="all"):
+            asked.append(max_id)
+            fut = Future()
+            fut.set_result([])
+            return fut
+        part.view = types.SimpleNamespace(account_posts=account_posts)
+        part.more()
+        self.assertEqual(asked, [last])
 
     def test_choose_answers_only_on_ok(self):
         from fedtail.frontends.gtk.dialogs import choose

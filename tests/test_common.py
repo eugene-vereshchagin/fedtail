@@ -80,6 +80,7 @@ class CommonTest(TmpDir):
         ls.open("https://x.test/a")
         ls.open("fedtail:thread/001")
         ls.open("fedtail:account/B")
+        self.core.cfg["feed"]["tag_click"] = "everywhere"  # (the default: its menu)
         ls.open("fedtail:tag/linux%2B")
         ls.open("fedtail:reply/001")
         names = [d[0] for d in h.did]

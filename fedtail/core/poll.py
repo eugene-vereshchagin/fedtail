@@ -489,6 +489,7 @@ class PollMixin:
             browse_changed = set()  # browse sources that turned empty or stopped being so
             every = self.cfg["lists"]["refresh_minutes"] * 60
             self._step("start")
+            self.retry_caps()  # the server's limits, when the connection missed them
             if _due(self._silence_checked, every):
                 try:
                     self._refresh_silence()

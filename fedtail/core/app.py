@@ -239,7 +239,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         from .wider import Wider
         self.wider = Wider(self)  # other servers' lanes into mine (lanes.*_extra)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
-        self.caps = Capabilities()
+        # the server's limits as last heard (kept in the store): a post can be as long as
+        # the server lets before the connection says so, and when its instance document
+        # doesn't come (a timeout) — 500 meanwhile was all a post could be (08.11)
+        self.caps = self._remembered_caps()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (its preferences)
@@ -563,6 +566,46 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                          sw, caps.version)
             caps.software, caps.software_sure = sw, True
 
+    CAPS_KV = "server_caps"
+    CAPS_KEPT = ("software", "version", "software_sure", "max_characters", "max_media",
+                 "markdown", "max_poll_options", "max_profile_fields", "translation",
+                 "image_bytes", "image_pixels")
+
+    def _remembered_caps(self):
+        """Capabilities as the server last said them (the store's kv), or the defaults."""
+        caps = Capabilities()
+        kept = self.store.kv_get(self.CAPS_KV)
+        if isinstance(kept, dict):
+            for k in self.CAPS_KEPT:
+                if k in kept and isinstance(kept[k], type(getattr(caps, k))):
+                    setattr(caps, k, kept[k])
+        return caps
+
+    def _remember_caps(self, caps):
+        kept = {k: getattr(caps, k) for k in self.CAPS_KEPT}
+        if self.store.kv_get(self.CAPS_KV) != kept:
+            self.store.kv_set(self.CAPS_KV, kept)
+
+    def retry_caps(self):
+        """The instance document didn't come at the connection: asked again (a poll
+        round's step, until it comes) — the limits then are the server's own."""
+        if not getattr(self, "_caps_unsure", False) or self.api is None:
+            return
+        try:
+            v2 = self.api.instance_v2() if hasattr(self.api, "instance_v2") else None
+        except Exception:  # noqa: BLE001 — v1 alone will do
+            v2 = None
+        try:
+            caps = self.proto.capabilities(self.api.instance(), v2)
+        except Exception as e:  # noqa: BLE001 — next round
+            log.info("instance again: %s", type(e).__name__)
+            return
+        self._own_software(caps)
+        self._carry_answers(self.caps, caps)
+        self.caps, self._caps_unsure = caps, False
+        self._remember_caps(caps)
+        log.info("instance: came at last — a post up to %d characters", caps.max_characters)
+
     def _carry_answers(self, old, new):
         """What the server answered about its features stays across a reconnect to the
         same server; the last probe (kept) speaks for the same software and version."""
@@ -606,13 +649,17 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 v2 = None
             try:
                 caps = self.proto.capabilities(api.instance(), v2)
+                self._caps_unsure = False
             except Exception as e:  # instance info is a nicety, not a must
-                log.warning("instance: %s: %s — the server's limits and features unknown",
-                            type(e).__name__, e)
-                caps = Capabilities()
+                log.warning("instance: %s: %s — the server's limits as last heard; asked "
+                            "again with the next rounds", type(e).__name__, e)
+                caps = self._remembered_caps()
+                self._caps_unsure = True
             self._own_software(caps)
             self._carry_answers(self.caps, caps)
             self.api, self.me, self.caps = api, me, caps
+            if not self._caps_unsure:
+                self._remember_caps(caps)
             self.store.me_id = (me or {}).get("id")  # my posts are read, however they come
             n = self.store.mark_mine_read()
             if n:
@@ -869,7 +916,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             if not self.cfg["feed"].get("repeat_boosts", False):  # not shown: no news
                 rows = self._without_repeats(lane.source, rows)
             sts = [st for item_id, st in rows if item_id in id_set]
-            if lane.chips:  # what a free lane's quick filter hides makes no news either
+            if lane.chips and not self.cfg["feed"].get("count_filtered", True):
+                # what a free lane's quick filter hides makes no news (count_filtered off)
                 shows = self._chip_shows(name)
                 sts = [st for st in sts if shows(st)]
             unread = self.store.read_set(st["id"] for st in sts)
@@ -1170,6 +1218,21 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def _lang_out(self):
         return self.__dict__.setdefault("_lang_out_counts", {})
 
+    @property
+    def _filter_out(self):
+        return self.__dict__.setdefault("_filter_out_ids", {})
+
+    def filter_hidden_unread(self, name):
+        """The unread posts of a lane its quick filters and funnel keep out of sight (the
+        last time it was made): ids, newest first — [] with feed.count_filtered off."""
+        if not self.cfg["feed"].get("count_filtered", True):
+            return []
+        ids = self._filter_out.get(name) or []
+        if not ids:
+            return []
+        read = self.store.read_set(ids)
+        return [i for i in ids if i not in read]
+
     def language_hidden(self, name):
         """How many of the lane's posts lanes.languages left out (the last time it was
         made), 0 when none or no filter there."""
@@ -1274,6 +1337,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # one post of forty, the rest gone without a word, 29.10)
         by_lang = bool(ctx.languages) and lanes.in_scope(lane.name, ctx.languages_in)
         lang_out = 0
+        # what the quick filters and the funnel took out, newest first, as many as the
+        # lane shows: still news (feed.count_filtered) — a lane filtered to gifs and
+        # forgotten so looked dead, nothing new counted nor notified (08.11)
+        out_by_filter = []
         rows = self.store.iter_items(lane.source, max_rows=horizon)
         if not repeats:
             rows = self._without_repeats(lane.source, rows)
@@ -1281,17 +1348,19 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             if scanned >= horizon:
                 break
             scanned += 1
-            if only_posts and real(st).get("in_reply_to_id"):
-                continue
             if self.silenced(st):
                 continue
-            if funnel is not None and not funnel(st):
-                continue
-            if shows is not None and not shows(st):
+            filtered = (only_posts and real(st).get("in_reply_to_id")) or \
+                (funnel is not None and not funnel(st)) or (shows is not None and not shows(st))
+            if filtered and len(out_by_filter) >= limit:
                 continue
             if by_lang and not langs.wanted(real(st), ctx.languages, ctx.detect,
                                             ctx.min_words):
-                lang_out += 1
+                lang_out += 0 if filtered else 1
+                continue
+            if filtered:
+                if lanes.keeps(lane, st, ctx):
+                    out_by_filter.append(st["id"])
                 continue
             if lanes.keeps(lane, st, ctx):
                 kept.append((item_id, st))
@@ -1299,6 +1368,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                     full = True
                     break
         self._lang_out[name] = lang_out
+        self._filter_out[name] = out_by_filter
         # what "Older" does next: the store has more to look through, or only the server
         self._lane_deep[name] = not full and scanned >= horizon
         kept.reverse()
@@ -1538,6 +1608,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         unread = self.unread_ids(entries)
         n = self._threads_of([e for e in entries if e[1]["id"] in unread]) \
             if self._by_thread(name) else len(unread)
+        n += len(self.filter_hidden_unread(name))  # news, though the filters hide it
         cache[name] = (key, n)
         return n
 
@@ -1929,7 +2000,25 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         return self.call_api("tag", name)
 
     def follow_tag(self, name, on=True):
-        return self.call_api("follow_tag", name, on)
+        """Follow a hashtag (on) or stop; the names kept for tag_followed change with it."""
+        fut = self.call_api("follow_tag", name, on)
+
+        def done(f):
+            if f.exception() is None and getattr(self, "_followed_tag_names", None) is not None:
+                key = str(name or "").lstrip("#")
+                names = {t for t in self._followed_tag_names if t.lower() != key.lower()}
+                self._followed_tag_names = names | ({key} if on else set())
+        fut.add_done_callback(done)
+        return fut
+
+    def tag_followed(self, name):
+        """Do I follow this hashtag — as last heard (the free lanes and the editor keep the
+        names); None while not known yet."""
+        names = getattr(self, "_followed_tag_names", None)
+        if names is None:
+            return None
+        key = str(name or "").lstrip("#").lower()
+        return any(t.lower() == key for t in names)
 
     def followed_tags(self):
         return self.call_api("followed_tags")

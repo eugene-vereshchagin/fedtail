@@ -309,6 +309,20 @@ class _LinkHost:
         from .dialogs import choose
         return choose(self.win, title, text, options, done, check=check)
 
+    def tag_menu_here(self, items):
+        """A tag clicked (feed.tag_click = "menu", common/links.py): its menu by the
+        mouse — the right click's menu of it."""
+        from PySide6.QtGui import QCursor
+        from PySide6.QtWidgets import QMenu
+        if not items:
+            return False
+        menu = QMenu(self.win)
+        for words, url in items:
+            menu.addAction(words, lambda u=url: self.win.on_link(u))
+        self.win._tag_menu = menu  # (tests)
+        menu.popup(QCursor.pos())
+        return True
+
     def redrafted(self, d):
         self.win._redrafted(d)
 

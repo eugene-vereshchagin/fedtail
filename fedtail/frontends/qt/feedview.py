@@ -649,7 +649,12 @@ class FeedView(QScrollArea):
             self._let_go(key)
         for key in [k for k in self._kept if k not in self._index]:
             del self._kept[key]
-        for key, row in self.rows.items():
+        # a copy: a card made anew can move the scroll bar (the focus it held hidden),
+        # and _realize then lets cards go or builds some, mid-loop — "dictionary changed
+        # size during iteration", seven times in a night's log (07.11)
+        for key, row in list(self.rows.items()):
+            if self.rows.get(key) is not row or key not in self._index:
+                continue  # let go meanwhile, or built from the new specs already
             spec = self.model[self._index[key]]
             if row.spec is not spec:
                 row.update_spec(spec)

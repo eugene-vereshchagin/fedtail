@@ -374,6 +374,13 @@ class LaneModel:
             info = _("media_filter_info", n=len(entries))
         if held:
             info = _("held_info", n=held) + (" · " + info if info else "")
+        # news the quick filters or the funnel keep out of sight (feed.count_filtered):
+        # counted in the lane's number, said here — a lane filtered and forgotten
+        # mustn't look dead (08.11)
+        hidden_new = len(getattr(view, "filter_hidden_unread", lambda _n: [])(self.name))
+        if hidden_new:
+            words = _("filtered_new_info", n=hidden_new)
+            info = info + " · " + words if info else words
         # a browse lane still asking its server: said in the line over whatever is shown
         # already (one stale post on its own, and no word of more on the way: 29.10)
         if getattr(view, "lane_waiting", lambda _n: False)(self.name):

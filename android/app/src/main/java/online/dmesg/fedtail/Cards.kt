@@ -111,8 +111,9 @@ class CardActions(
     val profile: (String) -> Unit = {},              // an account's id: its profile
     val menu: (suspend (PostItem) -> JSONObject)? = null, // the windows' ⋯ (common/actions)
     val runLink: (String) -> Unit = {},              // a fedtail: link of that menu
-    // a long press on a #tag: the windows' menu of it — [(words, fedtail: link)]
-    val tagMenu: suspend (String) -> List<Pair<String, String>> = { emptyList() },
+    // a long press on a #tag (a tap too, reading.tag_click = "menu" — click true): the
+    // windows' menu of it — [(words, fedtail: link)]
+    val tagMenu: suspend (String, Boolean) -> List<Pair<String, String>> = { _, _ -> emptyList() },
     val page: (String, String) -> Unit = { _, _ -> }, // a place of that menu (lists, translate…)
     val quoteReply: (PostItem) -> Unit = {},
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
@@ -129,8 +130,8 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
     expandCw = expandCw || cwOpen, profile = { openProfile(it) }, menu = { postMenu(it) },
     runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
-    tagMenu = { url ->
-        val arr = Core.tagMenu(url).optJSONArray("items") ?: org.json.JSONArray()
+    tagMenu = { url, click ->
+        val arr = Core.tagMenu(url, click).optJSONArray("items") ?: org.json.JSONArray()
         (0 until arr.length()).map { arr.getJSONObject(it).let { o -> o.optString("label") to o.optString("url") } }
     },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
@@ -218,7 +219,7 @@ fun postText(html: String, plain: String, linkColor: Color): AnnotatedString {
  *  its author writes it, everywhere, muted; the phone had none, 02.11). */
 @Composable
 private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
-                      runLink: (String) -> Unit, tagMenu: suspend (String) -> List<Pair<String, String>>,
+                      runLink: (String) -> Unit, tagMenu: suspend (String, Boolean) -> List<Pair<String, String>>,
                       onTap: () -> Unit) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val link by rememberUpdatedState(onLink)
@@ -239,10 +240,22 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
                     onLongPress = { pos ->
                         val url = urlAt(pos)
                         if (url != null && url.startsWith("fedtail:tag/")) {
-                            scope.launch { menu = tagMenu(url) }
+                            scope.launch { menu = tagMenu(url, false) }
                         }
                     },
-                    onTap = { pos -> val url = urlAt(pos); if (url != null) link(url) else tap() })
+                    onTap = { pos ->
+                        val url = urlAt(pos)
+                        when {
+                            url == null -> tap()
+                            // reading.tag_click = "menu": a tap gives the tag's menu (the
+                            // core says whether; no items — the tag opens as before)
+                            url.startsWith("fedtail:tag/") -> scope.launch {
+                                val got = tagMenu(url, true)
+                                if (got.isNotEmpty()) menu = got else link(url)
+                            }
+                            else -> link(url)
+                        }
+                    })
             })
         DropdownMenu(expanded = menu.isNotEmpty(), onDismissRequest = { menu = emptyList() }) {
             menu.forEach { (said, url) ->
@@ -389,6 +402,7 @@ fun PostList(
     emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
     prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
     busy: Boolean = false,     // a poll round on: the opossum swings
+    bottomRoom: Int = 96,      // dp under the last post: the buttons floating there clear it
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -403,7 +417,7 @@ fun PostList(
     if (prefetch != "off") Ahead(state, posts, prefetch)
     LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = if (thread) 0.dp else 8.dp,
-            end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = 96.dp),
+            end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = bottomRoom.dp),
         verticalArrangement = Arrangement.spacedBy(if (thread) 0.dp else 8.dp)) {
         header?.let { h -> item(key = "header") { h() } }
         // "new below" is an item of its own: it comes and goes without moving the post
@@ -494,47 +508,53 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp, shadowElevation = if (p.unread) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth().clickable { act.open(p) }) {
-        Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val who = stringResource(R.string.profile_of, p.handle)
-            Box(Modifier.clip(CircleShape).clickable(enabled = p.accountId.isNotBlank()) {
-                act.profile(p.accountId)
-            }.semantics { contentDescription = who }) { Avatar(p, 36) }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Head(p, act, dim = !p.unread)
-                // "♻ boosted by X · 14:02": a tap — their profile
-                val boosted = p.boosted
-                if (boosted != null) BitLine(boosted, act, html = p.boostedHtml)
-                else if (p.sharedBy.isNotBlank()) {
-                    Small(stringResource(R.string.shared_by, p.sharedBy))
+        // the face beside the head only, the words the card's whole width under it — as
+        // the windows and the web page draw a card (08.11: a column beside the face left
+        // a strip of nothing down the post's left side, the text narrow)
+        Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                val who = stringResource(R.string.profile_of, p.handle)
+                Box(Modifier.clip(CircleShape).clickable(enabled = p.accountId.isNotBlank()) {
+                    act.profile(p.accountId)
+                }.semantics { contentDescription = who }) { Avatar(p, 36) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Head(p, act, dim = !p.unread)
+                    // "♻ boosted by X · 14:02": a tap — their profile
+                    val boosted = p.boosted
+                    if (boosted != null) BitLine(boosted, act, html = p.boostedHtml)
+                    else if (p.sharedBy.isNotBlank()) {
+                        Small(stringResource(R.string.shared_by, p.sharedBy))
+                    }
+                    // the windows' marks (time, edited, old, bot…), each with its link (the
+                    // thread, the post's edits), and, all accounts in one, whose
+                    val tint = hexColor(p.viaColor)
+                    MetaLine(p, act, if (tint == null) p.via else "")
+                    if (tint != null && p.via.isNotBlank()) {  // whose: in that account's colour
+                        Text(p.via, fontSize = 12.sp, color = Color.White,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(tint)
+                                .padding(horizontal = 6.dp, vertical = 1.dp))
+                    }
                 }
-                // the windows' marks (time, edited, old, bot…), each with its link (the
-                // thread, the post's edits), and, all accounts in one, whose
-                val tint = hexColor(p.viaColor)
-                MetaLine(p, act, if (tint == null) p.via else "")
-                if (tint != null && p.via.isNotBlank()) {  // whose: in that account's colour
-                    Text(p.via, fontSize = 12.sp, color = Color.White,
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(tint)
-                            .padding(horizontal = 6.dp, vertical = 1.dp))
-                }
-                if (p.contextText.isNotBlank() && p.number == null) {
-                    Text("↳ @${p.contextHandle}: ${p.contextText}", maxLines = 2,
-                        overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                // the parent not here (yet): "the post it answers is gone" / "fetching…"
-                val ctxLine = p.contextLine
-                if (p.contextText.isBlank() && p.number == null && ctxLine != null) {
-                    BitLine(ctxLine, act)
-                }
-                // someone new in a private talk: before the words, in the warning's colour
-                p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
-                Body(p, act, hideSensitive)
-                p.conversation?.let { ConversationLine(it, act) }
-                p.myReplies.forEach { BitLine(it, act) }
-                p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
-                Actions(p, act)
             }
+            if (p.contextText.isNotBlank() && p.number == null) {
+                Text("↳ @${p.contextHandle}: ${p.contextText}", maxLines = 2,
+                    overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
+                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            // the parent not here (yet): "the post it answers is gone" / "fetching…"
+            val ctxLine = p.contextLine
+            if (p.contextText.isBlank() && p.number == null && ctxLine != null) {
+                BitLine(ctxLine, act)
+            }
+            // someone new in a private talk: before the words, in the warning's colour
+            p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
+            Body(p, act, hideSensitive)
+            p.conversation?.let { ConversationLine(it, act) }
+            p.myReplies.forEach { BitLine(it, act) }
+            p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
+            Actions(p, act)
         }
     }
 }

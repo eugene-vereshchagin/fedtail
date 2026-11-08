@@ -152,6 +152,7 @@ def capabilities_from_instance(inst, v2=None):
     version = str(inst.get("version", "")).lower()
     conf = inst.get("configuration") or {}
     st = conf.get("statuses") or {}
+    st2 = (v2.get("configuration") or {}).get("statuses") or {}  # v1 not saying: v2's
     mimes = st.get("supported_mime_types") or []
     software, sure = software_of(inst)
     md = "text/markdown" in mimes or software in MARKDOWN_SERVERS or \
@@ -160,8 +161,10 @@ def capabilities_from_instance(inst, v2=None):
         software=software,
         software_sure=sure,
         version=str(inst.get("version", ""))[:80],
-        max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
-        max_media=int(st.get("max_media_attachments") or 4),
+        max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or
+                           st2.get("max_characters") or 500),
+        max_media=int(st.get("max_media_attachments") or st2.get("max_media_attachments")
+                      or 4),
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
         # a profile's fields: GoToSocial's configuration.accounts, Akkoma's metadata
         max_profile_fields=int((conf.get("accounts") or {}).get("max_profile_fields") or

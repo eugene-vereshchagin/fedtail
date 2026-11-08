@@ -7,6 +7,42 @@
 
 ## What's next
 
+- **Someone's posts no longer go round in a circle.** Paging back through a profile, the
+  next page started after the last post *by time*, and posts fetched from the author's own
+  server stood among them: old by date, but (on GoToSocial and other servers giving
+  time-ordered ids at fetch) new by id — from there my server gave the pages already
+  shown, again and again. The next page now starts where my server's last one ended, in
+  the windows (Qt and GTK) as the web page and the phone did already; a tag's or a
+  link's "More" goes by the post itself, not the boosted one.
+
+- **A tag's menu on a click.** A click on a #tag in a post did one thing only (that
+  author's posts with it, or the tag everywhere); now it opens the tag's menu, as
+  Mastodon's own page does: that author's posts with it, the tag everywhere, follow it or
+  stop, into the lanes…, mute it or show it again — each as it stands now. In the windows
+  by the mouse, on the web page and the phone by the word, in the terminal as a list; a
+  right click (a long press) gives the same menu always (`card.tag_click = "menu"`;
+  `"author"`, `"everywhere"` — a click opens those at once, as before).
+
+- **News behind a lane's filters still counts.** A lane's quick filters ("Posts only", a
+  tag, "New"…) and its content filter ("only gifs") took the posts they hide out of the
+  count too: a filter forgotten on a rare kind of post made the lane look dead — no number,
+  no notification. Now the new posts behind them go into the lane's number and its
+  notifications all the same, the lane's line says "N more new ones hidden by the
+  filters", and "Mark all read" takes them too — in every interface
+  (`reading.count_filtered`, on; off — only what shows counts, as before).
+
+- **A post as long as the server lets, always.** The server's limits come with its
+  instance document when fedtail connects; when that answer didn't come (a slow server's
+  timeout), a post could be 500 characters the whole session, whatever the server allowed.
+  The limits are now remembered from last time — before the connection too — and asked
+  again with the next rounds until the server answers; `/api/v2/instance` speaks for them
+  when v1 doesn't say.
+
+- **Qt: no more "dictionary changed size during iteration".** A lane refreshing while a
+  card made anew moved the scroll bar let cards go mid-loop: an error in the log each
+  time (seven in one night) and the refresh left half done. GTK's lane is guarded the same
+  way.
+
 - **The apt repository is in the README**: two lines add it (signed), and fedtail comes
   with the system's updates on Debian and Ubuntu. It has been there since 0.22, unsaid.
 
@@ -14,6 +50,20 @@
   can't show quotes went only in Mastodon's shape; Misskey's and Sharkey's (a span after
   line breaks) and Mitra's (a plain last paragraph) stayed above the quote drawn under
   them — in every interface.
+
+- **Phone: a post's text the card's whole width.** The words stood in a column beside the
+  avatar, a strip of nothing down the post's left side. Now the avatar sits in the line
+  with the name and the text goes under it, edge to edge — as the windows and the web page
+  draw a card.
+
+- **Phone: "↓ N new" by the thumb.** The button to the new posts was a small arrow at the
+  top, hard to see and to reach; it now floats over the "write" button, and the lane's
+  end leaves room enough under the last post to read it past both (`phone.to_new`,
+  `"top"` — where it was).
+
+- **Phone: what you type stays in sight.** Writing a post, the text field grew down under
+  the keyboard and the screen stayed where it was: the line being typed went out of view.
+  Now the field's last line and its count follow the typing above the keyboard.
 
 - **Phone: the interface's language is the app's too.** `ui.language` switched only the
   core's words; the app's own (its buttons, menus, dialogs) stayed in the phone's

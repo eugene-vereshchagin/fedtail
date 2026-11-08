@@ -5,6 +5,7 @@ and Older first looks deeper into the store, then asks the server."""
 
 import unittest
 
+from fedtail import i18n
 from fedtail.core import app as core_app
 from fedtail.core.view import View
 from fedtail.frontends.common.lane import LaneModel
@@ -99,3 +100,40 @@ class FunnelTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FilteredNewsTest(FunnelTest):
+    """08.11: a lane filtered to gifs and forgotten looked dead — nothing new counted
+    nor said. With feed.count_filtered (on by default) what the filters hide is news
+    still: in the lane's number, in its line, and "Mark all read" takes it too."""
+
+    def test_hidden_news_counted_and_said(self):
+        core = self.core
+        core.store.mark_read([f"{i:03d}" for i in range(30)])  # the videos: read
+        view = View(core)
+        model = LaneModel(view, "home")
+        unread_all = core.unread_count("home")
+        self.assertEqual(unread_all, 20)  # the window: 20 newest, text, unread
+        model.media.wanted = {"video"}
+        built = model.build(False)
+        self.assertEqual(built.unread, 0)  # nothing new shows: the videos are read
+        hidden = core.filter_hidden_unread("home")
+        self.assertEqual(len(hidden), 20)  # as many as the lane shows, newest first
+        self.assertEqual(hidden[0], "159")
+        self.assertEqual(core.unread_count("home"), 20)
+        self.assertIn("20", built.info)
+        self.assertIn(i18n._("filtered_new_info", n=20), built.info)
+        view.mark_lane_read("home")
+        core._lane_cache.clear()
+        model.build(False)
+        self.assertEqual(core.filter_hidden_unread("home"), [])
+
+    def test_off_counts_only_what_shows(self):
+        core = self.core
+        core.cfg["feed"]["count_filtered"] = False
+        core.store.mark_read([f"{i:03d}" for i in range(30)])
+        model = LaneModel(View(core), "home")
+        model.media.wanted = {"video"}
+        built = model.build(False)
+        self.assertEqual(core.unread_count("home"), 0)
+        self.assertNotIn(i18n._("filtered_new_info", n=20), built.info)

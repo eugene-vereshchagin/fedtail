@@ -266,6 +266,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var commandLine by mutableStateOf(false)
     var overview by mutableStateOf("lanes") // phone.overview: lanes | all | list
     var layoutPref by mutableStateOf("auto") // phone.layout: auto | one | two | three
+    var toNewBottom by mutableStateOf(true) // phone.to_new: the "↓ N" button by the thumb
     var columns = 1                          // what the screen fits now (Screens.kt says)
     private var startLane: String? = null
 
@@ -558,6 +559,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         commandLine = me.optBoolean("command_line")
         overview = me.optString("overview", "lanes")
         layoutPref = me.optString("layout", "auto")
+        toNewBottom = me.optString("to_new", "bottom") != "top"
         merged = me.optBoolean("merged")
         accountCount = me.optInt("accounts", 1)
         // phone.push: UnifiedPush when a distributor is there (not in the demo: no server)

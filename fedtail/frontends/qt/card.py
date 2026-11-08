@@ -354,7 +354,7 @@ class PostRow(QWidget):
             return
         menu = QMenu(lab)
         from ..common.links import tag_menu
-        tags = tag_menu(getattr(lab, "_hovered", "") or "")
+        tags = tag_menu(getattr(lab, "_hovered", "") or "", self.ctx.view)
         for words, url in tags:  # a right click on a tag: by its author, everywhere, mute
             menu.addAction(words, lambda u=url: self.ctx.on_link(u))
         if tags:

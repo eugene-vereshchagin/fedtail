@@ -64,6 +64,32 @@ class CoreTurnsTest(Base):
         self.assertEqual(core.caps.max_characters,
                          core.proto.capabilities(core.api.instance(), None).max_characters)
 
+    def test_the_servers_limits_remembered(self):
+        """A post can be as long as the server lets (5000 here) before the connection,
+        and when /api/v1/instance doesn't come — then it is asked again with the next
+        round. 500 was all a post could be, a whole session long (08.11)."""
+        import requests
+
+        from fedtail.core.app import Core
+        core, w = self.make()
+        self.assertEqual(core.caps.max_characters, 5000)
+        again = Core(core.cfg, core.paths, api_class=type(core.api))
+        self.addCleanup(again.shutdown)
+        self.assertEqual(again.caps.max_characters, 5000)  # before any connection
+        api = type(core.api)
+        with mock.patch.object(api, "instance", side_effect=requests.Timeout("slow")):
+            again.connect().result()
+            self.assertEqual(again.caps.max_characters, 5000)  # as last heard
+            self.assertTrue(again._caps_unsure)
+            again.retry_caps()  # still slow: kept, asked next time
+            self.assertTrue(again._caps_unsure)
+        with mock.patch.object(api, "instance", return_value={
+                "version": "4.4.0", "configuration": {"statuses": {"max_characters": 9000}}}):
+            again.poll_once()
+        self.assertFalse(again._caps_unsure)
+        self.assertEqual(again.caps.max_characters, 9000)
+        self.assertEqual(Core(core.cfg, core.paths, api_class=api).caps.max_characters, 9000)
+
     def test_the_poller_paused_then_slow(self):
         core, _w = self.make()
         core._paused = True

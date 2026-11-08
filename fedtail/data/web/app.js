@@ -3013,8 +3013,16 @@ document.addEventListener("click", async (e) => {
     if (kind === "account") openAccount(arg);
     else if (kind === "thread") openThread(arg, "post");
     else if (kind === "threadnew") openThread(arg, "first_unread");
-    else if (kind === "tag") openPlace("tag", arg);
-    else if (kind === "help") {  // a page of the help, and a place on it
+    else if (kind === "tag") {
+      // reading.tag_click = "menu": a click gives the tag's menu (the server says whether;
+      // no items — the tag opens as before)
+      let r = null;
+      try { r = await api("/api/tag_menu?click=1&url=" + encodeURIComponent(href)); }
+      catch (err) { r = null; }
+      if (r && r.items && r.items.length) {
+        popup(a, r.items.map((it) => [it.label, () => linkAct(it.url, null)]));
+      } else openPlace("tag", arg);
+    } else if (kind === "help") {  // a page of the help, and a place on it
       const [page, anchor] = arg.split("#");
       openPlace("help", page, "", "", state.place && state.place.into === "main" ? "main" : "side",
                 anchor);

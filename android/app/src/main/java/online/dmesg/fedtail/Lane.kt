@@ -42,6 +42,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -136,18 +137,10 @@ fun LaneScreen(
                             // windows' lane buttons (a bare arrow told nothing). Nothing new: the
                             // arrow stays and goes to the newest end, as the windows' does — after
                             // "mark all read" the end was a long scroll away (02.11)
+                            // phone.to_new = "bottom": it floats over "write", by the thumb
+                            // (08.11: up here it was small, hard to see and to reach)
                             val unread = model.posts.count { it.unread }
-                            val toNew = stringResource(if (unread > 0) R.string.to_new else R.string.to_end)
-                            TextButton(onClick = {
-                                scope.launch {
-                                    aim(state, model.posts, model.newestFirst,
-                                        before = if (model.newestFirst) 0 else 1,
-                                        divider = model.divider?.first)
-                                }
-                            }, modifier = Modifier.semantics { contentDescription = toNew }) {
-                                Text((if (model.newestFirst) "↑" else "↓") +
-                                    (if (unread > 0) " $unread" else ""), fontSize = 15.sp)
-                            }
+                            if (!model.toNewBottom) ToNewButton(model, state, scope, unread)
                             if (unread > 0) {
                                 val allRead = stringResource(R.string.mark_all_read)
                                 IconButton(onClick = { model.markLaneRead() },
@@ -187,11 +180,16 @@ fun LaneScreen(
         },
         bottomBar = { if (model.commandLine) CommandBar(model) },
         floatingActionButton = {
-            if (!model.commandLine) {
-                FloatingActionButton(onClick = { model.compose(null) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary) {
-                    ThemedIcon("write", Icons.Filled.Edit, stringResource(R.string.write))
+            Column(horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (model.toNewBottom) ToNewButton(model, state, scope,
+                    model.posts.count { it.unread }, floating = true)
+                if (!model.commandLine) {
+                    FloatingActionButton(onClick = { model.compose(null) },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary) {
+                        ThemedIcon("write", Icons.Filled.Edit, stringResource(R.string.write))
+                    }
                 }
             }
         },
@@ -246,6 +244,9 @@ fun LaneScreen(
                 prefetch = model.prefetch,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 busy = model.busy,
+                // the last post's end readable above the floating buttons: "write" and,
+                // by the thumb, "↓ N" over it
+                bottomRoom = if (model.toNewBottom) 160 else 96,
                 header = if (model.newestFirst) null else earlier,
                 footer = {
                     Column {
@@ -270,6 +271,37 @@ fun LaneScreen(
                 Text(stringResource(R.string.yes_do)) } },
             dismissButton = { TextButton(onClick = { model.cmdConfirm = null }) {
                 Text(stringResource(R.string.cancel)) } })
+    }
+}
+
+/** "To the new" with how many there are — the windows' lane button (a bare arrow told
+ *  nothing). Nothing new: the arrow stays and goes to the newest end, as the windows' does
+ *  (after "mark all read" the end was a long scroll away, 02.11). floating: a small round
+ *  button over "write" (phone.to_new = "bottom"), else a text button in the lane's bar. */
+@Composable
+private fun ToNewButton(model: AppModel, state: LazyListState,
+                        scope: kotlinx.coroutines.CoroutineScope, unread: Int,
+                        floating: Boolean = false) {
+    val toNew = stringResource(if (unread > 0) R.string.to_new else R.string.to_end)
+    val go: () -> Unit = {
+        scope.launch {
+            aim(state, model.posts, model.newestFirst,
+                before = if (model.newestFirst) 0 else 1, divider = model.divider?.first)
+        }
+    }
+    val words = (if (model.newestFirst) "↑" else "↓") + (if (unread > 0) " $unread" else "")
+    if (floating) {
+        SmallFloatingActionButton(onClick = go,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.semantics { contentDescription = toNew }) {
+            Text(words, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 10.dp))
+        }
+    } else {
+        TextButton(onClick = go, modifier = Modifier.semantics { contentDescription = toNew }) {
+            Text(words, fontSize = 15.sp)
+        }
     }
 }
 

@@ -5,6 +5,11 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**What's next:**
+
+- A tag's menu on a click
+- News behind the filters still counts
+
 **0.22.3:**
 
 - "A device joined" in Activity — on it and on the others

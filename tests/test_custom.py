@@ -395,8 +395,25 @@ class ChipsTest(FreeBase):
         self.assertEqual(core.lane_filter(name), "main")
         self.assertEqual(core.lane_filter("home"), "all")
 
+    def test_hidden_counted_and_news_by_default(self):
+        """feed.count_filtered (on): what the quick filter hides is news all the same —
+        in the lane's number and notified (08.11: a lane filtered and forgotten)."""
+        core, w = self.setup_lane()
+        name = "feed"
+        self.assertEqual(core.unread_count(name), 2)  # 001 and the comment 002, hidden
+        self.assertEqual(core.filter_hidden_unread(name), ["002"])
+        self.events.clear()
+        core.cfg["notify"]["lanes"] = ["all"]
+        w.add(status("004", BOB, reply_to="001", reply_acc="B", minute=4), home=True)
+        core.poll_once()
+        news = [st["id"] for n, pl in self.events if n == "notify" for _lane, st in pl]
+        self.assertEqual(news, ["004"])  # notified (once a post: by Home, its first lane)
+        self.assertEqual(core.unread_count(name), 3)
+        self.assertEqual(core.filter_hidden_unread(name), ["004", "002"])
+
     def test_hidden_not_counted_nor_news(self):
         core, w = self.setup_lane()
+        core.cfg["feed"]["count_filtered"] = False
         name = "feed"
         self.assertEqual(core.unread_count(name), 1)  # 001 (003 is mine: read)
         self.events.clear()

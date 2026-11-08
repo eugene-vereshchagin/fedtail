@@ -297,12 +297,16 @@ class LaneView(Gtk.Box):
                     self._remove(k)
         self.strip.set_keys(keys)
         self._waiting = [k for k in self._waiting if k in index and k not in self.rows]
-        for k in self.order:  # "you replied" under what's on screen: a reply just sent
-            card = self.rows[k]
+        # a copy, and a card gone meanwhile skipped: a card made anew can move the
+        # scroll, and the cards near the screen change mid-loop (as Qt's set_specs, 07.11)
+        for k in list(self.order):  # "you replied" under what's on screen: a reply just sent
+            card = self.rows.get(k)
+            if card is None or k not in self.specs:
+                continue
             if isinstance(card, EventRow) and card.ids != EventRow.ids_of(self.specs[k]):
                 card.update_spec(self.specs[k])  # its events changed: one more like…
             card.set_unread(k in self.unread)
-            self.rows[k].set_my_replies(self.specs[k].extra.get("my_replies", ()))
+            card.set_my_replies(self.specs[k].extra.get("my_replies", ()))
         self._pill(len(self.unread))
         self._lay_out()
         if not self.positioned:
@@ -718,7 +722,7 @@ class LaneView(Gtk.Box):
         tip(self.to_new, _("to_new_tip") if n else _("to_end_tip"))
 
     def update_post(self, post):
-        for card in self.rows.values():
+        for card in list(self.rows.values()):
             if card.entry is not None and real(card.entry).id == post.id:
                 card.update(replace(card.entry, post=post) if isinstance(card.entry, Share)
                             else post)

@@ -19,6 +19,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Into a list right after a follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Hashtag lane, following tags | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A tag as its author writes it, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A tag's menu on a click | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | My likes | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   | ✓ | ✓ |   |   |
 | Bookmarks | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Trends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
@@ -77,6 +78,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A draft's pictures travel with it | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
+| News behind the filters still counts | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Sync set up in the window step by step, a new device by a password alone | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | "A device joined" in Activity — on it and on the others | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A lane without a seam: older posts come by themselves | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
@@ -253,4 +255,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **61** features of the 189 compared.
+Only in fedtail — **62** features of the 191 compared.

@@ -94,6 +94,7 @@ DEFAULTS = {
         "order": "oldest_first",
         "start_at": "first_unread",
         "on_new": "keep_position",
+        "count_filtered": True,
         "show_reply_context": True,
         "thread_indent_max": 8,
         "reply_context_chars": 160,
@@ -110,7 +111,7 @@ DEFAULTS = {
         "first_run_mark_read": True,
         "honest_counters": False,
         "counts_minutes": 5,
-        "tag_click": "author",
+        "tag_click": "menu",
         "counters_via_accounts": True,
         "remember_choices": False,
         "complete_threads": True,
@@ -363,6 +364,7 @@ DEFAULTS = {
     "phone": {
         "overview": "lanes",
         "layout": "auto",
+        "to_new": "bottom",  # the "↓ N new" button: "bottom" (by the thumb), "top"
         "push": "auto",
         "stream": "always",        # the live stream: "always", "wifi" (Wi-Fi only), "off"
     },
@@ -379,7 +381,7 @@ CHOICES = {
     ("feed", "thread_from"): {"local", "mixed", "remote"},
     ("feed", "open_at"): {"post", "first_unread"},
     ("feed", "comment_ids"): {"post", "own"},
-    ("feed", "tag_click"): {"author", "everywhere"},
+    ("feed", "tag_click"): {"menu", "author", "everywhere"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
     ("phone", "stream"): {"always", "wifi", "off"},
@@ -429,6 +431,7 @@ CHOICES = {
     ("phone", "overview"): {"lanes", "all", "list"},
     ("ui", "tiles"): {"lanes", "all", "none"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
+    ("phone", "to_new"): {"bottom", "top"},
     ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "fonts"): {"theme", "system", "custom"},
@@ -570,8 +573,8 @@ FILE_LAYOUT = (
                              "extra_minutes extra_posts rss_items rss_summary_chars "
                              "tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
-    ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit late_hours "
-                              "late_minutes render_limit "
+    ("reading", _keys("feed", "order start_at on_new count_filtered page_size catch_up_limit "
+                              "late_hours late_minutes render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
@@ -638,7 +641,7 @@ FILE_LAYOUT = (
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout push stream")),
+    ("phone", _keys("phone", "overview layout to_new push stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}

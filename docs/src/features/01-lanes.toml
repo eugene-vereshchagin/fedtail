@@ -198,8 +198,22 @@ api = "`accounts/:id/statuses?tagged=`"
 others.ru = "Point (теги у каждого блога свои)"
 others.en = "Point (each blog has its own tags)"
 clients = []
-details.ru = "Клик по #тегу в посте открывает посты этого автора с этим тегом; сверху — «#тег везде» (лента тега на твоём сервере) и профиль автора. Правый клик по тегу (на телефоне — долгое нажатие): у автора, везде, заглушить. `tag_click = \"everywhere\"` — клик сразу открывает ленту тега. Во всех интерфейсах и на телефоне."
-details.en = "A click on a #tag in a post opens that author's posts with the tag; on top — \"#tag everywhere\" (the tag's lane on your server) and the author's profile. A right click on a tag (a long press on the phone): by the author, everywhere, mute it. `tag_click = \"everywhere\"` — a click opens the tag's lane at once. Every interface and the phone."
+details.ru = "Посты этого автора с этим тегом — первый пункт меню тега, а при `tag_click = \"author\"` их открывает сам клик по #тегу; сверху — «#тег везде» (лента тега на твоём сервере) и профиль автора. `tag_click = \"everywhere\"` — клик сразу открывает ленту тега. Во всех интерфейсах и на телефоне."
+details.en = "That author's posts with the tag — the first item of the tag's menu, and with `tag_click = \"author\"` a click on the #tag opens them at once; on top — \"#tag everywhere\" (the tag's lane on your server) and the author's profile. `tag_click = \"everywhere\"` — a click opens the tag's lane at once. Every interface and the phone."
+
+[[feature]]
+id = "tag-menu"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Меню тега по клику"
+name.en = "A tag's menu on a click"
+config = "`card.tag_click` (`menu`)"
+api = "`tags/:name/follow`, `filters`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "Клик по #тегу в посте (правый клик, долгое нажатие на телефоне — всегда) открывает меню тега: посты этого автора с ним, #тег везде, подписаться на тег или отписаться, в ленты…, заглушить или снова показывать — каждое по тому, как сейчас. В окнах — у курсора, на веб-странице и телефоне — у слова, в терминале — списком."
+details.en = "A click on a #tag in a post (a right click, a long press on the phone — always) opens the tag's menu: that author's posts with it, #tag everywhere, follow the tag or stop, into the lanes…, mute it or show it again — each as it stands now. In the windows — by the mouse, on the web page and the phone — by the word, in the terminal — as a list."
 
 [[feature]]
 id = "my-likes"

@@ -490,8 +490,12 @@ class BridgeTest(_Base):
         self.assertIn("error", json.loads(self.bridge.thread_act("sideways", "103")))
         # a long press on a #tag: the windows' menu of it (common/links.tag_menu, 02.11)
         items = self.call("tag_menu", "fedtail:tag/cats")["items"]
-        self.assertEqual([x["url"] for x in items], ["fedtail:tagall/cats", "fedtail:mutetag/cats"])
-        self.assertIn("message", self.call("link", items[1]["url"]))  # muted, said so
+        self.assertEqual([x["url"].split("/")[0] for x in items],
+                         ["fedtail:tagall", "fedtail:followtag", "fedtail:place",
+                          "fedtail:mutetag"])
+        self.assertIn("message", self.call("link", items[-1]["url"]))  # muted, said so
+        # a tap: the menu too (reading.tag_click = "menu"); else none — the tag opens
+        self.assertTrue(self.call("tag_menu", "fedtail:tag/cats", True)["items"])
 
     def test_pinned_lanes_come_as_tiles_in_their_order(self):
         self.demo()

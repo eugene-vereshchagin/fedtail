@@ -49,6 +49,44 @@ class TagLinkTest(unittest.TestCase):
         self.assertEqual(self._open(menu[1][1], "author"), "cats")
         self.assertEqual(links.tag_menu("https://x.test/"), [])
 
+    def test_with_the_view_each_as_it_stands(self):
+        """08.11: Mastodon's own menu of a tag — follow, into the lanes, muted or not."""
+        url = core_links.tag_link("cats", "A1")
+        view = types.SimpleNamespace(tag_followed=lambda n: n == "cats",
+                                     tag_muted=lambda n: True)
+        got = [u.split("/")[0] for _w, u in links.tag_menu(url, view)]
+        self.assertEqual(got, ["fedtail:tagby", "fedtail:tagall", "fedtail:unfollowtag",
+                               "fedtail:place", "fedtail:unmutetag"])
+        view.tag_followed = lambda n: None  # not known yet: not offered
+        got = [u.split("/")[0] for _w, u in links.tag_menu(url, view)]
+        self.assertNotIn("fedtail:followtag", got)
+        view.tag_followed, view.tag_muted = (lambda n: False), (lambda n: False)
+        menu = links.tag_menu(url, view)
+        self.assertIn((i18n._("tag_follow_n", tag="cats"), "fedtail:followtag/cats"), menu)
+        self.assertIn((i18n._("tag_mute_n", tag="cats"), "fedtail:mutetag/cats"), menu)
+
+    def test_a_click_gives_the_menu(self):
+        """tag_click = "menu" (the default): the window shows it by the pointer when it
+        can (tag_menu_here), else it is a choice; the one picked is done."""
+        url = core_links.tag_link("cats", "A1")
+        host = mock.Mock()
+        view = types.SimpleNamespace(cfg={"feed": {"tag_click": "menu"}},
+                                     tag_followed=lambda n: False, tag_muted=lambda n: False)
+        host.tag_menu_here.return_value = True
+        links.Links(view, host).open(url)
+        items = host.tag_menu_here.call_args.args[0]
+        self.assertEqual(items[0][1], "fedtail:tagby/cats%20by%3AA1")
+        host.choose.assert_not_called()
+        host.open_tag.assert_not_called()
+        host = mock.Mock(spec=["choose", "open_tag", "open_place", "call", "status", "error"])
+        links.Links(view, host).open(url)
+        title, _text, options, done = host.choose.call_args.args[:4]
+        self.assertEqual(title, "#cats")
+        done("fedtail:tagall/cats", False)  # picked: done as a link
+        host.open_tag.assert_called_with("cats")
+        done("fedtail:place/taglanes%20cats", False)
+        host.open_place.assert_called_with("taglanes", "cats")
+
 
 class AuthorTagPlaceTest(TmpDir):
     make = test_cli.CliTest.make

@@ -189,6 +189,22 @@ details.ru = "Пришедшее после того, как лента нари
 details.en = "What comes after the lane is drawn doesn't go into it: the lane's header says \"N new — Refresh shows them\", and ⟳ / F5 lets them in. Older posts (paging down) come at once."
 
 [[feature]]
+id = "count-filtered"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Новое за фильтрами всё равно считается"
+name.en = "News behind the filters still counts"
+config = "`reading.count_filtered`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Быстрые фильтры ленты («Только посты», тег, «Новое»…) и фильтр по содержимому («только гифки») прячут посты с экрана, но не из счёта: новые за ними всё равно идут в число ленты и в уведомления, а в строке ленты — «ещё N новых скрыто фильтрами». Забытый фильтр больше не делает ленту мёртвой. «Прочитать всё» отмечает и их. `false` — считается только видное."
+details.en = "A lane's quick filters (\"Posts only\", a tag, \"New\"…) and its content filter (\"only gifs\") hide posts from the screen, not from the count: new ones behind them still go into the lane's number and its notifications, and the lane's line says \"N more new ones hidden by the filters\". A filter forgotten no longer makes a lane look dead. \"Mark all read\" takes them too. `false` — only what shows counts."
+
+[[feature]]
 id = "sync-wizard"
 status = "has"
 android = "has"

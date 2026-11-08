@@ -348,6 +348,7 @@ def open():  # noqa: A001 — what Kotlin calls it
         out["prefetch"] = core.cfg["feed"].get("prefetch", "previews")  # pictures ahead
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]
+        out["to_new"] = core.cfg["phone"].get("to_new", "bottom")
         out["push"] = core.cfg["phone"]["push"]
         out["merged"] = bool(_s["web"].merged())
         out["accounts"] = sum(1 for p in _profiles() if p["logged_in"])
@@ -534,10 +535,11 @@ def link(url, confirmed=False, chosen_json=None, shown_json=None):
     return _answer(go)
 
 
-def tag_menu(url):
+def tag_menu(url, click=False):
     """A long press on a post's #tag: the windows' menu of it (common/links.tag_menu) →
-    {"items": [{label, url}]}, each a fedtail: link link() does."""
-    return _answer(lambda: _s["web"].tag_menu(url))
+    {"items": [{label, url}]}, each a fedtail: link link() does. click: a tap — items
+    only with feed.tag_click = "menu" (none: the tag opens as before)."""
+    return _answer(lambda: _s["web"].tag_menu(url, bool(click)))
 
 
 def account(acc_id, show=None):

@@ -2156,6 +2156,17 @@ class MainWindow(Gtk.ApplicationWindow):
         self._asking = choose(self, title, text, options, done, check=check)  # (tests)
         return self._asking
 
+    def tag_menu_here(self, items):
+        """A tag clicked (feed.tag_click = "menu", common/links.py): its menu by the
+        pointer, in the text it was clicked in. False — not from a text: a choice then."""
+        from .textblock import last_click
+        at = last_click()
+        if at is None or not items:
+            return False
+        block, x, y = at
+        block.tag_popover(items, x, y)
+        return True
+
     def open_people(self, acc, which):
         """Whom someone follows, or who follows them: a tab of people."""
         from .people import open_people

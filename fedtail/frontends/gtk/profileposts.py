@@ -21,6 +21,11 @@ class ProfilePosts:
         self.pinned = []
         self.cards = []        # the cards shown, in order
         self.first_page = None
+        # where my server's next page starts: the last of its last page, in the server's
+        # order — not the last of items, sorted by time with posts fetched from the
+        # author's server among them, whose ids (GoToSocial's ULIDs) are as new as the
+        # fetch: the pages went round in a circle from there (as Qt's, 08.11)
+        self.max_id = None
         self.origin_asked = False
         self.older_origin = False
         self.origin_next = None
@@ -69,7 +74,7 @@ class ProfilePosts:
         self.show = show
         if not self.show_buttons[show].get_active():
             self.show_buttons[show].set_active(True)
-        self.items, self.first_page = [], None
+        self.items, self.first_page, self.max_id = [], None, None
         self.origin_asked = self.older_origin = False
         self.origin_next = None
         self.more_btn.set_label(_("older_down"))
@@ -132,7 +137,7 @@ class ProfilePosts:
         if self.older_origin:
             return self._more_from_origin()
         self.more_btn.set_sensitive(False)
-        last = self.items[-1].id if self.items else None
+        last = self.max_id
         want = self.show  # a page for a kind switched away from meanwhile: dropped
         self.win.call(self.view.account_posts(self.acc.id, last, show=want),
                       lambda page: want == self.show and self._page(page),
@@ -142,6 +147,8 @@ class ProfilePosts:
         page = list(page or ())
         if self.first_page is None:
             self.first_page = page
+        if page:
+            self.max_id = page[-1].id
         self._merge(page)
         self.more_btn.set_visible(True)
         self.more_btn.set_sensitive(True)

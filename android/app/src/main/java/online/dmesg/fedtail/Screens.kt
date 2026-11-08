@@ -26,6 +26,12 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import coil.compose.AsyncImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -451,7 +457,7 @@ private val VISIBILITIES = listOf(
     "public" to R.string.vis_public, "unlisted" to R.string.vis_unlisted,
     "followers" to R.string.vis_followers, "direct" to R.string.vis_direct)
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarHostState) {
     val title = stringResource(when {
@@ -650,9 +656,22 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     formats.forEach { formatButton(it) }
                 }
             }
+            // typing at the end, the field grows under the keyboard and the screen didn't
+            // follow (08.11: what was typed went out of sight below): its bottom — the
+            // last line and the count — is brought into view as it grows
+            val bring = remember { BringIntoViewRequester() }
+            var fieldSize by remember { mutableStateOf(IntSize.Zero) }
+            var focused by remember { mutableStateOf(false) }
+            LaunchedEffect(field.text, fieldSize, focused) {
+                if (!focused || fieldSize.height == 0 || !field.selection.collapsed ||
+                    field.selection.end != field.text.length) return@LaunchedEffect
+                val h = fieldSize.height.toFloat()
+                bring.bringIntoView(Rect(0f, (h - 1f).coerceAtLeast(0f), fieldSize.width.toFloat(), h))
+            }
             val textField: @Composable (Modifier) -> Unit = { mod ->
             OutlinedTextField(value = field, onValueChange = { field = it; model.composeText = it.text },
-                modifier = mod.heightIn(min = 160.dp),
+                modifier = mod.heightIn(min = 160.dp).bringIntoViewRequester(bring)
+                    .onSizeChanged { fieldSize = it }.onFocusChanged { focused = it.isFocused },
                 placeholder = { Text(stringResource(R.string.write_here)) },
                 supportingText = {
                     // the windows' count once asked (a chain: part by part), till then the length

@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import html
 import re
+import time
+import weakref
 
 from .gi_setup import Gdk, Gtk, Pango
 
@@ -76,6 +78,21 @@ def links_of(markup, color):
         pos += len(text.encode("utf-8"))
     return "".join(out), links
 
+
+
+_last_click = None  # (the text block, x, y, when) of the last link clicked
+
+
+def last_click(within=1.0):
+    """(text block, x, y) of a link clicked just now, or None — a tag's menu
+    (feed.tag_click = "menu") opens by the pointer there."""
+    if _last_click is None:
+        return None
+    ref, x, y, at = _last_click
+    block = ref()
+    if block is None or time.monotonic() - at > within:
+        return None
+    return block, x, y
 
 class TextBlock(Gtk.Widget):
     """markup: Pango markup with <a href> links; link_color: "#rrggbb";
@@ -285,24 +302,31 @@ class TextBlock(Gtk.Widget):
         self.sel = (start, end)
         self.queue_draw()
 
+    def tag_popover(self, tags, x, y):
+        """A tag's menu (common/links.tag_menu: [(words, link)]) pointing at (x, y)."""
+        pop = Gtk.Popover()
+        pop.set_parent(self)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for words, url in tags:
+            b = Gtk.Button(label=words)
+            b.add_css_class("flat")
+            b.connect("clicked", lambda _b, u=url: (pop.popdown(), self.on_link(u)))
+            box.append(b)
+        pop.set_child(box)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+        pop.set_pointing_to(rect)
+        pop.popup()
+        self._tag_pop = pop  # (tests)
+        return pop
+
     def _right(self, gesture, _n, x, y):
         from ..common.links import tag_menu
-        tags = tag_menu(self.link_at(x, y) or "") if self.on_link is not None else []
+        tags = tag_menu(self.link_at(x, y) or "", getattr(self, "view", None)) \
+            if self.on_link is not None else []
         if tags:  # a tag: by its author, everywhere, muted (as Qt's menu)
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-            pop = Gtk.Popover()
-            pop.set_parent(self)
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            for words, url in tags:
-                b = Gtk.Button(label=words)
-                b.add_css_class("flat")
-                b.connect("clicked", lambda _b, u=url: (pop.popdown(), self.on_link(u)))
-                box.append(b)
-            pop.set_child(box)
-            rect = Gdk.Rectangle()
-            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
-            pop.set_pointing_to(rect)
-            pop.popup()
+            self.tag_popover(tags, x, y)
             return
         text = self.selected()
         if text and self.on_select is not None:
@@ -335,4 +359,6 @@ class TextBlock(Gtk.Widget):
         url = self.link_at(x, y)
         if url and self.on_link is not None and n == 1:
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            global _last_click  # where a menu the link asks for (a tag's) points
+            _last_click = (weakref.ref(self), x, y, time.monotonic())
             self.on_link(url)
