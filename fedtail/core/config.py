@@ -46,8 +46,9 @@ DEFAULTS = {
         "bookmark_button": True,
         "additional_highlight": True,
         # the tools over a post, under the mouse (common/actions.TOOLS): out of its menu
-        "hover_tools": ["open", "copy_link", "translate", "quote", "sub_thread",
-                        "mute_thread", "read_upto", "edit", "delete"],
+        "hover_tools": ["open", "copy_link", "translate", "quote", "reply_quote",
+                        "sub_thread", "mute_thread", "read_upto", "edit", "delete"],
+        "code_click": "thread",  # a click on a post's #abc: "thread" — open it; "line"
         "menu_groups": True,  # a post's menu in submenus: Author, Thread, More
         "arts_mode": True,
         "max_width": 760,
@@ -388,6 +389,7 @@ CHOICES = {
     ("feed", "open_at"): {"post", "first_unread"},
     ("feed", "comment_ids"): {"post", "own"},
     ("feed", "tag_click"): {"menu", "author", "everywhere"},
+    ("ui", "code_click"): {"thread", "line"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
     ("feed", "translate_backend"): {"server", "libretranslate"},
     ("phone", "stream"): {"always", "wifi", "off"},
@@ -590,7 +592,7 @@ FILE_LAYOUT = (
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
-             "hover_tools menu_groups links_in_app")
+             "hover_tools menu_groups code_click links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
              "counters_via_accounts "
              "translate "
@@ -818,8 +820,8 @@ def _type_name(v):
 
 
 # the tools over a post a window may show (ui.hover_tools; common/actions.TOOLS draws them)
-HOVER_TOOLS = ("open", "copy_link", "translate", "quote", "sub_thread", "mute_thread",
-               "read_upto", "edit", "delete")
+HOVER_TOOLS = ("open", "copy_link", "translate", "quote", "reply_quote", "sub_thread",
+               "mute_thread", "read_upto", "edit", "delete")
 
 
 def validate(user):

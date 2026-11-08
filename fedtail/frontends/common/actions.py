@@ -152,11 +152,18 @@ class Item:
 # right, each one of the ⋯ menu's items — out of the menu then, where they show (the
 # windows); name → (the picture, iconpack's name; the glyph without pictures)
 TOOLS = {"open": ("open", "↗"), "copy_link": ("copy", "⧉"), "translate": ("translate", "文"),
-         "quote": ("quote", "❝"), "sub_thread": ("subs", "◉"), "mute_thread": ("mute", "🔇"),
+         "quote": ("quote", "❝"), "reply_quote": ("reply_quote", "↩❝"),
+         "sub_thread": ("subs", "◉"), "mute_thread": ("mute", "🔇"),
          "read_upto": ("mark_read", "✓"), "edit": ("edit", "✎"), "delete": ("delete", "✕")}
 
 
 SEP = Item("separator")
+
+
+def short_id_tip(cfg):
+    """What a post's #abc says under the mouse: what a click on it does (ui.code_click)."""
+    line = (cfg.get("ui") or {}).get("code_click", "thread") == "line"
+    return _("short_id_tip_line" if line else "short_id_tip")
 
 
 def hover_tools(cfg):
@@ -221,8 +228,8 @@ def _menu(entry, ctx, short_id=None, unread=False):
     url = p.url or p.uri
     out = [Item("open", _("open_browser"), url=url, tool="open"),
            Item("copy", _("copy_link"), text=url, tool="copy_link")]
-    if short_id:
-        out.append(Item("copy", _("copy_id", id="#" + short_id), text="#" + short_id))
+    # (#abc to copy: not here — a click on the code opens the thread or puts it into
+    # the command line, ui.code_click; 08.11)
     author = p.author
     booster = entry.by if isinstance(entry, Share) and entry.by.id != author.id else None
     # @user@server of who wrote it (and who boosted it): to call them anywhere
@@ -260,11 +267,12 @@ def _menu(entry, ctx, short_id=None, unread=False):
             can_translate(ctx.translates, lang):
         out.append(Item("translate", _("translate"), tool="translate"))
     if ctx.quote_reply and ctx.me_id:
-        out.append(Item("quote_reply", _("reply_quote")))
+        out.append(Item("quote_reply", _("reply_quote"), tool="reply_quote"))
     if ctx.cfg["post"].get("invite", True):
         out.append(Item("link", _("invite"), url=make("invite", sid), group="thread"))
-    out.append(Item("link", _("unbookmark") if p.mine.bookmarked else _("bookmark"),
-                    url=make("bookmark", sid)))
+    if not ctx.cfg["ui"].get("bookmark_button", True):  # under the post already: not twice
+        out.append(Item("link", _("unbookmark") if p.mine.bookmarked else _("bookmark"),
+                        url=make("bookmark", sid)))
     if unread:  # by hand, whatever read.mark_read says
         out.append(Item("link", _("mark_one_read"), url=make("readone", sid)))
         out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid),

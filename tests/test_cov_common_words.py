@@ -60,7 +60,8 @@ class View:
     def __init__(self, posts, me=True):
         self.posts = {p.id: p for p in posts}
         self.me = types.SimpleNamespace(handle="mira") if me else None
-        self.cfg = {"feed": {"tag_click": "everywhere"}}  # a click opens the tag
+        self.cfg = {"feed": {"tag_click": "everywhere"},  # a click opens the tag
+                    "ui": {"code_click": "line"}}  # #abc into the command line
         self.read = []
 
     def by_id(self, sid):

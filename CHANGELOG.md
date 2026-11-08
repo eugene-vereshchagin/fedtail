@@ -47,6 +47,19 @@
   built-in theme's set has the new pictures (open, copy, translate, quote, mute, delete
   — the last was a ✕ glyph till now).
 
+- **A post's menu in submenus.** What's left in the ⋯ menu after the tools is grouped:
+  the frequent items on top, then "Author @…" (the address, a list, mute, their tags,
+  block, the server, report), "Thread" and "More" (who liked and boosted, the link's
+  posts, quotes, hide, why it's here…) — `card.menu_groups`. "Bookmark" is no longer in
+  the menu when it's a button under the post, "Copy #abc" is gone, and "Reply with
+  quote" is a tool over the post of its own (a new picture in every theme's set). In the
+  windows and on the web page; the terminal and the phone keep the menu flat.
+
+- **A click on a post's #abc opens its thread.** It put the name into the command line
+  (point.im's way) — where the hand reached for the thread. `card.code_click = "line"`
+  keeps the old way. The tools over the post no longer cover the #abc: they stand left of
+  it.
+
 - **The same lanes on every device, the same numbers.** With `sync.lane_rules` the lanes
   travelled only when they changed: lanes set up before sync never reached the other
   devices, and what made their counts (their languages, the counting window, repeated

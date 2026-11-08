@@ -144,7 +144,10 @@ class CommonTest(TmpDir):
         self.assertNotIn("fedtail:delete/001", urls(theirs))
         self.assertIn("fedtail:delete/002", urls(mine))
         self.assertNotIn("fedtail:block/002", urls(mine))
-        self.assertIn(("copy", "#a00"), [(i.kind, i.text) for i in theirs])
+        # #abc isn't copied from the menu: a click on the code opens the thread (08.11)
+        self.assertNotIn(("copy", "#a00"), [(i.kind, i.text) for i in theirs])
+        # the bookmark button under the post: not in the menu twice
+        self.assertNotIn("fedtail:bookmark/001", urls(theirs))
         self.assertIn("fedtail:hidepost/001", urls(theirs))
         self.assertIn("fedtail:hidepost/002", urls(mine))  # my own too
         cannot = actions.menu(self.view.by_id("001"),
@@ -179,6 +182,21 @@ class CommonTest(TmpDir):
         self.assertEqual(actions.tools(self.view.by_id("001"), none), [])
         self.assertEqual(len(actions.menu(self.view.by_id("001"), none, without_tools=True)),
                          len(actions.menu(self.view.by_id("001"), none)))
+
+    def test_a_click_on_the_code(self):
+        """ui.code_click (08.11): "thread" — the post's thread opens (the hand reaches for
+        it); "line" — into the command line, as point.im; the tip says which."""
+        h = Host()
+        ls = links.Links(self.view, h)
+        alias = self.view.short_ids([self.view.by_id("001")])[self.view.by_id("001").id]
+        ls.open("fedtail:alias/" + alias)
+        self.assertEqual(h.did[-1][:2], ("open_thread", ("001", "post")))
+        self.core.cfg["ui"]["code_click"] = "line"
+        ls.open("fedtail:alias/" + alias)
+        self.assertEqual(h.did[-1][:2], ("put_alias", (alias,)))
+        self.assertEqual(actions.short_id_tip(self.core.cfg), i18n._("short_id_tip_line"))
+        self.core.cfg["ui"]["code_click"] = "thread"
+        self.assertEqual(actions.short_id_tip(self.core.cfg), i18n._("short_id_tip"))
 
     def test_the_menu_in_submenus(self):
         """ui.menu_groups (08.11): Author ▸ (the address, a list, mute, block, report…),

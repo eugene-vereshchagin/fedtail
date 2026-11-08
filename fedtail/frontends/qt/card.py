@@ -670,7 +670,7 @@ class PostRow(QWidget):
             lab.setObjectName("shortId")
             lab.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
             lab.setCursor(Qt.CursorShape.PointingHandCursor)
-            lab.setToolTip(_("short_id_tip"))
+            lab.setToolTip(actions.short_id_tip(self.ctx.cfg))
             lab.linkActivated.connect(self.ctx.on_link)
             h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop if place == "header"
                         else Qt.AlignmentFlag.AlignVCenter)
@@ -727,7 +727,13 @@ class PostRow(QWidget):
         if host is None:
             return
         box.adjustSize()
-        box.move(max(0, host.width() - box.width() - 6), 4)
+        # left of the post's #abc, not over it: it stays to be clicked (08.11)
+        right = host.width() - 6
+        code = host.findChild(QLabel, "shortId")
+        if code is not None and code.isVisible():
+            from PySide6.QtCore import QPoint
+            right = code.mapTo(host, QPoint(0, 0)).x() - 4
+        box.move(max(0, right - box.width()), 4)
         box.raise_()
 
     def enterEvent(self, e):  # noqa: N802 — Qt's name

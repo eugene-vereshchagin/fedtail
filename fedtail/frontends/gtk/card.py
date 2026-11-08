@@ -204,6 +204,9 @@ class Card(Gtk.Box):
                 tip(b, it.label)
                 b.connect("clicked", lambda _b, i=it: self._do(i))
                 tools.append(b)
+        # left of the post's #abc, not over it: it stays to be clicked (08.11)
+        sid = getattr(self, "sid_label", None)
+        tools.set_margin_end((sid.get_width() + 8) if sid is not None and on else 0)
         tools.set_visible(on and tools.get_first_child() is not None)
 
     own_tools = None
@@ -322,8 +325,9 @@ class Card(Gtk.Box):
             sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
                          ("ft-mono",), markup=True)
             sid.connect("activate-link", self._link)
-            tip(sid, _("short_id_tip"))
+            tip(sid, actions.short_id_tip(self.ctx.cfg))
             head.append(sid)
+            self.sid_label = sid  # the tools stand left of it: it stays clickable
 
     def _build(self, parent, number, my_replies):
         p, ctx, col = self.post, self.ctx, self.column
@@ -379,8 +383,9 @@ class Card(Gtk.Box):
                 sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
                              ("ft-mono",), markup=True)
                 sid.connect("activate-link", self._link)
-                tip(sid, _("short_id_tip"))
+                tip(sid, actions.short_id_tip(self.ctx.cfg))
                 head.append(sid)
+                self.sid_label = sid  # the tools stand left of it: it stays clickable
             # the time (the thread), who sees it, "edited" — as Qt's header has them
             meta = []
             if p.created:

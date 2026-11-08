@@ -379,3 +379,8 @@ help = "reading.md#the-post-card"
 text = "Delete your post — asked first."
 config = "ui.hover_tools"
 help = "reading.md#the-post-card"
+
+[reply_quote]
+text = "Reply quoting the post's text (what's selected — only that)."
+config = "ui.hover_tools"
+help = "reading.md#the-post-card"

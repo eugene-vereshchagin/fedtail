@@ -28,6 +28,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | No emoji at all | ◐ | the setting is there; the phone's own emoji are drawn by its font |
 | The post under the mouse lit | · | a phone has no mouse |
 | Tools over the post instead of a long menu | · | a phone has no mouse: all of it in the ⋯ menu |
+| A post's menu in submenus | — | the phone's menu is flat for now |
 
 ### Pictures and video
 

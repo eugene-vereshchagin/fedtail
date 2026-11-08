@@ -379,3 +379,8 @@ help = "reading.md#карточка-поста"
 text = "Удалить свой пост — спросим перед этим."
 config = "ui.hover_tools"
 help = "reading.md#карточка-поста"
+
+[reply_quote]
+text = "Ответить, процитировав текст поста (выделенное — только его)."
+config = "ui.hover_tools"
+help = "reading.md#карточка-поста"

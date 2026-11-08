@@ -1183,6 +1183,8 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: len(self.world.posted) > before, 5))
         self.assertEqual(self.world.posted[-1][2], "011")
         self.assertTrue(pump(lambda: bar.entry.get_text() == "", 2))
+        self.win.cfg["ui"]["code_click"] = "line"  # (the default opens the thread)
+        self.addCleanup(self.win.cfg["ui"].__setitem__, "code_click", "thread")
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 

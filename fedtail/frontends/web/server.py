@@ -781,7 +781,8 @@ class Web:
             # not logged in yet: the page shows the login place and nothing else
             return {"login": self.core.paths.profile, "version": __version__,
                     "lang": i18n.current_language(), "homepage": version.HOMEPAGE,
-                    "words": {k: _(k) for k in WORDS}}
+                    "words": dict({k: _(k) for k in WORDS},
+                              short_id_tip=actions.short_id_tip(c))}
         if self.core.me is None:  # just logged in from the page: connected, then polling
             self.core.connect().result(timeout=120)
         self.core.start_polling()
@@ -798,6 +799,7 @@ class Web:
                 "highlight": bool(c["ui"].get("additional_highlight", True)),
                 # the tools over a post, under the mouse (ui.hover_tools; /api/post_menu)
                 "hover_tools": bool(actions.hover_tools(c)),
+                "code_click": c["ui"].get("code_click", "thread"),  # #abc: thread or line
                 "visibility": self.core.default_visibility(),
                 # when a picture that didn't come is asked again: the windows' times
                 "picture_later": list(_picture_later()),
@@ -816,7 +818,8 @@ class Web:
                 "notify": {"when_focused": c["notify"]["when_focused"]},
                 "editor": self.editor_facts(),
                 "merged": self.merged(),
-                "words": {k: _(k) for k in WORDS}}
+                "words": dict({k: _(k) for k in WORDS},
+                              short_id_tip=actions.short_id_tip(c))}
 
     # ---- the theme: the windows' colours and font, as the page's own --------------------
     # CSS variable <- the theme's colour (the first one set, "auto" passed over)

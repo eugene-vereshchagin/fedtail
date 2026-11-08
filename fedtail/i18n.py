@@ -572,7 +572,9 @@ _STRINGS = {
         "copy_handle_tip": "@ник@сервер — по нему человека найдёт и упомянет любой клиент и "
                            "любой сервер, как по адресу почты",
         "handle_copied": "Скопировано: {handle}",
-        "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
+        "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — открыть тред",
+        "short_id_tip_line": "Короткий номер поста, как #abc на Point. Клик — в командную "
+                             "строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
         "fresh_of_them": "из них новых {n}",
         "config_broken": "В файле настроек ошибка: {path}",
@@ -2461,7 +2463,9 @@ _STRINGS = {
         "copy_handle_tip": "@name@server — any client on any server finds and mentions them "
                            "by it, like an email address",
         "handle_copied": "Copied: {handle}",
-        "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
+        "short_id_tip": "Short post number, like #abc on Point. Click — open the thread",
+        "short_id_tip_line": "Short post number, like #abc on Point. Click — into the "
+                             "command line",
         "unread_tip": "New", "came_from": "you came from here",
         "fresh_of_them": "{n} of them new",
         "config_broken": "The settings file has an error: {path}",

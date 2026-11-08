@@ -174,7 +174,11 @@ function renderPost(p, inThread) {
   if (p.alias) {
     const a = el("span", "alias", "#" + p.alias);
     a.title = w("short_id_tip");
-    a.onclick = () => { const c = $("#cmd"); c.value = "#" + p.alias + " "; c.focus(); };
+    // ui.code_click: the thread (the hand reaches for it, 08.11), or the command line
+    a.onclick = () => {
+      if (state.me.code_click === "line") { const c = $("#cmd"); c.value = "#" + p.alias + " "; c.focus(); }
+      else openThread(p.sid, "post");
+    };
     meta.append(a);
   }
   if (VIS_MARK[p.visibility]) {

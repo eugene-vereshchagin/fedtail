@@ -19,6 +19,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 |---|---|---|---|---|---|---|
 | Servers' emoji as pictures | ✓ | ✓ | · | ✓ | ✓ | The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text. |
 | Tools over the post under the mouse | ✓ | ✓ | · | ✓ | · | ui.hover_tools: in the Qt and GTK windows and on the web page the post under the mouse has at its top right — open in the browser, copy the link, translate, quote, follow the thread, mute it, read up to here, and on my own one edit and delete; its ⋯ menu has them no more there. The terminal has no mouse — all of it in the post's menu. Android: a phone has no mouse: all of it in the card's ⋯ menu |
+| A post's menu in submenus | ✓ | ✓ | ◐ | ✓ | — | ui.menu_groups: in the Qt and GTK windows and on the web page the ⋯ menu has the frequent items on top and the submenus "Author @…", "Thread", "More". The terminal's post menu is one list (the words are in the common code; it draws no submenus yet). Android: the phone's card menu is flat for now |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
 
 ### Pictures and video

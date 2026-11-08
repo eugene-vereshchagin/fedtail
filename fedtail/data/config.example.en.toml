@@ -704,10 +704,11 @@ additional_highlight = true
 # The tools over a post, at its top right while the mouse is on it (the windows): each is
 # an item of its ⋯ menu, and goes out of the menu there. Each only where the post has it:
 # "open" (in the browser), "copy_link", "translate" (a post in another language),
-# "quote" (where the author allows), "sub_thread", "mute_thread" (lit when on),
+# "quote" (where the author allows), "reply_quote" (reply quoting the post's text),
+# "sub_thread", "mute_thread" (lit when on),
 # "read_upto" (an unread post: read up to here), "edit" and "delete" (your own post).
 # [] — none: the whole menu in ⋯, as before.
-hover_tools = ["open", "copy_link", "translate", "quote", "sub_thread", "mute_thread", "read_upto", "edit", "delete"]
+hover_tools = ["open", "copy_link", "translate", "quote", "reply_quote", "sub_thread", "mute_thread", "read_upto", "edit", "delete"]
 
 # A post's ⋯ menu in submenus: what's about its author ("Author @…" — the address, a
 # list, mute, block, the server, report, its tags), the thread ("Thread" — call someone
@@ -715,6 +716,10 @@ hover_tools = ["open", "copy_link", "translate", "quote", "sub_thread", "mute_th
 # link's posts, quotes, hide, why it's here…); the frequent ones stay on top. In the
 # windows and on the web page; the terminal and the phone keep it flat. false — one list.
 menu_groups = true
+
+# A click on a post's short number (#abc): "thread" — open its thread, at the post; "line"
+# — put it into the command line (point.im's way), to type a command for it.
+code_click = "thread"
 
 # Open @mentions, #hashtags and links to fediverse posts and profiles inside
 # fedtail (a profile, a tag's lane, a thread), not in the browser. Not found — the browser.

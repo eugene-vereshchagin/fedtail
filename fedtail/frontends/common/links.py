@@ -142,8 +142,14 @@ class Links:
         h = self.host
         if action == "copyhandle":  # someone's @user@server, to call them anywhere
             self._ask(h, "copy_handle", unquote(arg))
-        elif action == "alias":  # a post's #abc: into the command line
-            self._ask(h, "put_alias", arg)
+        elif action == "alias":  # a post's #abc: its thread, or into the command line
+            post = self.view.by_alias(arg) \
+                if (self.view.cfg.get("ui") or {}).get("code_click", "thread") == "thread" \
+                else None
+            if post is not None:  # (the hand reaches for it to open the post, 08.11)
+                h.open_thread(post.id, "post")
+            else:
+                self._ask(h, "put_alias", arg)
         elif action == "tag":  # a post's tag: its menu, as its author writes it, everywhere
             name, _s, by = unquote(arg).partition(" by:")
             how = self.view.cfg["feed"].get("tag_click", "menu")

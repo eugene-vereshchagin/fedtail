@@ -653,8 +653,11 @@ class BridgePlacesTest(_Base):
         m = self.call("post_menu", "103")
         kinds = {i["kind"] for i in m["items"]}
         self.assertIn("link", kinds)
-        bm = next(i for i in m["items"] if i["url"].startswith("fedtail:bookmark/"))
-        got = self.call("link", bm["url"])
+        # (no bookmark here: the button under the card has it — 08.11)
+        self.assertFalse([i for i in m["items"] if i["url"].startswith("fedtail:bookmark/")])
+        sub = next(i for i in m["items"] if i["url"].startswith(("fedtail:sub/",
+                                                                  "fedtail:unsub/")))
+        got = self.call("link", sub["url"])
         self.assertTrue(got.get("message") or got.get("refresh"))
         mute = next(i for i in m["items"] if i["url"].startswith("fedtail:mute/"))
         ask = self.call("link", mute["url"])
