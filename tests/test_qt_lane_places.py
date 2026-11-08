@@ -396,6 +396,21 @@ class HoverTest(unittest.TestCase):
         mine.leaveEvent(QEvent(QEvent.Type.Leave))
         self.assertFalse(mine.own_tools.isVisible())
         self.assertEqual(mine.actions_box.property("hover"), "false")
+        # a theme tried from the menu whose card has no rich header — chat (QIP, MRA,
+        # Psi), compact (juick, terminal): the tools all the same, over the corner (08.11)
+        for name in ("psi", "juick"):
+            self.win.try_theme(name)
+            self.pump(until=lambda: "011" in view.rows)
+            row = view.rows["011"]
+            row.enterEvent(QEnterEvent(p, p, p))
+            self.assertIsNotNone(row.own_tools, name)
+            self.assertTrue(row.own_tools.isVisible(), name)
+            self.assertNotIn(i18n._("open_browser"),
+                             [a.text() for a in row.ensure_menu().actions()])
+            row.leaveEvent(QEvent(QEvent.Type.Leave))
+        self.win.try_theme("system")
+        self.pump(until=lambda: "011" in view.rows)
+        theirs = view.rows["011"]
         view.ctx.cfg["ui"]["additional_highlight"] = False  # off: nothing lit
         theirs.enterEvent(QEnterEvent(p, p, p))
         self.assertNotEqual(theirs.actions_box.property("hover"), "true")

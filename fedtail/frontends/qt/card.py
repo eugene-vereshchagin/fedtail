@@ -496,7 +496,7 @@ class PostRow(QWidget):
         self._route_text_menus()  # every time: a rebuilt card has new labels
 
     def _build_body(self):
-        self.own_tools = self._tools_row = None  # the header is made anew
+        self.own_tools = None  # the card is made anew: its tools with it
         if self.body is not None:
             drop(self.body, self.lay)
         self.body = QWidget()
@@ -678,15 +678,13 @@ class PostRow(QWidget):
     own_tools = None  # the tools over the post, under the mouse (ui.hover_tools)
     # (named so since ✎ ✕ on my own post were all it had)
 
-    _tools_row = None
 
     def _own_tools(self):
         """The tools over the post (ui.hover_tools; common/actions.tools): at its top
         right, seen only while the mouse is over it — items of its ⋯ menu, out of the
         menu then (08.11: thirty lines of menu). Made anew at each hover: whether the
         thread is followed, the post read, may have changed meanwhile."""
-        row = self._tools_row
-        if row is None or self.spec.entry is None:
+        if self.card is None or self.spec.entry is None:  # (a separator, an event)
             return
         got = actions.tools(self.spec.entry, self._actions_ctx(),
                             short_id=self.spec.extra.get("short_id"), unread=self.spec.unread)
@@ -836,7 +834,6 @@ class PostRow(QWidget):
         top.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
         self._pinned_mark(top)
         top.addStretch(1)
-        self._tools_row = top  # ✎ ✕ go here on my own post, at the first hover
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
             came.setObjectName("cameFrom")
@@ -1104,12 +1101,13 @@ class PostRow(QWidget):
     def _fill_more(self, menu, entry):
         """The post's ⋯ menu: what's in it comes from common/actions.py."""
         menu.clear()
-        # the tools over the post (ui.hover_tools) are there, not here — unless the
-        # card has no top row to show them in (then the menu keeps them)
+        # the tools over the post (ui.hover_tools) are there, not here — in every
+        # theme's card: they float over its corner, whatever its header (the chat and
+        # compact ones had no row for them, and the tools never showed: 08.11)
         for it in actions.menu(entry, self._actions_ctx(),
                                short_id=self.spec.extra.get("short_id"),
                                unread=self.spec.unread,
-                               without_tools=self._tools_row is not None):
+                               without_tools=self.card is not None):
             if it.kind == "separator":
                 menu.addSeparator()
             elif it.kind in ("link", "open", "copy", "translate", "quote_reply",
