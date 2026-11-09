@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 
 from ...i18n import _
+from .syncline import last_line
 
 log = logging.getLogger(__name__)
 
@@ -173,8 +174,7 @@ class SyncPlaces:
         page.hint = _("sync_done_hint")
         page.rows += [
             Row("text", _("sync_f_pending"), str((st or {}).get("pending", 0))),
-            Row("text", _("sync_f_last"), " ".join(
-                x for x in (last.get("at", ""), last.get("error", "")) if x) or nothing,
+            Row("text", _("sync_f_last"), last_line(last) or nothing,
                 buttons=(self._btn(_("sync_now_btn"), "sync", "now", primary=True),)),
             Row("item", _("sync_next_device_title"), _("sync_next_device_line"),
                 key="show", buttons=(self._btn(_("sync_key_show_btn"), "sync", "show"),)),

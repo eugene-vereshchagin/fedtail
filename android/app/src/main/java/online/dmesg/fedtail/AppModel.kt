@@ -575,13 +575,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (!demo) Push.setUp(getApplication(), me.optString("push", "auto"))
         val arr = got.optJSONArray("lanes") ?: JSONArray()
         lanes = parseLanes(arr)
-        startLane = (0 until arr.length()).map { arr.getJSONObject(it) }
+        // the core says which (ui.start_lane); none marked — "none": the overview first
+        val marked = (0 until arr.length()).map { arr.getJSONObject(it) }
             .firstOrNull { it.optBoolean("start") }?.optString("name")
-            ?: lanes.firstOrNull()?.name  // the core says which (ui.start_lane)
+        startLane = marked ?: lanes.firstOrNull()?.name
         loadHub()
         current = null
         screen = Screen.Main
-        laneOnStart?.let { showLane(it) }
+        // a notification's lane first; else ui.start_lane ("last", a lane) in one column
+        // too — the phone opened on the overview whatever it said (a report, 09.11)
+        (laneOnStart ?: marked)?.let { showLane(it) }
         laneOnStart = null
         watch()
         threadOnStart?.let { openThread(it) }

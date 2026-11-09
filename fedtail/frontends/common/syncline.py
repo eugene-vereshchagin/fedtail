@@ -33,6 +33,17 @@ def local_time(iso):
     return t.strftime("%H:%M") if t.date() == today else t.strftime("%d.%m %H:%M")
 
 
+def last_line(last):
+    """sync_status()["last"] in words: when (local time; kept in UTC) and the error, if
+    any — "" when there was no round yet."""
+    last = last or {}
+    when = local_time(last["at"]) if last.get("at") else ""
+    if last.get("error"):
+        at = local_time(last["error_at"]) if last.get("error_at") else ""
+        return " ".join(x for x in (at or when, last["error"]) if x)
+    return when
+
+
 def bar(view):
     """(text, tooltip) for the status bar."""
     st = status(view)
@@ -58,4 +69,4 @@ def about(view):
     return f"{st.get('where') or ''} · {bar(view)[0]}"
 
 
-__all__ = ["about", "bar", "local_time", "status"]
+__all__ = ["about", "bar", "last_line", "local_time", "status"]

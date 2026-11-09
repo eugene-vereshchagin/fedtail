@@ -246,6 +246,7 @@ sidebar_footer = true
 #   "none" — nothing: every lane behind the curtain, the counts on the left (Enter opens the last one);
 #   "last" — the lane open last time;
 #   a lane's name — always that one: "home", "replies", "subs"… (as in [lanes]).
+# The phone does the same: "none" — the overview of lanes, else that lane at once.
 start_lane = "none"
 
 # Tiles on the curtain (every lane closed: at start, or Esc), under the opossum, as the

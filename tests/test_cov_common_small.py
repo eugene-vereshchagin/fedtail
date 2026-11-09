@@ -186,6 +186,26 @@ class SynclineTest(unittest.TestCase):
         old = (datetime.now(UTC) - timedelta(days=3)).isoformat()
         self.assertIn(".", syncline.local_time(old))  # not today: with its date
 
+    def test_the_last_round_in_local_time(self):
+        """Sync's "Last time" (≡ → Sync, `fedtail sync status`): kept in UTC, said in
+        the local time — it said "2026-11-09T14:11:06Z" (a report, 09.11)."""
+        import os
+        import time
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"TZ": "UTC-3"}):
+            time.tzset()
+            try:
+                self.assertEqual(syncline.local_time("2000-01-02T14:11:06Z"), "02.01 17:11")
+                self.assertEqual(syncline.last_line({"at": "2000-01-02T14:11:06Z"}),
+                                 "02.01 17:11")
+                self.assertEqual(syncline.last_line(
+                    {"at": "2000-01-02T14:11:06Z", "error": "403",
+                     "error_at": "2000-01-03T20:00:00Z"}), "03.01 23:00 403")
+                self.assertEqual(syncline.last_line({}), "")
+            finally:
+                os.environ.pop("TZ", None)
+        time.tzset()
+
 
 class FindTest(unittest.TestCase):
     def test_words(self):

@@ -15,6 +15,9 @@
   the upload: the server's own list of types is asked first (`post.check_media_types`).
   And .md, .fb2, .epub go with their right type on Windows too, where Python didn't know
   them — for the servers that do take documents.
+* Sync's "Last time" (≡ → Sync, `fedtail sync status`) is in the local time, not UTC.
+* Android: `window.start_lane` ("last" or a lane's name) opens that lane at start in one
+  column too; the phone always opened on the overview of lanes. "none" keeps the overview.
 * Sync through WebDAV no longer sends MKCOL for folders that are there every round (nginx
   logged each one as an error, "File exists"): a folder is asked about first.
 

@@ -280,7 +280,8 @@ def cmd_sync(core, out, args, stdin=None):
                  else _("sync_round_failed"))
     st = core.sync_status()
     last = st["last"]
-    shown = " ".join(x for x in (last.get("at", ""), last.get("error", "")) if x)
+    from .common.syncline import last_line
+    shown = last_line(last)
     nothing = _("sync_nothing")
     out.line(_("sync_status", backend=st["backend"], where=st["where"] or nothing,
                login=st["login"] or nothing, device=st["device"], kid=st["key"] or nothing,
