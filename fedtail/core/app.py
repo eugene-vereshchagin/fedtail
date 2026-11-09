@@ -21,6 +21,7 @@ worker threads (see events.py):
 
 import json
 import logging
+import os
 import re
 import threading
 import time
@@ -509,15 +510,55 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             return me
         return self.submit(job)
 
-    def logout(self):
+    def logout(self, revoke=True):
         """The token off this computer and, best effort, dead on the server too: a copy of
-        auth.json left in a backup is worth nothing then."""
+        auth.json left in a backup is worth nothing then. revoke False: off this computer
+        only — the server refused it (token_refused), and if that was wrong after all, a
+        token revoked by fedtail itself would be truly dead."""
         old = self.auth
         auth.forget(self.paths.auth_file)
         self.auth = None
         self.api = None
-        if old:
+        if old and revoke:
             self._revoke(old)
+
+    # a 401 is the token refused only when the server says so again and again: a server
+    # coming back up, or a proxy before it, answers 401 / 403 for a while (09.11: "fedtail
+    # thinks it was logged out after the server was down for a moment")
+    TOKEN_CHECKS = (0, 5, 20)  # seconds before each new "who am I?"
+
+    def token_refused(self, api=None, waits=None):
+        """Is the token really refused? "Who am I?" asked again, TOKEN_CHECKS apart:
+        True only when every answer is 401. An answer (200) — it wasn't the token (a lane
+        of its own refused: a list gone, a closed tag); another error (5xx, 403, no
+        answer) — the server isn't itself yet: not the token either, the round goes on
+        and the next one sees."""
+        api = api or self.api
+        if api is None:
+            return False
+        if waits is None:
+            waits = self.TOKEN_CHECKS
+        if os.environ.get("FEDTAIL_TOKEN_WAITS") == "0":  # the tests: asked, not waited for
+            waits = [0] * len(waits)
+        for wait in waits:
+            if wait:
+                time.sleep(wait)
+            try:
+                api.me()
+            except ApiError as e:
+                if getattr(e, "status", None) != 401:
+                    log.info("token check: %s — the server, not the token", e)
+                    return False
+                log.info("token check: %s", e)
+                continue
+            except Exception as e:  # noqa: BLE001 — no answer: the server is down
+                log.info("token check: %s: %s — the server, not the token",
+                         type(e).__name__, e)
+                return False
+            log.info("token check: the server knows me — not the token")
+            return False
+        log.warning("the server refuses the token (401 every time asked)")
+        return True
 
     def _new_token(self, server, token):
         """Logged in anew while connected: the requests and the live stream go on with the
@@ -641,7 +682,17 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                             "(log in anew with https://)")
                 raise ValueError(_("login_insecure"))
             api = self.api_class(self.auth["server"], self.auth["token"])
-            me = api.me()
+            try:
+                me = api.me()
+            except ApiError as e:
+                if getattr(e, "status", None) not in (401, 403):
+                    raise
+                if self.token_refused(api, self.TOKEN_CHECKS[1:]):
+                    raise  # a 401, said again and again: the windows log in anew
+                # a 401 / 403 that didn't last (a server coming up, a proxy): the server
+                # not answering as itself — said so, and connected again later
+                raise ConnectionError(f"the server answered {e.status} for a while, then "
+                                      "not that: not the token — trying again") from None
             try:  # the newer document apart: its trouble mustn't cost the older one's facts
                 v2 = api.instance_v2() if hasattr(api, "instance_v2") else None
             except Exception as e:  # noqa: BLE001 — a timeout, a broken answer

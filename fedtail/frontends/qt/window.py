@@ -1209,9 +1209,11 @@ class MainWindow(QMainWindow):
         self.select_lane(name)
 
     def _connect_failed(self, err):
-        if "HTTP 401" in err or "HTTP 403" in err:
+        if "HTTP 401" in err:  # the core asked again and again (Core.token_refused)
             QMessageBox.warning(self, _("auth_failed_title"), _("auth_failed"))
-            self.core.logout()  # the token is dead anyway: the login window, from scratch
+            # the login window, from scratch; the token not revoked by us: if the server
+            # was wrong after all, it still works
+            self.core.logout(revoke=False)
             self.start()
             return
         self.statusBar().showMessage(_("server_down", err=err))

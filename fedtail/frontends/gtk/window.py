@@ -1454,9 +1454,9 @@ class MainWindow(Gtk.ApplicationWindow):
         """As Qt: a token no longer taken — said, and the login from scratch; the server
         not answering — said, and again in 20 s."""
         err = str(err)
-        if "HTTP 401" in err or "HTTP 403" in err:
+        if "HTTP 401" in err:  # the core asked again and again (Core.token_refused)
             self.alert(_("auth_failed_title"), _("auth_failed"))
-            self.view.logout()
+            self.view.logout(revoke=False)  # not revoked by us: it may be fine after all
             self.start()
             return
         self.status(_("server_down", err=err), seconds=0)

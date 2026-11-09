@@ -7,6 +7,13 @@
 
 ## What's next
 
+- **A server down for a moment no longer logs fedtail out.** One 401 or 403 was enough:
+  in a round, "the token is no longer accepted"; at start (Qt, GTK), the login dropped
+  and the token revoked on the server — so a server coming back up, or a proxy before it,
+  killed a token that was fine. Now "who am I?" is asked again, seconds apart, and only a
+  401 every time counts; a lane of its own refused (a list gone) is that lane's error,
+  and the window's logout after it no longer revokes the token — in every interface.
+
 ## 0.22.4 — 2026-11-09
 
 **In short: the phone runs on Android 11 and reads like the windows; a tag and a post say

@@ -223,9 +223,11 @@ class PollErrorsTest(CoreCase):
 
     def test_a_refused_token_stops_the_round(self):
         c = self.connect()
+        self.w.fail_auth = True  # "who am I?" says 401 too, every time asked
         with mock.patch.object(c.sources["home"], "fetch", boom(ApiError(401, "token"))):
             c.poll_once()
         self.assertIn("auth_failed", [n for n, _p in self.events])
+        self.w.fail_auth = False
         with mock.patch.object(c.sources["home"], "fetch", boom(ApiError(500, "oops"))):
             c.poll_once()
         self.assertTrue(any("home" in e and "oops" in e for e in self.errors()))

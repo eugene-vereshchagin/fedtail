@@ -607,7 +607,10 @@ class PollMixin:
                     self.store.prune(name, self.keep_per_lane())
                     self._step("prune")
                 except ApiError as e:
-                    if e.status in (401, 403):
+                    # the token refused — only when "who am I?" says so again and again
+                    # (Core.token_refused): one 401 / 403 was a server coming up, or a
+                    # lane of its own refused
+                    if e.status in (401, 403) and self.token_refused():
                         self.emit("auth_failed", str(e))
                         return
                     self._round_error(name, e)

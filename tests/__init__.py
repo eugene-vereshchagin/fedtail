@@ -11,6 +11,9 @@ _os.environ.setdefault("FEDTAIL_MARK_MISSING", "0")
 # what this machine has installed decides nothing in a test (the CI's Debian job lacks some
 # Qt modules: a start through main() exited 3); tests/test_deps.py checks the check itself
 _os.environ.setdefault("FEDTAIL_NO_DEPCHECK", "1")
+# a 401 is asked again before it counts as the token refused (Core.token_refused): seconds
+# apart in life, at once in a test
+_os.environ.setdefault("FEDTAIL_TOKEN_WAITS", "0")
 
 
 def _offline():

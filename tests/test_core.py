@@ -2660,6 +2660,58 @@ class CoreTest(TmpDir):
         self.assertEqual(w.revoked, ["old"])
         self.assertEqual(core.api.token, "tok")
 
+    def test_a_server_coming_back_is_no_lost_token(self):
+        """09.11: "fedtail thinks the server logged it out after the server was down for
+        a moment". One 401 / 403 is asked again ("who am I?", Core.token_refused): a lane
+        of its own refused, or the server still coming up, is no lost token — the round
+        goes on, nothing is said, nothing revoked."""
+        core, w = self.make()
+        core.connect().result()
+        for status_ in (401, 403):  # a lane's own refusal: "who am I?" answers
+            def refused(code=status_, **kw):
+                raise ApiError(code, "a list gone")
+            core.sources["home"].fetch = refused
+            core.poll_once()
+        self.assertFalse(any(e[0] == "auth_failed" for e in self.events))
+        answers = [ApiError(401, "booting"), ConnectionError("down")]  # coming back up
+
+        def flaky():
+            raise answers.pop(0) if answers else AssertionError("asked too often")
+        core.api.me = flaky
+        core.poll_once()
+        self.assertFalse(any(e[0] == "auth_failed" for e in self.events))
+        self.assertEqual(w.revoked, [])
+
+    def test_connect_asks_again_before_logging_out(self):
+        """Connecting, a 401 that doesn't last is the server, not the token: said as a
+        server that isn't answering (the windows try again in 20 s); a 401 every time
+        asked — the token refused, and the window's logout leaves it unrevoked."""
+        core, w = self.make()
+        calls = []
+        orig = core.api_class
+
+        class Flaky(orig):
+            def me(self):
+                calls.append(1)
+                if len(calls) == 1:
+                    raise ApiError(401, "booting")
+                if len(calls) == 2:
+                    raise ConnectionError("still down")
+                return super().me()
+        core.api_class = Flaky
+        with self.assertRaises(ConnectionError) as e:
+            core.connect().result()
+        self.assertNotIn("HTTP 40", str(e.exception))
+        core.api_class = orig
+        w.fail_auth = True
+        with self.assertRaises(ApiError) as e:
+            core.connect().result()
+        self.assertIn("HTTP 401", str(e.exception))
+        self.assertTrue(core.token_refused(core.api_class("https://example.test", "t")))
+        core.logout(revoke=False)
+        self.assertEqual(w.revoked, [])
+        self.assertIsNone(core.auth)
+
     def test_auth_failure_event(self):
         core, w = self.make()
         core.connect().result()
