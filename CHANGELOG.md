@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.22.4 — 2026-11-09
 
 **In short: the phone runs on Android 11 and reads like the windows; a tag and a post say
