@@ -1,5 +1,6 @@
 package online.dmesg.fedtail
 
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -101,11 +102,19 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import androidx.compose.foundation.interaction.DragInteraction
+
+/** A long press on a card (its words too, but a tag): its menu, the sheet of ⋯ — set by
+ *  the card around them. */
+val LocalCardHold = androidx.compose.runtime.compositionLocalOf<(() -> Unit)?> { null }
 
 /** What a card can ask for; the lane and the thread give the same (AppModel.cardActions). */
 class CardActions(
@@ -238,6 +247,7 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
     val scope = rememberCoroutineScope()
     val scale = LocalPostScale.current  // [font] post_scale: a theme's posts larger
     val emoji = remember(words) { emojiContent(words) }
+    val hold by rememberUpdatedState(LocalCardHold.current)
     fun urlAt(pos: androidx.compose.ui.geometry.Offset): String? {
         val at = layout?.getOffsetForPosition(pos) ?: return null
         return words.getStringAnnotations("URL", at, at).firstOrNull()?.item
@@ -251,7 +261,7 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
                         val url = urlAt(pos)
                         if (url != null && url.startsWith("fedtail:tag/")) {
                             scope.launch { menu = tagMenu(url, false) }
-                        }
+                        } else hold?.invoke()
                     },
                     onTap = { pos ->
                         val url = urlAt(pos)
@@ -514,11 +524,20 @@ fun Avatar(p: PostItem, size: Int) {
 }
 
 /** A card in a lane (variant A of the mockups): face, who, when, #alias; words, pictures. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
+    // a tap: its thread; a long press (anywhere but a link or a button): its menu, the ⋯
+    // sheet — the phone's way to a thing's menu (Fable's review, 09.11)
+    var menu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    val hold = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true } }
+    val menuWords = stringResource(R.string.more)
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp, shadowElevation = if (p.unread) 1.dp else 0.dp,
-        modifier = Modifier.fillMaxWidth().clickable { act.open(p) }) {
+        modifier = Modifier.fillMaxWidth().combinedClickable(onLongClickLabel = menuWords,
+            onLongClick = hold) { act.open(p) }) {
+      CompositionLocalProvider(LocalCardHold provides hold) {
         // the face beside the head only, the words the card's whole width under it — as
         // the windows and the web page draw a card (08.11: a column beside the face left
         // a strip of nothing down the post's left side, the text narrow)
@@ -565,21 +584,27 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
             p.conversation?.let { ConversationLine(it, act) }
             p.myReplies.forEach { BitLine(it, act) }
             p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
-            Actions(p, act)
+            Actions(p, act, menu) { menu = it }
         }
+      }
     }
 }
 
 /** A comment in a thread: indented by depth with a thread line, its /N, smaller face. */
 @Composable
 fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Boolean) {
+    var menu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    val hold = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true } }
     val depth = p.indent  // the model's (INDENT_MAX), as every interface draws it
     val bg = when {
         focused -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
         p.unread -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         else -> Color.Transparent
     }
+    CompositionLocalProvider(LocalCardHold provides hold) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(bg)
+        .pointerInput(p.key) { detectTapGestures(onLongPress = { hold() }) }
         .padding(start = 14.dp + (if (depth > 0) (depth - 1) * 16 else 0).dp)) {
         if (depth > 0) {
             Box(Modifier.padding(top = 4.dp, bottom = 4.dp, end = 10.dp).width(2.dp)
@@ -611,8 +636,9 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
             MetaLine(p, act, p.via)
             p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
             Body(p, act, hideSensitive)
-            Actions(p, act)
+            Actions(p, act, menu) { menu = it }
         }
+    }
     }
 }
 
@@ -894,7 +920,8 @@ private fun Vote(p: PostItem, act: CardActions) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         .background(MaterialTheme.colorScheme.surfaceVariant).padding(6.dp)) {
         p.pollOptions.forEachIndexed { i, title ->
-            Row(Modifier.fillMaxWidth().clickable {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(i in picked,
+                role = if (p.pollMultiple) Role.Checkbox else Role.RadioButton) {
                 picked = if (p.pollMultiple) (if (i in picked) picked - i else picked + i) else setOf(i)
             }, verticalAlignment = Alignment.CenterVertically) {
                 if (p.pollMultiple) Checkbox(checked = i in picked, onCheckedChange = null)
@@ -987,7 +1014,7 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, onClick: () -
             }
         }
         if (m.alt.isNotBlank() && shown) {
-            Text("ALT", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            Text("ALT", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Color(0x99000000))
                     .padding(horizontal = 4.dp, vertical = 1.dp))
@@ -996,7 +1023,7 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, onClick: () -
 }
 
 @Composable
-private fun Actions(p: PostItem, act: CardActions) {
+private fun Actions(p: PostItem, act: CardActions, menu: Boolean, setMenu: (Boolean) -> Unit) {
     val grey = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.padding(start = 0.dp), verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = { act.reply(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
@@ -1029,7 +1056,7 @@ private fun Actions(p: PostItem, act: CardActions) {
                 tint = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey)
         }
         Spacer(Modifier.weight(1f))
-        CardMenu(p, act)
+        CardMenu(p, act, menu, setMenu)
     }
 }
 
@@ -1040,18 +1067,17 @@ private fun Actions(p: PostItem, act: CardActions) {
  *  and the rest of the windows' menu, "Author ▸", "Thread ▸", "More ▸" opening in place. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CardMenu(p: PostItem, act: CardActions) {
-    var open by remember { mutableStateOf(false) }
+private fun CardMenu(p: PostItem, act: CardActions, open: Boolean, setOpen: (Boolean) -> Unit) {
     var info by remember { mutableStateOf<JSONObject?>(null) }
     // asked anew at each opening (last time's items stand till the answer: clearing them
     // first made the UI test of this menu fail on CI's slow emulator, 31.10)
     LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
-    IconButton(onClick = { open = true }, modifier = Modifier.size(48.dp)) {
+    IconButton(onClick = { setOpen(true) }, modifier = Modifier.size(48.dp)) {
         ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    if (open) ModalBottomSheet(onDismissRequest = { open = false }) {
-        PostSheet(p, act, info) { open = false }
+    if (open) ModalBottomSheet(onDismissRequest = { setOpen(false) }) {
+        PostSheet(p, act, info) { setOpen(false) }
     }
 }
 

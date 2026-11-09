@@ -1,5 +1,6 @@
 package online.dmesg.fedtail
 
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -594,7 +595,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 }
             }
             val from = model.fromAccounts()
-            if (from.isNotEmpty() && !editing && place.replyTo == null) {
+            // a reply too: it may go from another account (the core starts at the one
+            // that got the post — draft_start's "account"), as the windows' and the page's
+            if (from.isNotEmpty() && !editing) {
                 Row(Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     from.forEachIndexed { i, (key, words) ->
@@ -762,10 +765,11 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             }
             model.attachments.forEach { a -> AttachmentRow(model, a, editing) }
             if (model.attachments.isNotEmpty() && !editing) {
-                Row(Modifier.fillMaxWidth().clickable { model.composeSensitive = !model.composeSensitive },
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .toggleable(model.composeSensitive, role = Role.Switch) { model.composeSensitive = it },
                     verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.mark_sensitive), Modifier.weight(1f))
-                    Switch(checked = model.composeSensitive, onCheckedChange = { model.composeSensitive = it })
+                    Switch(checked = model.composeSensitive, onCheckedChange = null)
                 }
             }
             if (model.pollOn && !editing) PollEditor(model)
@@ -926,10 +930,11 @@ private fun PollEditor(model: AppModel) {
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().clickable { model.pollMultiple = !model.pollMultiple },
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .toggleable(model.pollMultiple, role = Role.Switch) { model.pollMultiple = it },
             verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.poll_multiple), Modifier.weight(1f))
-            Switch(checked = model.pollMultiple, onCheckedChange = { model.pollMultiple = it })
+            Switch(checked = model.pollMultiple, onCheckedChange = null)
         }
         Row(Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {

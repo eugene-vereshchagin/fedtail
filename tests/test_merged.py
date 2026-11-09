@@ -468,6 +468,17 @@ class MergedRoutingTest(TmpDir):
         alone = Web(View(self.p), None)
         self.assertFalse([i for i in alone.post_menu("010")["items"] if i["kind"] == "act_as"])
 
+    def test_web_reply_starts_from_the_account_that_got_it(self):
+        """The editor's "From" of a reply (the page's, the phone's): the account the post
+        came by; a new post — the main one; one account alone — nothing to choose."""
+        from fedtail.core.view import View
+        from fedtail.frontends.web.server import Web
+        web = Web(View(self.m), None)
+        self.assertEqual(web.draft_start(reply_to="work~501")["account"], "work")
+        self.assertEqual(web.draft_start(reply_to="010")["account"], "")
+        self.assertEqual(web.draft_start()["account"], "")
+        self.assertIsNone(Web(View(self.p), None).draft_start(reply_to="010")["account"])
+
 
 if __name__ == "__main__":
     unittest.main()

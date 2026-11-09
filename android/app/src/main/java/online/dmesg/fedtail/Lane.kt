@@ -123,7 +123,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LaneScreen(
     model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit, state: LazyListState,
-    pane: Boolean = false, // beside the overview (a tablet): no way back to it, no strip
+    pane: Boolean = false, // beside the overview (a tablet): no ⊞ back to it; the strip stays
 ) {
     var switcher by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -338,7 +338,10 @@ private fun LaneHeader(model: AppModel, name: String, pane: Boolean, state: Lazy
                 LaneMore(model, name, state, scope, onSwitcher)
             }
             val unseen = stringResource(R.string.offline)
-            val line = listOf(if (model.offline) unseen else "", model.hubSlow,
+            // more accounts, each its own lanes: whose these are
+            val whose = if (model.accountCount > 1 && !model.merged && model.handle.isNotBlank())
+                "@" + model.handle else ""
+            val line = listOf(if (model.offline) unseen else "", whose, model.hubSlow,
                 model.laneSwitches?.info?.takeIf { model.posts.isNotEmpty() } ?: "")
                 .filter { it.isNotBlank() }.joinToString(" · ")
             if (line.isNotBlank()) {
@@ -469,7 +472,7 @@ private fun LanePill(model: AppModel, name: String, onExpand: () -> Unit, onSwit
     val words = stringResource(R.string.show_header, model.title)
     Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceVariant,
         shadowElevation = 3.dp,
-        modifier = Modifier.heightIn(min = 44.dp)
+        modifier = Modifier.heightIn(min = 48.dp)
             .combinedClickable(onClick = onExpand, onLongClick = onSwitcher)
             .semantics { contentDescription = words; role = Role.Button }) {
         Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,

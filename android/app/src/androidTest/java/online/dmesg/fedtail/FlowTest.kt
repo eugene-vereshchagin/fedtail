@@ -245,6 +245,21 @@ class FlowTest {
     }
 
     @Test
+    fun aLongPressOnACardOpensItsMenu() {
+        launch()
+        overview()
+        compose.onAllNodesWithText("Home").onFirst().performClick()
+        waitFor("a card", 90_000) { compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty() }
+        // the card's long click (its label "More"), not a tap: the menu, not the thread
+        val held = card and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(
+            SemanticsActions.OnLongClick)
+        compose.onAllNodes(held).onFirst().performSemanticsAction(SemanticsActions.OnLongClick)
+        compose.waitForIdle()
+        waitText("Reply with quote", 60_000)
+        assert(compose.onAllNodesWithText("/1").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
     fun aRefreshKeepsThePlaceInTheLane() {
         launch("lane" to "home")
         waitDescription("open now", substring = true)

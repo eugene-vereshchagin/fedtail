@@ -1,5 +1,10 @@
 package online.dmesg.fedtail
 
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import android.net.Uri
 import androidx.compose.foundation.Canvas
@@ -115,8 +120,10 @@ fun AskDialogs(model: AppModel) {
                         }
                         if (a.check.isNotBlank()) {
                             Row(verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { ticked = !ticked }) {
-                                Checkbox(checked = ticked, onCheckedChange = { ticked = it })
+                                modifier = Modifier.heightIn(min = 48.dp)
+                                    .toggleable(ticked, role = Role.Checkbox) { ticked = it }) {
+                                Checkbox(checked = ticked, onCheckedChange = null,
+                                    modifier = Modifier.padding(horizontal = 12.dp))
                                 Text(a.check)
                             }
                         }
@@ -383,20 +390,23 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
     }
     when (f.kind) {
         "check" -> Column {
-            Row(Modifier.fillMaxWidth().clickable { values[f.name] = values[f.name] != true },
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .toggleable(values[f.name] == true, role = Role.Switch) { values[f.name] = it },
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(f.label, Modifier.weight(1f))
-                Switch(checked = values[f.name] == true, onCheckedChange = { values[f.name] = it })
+                Switch(checked = values[f.name] == true, onCheckedChange = null)
             }
             tip()
         }
         "choice" -> Column {
             if (f.label.isNotBlank()) Text(f.label, style = MaterialTheme.typography.labelLarge)
             f.choices.forEach { (value, words) ->
-                Row(Modifier.fillMaxWidth().clickable { values[f.name] = value },
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .selectable(values[f.name]?.toString() == value, role = Role.RadioButton) {
+                        values[f.name] = value },
                     verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = values[f.name]?.toString() == value,
-                        onClick = { values[f.name] = value })
+                    RadioButton(selected = values[f.name]?.toString() == value, onClick = null,
+                        modifier = Modifier.padding(horizontal = 12.dp))
                     Text(words)
                 }
             }
@@ -599,12 +609,14 @@ private fun Featured(model: AppModel, f: FeaturedLine) {
         f.tags.forEach { t ->
             Text("#$t ", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { model.openPage("tag", t) })
+                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight()
+                    .clickable { model.openPage("tag", t) })
         }
         f.people.forEach { a ->
             Text("@${a.handle} ", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { model.openProfile(a.id) })
+                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight()
+                    .clickable { model.openProfile(a.id) })
         }
     }
 }

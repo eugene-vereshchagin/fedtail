@@ -1,5 +1,12 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +84,24 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface),
+                    // whose lanes these are, at a glance (Fable's review, 09.11): my face —
+                    // a tap, the accounts (switch, add) when there are more, else my profile
+                    navigationIcon = {
+                        if (model.handle.isNotBlank()) {
+                            val many = model.accountCount > 1
+                            val said = stringResource(if (many) R.string.accounts
+                                                      else R.string.my_profile)
+                            Box(Modifier.padding(start = 4.dp).size(48.dp).clip(CircleShape)
+                                .clickable {
+                                    if (many) model.openPage("accounts")
+                                    else model.openProfile(model.myId)
+                                }
+                                .semantics { contentDescription = said; role = Role.Button },
+                                contentAlignment = Alignment.Center) {
+                                Face(model.myAvatar, model.handle, model.handle, 34)
+                            }
+                        }
+                    },
                     title = {
                         // a tap: my profile, as the windows' "My profile" (02.11: the phone had
                         // no way there but my own post's avatar)
@@ -293,7 +318,8 @@ fun SmallHead(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun RestRow(lane: HubLane, browsed: Boolean, inset: Dp = 16.dp, onClick: () -> Unit) {
     Column(Modifier.padding(horizontal = inset)) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick),
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { role = Role.Button },
             verticalAlignment = Alignment.CenterVertically) {
             Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
             Text(when {
@@ -343,7 +369,9 @@ fun LaneTile(
     }
     val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
     Column(modifier.height(92.dp).clip(RoundedCornerShape(16.dp)).background(bg)
-        .clickable(onClick = onClick).padding(4.dp),
+        .clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) { role = Role.Button; selected = on }
+        .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         if (news) {
@@ -354,8 +382,8 @@ fun LaneTile(
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
         // "of them new 56": what the last update brought, smaller, under the title
         if (news && lane.fresh > 0) {
-            Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 11.sp,
-                lineHeight = 13.sp, color = fg.copy(alpha = 0.75f), maxLines = 1,
+            Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 12.sp,
+                lineHeight = 14.sp, color = fg.copy(alpha = 0.75f), maxLines = 1,
                 textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -418,6 +446,7 @@ private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Uni
                     else MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick)
+                .semantics(mergeDescendants = true) { role = Role.Button; selected = on }
                 .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -434,7 +463,7 @@ private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Uni
                 if (lane.unread > 0) Column(horizontalAlignment = Alignment.End) {
                     Count(lane.count, mine)
                     if (lane.fresh > 0) {
-                        Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 11.sp,
+                        Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -458,10 +487,14 @@ fun Count(n: String, mine: Boolean) {
 
 @Composable
 fun Chip(text: String, onClick: () -> Unit) {
+    // 48 dp to touch, 36 to see (Fable's review, 09.11: the chips were 36 to touch too)
+    Box(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick)
+        .semantics { role = Role.Button },
+        contentAlignment = Alignment.Center) {
     Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp))
-        .background(MaterialTheme.colorScheme.surface)
-        .clickable(onClick = onClick).padding(horizontal = 14.dp),
+        .background(MaterialTheme.colorScheme.surface).padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center) {
         Text(text, fontSize = 14.sp, maxLines = 1)
+    }
     }
 }

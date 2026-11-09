@@ -7,6 +7,13 @@
 
 ## What's next
 
+- Android: a long press on a card (or a comment in a thread) opens its menu, as a right
+  click does in the windows; the home screen shows your account's avatar (a tap: your
+  profile, or the accounts when there are more), a lane says whose it is when accounts
+  aren't merged, and a reply may go from another account too — the editor starts at the
+  one that got the post (the core's `draft_start` says which). Rows with a switch, a radio
+  button or a tick are one 48 dp target each, read by TalkBack as that control; tiles and
+  lane rows are buttons and say which lane is open; no label under 12 sp.
 - **Someone's posts no longer go round in a circle.** Paging back through a profile, the
   next page started after the last post *by time*, and posts fetched from the author's own
   server stood among them: old by date, but (on GoToSocial and other servers giving

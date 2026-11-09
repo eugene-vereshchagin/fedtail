@@ -1793,9 +1793,13 @@ class Web:
         mine = self._post_by_id(edit) if edit else None
         key = cc.draft_key(core, parent, quoted, mine, bool(invite))
         st = cc.start(core, key, parent, invite=bool(invite))
+        # all accounts in one: the one it goes from — the account that got the post
+        # replied to (core.post_accounts), "" the main one; the editor's "From" starts there
+        accounts, first = core.post_accounts(parent)
         return {"key": key, "text": st.text, "cw": st.cw, "visibility": st.visibility,
                 "language": st.language, "sensitive": st.sensitive, "poll": st.poll,
-                "restored": st.restored, "hint": _(st.hint) if st.hint else ""}
+                "restored": st.restored, "hint": _(st.hint) if st.hint else "",
+                "account": first if len(accounts) > 1 else None}
 
     def draft_save(self, key, snap):
         """The editor as it is now, kept under key (or gone, emptied) — post.drafts_autosave

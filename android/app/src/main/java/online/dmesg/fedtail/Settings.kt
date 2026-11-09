@@ -1,5 +1,7 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -117,9 +119,12 @@ private fun OptionCard(opt: Setting, set: (String) -> Unit) {
             // a choice with what each one means, as the desktop's card shows it
             "choice" -> Column {
                 opt.choices.forEach { (value, words) ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { set(value) },
+                    // the whole row one radio button, 48 dp (Fable's review, 09.11)
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        .selectable(selected = opt.value == value, role = Role.RadioButton) { set(value) },
                         verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = opt.value == value, onClick = { set(value) })
+                        RadioButton(selected = opt.value == value, onClick = null,
+                            modifier = Modifier.padding(horizontal = 12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(shown(value), fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                             if (words.isNotBlank() && words != shown(value)) {

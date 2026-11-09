@@ -258,6 +258,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf<Screen>(Screen.Starting)
     var demo by mutableStateOf(false)
     var handle by mutableStateOf("")
+    var myAvatar by mutableStateOf("")  // my account's picture: the home screen's corner
     var myId by mutableStateOf("")  // my account's id: "My profile" (the windows' ≡ item)
     var newestFirst by mutableStateOf(false)
     var markOnScroll by mutableStateOf(true)
@@ -555,6 +556,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val me = got.optJSONObject("me") ?: JSONObject()
         handle = me.optString("handle")
         myId = me.optJSONObject("me")?.optString("id").orEmpty()
+        myAvatar = me.optJSONObject("me")?.optString("avatar").orEmpty()
         newestFirst = me.optString("order") == "newest_first"
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
@@ -1263,6 +1265,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val d = Core.draftStart(replyTo?.sid ?: "")
             if (Core.failed(d) != null || editId != null || quoteId != null) return@launch
+            // all accounts in one: "From" starts at the account that got the post replied to
+            if (composeFrom == null && !d.isNull("account")) composeFrom = str(d, "account")
             if (place !is Place.Compose || composeText != opened) return@launch // typed meanwhile
             composeText = str(d, "text").ifBlank { composeText }
             // who sees a reply: the core's word (post.reply_never_wider), shown chosen —
