@@ -610,7 +610,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     CAPS_KV = "server_caps"
     CAPS_KEPT = ("software", "version", "software_sure", "max_characters", "max_media",
                  "markdown", "max_poll_options", "max_profile_fields", "translation",
-                 "image_bytes", "image_pixels")
+                 "image_bytes", "image_pixels", "media_types")
 
     def _remembered_caps(self):
         """Capabilities as the server last said them (the store's kv), or the defaults."""

@@ -218,6 +218,18 @@ class InstanceTest(unittest.TestCase):
         self.assertTrue(c.markdown and c.translation)
         self.assertEqual(c.streaming, "wss://s.test")
         self.assertEqual((c.image_bytes, c.image_pixels), (100, 200))
+        self.assertEqual(c.media_types, [])  # not said: the server decides
+        m = api_mod.capabilities_from_instance(
+            {"configuration": {"media_attachments": {"supported_mime_types": [
+                "image/png", "video/mp4", 5]}}}, {})
+        self.assertEqual(m.media_types, ["image/png", "video/mp4"])
+        v2 = api_mod.capabilities_from_instance({}, {"configuration": {"media_attachments": {
+            "supported_mime_types": ["audio/ogg"]}}})
+        self.assertEqual(v2.media_types, ["audio/ogg"])
+        from fedtail.protocols.base import media_type
+        self.assertEqual([media_type(p) for p in ("a.md", "b.FB2", "c.epub", "d.pdf", "e")],
+                         ["text/markdown", "application/x-fictionbook+xml",
+                          "application/epub+zip", "application/pdf", ""])
         self.assertTrue(c.software_sure)
         d = api_mod.capabilities_from_instance({"max_toot_chars": 1000}, "not a dict")
         self.assertEqual((d.max_characters, d.max_media), (1000, 4))

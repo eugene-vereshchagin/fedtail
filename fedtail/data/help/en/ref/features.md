@@ -503,6 +503,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Content warning (CW) | has | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
+| A file the server won't take — said at once | has | next | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
 | CamelCase hint for hashtags | has | 0.2.0 | `post.camelcase_hint` | own | only in fedtail |
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |
@@ -541,6 +542,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Pictures: drag, paste, description, focus.** Drag a file in or paste from the clipboard. A double click on a picture — the description and the focus point. A picture without a description — before sending, ask “Describe” or “Send as is”. Marking pictures sensitive — with a tick.
 
 **Shrinking pictures to the server's limit.** The server says what picture it takes (in pixels and bytes). Bigger — before the upload fedtail shrinks a copy to the pixel limit and recompresses it as JPEG (with transparency — PNG) under the byte limit, instead of being refused. Your file isn't touched, gifs aren't flattened. `post.resize_images = false` — as is.
+
+**A file the server won't take — said at once.** The server says which file types it takes (usually pictures, video, sound). PDF, EPUB, FB2 and anything else not on its list fedtail doesn't upload but says at once: “The server doesn't take such files: book.pdf (it takes: pictures, video, sound)” — the text stays in the draft. fedtail knows a file's type itself, the same on every system (.md, .fb2, .epub — on Windows too), so a server that takes documents (Akkoma, Pleroma) gets them with the right type. A server that gives no list decides itself. `post.check_media_types = false` — no check.
 
 **Completing #tags, @nicks, :emoji:.** `#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, Tab or Enter puts it in.
 

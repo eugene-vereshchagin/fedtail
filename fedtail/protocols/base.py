@@ -23,6 +23,7 @@ inside ``protocols/``: no ``/api/v…`` path in the code anywhere else, and the 
 only methods listed here.
 """
 
+import mimetypes
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -141,6 +142,8 @@ class Capabilities:
     streaming: str = ""  # wss://… of the live stream, "" — not said
     image_bytes: int = 0   # the largest picture the server takes, bytes (0 — not said)
     image_pixels: int = 0  # …and in pixels, width × height
+    media_types: list = field(default_factory=list)  # the attachments' MIME types it
+    # takes ("image/png", "video/*"…), [] — not said
     missing: set = field(default_factory=set)  # the server said no
     present: set = field(default_factory=set)  # the server said yes (a probe)
 
@@ -179,3 +182,39 @@ class Protocol:
     counters: Any = None  # module: origin_api_url(status, own), merge(status, origin)
     urls: Any = None      # the addresses of other servers' public pages: search, lookup,
     #                       statuses, public, tag (fetched without a token, core/remote)
+
+
+# Types the system may not know (Python on Windows asks the registry: .md, .fb2, .epub
+# often aren't there and go as application/octet-stream) — ours first, the same on every
+# system; then the system's.
+MEDIA_TYPES = {
+    ".md": "text/markdown", ".markdown": "text/markdown", ".txt": "text/plain",
+    ".pdf": "application/pdf", ".epub": "application/epub+zip",
+    ".fb2": "application/x-fictionbook+xml", ".djvu": "image/vnd.djvu",
+    ".odt": "application/vnd.oasis.opendocument.text",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
+    ".webp": "image/webp", ".avif": "image/avif", ".heic": "image/heic",
+    ".heif": "image/heif", ".jxl": "image/jxl", ".svg": "image/svg+xml",
+    ".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm",
+    ".mov": "video/quicktime", ".mkv": "video/x-matroska",
+    ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".oga": "audio/ogg", ".opus": "audio/ogg",
+    ".m4a": "audio/mp4", ".flac": "audio/flac", ".wav": "audio/wav",
+}
+
+
+def media_type(path):
+    """An attachment's MIME type by its name, or "" — not known."""
+    import os
+    ext = os.path.splitext(str(path))[1].lower()
+    return MEDIA_TYPES.get(ext) or mimetypes.guess_type(str(path))[0] or ""
+
+
+def media_taken(path, types):
+    """Whether a server that takes `types` (Capabilities.media_types) takes this file:
+    True when it doesn't say, or the file's type isn't known here (the server decides)."""
+    kind = media_type(path)
+    if not types or not kind:
+        return True
+    types = {str(t).lower() for t in types}
+    return kind in types or kind.split("/")[0] + "/*" in types

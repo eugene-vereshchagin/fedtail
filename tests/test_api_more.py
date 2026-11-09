@@ -40,6 +40,33 @@ class MoreApiTest(TmpDir):
         with self.assertRaises(LookupError):
             self.core.edit_filter("nope", words=["x"]).result()
 
+    def test_a_file_the_server_wont_take_is_said_before_the_upload(self):
+        """The server's supported_mime_types: a .pdf to one that takes pictures, video and
+        sound is refused here, in words, with nothing uploaded; a picture goes; a server
+        that doesn't say — or post.check_media_types off — leaves it to the server."""
+        self.core.caps.media_types = ["image/jpeg", "image/png", "video/mp4", "audio/mpeg",
+                                      "text/markdown"]
+        with self.assertRaises(ValueError) as e:
+            self.core.post("книга", "public", media=[("/tmp/book.pdf", "")]).result()
+        self.assertIn("book.pdf", str(e.exception))
+        self.assertIn("pictures, video, sound, .md", str(e.exception))
+        self.assertEqual(self.w.uploads, [])
+        # the type ours, not the system's: .md is text/markdown everywhere (Windows too)
+        self.core.post("заметка", "public", media=[("/tmp/note.md", "")]).result()
+        self.core.post("кот", "public", media=[("/tmp/cat.JPG", "")]).result()
+        self.assertEqual([u[0] for u in self.w.uploads], ["/tmp/note.md", "/tmp/cat.JPG"])
+        self.core.caps.media_types = ["image/*"]  # a family by its star
+        self.assertEqual(self.core.media_refused(["/tmp/a.webp", "/tmp/b.epub"]),
+                         self.core.media_refused(["/tmp/b.epub"]))
+        self.assertIn("b.epub", self.core.media_refused(["/tmp/b.epub"]))
+        self.assertEqual(self.core.media_refused(["/tmp/x.unknownext"]), "")  # server's call
+        self.core.cfg["post"]["check_media_types"] = False
+        self.assertEqual(self.core.media_refused(["/tmp/b.epub"]), "")
+        self.core.cfg["post"]["check_media_types"] = True
+        self.core.caps.media_types = []  # not said
+        self.core.post("книга", "public", media=[("/tmp/book.pdf", "")]).result()
+        self.assertEqual(self.w.uploads[-1][0], "/tmp/book.pdf")
+
     def test_media_words_and_cover(self):
         self.core.post("с видео", "public", media=[("/tmp/v.mp4", "кот", None, "/tmp/c.jpg")]
                        ).result()

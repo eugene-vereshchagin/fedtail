@@ -244,6 +244,7 @@ DEFAULTS = {
         "drafts_place": False,     # "Drafts" in the ≡ menu: every kept draft
         "redraft": True,
         "resize_images": True,
+        "check_media_types": True,
         "chain": True,
         "preview": True,
         "format_bar": "left",
@@ -636,7 +637,8 @@ FILE_LAYOUT = (
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "report_forward quote_policy quote_action quote_prefix invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
-                           "redraft resize_images focus_point chain preview format_bar lang_check "
+                           "redraft resize_images check_media_types focus_point chain preview "
+                           "format_bar lang_check "
                            "link_quote send_in_background scheduled_to_draft drafts_place")
      + _keys("account", "markdown")),
     ("notify", _keys("notify", "enabled lanes except privacy max_lines seconds when_focused "

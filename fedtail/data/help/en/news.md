@@ -5,7 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**What's next:**
+
+- A file the server won't take — said at once
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

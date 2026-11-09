@@ -16,7 +16,7 @@ import requests
 from ... import version
 from ...core import health
 from ...core.remote import cleartext_ok  # noqa: F401 — the address rule, the core's
-from ..base import Budget, Capabilities, RateLimited, ServerError  # noqa: F401
+from ..base import Budget, Capabilities, RateLimited, ServerError, media_type  # noqa: F401
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
@@ -154,6 +154,9 @@ def capabilities_from_instance(inst, v2=None):
     st = conf.get("statuses") or {}
     st2 = (v2.get("configuration") or {}).get("statuses") or {}  # v1 not saying: v2's
     mimes = st.get("supported_mime_types") or []
+    media = conf.get("media_attachments") or {}
+    media2 = (v2.get("configuration") or {}).get("media_attachments") or {}
+    takes = media.get("supported_mime_types") or media2.get("supported_mime_types") or []
     software, sure = software_of(inst)
     md = "text/markdown" in mimes or software in MARKDOWN_SERVERS or \
         any(s in version for s in MARKDOWN_SERVERS)
@@ -178,6 +181,7 @@ def capabilities_from_instance(inst, v2=None):
                       ((conf.get("urls") or {}).get("streaming")) or ""),
         image_bytes=int((conf.get("media_attachments") or {}).get("image_size_limit") or 0),
         image_pixels=int((conf.get("media_attachments") or {}).get("image_matrix_limit") or 0),
+        media_types=[str(t) for t in takes if isinstance(t, str)][:300],
     )
 
 
@@ -881,7 +885,7 @@ class Api:
     def upload_media(self, path, description="", focus=None, thumbnail=None):
         """focus: (x, y), each -1…1, y up — the part a cropped preview keeps;
         thumbnail: a picture's path, the cover of a video or a sound."""
-        mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+        mime = media_type(path) or "application/octet-stream"
         data = {"description": description} if description else {}
         if focus:
             data["focus"] = self._focus(focus)

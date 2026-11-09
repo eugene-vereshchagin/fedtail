@@ -1105,6 +1105,9 @@ _STRINGS = {
         "draft_restored": "Восстановлен черновик.", "draft_saved": "Черновик сохранён.",
         "discard_q_title": "Выкинуть?", "discard_q": "Выкинуть этот текст насовсем?",
         "no_alt": "без подписи", "media_limit": "Сервер разрешает не больше {n} вложений.",
+        "filetype_refused": "Сервер не принимает такие файлы: {names} (он принимает: "
+                              "{kinds}). Ничего не загружено.",
+        "filetype_image": "картинки", "filetype_video": "видео", "filetype_audio": "звук",
         "media_files": "Картинки, видео, звук",
         "alt_title": "Подпись", "alt_prompt": "Что на картинке (для тех, кто её не видит):",
         "send_failed": "Не отправилось",
@@ -3009,6 +3012,9 @@ _STRINGS = {
         "draft_restored": "Draft restored.", "draft_saved": "Draft saved.",
         "discard_q_title": "Discard?", "discard_q": "Throw this text away for good?",
         "no_alt": "no description", "media_limit": "The server allows at most {n} attachments.",
+        "filetype_refused": "The server doesn't take such files: {names} (it takes: {kinds})."
+                              " Nothing was uploaded.",
+        "filetype_image": "pictures", "filetype_video": "video", "filetype_audio": "sound",
         "media_files": "Images, video, audio",
         "alt_title": "Description",
         "alt_prompt": "What's in the image (for those who can't see it):",

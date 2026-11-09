@@ -164,6 +164,48 @@ class WritingMixin:
         the window with all of them)."""
         return [], ""
 
+    def media_refused(self, paths):
+        """The attachments my server says it won't take (its supported_mime_types), as
+        words to show, or "" — all fine, the server doesn't say, or post.check_media_types
+        is off. Asked before anything is uploaded: no wait for a 422."""
+        if not self.cfg["post"].get("check_media_types", True):
+            return ""
+        from pathlib import Path
+
+        from ..i18n import _
+        from ..protocols.base import media_taken
+        types = list(getattr(self.caps, "media_types", None) or [])
+        bad = [Path(str(p)).name for p in paths if not media_taken(p, types)]
+        if not bad:
+            return ""
+        return _("filetype_refused", names=", ".join(bad), kinds=self._media_kinds(types))
+
+    @staticmethod
+    def _media_kinds(types):
+        """A server's MIME types in short words: "pictures, video, sound, .pdf"."""
+        from ..i18n import _
+        from ..protocols.base import MEDIA_TYPES
+        words, rest = [], []
+        for key, major in (("filetype_image", "image/"), ("filetype_video", "video/"),
+                           ("filetype_audio", "audio/")):
+            if any(str(t).lower().startswith(major) for t in types):
+                words.append(_(key))
+        by_type = {}
+        for ext, kind in MEDIA_TYPES.items():
+            by_type.setdefault(kind, ext)
+        for t in types:
+            t = str(t).lower()
+            if not t.startswith(("image/", "video/", "audio/")):
+                ext = by_type.get(t) or t
+                if ext not in rest:
+                    rest.append(ext)
+        return ", ".join(words + rest[:12])
+
+    def _media_taken(self, media):
+        refused = self.media_refused([m[0] for m in media])
+        if refused:
+            raise ValueError(refused)
+
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
              language=None, sensitive=False, poll=None, quote=None, scheduled_at=None,
              account=None):
@@ -187,6 +229,7 @@ class WritingMixin:
 
         def job():
             nonlocal text
+            self._media_taken(media)
             ids = [(self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None,
                                           thumbnail=m[3]) if len(m) > 3 and m[3] else
                     self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None))["id"]

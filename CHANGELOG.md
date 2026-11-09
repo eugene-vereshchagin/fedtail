@@ -10,6 +10,11 @@
 * Android: the Federated and Local lanes stayed empty — the phone never told the core the
   lane was open, so their server was never asked. Now opening one fetches it ("loading…"
   until the answer comes), as in the windows and on the web page.
+* A file the server won't take (a PDF, EPUB, FB2… where it takes only pictures, video and
+  sound) is said at once, in words and in every interface, instead of a "HTTP 422" after
+  the upload: the server's own list of types is asked first (`post.check_media_types`).
+  And .md, .fb2, .epub go with their right type on Windows too, where Python didn't know
+  them — for the servers that do take documents.
 * Sync through WebDAV no longer sends MKCOL for folders that are there every round (nginx
   logged each one as an error, "File exists"): a folder is asked about first.
 

@@ -151,6 +151,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Content warning (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Pictures: drag, paste, description, focus | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Shrinking pictures to the server's limit | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| A file the server won't take — said at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Completing #tags, @nicks, :emoji: | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | CamelCase hint for hashtags | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The post's language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -258,4 +259,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **64** features of the 194 compared.
+Only in fedtail — **65** features of the 195 compared.

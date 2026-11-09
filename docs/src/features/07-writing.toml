@@ -136,6 +136,21 @@ details.ru = "Сервер говорит, какую картинку прим�
 details.en = "The server says what picture it takes (in pixels and bytes). Bigger — before the upload fedtail shrinks a copy to the pixel limit and recompresses it as JPEG (with transparency — PNG) under the byte limit, instead of being refused. Your file isn't touched, gifs aren't flattened. `post.resize_images = false` — as is."
 
 [[feature]]
+id = "media-types"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Файл, которого сервер не примет, — сразу"
+name.en = "A file the server won't take — said at once"
+config = "`post.check_media_types`"
+api = "`instance.configuration.media_attachments.supported_mime_types`"
+others.ru = "нет"
+others.en = "none"
+clients = []
+details.ru = "Сервер говорит, какие типы файлов принимает (обычно картинки, видео, звук). PDF, EPUB, FB2 и прочее, чего в его списке нет, fedtail не загружает, а сразу говорит: «Сервер не принимает такие файлы: book.pdf (он принимает: картинки, видео, звук)» — текст остаётся в черновике. Тип файла fedtail знает сам, одинаково на любой системе (.md, .fb2, .epub — и на Windows), так что сервер, который документы берёт (Akkoma, Pleroma), получает их с правильным типом. Сервер списка не дал — решает он. `post.check_media_types = false` — не проверять."
+details.en = "The server says which file types it takes (usually pictures, video, sound). PDF, EPUB, FB2 and anything else not on its list fedtail doesn't upload but says at once: “The server doesn't take such files: book.pdf (it takes: pictures, video, sound)” — the text stays in the draft. fedtail knows a file's type itself, the same on every system (.md, .fb2, .epub — on Windows too), so a server that takes documents (Akkoma, Pleroma) gets them with the right type. A server that gives no list decides itself. `post.check_media_types = false` — no check."
+
+[[feature]]
 id = "completion"
 status = "has"
 android = "has"
