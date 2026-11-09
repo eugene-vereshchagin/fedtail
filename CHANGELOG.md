@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.22.5 — 2026-11-09
 
 **In short: a server down for a moment no longer logs fedtail out.** A single "not
