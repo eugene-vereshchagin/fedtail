@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.22.6:**
 
 - A file the server won't take — said at once
 <!-- /include -->

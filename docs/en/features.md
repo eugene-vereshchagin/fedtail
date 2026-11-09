@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.5 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.6**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -503,7 +503,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Content warning (CW) | has | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
-| A file the server won't take — said at once | has | next | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
+| A file the server won't take — said at once | has | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
 | CamelCase hint for hashtags | has | 0.2.0 | `post.camelcase_hint` | own | only in fedtail |
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |

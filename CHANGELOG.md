@@ -5,7 +5,16 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.6 — 2026-11-09
+
+**In short: fixes from your reports.** On Android the Federated and Local lanes are no
+longer always empty, and `window.start_lane` opens its lane at start. A file the server
+won't take (a PDF, an EPUB…) is said before the upload, in plain words, not as "HTTP 422".
+Sync shows its last time in your local time, and through WebDAV it no longer fills
+nginx's error log.
+
+<!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
+     with fedtail-sync 0.22.6 (the same server under the new number; protocol 2). -->
 
 * Android: the Federated and Local lanes stayed empty — the phone never told the core the
   lane was open, so their server was never asked. Now opening one fetches it ("loading…"

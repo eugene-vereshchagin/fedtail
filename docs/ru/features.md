@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.22.5 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.22.6**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -505,7 +505,7 @@
 | Предупреждение (CW) | есть | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | у всех |
 | Картинки: перетащить, вставить, подпись, фокус | есть | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | у всех (фокус — Mastodon web, Ivory) |
 | Ужимать картинки под лимит сервера | есть | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
-| Файл, которого сервер не примет, — сразу | есть | дальше | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | нет |
+| Файл, которого сервер не примет, — сразу | есть | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | нет |
 | Дополнение #тегов, @ников, :эмодзи: | есть | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | у всех |
 | Подсказка CamelCase для хэштегов | есть | 0.2.0 | `post.camelcase_hint` | своё | только в fedtail |
 | Язык поста | есть | 0.3.0 | `post.language`, `post.languages` | `language` | у всех |
