@@ -5,7 +5,17 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.5 — 2026-11-09
+
+**In short: a server down for a moment no longer logs fedtail out.** A single "not
+allowed" answer from a server coming back up (or from a proxy before it) made fedtail
+say the token was no longer accepted, and at start the Qt and GTK windows dropped the
+login and revoked the token on the server — killing a token that was fine. Now the
+server is asked again, seconds apart, and only a refusal every time counts. Update if
+your server restarts now and then.
+
+<!-- For the site's builder (an agent): a bug-fix release of the 0.22 branch, together
+     with fedtail-sync 0.22.5 (the same server under the new number; protocol 2). -->
 
 - **A server down for a moment no longer logs fedtail out.** One 401 or 403 was enough:
   in a round, "the token is no longer accepted"; at start (Qt, GTK), the login dropped
