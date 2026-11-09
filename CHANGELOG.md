@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.22.6 — 2026-11-09
 
 **In short: fixes from your reports.** On Android the Federated and Local lanes are no
