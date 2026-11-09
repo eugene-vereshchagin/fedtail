@@ -7,6 +7,11 @@
 
 ## What's next
 
+- A right click on a picture (a long press on the phone, `f` on the terminal's picture
+  screen): "Search for it" in Google Lens, Yandex, TinEye or Bing (`media.image_search`).
+  A post's menu: "Fact-check" opens Google Fact Check Explorer with the title of the
+  post's link, or its first sentence (`card.fact_check`); public posts only, unless
+  `card.fact_check_private`.
 - Android: the app installs on Android 11 too (was 12 and newer). There a sensitive
   picture, until tapped, is a plain tile under its plaque: Android 11 can't blur it.
 - Android: a long press on a card (or a comment in a thread) opens its menu, as a right

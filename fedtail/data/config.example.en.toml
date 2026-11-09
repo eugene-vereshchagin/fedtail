@@ -778,6 +778,15 @@ translate_url = ""
 # LibreTranslate's API key, if it asks for one.
 translate_key = ""
 
+# A post's menu (a right click on it, a long press on the phone): "Fact-check — <name>",
+# opened in the browser. "Name|address"; {query} — what the post says, short (its link's
+# title, else its first sentence), {link} — the link it shares, {lang} — the interface's
+# language. [] — no such item.
+fact_check = ["Google Fact Check|https://toolbox.google.com/factcheck/explorer/search/{query};hl={lang}"]
+
+# Offer it on followers-only and direct posts too: their words then go to that service.
+fact_check_private = false
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  6. Threads and following them
@@ -986,6 +995,11 @@ image_upscale = 2
 # Where to save pictures (S in the viewer, a right click on a picture in a lane).
 # "" — the desktop's Downloads folder (~/Downloads, or as set in KDE).
 save_dir = ""
+
+# A right click on a picture (a long press on the phone; f on the terminal's picture
+# screen): "Search for it — <name>" for each, opened in the browser. "Name|address";
+# {image} — the picture's address (a video's still frame). [] — no such items.
+image_search = ["Google Lens|https://lens.google.com/uploadbyurl?url={image}", "Yandex|https://yandex.ru/images/search?rpt=imageview&url={image}", "TinEye|https://tineye.com/search?url={image}", "Bing|https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:{image}"]
 
 # Fetch the pictures of new posts ahead, as soon as the posts have come — open a lane and
 # they're on disk already. "previews" — previews (of videos too), avatars and link pictures;

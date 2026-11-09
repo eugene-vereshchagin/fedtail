@@ -838,6 +838,17 @@ class PicturesTest(Base):
                 self.assertEqual(s.query_one("#pic-alt").styles.max_height.value, 4)
                 s.action_original()
                 self.browser.assert_called_with("https://example.test/001.png")
+                # f: the image searches (media.image_search), the one chosen opens
+                from fedtail.frontends.tui.screens import MenuScreen
+                s.action_search()
+                await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+                self.assertEqual([it[0] for it in app.screen.items][:2],
+                                 [i18n._("image_search_in", name="Google Lens"),
+                                  i18n._("image_search_in", name="Yandex")])
+                app.screen.dismiss(app.screen.items[1][1])
+                await self.wait(pilot, lambda: app.screen is s)
+                self.assertTrue(self.browser.call_args[0][0].startswith(
+                    "https://yandex.ru/images/search?rpt=imageview&url=https%3A"))
                 s.action_step(1)
                 await self.wait(pilot, lambda: "▶" in str(s.query_one("#pic").render()))
                 s.action_step(1)

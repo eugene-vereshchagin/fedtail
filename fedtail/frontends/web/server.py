@@ -1647,6 +1647,22 @@ class Web:
         return {"items": [{"label": words, "url": link}
                           for words, link in tag_menu(str(url or ""), self.core)]}
 
+    def media_menu(self, sid, i):
+        """A right click (a long press on the phone) on a post's picture: its own menu,
+        the windows' (common/actions.media_items) — save, open, copy its link, look it
+        up in the image searches (media.image_search) — {"items": [{kind, label, url,
+        text}]}; "save" goes to /api/save with url."""
+        from ..common.actions import media_items
+        media = real(self._post_by_id(sid)).media
+        i = int(i)
+        if not 0 <= i < len(media):
+            raise KeyError(i)
+        m = media[i]
+        url = m.url or m.remote_url or m.preview
+        return {"items": [{"kind": it.kind, "label": it.label,
+                           "url": url if it.kind == "save" else it.url, "text": it.text}
+                          for it in media_items(self.core.cfg, m)]}
+
     def post_menu(self, sid, hover=False, nested=False):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
         what is offered, when, in which order) — the page only lays them out; a list's
@@ -2362,6 +2378,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", ""),
                                                                q.get("hover") == "1",
                                                                q.get("nested") == "1"),
+                  "/api/media_menu": lambda: self.web.media_menu(q.get("id", ""),
+                                                                 q.get("i", "0")),
                   "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", ""),
                                                              q.get("click") == "1"),
                   "/api/places": lambda: self.web.place_menu(),

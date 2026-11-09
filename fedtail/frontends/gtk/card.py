@@ -742,17 +742,21 @@ class Card(Gtk.Box):
         return over
 
     def _media_menu(self, anchor, m):
-        """Save it, open it in the browser, copy its link — as Qt's."""
-        url = m.url or m.remote_url or m.preview
+        """Save it, open it in the browser, copy its link, look it up elsewhere — as
+        Qt's (common/actions.media_items)."""
+        from ..common.actions import media_items
         pop = Gtk.Popover()
         pop.set_has_arrow(False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        items = [(_("save_image") if m.kind == "image" else _("save_media"),
-                  lambda: self.ctx.save_media(m)),
-                 (_("open_browser"), lambda: self.ctx.open_url(url)),
-                 (_("copy_link"), lambda: (self.get_clipboard().set(url),
-                                           self.ctx.status(url)))]
-        for label, fn in items:
+        for it in media_items(self.ctx.cfg, m):
+            if it.kind == "separator":
+                box.append(Gtk.Separator())
+                continue
+            label, fn = it.label, {
+                "save": lambda: self.ctx.save_media(m),
+                "open": lambda u=it.url: self.ctx.open_url(u),
+                "copy": lambda t=it.text: (self.get_clipboard().set(t), self.ctx.status(t)),
+            }[it.kind]
             b = Gtk.Button(label=label)
             b.add_css_class("flat")
             b.get_child().set_xalign(0)

@@ -90,6 +90,21 @@ details.ru = "Кнопка ⤓, клавиша S в просмотрщике, п
 details.en = "The ⤓ button, the S key in the viewer, a right click on a picture in a lane. `\"\"` — into the desktop's Downloads."
 
 [[feature]]
+id = "image-search"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Искать такую картинку в интернете"
+name.en = "Search the web for a picture"
+config = "`media.image_search`"
+api.ru = "нет: ссылка открывается в браузере"
+api.en = "none: a link opened in the browser"
+others = "—"
+clients = []
+details.ru = "Правый клик по картинке в ленте (долгое нажатие на телефоне, `f` на экране картинки в терминале): «Искать такую — Google Lens», «— Yandex», «— TinEye», «— Bing»; открывается в браузере, сервису уходит только адрес картинки (у видео — его кадр). Список — шаблоны `\"Имя|https://…{image}\"`, свои добавляются, `[]` — без этих пунктов."
+details.en = "A right click on a picture in a lane (a long press on the phone, `f` on the terminal's picture screen): “Search for it — Google Lens”, “— Yandex”, “— TinEye”, “— Bing”; opened in the browser, the service gets only the picture's address (a video's still frame). The list is templates, `\"Name|https://…{image}\"`; add your own, `[]` — no such items."
+
+[[feature]]
 id = "prefetch"
 status = "has"
 android = "has"

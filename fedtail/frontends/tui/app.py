@@ -196,7 +196,8 @@ class PictureScreen(Screen):
                 Binding("s", "save", _("viewer_save")),
                 Binding("r", "again", show=False),
                 Binding("d", "description", _("alt_title")),
-                Binding("o", "original", _("open_browser"))]
+                Binding("o", "original", _("open_browser")),
+                Binding("f", "search", _("tui_image_search"))]
     CSS = """
     PictureScreen { align: center middle; }
     PictureScreen #pic { width: auto; height: auto; }
@@ -310,6 +311,19 @@ class PictureScreen(Screen):
         url = m.remote_url or m.url
         if url and openable(url):
             webbrowser.open(url)
+
+    def action_search(self):
+        """f: the picture in the image searches (media.image_search), as the windows'
+        right click on it — a menu of them, the one chosen in the browser."""
+        from ...core.lookup import image_search
+        from .screens import MenuScreen
+        found = image_search(self.app.core.cfg, self.media[self.at])
+        if not found:
+            self.app.notify(_("tui_image_search") + ": —")
+            return
+        items = [(_("image_search_in", name=name), url) for name, url in found]
+        self.app.push_screen(MenuScreen("🔍 " + _("tui_image_search"), items),
+                             lambda url: url and self.app.host.open_url(url))
 
     def action_save(self):
         """s: the original into ui.save_dir, as the windows' "Save picture"."""

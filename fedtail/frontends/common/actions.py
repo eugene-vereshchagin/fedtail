@@ -218,6 +218,23 @@ def menu(entry, ctx, short_id=None, unread=False, without_tools=False, nested=Fa
     return _tidy(out)
 
 
+def media_items(cfg, m):
+    """A picture's own menu (a right click on it; a long press on the phone): save it,
+    open it, copy its link — and look it up elsewhere (media.image_search,
+    core/lookup.py). Item kinds: "save" (the window's own saving), "open", "copy"."""
+    from ...core.lookup import image_search
+    url = m.url or m.remote_url or m.preview
+    out = [Item("save", _("save_image") if m.kind == "image" else _("save_media")),
+           Item("open", _("open_browser"), url=url),
+           Item("copy", _("copy_link"), text=url)]
+    found = image_search(cfg, m)
+    if found:
+        out.append(SEP)
+        out += [Item("open", _("image_search_in", name=name), url=link)
+                for name, link in found]
+    return out
+
+
 def _tidy(out):
     tidy = []  # no line first, last or twice
     for it in out:
@@ -275,6 +292,10 @@ def _menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("translate", _("translate"), tool="translate"))
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote"), tool="reply_quote"))
+    # what it says, in a fact-checker (card.fact_check; core/lookup.py decides)
+    from ...core.lookup import fact_check
+    for name, link in fact_check(ctx.cfg, entry):
+        out.append(Item("open", _("fact_check_in", name=name), url=link))
     if ctx.cfg["post"].get("invite", True):
         out.append(Item("link", _("invite"), url=make("invite", sid), group="thread"))
     if not ctx.cfg["ui"].get("bookmark_button", True):  # under the post already: not twice
@@ -351,5 +372,5 @@ def _menu(entry, ctx, short_id=None, unread=False):
     return out
 
 
-__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "can_translate", "menu",
-           "vis_word"]
+__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "can_translate",
+           "media_items", "menu", "vis_word"]

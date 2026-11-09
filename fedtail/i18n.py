@@ -661,6 +661,8 @@ _STRINGS = {
         "viewer_keys": "← → или колесо — листать · двойной клик/Z — 1:1 · "
                        "S — сохранить · O — в браузере · Esc/клик — закрыть",
         "save_image": "Сохранить картинку", "save_media": "Скачать",
+        "image_search_in": "Искать такую — {name}", "fact_check_in": "Проверить факты — {name}",
+        "tui_image_search": "искать в интернете",
         "saved_to": "Сохранено: {path}",
         "save_failed": "Не сохранилось: {err}",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
@@ -2563,6 +2565,8 @@ _STRINGS = {
         "viewer_keys": "← → or wheel: flip · double-click/Z: 1:1 · "
                        "S: save · O: browser · Esc/click: close",
         "save_image": "Save picture", "save_media": "Download", "saved_to": "Saved: {path}",
+        "image_search_in": "Search for it — {name}", "fact_check_in": "Fact-check — {name}",
+        "tui_image_search": "search the web",
         "save_failed": "Couldn't save: {err}",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",

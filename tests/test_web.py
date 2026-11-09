@@ -533,6 +533,20 @@ class WebTest(TmpDir):
         got = json.loads(self.req("/api/link", {"url": "fedtail:readupto/004"})[2])
         self.assertEqual(got["read"], ["004"])  # nothing shown said: that post alone
 
+    def test_the_page_s_picture_menu(self):
+        """A right click on a picture: its menu, the windows' own (core/lookup.py) —
+        save, open, copy, the image searches."""
+        pic = status("070", BOB, minute=7, vis="public")
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "https://x/p.png"}]
+        self.w.add(pic, home=True)
+        self.core.poll_once()
+        items = json.loads(self.req("/api/media_menu?id=070&i=0")[2])["items"]
+        self.assertEqual(items[0], {"kind": "save", "label": "Save picture",
+                                    "url": "https://x/p.png", "text": ""})
+        self.assertTrue(any(i["url"].startswith("https://yandex.ru/images/search")
+                            for i in items))
+        self.assertEqual(self.req("/api/media_menu?id=070&i=5")[0], 400)
+
     def test_post_menu_is_the_windows_menu(self):
         """The ⋯ menu: the very items of the Qt and GTK windows (common/actions), and
         its fedtail: links done the way they do them, the page told what's left."""

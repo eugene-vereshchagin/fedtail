@@ -11,6 +11,14 @@ from importlib import resources
 
 from . import presets, taggroups
 
+# the services a picture and a post are looked up in (core/lookup.py), as the file has them
+IMAGE_SEARCH = ["Google Lens|https://lens.google.com/uploadbyurl?url={image}",
+                "Yandex|https://yandex.ru/images/search?rpt=imageview&url={image}",
+                "TinEye|https://tineye.com/search?url={image}",
+                "Bing|https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:{image}"]
+FACT_CHECK = ["Google Fact Check|https://toolbox.google.com/factcheck/explorer/search/"
+              "{query};hl={lang}"]
+
 DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
@@ -75,6 +83,8 @@ DEFAULTS = {
         "gifv_fps": 12,
         "image_upscale": 2,
         "save_dir": "",
+        # a picture's right click: look it up there (core/lookup.py; "Name|URL", {image})
+        "image_search": IMAGE_SEARCH,
         "links_in_app": True,
         "image_cache_mb": 64,
         "image_decode": 'box',
@@ -161,6 +171,9 @@ DEFAULTS = {
         "translate_backend": "server",  # "server" (its /translate) or "libretranslate"
         "translate_url": "",       # LibreTranslate's address (https://…)
         "translate_key": "",       # its API key, if it asks for one
+        # a post's menu: check what it says there (core/lookup.py; "Name|URL", {query})
+        "fact_check": FACT_CHECK,
+        "fact_check_private": False,  # followers' and direct posts too
         "profile_featured": True,
         "profile_show": "posts",
     },
@@ -599,7 +612,7 @@ FILE_LAYOUT = (
              "counters_via_accounts "
              "translate "
                      "translate_all translate_auto translate_backend translate_url "
-                     "translate_key")),
+                     "translate_key fact_check fact_check_private")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
                               "thread_recheck_for_minutes "
                               "thread_followed_only thread_progress open_at "
@@ -612,7 +625,8 @@ FILE_LAYOUT = (
                              "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
                           "links_in_player "
-                          "video_decode gifv gifv_max gifv_fps image_upscale save_dir")
+                          "video_decode gifv gifv_max gifv_fps image_upscale save_dir "
+                          "image_search")
      + _keys("feed", "prefetch")
      + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
                    "unload_hidden_minutes keep_hidden_lanes")),
@@ -950,6 +964,12 @@ def validate(user):
     if bad_tools:
         errors.append(f"card.hover_tools: unknown {bad_tools}; "
                       f"known: {', '.join(HOVER_TOOLS)}")
+    for section, key in (("ui", "image_search"), ("feed", "fact_check")):
+        bad = [x for x in cfg[section][key]
+               if not (isinstance(x, str) and "http" in x and "://" in x)]
+        if bad:
+            errors.append(f"{file_place(section, key)[0]}.{key}: {bad} — "
+                          '"Name|https://…" lines')
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")

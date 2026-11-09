@@ -546,6 +546,13 @@ def tag_menu(url, click=False):
     return _answer(lambda: _s["web"].tag_menu(url, bool(click)))
 
 
+def media_menu(post_id, i=0):
+    """A long press on a post's picture: the windows' right click on it
+    (common/actions.media_items) → {"items": [{kind: save|open|copy|separator, label,
+    url, text}]} — save: the picture's address; open: the browser; copy: text."""
+    return _answer(lambda: _s["web"].media_menu(post_id, int(i)))
+
+
 def account(acc_id, show=None):
     """A profile: {account, relation, meta, note_line, actions: [{key, label, tip,
     primary}], shows, show_tip, posts} — the web page's, cards with their words."""

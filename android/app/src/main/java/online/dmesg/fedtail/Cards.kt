@@ -133,6 +133,9 @@ class CardActions(
     // a long press on a #tag (a tap too, reading.tag_click = "menu" — click true): the
     // windows' menu of it — [(words, fedtail: link)]
     val tagMenu: suspend (String, Boolean) -> List<Pair<String, String>> = { _, _ -> emptyList() },
+    // a long press on a picture: its own menu, the windows' right click on it
+    // (common/actions.media_items: save, open, copy, the image searches) — [{kind, label, url, text}]
+    val mediaMenu: (suspend (PostItem, Int) -> JSONArray)? = null,
     val page: (String, String) -> Unit = { _, _ -> }, // a place of that menu (lists, translate…)
     val quoteReply: (PostItem) -> Unit = {},
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
@@ -153,6 +156,7 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
         val arr = Core.tagMenu(url, click).optJSONArray("items") ?: org.json.JSONArray()
         (0 until arr.length()).map { arr.getJSONObject(it).let { o -> o.optString("label") to o.optString("url") } }
     },
+    mediaMenu = { p, i -> Core.mediaMenu(p.sid, i).optJSONArray("items") ?: JSONArray() },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
     bookmarkButton = bookmarkButton, aliasTaps = commandLine)
@@ -822,7 +826,9 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         PostWords(words, act.link, act.runLink, act.tagMenu) { act.open(p) }
     }
     if (p.media.isNotEmpty()) {
-        MediaGrid(p.media, blurred = hideSensitive && p.sensitive) { i -> act.media(p.media, i) }
+        MediaGrid(p.media, blurred = hideSensitive && p.sensitive,
+            menu = act.mediaMenu?.let { f -> val m: suspend (Int) -> JSONArray = { i -> f(p, i) }; m },
+            browser = act.browser) { i -> act.media(p.media, i) }
     }
     if (p.pollOpen && p.pollOptions.isNotEmpty()) {
         Vote(p, act)
@@ -961,27 +967,36 @@ private fun Link(c: LinkCard, act: CardActions) {
 
 /** One picture wide, by its own proportions (within reason); more — two per row, square. */
 @Composable
-fun MediaGrid(media: List<MediaItem>, blurred: Boolean, open: (Int) -> Unit) {
+fun MediaGrid(media: List<MediaItem>, blurred: Boolean,
+              menu: (suspend (Int) -> JSONArray)? = null, browser: (String) -> Unit = {},
+              open: (Int) -> Unit) {
     var shown by remember(media) { mutableStateOf(!blurred) }
     val tap: (Int) -> Unit = { i -> if (shown) open(i) else { shown = true } }
+    // a long press on a shown picture: its menu (hidden — the card's, as before)
+    var items by remember(media) { mutableStateOf<JSONArray?>(null) }
+    val scope = rememberCoroutineScope()
+    val hold: ((Int) -> Unit)? = if (menu != null && shown) { i ->
+        scope.launch { items = runCatching { menu(i) }.getOrNull()?.takeIf { it.length() > 0 } }
+    } else null
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))) {
         if (media.size == 1) {
             val m = media[0]
             val ratio = if (m.w > 0 && m.h > 0) (m.w.toFloat() / m.h).coerceIn(0.66f, 2.2f) else 1.6f
-            Tile(m, Modifier.fillMaxWidth().aspectRatio(ratio), shown) { tap(0) }
+            Tile(m, Modifier.fillMaxWidth().aspectRatio(ratio), shown, hold?.let { { it(0) } }) { tap(0) }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 media.take(4).chunked(2).forEachIndexed { row, pair ->
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         pair.forEachIndexed { col, m ->
                             val i = row * 2 + col
-                            Tile(m, Modifier.weight(1f).aspectRatio(1f), shown) { tap(i) }
+                            Tile(m, Modifier.weight(1f).aspectRatio(1f), shown, hold?.let { { it(i) } }) { tap(i) }
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
         }
+        MediaMenu(items, browser) { items = null }
         if (!shown) {
             Text(stringResource(R.string.media_sensitive), color = Color.White, fontSize = 14.sp,
                 fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.Center)
@@ -991,9 +1006,45 @@ fun MediaGrid(media: List<MediaItem>, blurred: Boolean, open: (Int) -> Unit) {
     }
 }
 
+/** A picture's menu (common/actions.media_items): save it, open it, copy its link, look it
+ *  up in the image searches (media.image_search). */
 @Composable
-private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, onClick: () -> Unit) {
-    Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).clickable(onClick = onClick),
+private fun MediaMenu(items: JSONArray?, browser: (String) -> Unit, close: () -> Unit) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val saving = stringResource(R.string.saving)
+    DropdownMenu(expanded = items != null, onDismissRequest = close) {
+        val list = items ?: JSONArray()
+        for (k in 0 until list.length()) {
+            val it = list.getJSONObject(k)
+            if (it.optString("kind") == "separator") { HorizontalDivider(); continue }
+            DropdownMenuItem(text = { Text(it.optString("label")) }, onClick = {
+                close()
+                when (it.optString("kind")) {
+                    "save" -> {
+                        saveMedia(context, it.optString("url"))
+                        android.widget.Toast.makeText(context, saving, android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    "copy" -> clipboard.setText(AnnotatedString(it.optString("text")))
+                    else -> browser(it.optString("url"))
+                }
+            })
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, hold: (() -> Unit)? = null,
+                 onClick: () -> Unit) {
+    val menuWords = stringResource(R.string.media_menu)
+    val haptic = LocalHapticFeedback.current
+    Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).then(
+            if (hold == null) Modifier.clickable(onClick = onClick)
+            else Modifier.combinedClickable(onLongClickLabel = menuWords, onLongClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                hold()
+            }, onClick = onClick)),
         contentAlignment = Alignment.Center) {
         // a screen reader says what it is: the description, or the kind "without a description"
         val kind = stringResource(when (m.kind) {

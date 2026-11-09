@@ -230,6 +230,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `card.translate_backend` | `"server"` | Who translates: "server" — your server (its /translate; not every one has it) or "libretranslate" — your own or a public LibreTranslate at translate_url. |
 | `card.translate_url` | `""` | LibreTranslate's address: "https://translate.example" (http:// — on your own network). |
 | `card.translate_key` | `""` | LibreTranslate's API key, if it asks for one. |
+| `card.fact_check` | `["Google Fact Check|https://toolbox.google.com/factcheck/explorer/search/{query};hl={lang}"]` | A post's menu (a right click on it, a long press on the phone): "Fact-check — <name>", opened in the browser. "Name\|address"; {query} — what the post says, short (its link's title, else its first sentence), {link} — the link it shares, {lang} — the interface's language. [] — no such item. |
+| `card.fact_check_private` | `false` | Offer it on followers-only and direct posts too: their words then go to that service. |
 
 ## 6. Threads and following them
 
@@ -292,6 +294,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `media.gifv_fps` | `12` | The Qt window: a gifv in a card draws at most this many frames a second (smoother — more, the load too). |
 | `media.image_upscale` | `2` | How many times the viewer may enlarge a small picture so that it fills the window (1 — never enlarge). |
 | `media.save_dir` | `""` | Where to save pictures (S in the viewer, a right click on a picture in a lane). "" — the desktop's Downloads folder (~/Downloads, or as set in KDE). |
+| `media.image_search` | `["Google Lens|https://lens.google.com/uploadbyurl?url={image}", "Yandex|https://yandex.ru/images/search?rpt=imageview&url={image}", "TinEye|https://tineye.com/search?url={image}", "Bing|https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:{image}"]` | A right click on a picture (a long press on the phone; f on the terminal's picture screen): "Search for it — <name>" for each, opened in the browser. "Name\|address"; {image} — the picture's address (a video's still frame). [] — no such items. |
 | `media.prefetch` | `"previews"` | Fetch the pictures of new posts ahead, as soon as the posts have come — open a lane and they're on disk already. "previews" — previews (of videos too), avatars and link pictures; "all" — also the original pictures, the videos themselves and gifs (videos — one at a time, by a worker of their own, at most 300 MB each; much more traffic and disk space); "off" — only when the post is on screen. |
 | `media.image_cache_mb` | `64` | How much memory, MB, to keep for pictures already fetched and decoded (the oldest are thrown out first; the cache stays on disk, rereading from there is instant). |
 | `media.image_decode` | `"box"` | Pictures in a lane are decoded in memory to the size of their frame (minding the screen's density): "box" — several times less memory and work for the processor; "full" — as before, up to 1200 pixels on the longer side (sharper if you stretch the window later). |

@@ -252,7 +252,13 @@ function renderMedia(p) {
   const veiled = p.sensitive && !p.warning && state.me.sensitive_media === "hide";
   const show = () => {
     box.textContent = "";
-    for (const m of p.media) box.append(renderOne(m, p.media));
+    p.media.forEach((m, i) => {
+      const cell = renderOne(m, p.media);
+      // a right click (a long press on a phone): the picture's own menu — save, open,
+      // copy, look it up elsewhere (common/actions.media_items)
+      cell.oncontextmenu = (e) => { e.preventDefault(); mediaMenu(p, i, cell); };
+      box.append(cell);
+    });
   };
   if (veiled) {
     const v = el("button", "veil", "⚠ " + w("web_sensitive"));
@@ -326,6 +332,19 @@ function renderOne(m, all) {
   } else cell.append(broken(m));
   if (caption) cell.append(caption);
   return cell;
+}
+
+async function mediaMenu(p, i, anchor) {
+  let r;
+  try { r = await api("/api/media_menu?id=" + encodeURIComponent(p.sid) + "&i=" + i); }
+  catch (err) { toast(err.message); return; }
+  popup(anchor, r.items.map((it) => it.kind === "separator" ? "-" : [it.label, () => {
+    if (it.kind === "save") {
+      toast(w("saving"));
+      api("/api/save", { url: it.url }).then((x) => toast(x.message), (e) => toast(e.message));
+    } else if (it.kind === "copy") copyText(it.text);
+    else window.open(it.url, "_blank", "noopener");
+  }]));
 }
 
 function broken(m) {  // nothing to show here: still a way to the file

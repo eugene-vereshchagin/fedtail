@@ -187,6 +187,21 @@ details.ru = "«Перевести» в меню ⋯ у поста на чужо
 details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given."
 
 [[feature]]
+id = "fact-check"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Проверить факты"
+name.en = "Fact-check a post"
+config = "`card.fact_check`, `card.fact_check_private`"
+api.ru = "нет: ссылка открывается в браузере"
+api.en = "none: a link opened in the browser"
+others = "—"
+clients = []
+details.ru = "В меню поста (правый клик, ⋯, долгое нажатие на телефоне): «Проверить факты — Google Fact Check» открывает в браузере поиск среди уже проверенных утверждений. Ищется заголовок ссылки из поста, а без ссылки — его первая фраза (без упоминаний, тегов и адресов, до 120 знаков). Только у публичных постов: слова постов «только подписчикам» и личных чужому сервису не уходят, пока не включишь `card.fact_check_private`. Список — шаблоны `\"Имя|https://…{query}\"` (ещё `{link}` — ссылка поста, `{lang}` — язык интерфейса), `[]` — без пункта."
+details.en = "In a post's menu (a right click, ⋯, a long press on the phone): “Fact-check — Google Fact Check” opens a search among claims already checked, in the browser. It searches for the title of the link the post shares, and without one its first sentence (no mentions, tags or addresses, up to 120 characters). Public posts only: the words of followers-only and direct posts don't go to a stranger's service unless `card.fact_check_private` is on. The list is templates, `\"Name|https://…{query}\"` (also `{link}` — the post's link, `{lang}` — the interface's language); `[]` — no such item."
+
+[[feature]]
 id = "reactions-show"
 status = "has"
 android = "has"

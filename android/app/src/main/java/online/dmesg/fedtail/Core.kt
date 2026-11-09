@@ -81,6 +81,8 @@ object Core {
     suspend fun account(id: String, show: String?) = obj("account", id, show)
     /** A #tag's menu (common/links.tag_menu): {"items": [{label, url}]}. */
     suspend fun tagMenu(url: String, click: Boolean = false) = obj("tag_menu", url, click)
+    /** A picture's menu (common/actions.media_items): {"items": [{kind, label, url, text}]}. */
+    suspend fun mediaMenu(id: String, i: Int) = obj("media_menu", id, i)
     suspend fun accountMore(id: String, show: String?, maxId: String, cursor: String) =
         obj("account_more", id, show, maxId, cursor)
     suspend fun profileAct(id: String, key: String, answer: String?, confirmed: Boolean,

@@ -1545,6 +1545,36 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(i18n._("tag_mute_n", tag="cats"), words)
         menu.close()
 
+    def test_a_pictures_menu_searches_for_it(self):
+        """A right click on a picture: save, open, copy, then the image searches
+        (media.image_search, core/lookup.py) — a search opens in the browser."""
+        from unittest import mock
+
+        from PySide6.QtCore import QPoint
+        from PySide6.QtWidgets import QLabel, QMenu
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.model import Media
+        row = PostRow(CardSpec(key="091", entry=E(status("091", BOB, minute=1))),
+                      self.win.ctx)
+        m = Media(row.spec.post.ref, "image", url="https://e.test/a.png")
+        shown = []
+
+        class Kept(QMenu):  # shown, not run: exec would wait for a click
+            def exec(self, *_a):
+                shown.append(self)
+        lab = QLabel()  # the menu's parent: kept, or the menu goes with it
+        with mock.patch("fedtail.frontends.qt.card.QMenu", Kept):
+            row._media_menu(lab, m, QPoint(0, 0))
+        words = [a.text() for a in shown[0].actions() if not a.isSeparator()]
+        self.assertEqual(words[1:3], [i18n._("open_browser"), i18n._("copy_link")])
+        self.assertEqual(words[3:], [i18n._("image_search_in", name=n)
+                                     for n in ("Google Lens", "Yandex", "TinEye", "Bing")])
+        opened = []
+        with mock.patch.object(self.win.ctx, "open_url", opened.append):
+            next(a for a in shown[0].actions() if a.text() == words[4]).trigger()
+        self.assertTrue(opened[0].startswith("https://yandex.ru/images/search?"))
+
     def test_collections_in_a_place_window(self):
         """Collections (Mastodon 4.6): the shared place in a window of its own (qt/place.py)
         — made from its form, someone put in from "Add to collection"."""

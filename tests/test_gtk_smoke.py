@@ -1445,8 +1445,17 @@ class GtkSmokeTest(_GtkBase):
         self.win.images.save = lambda url, where: (asked.append(url), _done("/x/a.png"))[1]
         pop = card._media_menu(card, m)
         buttons = [w for w in _walk(pop) if isinstance(w, Gtk.Button)]
-        self.assertEqual([b.get_label() for b in buttons],
+        self.assertEqual([b.get_label() for b in buttons][:3],
                          [i18n._("save_image"), i18n._("open_browser"), i18n._("copy_link")])
+        # then the image searches (media.image_search, core/lookup.py), past a line
+        self.assertEqual(buttons[3].get_label(), i18n._("image_search_in", name="Google Lens"))
+        self.assertTrue([w for w in _walk(pop) if isinstance(w, Gtk.Separator)])
+        opened = []
+        card.ctx.open_url = opened.append
+        buttons[3].emit("clicked")
+        self.assertTrue(opened[0].startswith("https://lens.google.com/uploadbyurl?url=https%3A"))
+        pop = card._media_menu(card, m)
+        buttons = [w for w in _walk(pop) if isinstance(w, Gtk.Button)]
         buttons[0].emit("clicked")
         self.assertTrue(pump(lambda: asked, 2))
         self.assertEqual(asked, ["https://e.test/a.png"])

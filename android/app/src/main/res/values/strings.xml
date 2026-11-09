@@ -145,6 +145,7 @@
     <string name="try_theme">Try a theme…</string>
     <string name="act_as_wait">Looking the post up on the other account\'s server…</string>
     <string name="saving">Saving…</string>
+    <string name="media_menu">Picture menu</string>
     <string name="discard">Discard</string>
     <string name="discard_q">Discard the text and its draft?</string>
     <string name="send_later">Later…</string>

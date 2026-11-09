@@ -1477,13 +1477,20 @@ class PostRow(QWidget):
         self._build()
 
     def _media_menu(self, lab, m, pos):
+        """Save it, open it, copy its link, look it up elsewhere (common/actions)."""
+        from ..common.actions import media_items
         menu = QMenu(lab)
-        url = m.url or m.remote_url
-        if self.ctx.save_image:
-            menu.addAction(_("save_image") if m.kind == "image" else _("save_media"),
-                           lambda: self.ctx.save_image(m))
-        menu.addAction(_("open_browser"), lambda: self.ctx.open_url(url))
-        menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
+        for it in media_items(self.ctx.cfg, m):
+            if it.kind == "separator":
+                menu.addSeparator()
+            elif it.kind == "save":
+                if self.ctx.save_image:
+                    menu.addAction(it.label, lambda: self.ctx.save_image(m))
+            elif it.kind == "open":
+                menu.addAction(it.label, lambda u=it.url: self.ctx.open_url(u))
+            elif it.kind == "copy":
+                menu.addAction(it.label,
+                               lambda t=it.text: QGuiApplication.clipboard().setText(t))
         menu.exec(lab.mapToGlobal(pos))
 
     def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None,

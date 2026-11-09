@@ -99,6 +99,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Poll results without voting | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Edit history | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Translation by the server | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
+| Fact-check a post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 | Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Honest counters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -120,6 +121,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Video, audio, gifs inside the window | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Video without a hardware decoder (the default) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Save a picture, video, gif | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Search the web for a picture | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Pictures and video ahead of time, a disk cache | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Profiles
@@ -256,4 +258,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **62** features of the 192 compared.
+Only in fedtail — **64** features of the 194 compared.

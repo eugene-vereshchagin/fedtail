@@ -260,6 +260,22 @@ class FlowTest {
     }
 
     @Test
+    fun aLongPressOnAPictureGivesItsMenu() {
+        // the windows' right click on a picture (common/actions.media_items): save, open,
+        // copy, then the image searches (media.image_search) — not the post's menu
+        launch("thread" to "104")
+        val picture = androidx.compose.ui.test.SemanticsMatcher("the picture's long press") {
+            it.config.getOrNull(SemanticsActions.OnLongClick)?.label == "Picture menu"
+        }
+        waitFor("a picture", 60_000) { compose.onAllNodes(picture).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(picture).onFirst().performSemanticsAction(SemanticsActions.OnLongClick)
+        compose.waitForIdle()
+        waitText("Search for it — Google Lens", 30_000)
+        waitText("Search for it — Yandex")
+        assert(compose.onAllNodesWithText("Reply with quote").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
     fun aRefreshKeepsThePlaceInTheLane() {
         launch("lane" to "home")
         waitDescription("open now", substring = true)
