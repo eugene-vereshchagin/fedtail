@@ -186,6 +186,7 @@ class SynclineTest(unittest.TestCase):
         old = (datetime.now(UTC) - timedelta(days=3)).isoformat()
         self.assertIn(".", syncline.local_time(old))  # not today: with its date
 
+    @unittest.skipUnless(hasattr(__import__("time"), "tzset"), "no time.tzset (Windows)")
     def test_the_last_round_in_local_time(self):
         """Sync's "Last time" (≡ → Sync, `fedtail sync status`): kept in UTC, said in
         the local time — it said "2026-11-09T14:11:06Z" (a report, 09.11)."""
