@@ -5,7 +5,27 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.4 — 2026-11-09
+
+**In short: the phone runs on Android 11 and reads like the windows; a tag and a post say
+more about themselves.** The Android app now installs on Android 11 (it needed 12), and a
+long press on a card opens its menu — a sheet with the post's tools — as a right click does
+on the desktop; one bar over a lane that folds while you read, the post's text the card's
+whole width, a reply bar under a thread, "↓ N new" by the thumb, the app in the interface's
+language. Everywhere: a picture can be looked up in Google Lens, Yandex, TinEye or Bing,
+and a post checked in a fact-checker; a click on a #tag gives the tag's menu; the tools
+over a post and a shorter menu in submenus; "Why is it here?" answers in plain words; news
+behind a lane's filters still counts; the same lanes and numbers on every device; and
+someone's profile no longer pages round in a circle.
+
+<!-- For the site's builder (an agent): a release of the 0.22 branch, together with
+     fedtail-sync 0.22.4 (the same server under the new number; protocol 2).
+     Put a news item on the site for this release: the Android app now installs on
+     Android 11 and newer (until now it needed Android 12). Everything works there; the
+     one difference is that a sensitive picture is a plain tile under its "Sensitive —
+     tap to show" plaque instead of a blurred one (Android 11 can't blur), until tapped.
+     Wherever the site says which Android the app needs ("Android 12+" and the like),
+     it is Android 11+ now. -->
 
 - A right click on a picture (a long press on the phone, `f` on the terminal's picture
   screen): "Search for it" in Google Lens, Yandex, TinEye or Bing (`media.image_search`).
@@ -176,7 +196,8 @@
 - **Phone: the interface's language is the app's too.** `ui.language` switched only the
   core's words; the app's own (its buttons, menus, dialogs) stayed in the phone's
   language. On Android 13+ the app now takes the language set (and offers fedtail's two
-  in the phone's per-app language settings); Android 12 says the rest follows a restart.
+  in the phone's per-app language settings); Android 11 and 12 say the rest follows a
+  restart.
 
 - **Phone: a token the server no longer takes is said**, as the windows, the terminal and
   the web page say it: "Access denied — the token is no longer accepted", and "Log in

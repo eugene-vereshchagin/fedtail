@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.22.3 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.22.4**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -87,7 +87,7 @@
 | Добавить в список сразу после подписки | есть | 0.11.0 | `lists.refresh_minutes` | `lists/:id/accounts` | только в fedtail |
 | Лента хэштега, подписка на теги | есть | 0.2.0 | — | `timelines/tag/:name`, `tags/:name/follow`, `followed_tags` | у всех |
 | Тег у автора, как на Point | есть | 0.22.0 | `card.tag_click` (`author`) | `accounts/:id/statuses?tagged=` | Point (теги у каждого блога свои) |
-| Меню тега по клику | есть | дальше | `card.tag_click` (`menu`) | `tags/:name/follow`, `filters` | Mastodon web |
+| Меню тега по клику | есть | 0.22.4 | `card.tag_click` (`menu`) | `tags/:name/follow`, `filters` | Mastodon web |
 | Мои лайки | есть | 0.8.0 | `"my_likes"` в `lanes.enabled` | `/api/v1/favourites` | Mastodon web, Tusky, Ivory, Megalodon, tut |
 | Закладки | есть | 0.3.0 | `"bookmarks"` в `lanes.enabled`, `card.bookmark_button` | `/api/v1/bookmarks` | у всех |
 | Тренды | есть | 0.11.0 | — | `/api/v1/trends` (tags, links, statuses) | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes |
@@ -281,7 +281,7 @@
 | Картинки черновика едут вместе с ним | есть | 0.22.0 | `sync.drafts`; the server: `max_media_kb`, `media_quota_mb`, `media_keep_days`, `media_per_minute` | своё: `PUT/GET/DELETE /v1/media/<имя>` у fedtail-sync, `media/` в папке | только в fedtail |
 | Синхронизация: WebDAV напрямую, журнал упаковывается | есть | 0.22.0 | `sync.webdav`, `sync.webdav_user` | — | — |
 | Новое ждёт «Обновить» | есть | 0.21.0 | `reading.on_new = "hold"` | своё | Elk |
-| Новое за фильтрами всё равно считается | есть | дальше | `reading.count_filtered` | своё | только в fedtail |
+| Новое за фильтрами всё равно считается | есть | 0.22.4 | `reading.count_filtered` | своё | только в fedtail |
 | Синхронизация настраивается в окне по шагам, новое устройство — одним паролем | есть | 0.21.0 | ≡ → Синхронизация (или щелчок по «⇅»); `fedtail sync keep` / `unlock` | своё: ключ в журнале, запечатанный паролем (scrypt + AES-GCM) | только в fedtail |
 | «Подключилось устройство» в Активности — на нём и на остальных | есть | 0.22.3 | `sync.device_name`; `event = "device"`; не выключается | своё: имя устройства в каждой пачке журнала (запечатано ключом) | только в fedtail |
 | Лента без шва: старые посты подгружаются сами | есть | 0.21.0 | `reading.older_ahead` | своё | Mastodon web, Tusky, Phanpy, Ivory |
@@ -340,13 +340,13 @@
 | Результаты опроса без голосования | есть | 0.3.0 | — (кнопка «Результаты» у опроса) | — | Fedilab |
 | История правок | есть | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Перевод поста сервером | есть | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Проверить факты | есть | дальше | `card.fact_check`, `card.fact_check_private` | нет: ссылка открывается в браузере | — |
+| Проверить факты | есть | 0.22.4 | `card.fact_check`, `card.fact_check_private` | нет: ссылка открывается в браузере | — |
 | Эмодзи-реакции | есть | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Кто лайкнул и бустнул | есть | 0.11.0 | — | `favourited_by`, `reblogged_by` (и с сервера автора) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Честные счётчики | есть | 0.2.0 | `card.honest_counters` (выключен), `card.counters_via_accounts` | API сервера автора без токена | только в fedtail |
 | Пост под мышкой подсвечен | есть | 0.22.0 | `card.additional_highlight` (true) | своё | point.im |
-| Инструменты над постом вместо длинного меню | есть | дальше | `card.hover_tools` | своё | Mastodon web |
-| Меню поста подменю | есть | дальше | `card.menu_groups` | своё | — |
+| Инструменты над постом вместо длинного меню | есть | 0.22.4 | `card.hover_tools` | своё | Mastodon web |
+| Меню поста подменю | есть | 0.22.4 | `card.menu_groups` | своё | — |
 | Числа под постами на экране свежие | есть | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), иначе по одному | только в fedtail |
 | Кто процитировал мой пост | есть | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Сворачивать набивку хэштегами | есть | 0.14.0 | `card.collapse_tags` | своё | Phanpy |
@@ -419,7 +419,7 @@
 | Видео, аудио, гифки внутри окна | есть | 0.11.0 | `media.video_player`, `media.links_in_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | у всех |
 | Видео без аппаратного декодера (по умолчанию) | есть | 0.16.0 | `media.video_decode` | — | только в fedtail |
 | Сохранить картинку, видео, гифку | есть | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
-| Искать такую картинку в интернете | есть | дальше | `media.image_search` | нет: ссылка открывается в браузере | — |
+| Искать такую картинку в интернете | есть | 0.22.4 | `media.image_search` | нет: ссылка открывается в браузере | — |
 | Картинки и видео заранее, кэш на диске | есть | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | своё | только в fedtail |
 | Память под картинки | есть | 0.2.0 | `media.image_cache_mb`, `media.image_decode` | своё | — |
 

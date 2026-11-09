@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.22.4:**
 
 - A tag's menu on a click
 - News behind the filters still counts
@@ -13,11 +13,6 @@ What's new in the latest versions, and the plans.
 - Tools over the post instead of a long menu
 - A post's menu in submenus
 - Search the web for a picture
-
-**0.22.3:**
-
-- "A device joined" in Activity — on it and on the others
-- Update check: a newer version as a row of Activity; "Check now" in About
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

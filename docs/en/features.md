@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.3 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.4**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -84,7 +84,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Into a list right after a follow | has | 0.11.0 | `lists.refresh_minutes` | `lists/:id/accounts` | only in fedtail |
 | Hashtag lane, following tags | has | 0.2.0 | — | `timelines/tag/:name`, `tags/:name/follow`, `followed_tags` | everyone |
 | A tag as its author writes it, as on Point | has | 0.22.0 | `card.tag_click` (`author`) | `accounts/:id/statuses?tagged=` | Point (each blog has its own tags) |
-| A tag's menu on a click | has | next | `card.tag_click` (`menu`) | `tags/:name/follow`, `filters` | Mastodon web |
+| A tag's menu on a click | has | 0.22.4 | `card.tag_click` (`menu`) | `tags/:name/follow`, `filters` | Mastodon web |
 | My likes | has | 0.8.0 | `"my_likes"` in `lanes.enabled` | `/api/v1/favourites` | Mastodon web, Tusky, Ivory, Megalodon, tut |
 | Bookmarks | has | 0.3.0 | `"bookmarks"` in `lanes.enabled`, `card.bookmark_button` | `/api/v1/bookmarks` | everyone |
 | Trends | has | 0.11.0 | — | `/api/v1/trends` (tags, links, statuses) | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes |
@@ -279,7 +279,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | A draft's pictures travel with it | has | 0.22.0 | `sync.drafts`; the server: `max_media_kb`, `media_quota_mb`, `media_keep_days`, `media_per_minute` | own: `PUT/GET/DELETE /v1/media/<name>` of fedtail-sync, `media/` in a folder | only in fedtail |
 | Sync: WebDAV spoken directly, the journal packed | has | 0.22.0 | `sync.webdav`, `sync.webdav_user` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
-| News behind the filters still counts | has | next | `reading.count_filtered` | own | only in fedtail |
+| News behind the filters still counts | has | 0.22.4 | `reading.count_filtered` | own | only in fedtail |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
 | "A device joined" in Activity — on it and on the others | has | 0.22.3 | `sync.device_name`; `event = "device"`; can't be turned off | own: the device's name in every batch of the journal (sealed by the key) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
@@ -338,13 +338,13 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Translation by the server | has | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Fact-check a post | has | next | `card.fact_check`, `card.fact_check_private` | none: a link opened in the browser | — |
+| Fact-check a post | has | 0.22.4 | `card.fact_check`, `card.fact_check_private` | none: a link opened in the browser | — |
 | Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | The post under the mouse lit | has | 0.22.0 | `card.additional_highlight` (true) | own | point.im |
-| Tools over the post instead of a long menu | has | next | `card.hover_tools` | own | Mastodon web |
-| A post's menu in submenus | has | next | `card.menu_groups` | own | — |
+| Tools over the post instead of a long menu | has | 0.22.4 | `card.hover_tools` | own | Mastodon web |
+| A post's menu in submenus | has | 0.22.4 | `card.menu_groups` | own | — |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
@@ -417,7 +417,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.links_in_player`, `media.gifv`, `media.gifv_max`, `media.gifv_fps` | `media_attachments` | everyone |
 | Video without a hardware decoder (the default) | has | 0.16.0 | `media.video_decode` | — | only in fedtail |
 | Save a picture, video, gif | has | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
-| Search the web for a picture | has | next | `media.image_search` | none: a link opened in the browser | — |
+| Search the web for a picture | has | 0.22.4 | `media.image_search` | none: a link opened in the browser | — |
 | Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
 | Memory for pictures | has | 0.2.0 | `media.image_cache_mb`, `media.image_decode` | own | — |
 
