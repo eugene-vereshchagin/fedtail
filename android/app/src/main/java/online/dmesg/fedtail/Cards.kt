@@ -1003,10 +1003,17 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, onClick: () -
             else -> R.string.kind_image
         })
         val said = m.alt.ifBlank { stringResource(R.string.media_no_alt, kind) }
-        AsyncImage(model = ImageRequest.Builder(LocalContext.current)
-            .data(m.preview.ifBlank { m.url }).crossfade(true).build(),
-            contentDescription = said, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.blur(28.dp)))
+        // hidden: blurred on Android 12+; Android 11 can't blur (Modifier.blur does nothing
+        // there — the picture would show), so there it isn't drawn at all: a plain tile
+        // under the "sensitive" plaque until tapped
+        if (shown || android.os.Build.VERSION.SDK_INT >= 31) {
+            AsyncImage(model = ImageRequest.Builder(LocalContext.current)
+                .data(m.preview.ifBlank { m.url }).crossfade(true).build(),
+                contentDescription = said, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.blur(28.dp)))
+        } else {
+            Box(Modifier.fillMaxSize().semantics { contentDescription = said })
+        }
         if (m.kind == "video" || m.kind == "gifv" || m.kind == "audio") {
             Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0x99000000)),
                 contentAlignment = Alignment.Center) {

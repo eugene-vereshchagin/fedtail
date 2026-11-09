@@ -318,7 +318,9 @@ class FlowTest {
     @Test
     fun theInterfaceLanguageIsTheAppsToo() {
         // ui.language = "ru" on a phone in English: the core's words went Russian, the
-        // app's own (its buttons, its menus) stayed English
+        // app's own (its buttons, its menus) stayed English. Android 13+ only: before it
+        // an app has no language of its own (the app says it follows a restart)
+        org.junit.Assume.assumeTrue(android.os.Build.VERSION.SDK_INT >= 33)
         launch("lane" to "home")
         waitDescription("open now", substring = true)
         try {

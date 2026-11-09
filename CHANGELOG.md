@@ -7,6 +7,8 @@
 
 ## What's next
 
+- Android: the app installs on Android 11 too (was 12 and newer). There a sensitive
+  picture, until tapped, is a plain tile under its plaque: Android 11 can't blur it.
 - Android: a long press on a card (or a comment in a thread) opens its menu, as a right
   click does in the windows; the home screen shows your account's avatar (a tap: your
   profile, or the accounts when there are more), a lane says whose it is when accounts

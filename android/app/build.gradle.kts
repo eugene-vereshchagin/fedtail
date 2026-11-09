@@ -53,7 +53,7 @@ android {
 
     defaultConfig {
         applicationId = "online.dmesg.fedtail"
-        minSdk = 31 // Android 12: older is "necrophilia" (the author's word)
+        minSdk = 30 // Android 11 (the author's word, 09.11): nothing older
         targetSdk = 35
         versionCode = buildNumber
         versionName = shownVersion
