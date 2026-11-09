@@ -101,13 +101,13 @@ class CheckTest(Devices):
         self.assertTrue(out.message.startswith("You have the latest version · checked "))
         self.assertTrue(out.refresh)
         self.assertTrue(self.about_row().title.startswith("You have the latest version"))
-        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "0.22.5"}), \
+        with mock.patch("fedtail.core.remote.get_json", lambda *a, **k: {"version": "9.0.0"}), \
                 mock.patch.object(updates, "__version__", "0.22.3"):
             st = View(self.desk).check_updates_now()
             words, newer = about.facts(View(self.desk)).update
-        self.assertEqual((st["latest"], st["newer"], st["ok"]), ("0.22.5", True, True))
-        self.assertEqual(newer, "0.22.5")
-        self.assertTrue(words.startswith("A new version is out: 0.22.5 · checked "))
+        self.assertEqual((st["latest"], st["newer"], st["ok"]), ("9.0.0", True, True))
+        self.assertEqual(newer, "9.0.0")
+        self.assertTrue(words.startswith("A new version is out: 9.0.0 · checked "))
         row = self.about_row()
         self.assertEqual([b.label for b in row.buttons], ["Open in browser", "Check now"])
         self.assertIn("Updates: A new version", about.facts(View(self.desk)).text())
