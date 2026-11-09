@@ -111,6 +111,7 @@ DEFAULTS = {
         "on_new": "keep_position",
         "count_filtered": True,
         "show_reply_context": True,
+        "parents_first": True,    # a reply comes into a lane with its parent, not before it
         "thread_indent_max": 8,
         "reply_context_chars": 160,
         "mute_tags_shown": 3,
@@ -603,7 +604,7 @@ FILE_LAYOUT = (
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
-    ("card", _keys("feed", "show_reply_context thread_indent_max reply_context_chars "
+    ("card", _keys("feed", "show_reply_context parents_first thread_indent_max reply_context_chars "
                            "mute_tags_shown link_chars thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")

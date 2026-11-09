@@ -10,6 +10,10 @@
 - A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
   posts: the lane's window of the latest `render_limit` posts keeps where you stopped and a
   page above it, instead of letting the oldest go from under your eyes with every poll.
+- A reply comes into a lane with the post it answers already fetched — every reply of a
+  poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
+  grows over it seconds later on a slow server, moving the lane. `card.parents_first`
+  (on; `false` — at once, as before).
 
 ## 0.22.6 — 2026-11-09
 

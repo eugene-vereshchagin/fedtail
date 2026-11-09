@@ -3619,7 +3619,10 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
         lane = self.win.lane_widgets["home"]
-        self.pump(until=lambda: "011" in lane.view.rows and "010" in lane.view.rows)
+        # at its start place first: a theme tried before would carry the lane's first
+        # jump there with it (no "parents" redraw to wait through since parents_first)
+        self.pump(until=lambda: "011" in lane.view.rows and "010" in lane.view.rows
+                  and lane.positioned)
         try:
             for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "mra-green",
                          "mra-violet", "psi"):

@@ -56,6 +56,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | A thread as a tree, comments numbered | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
 | Over a reply — what it answers | ✓ |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| A reply comes into a lane with what it answers | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A whole thread: replies from the author's server | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A thread grows when Mastodon has gathered the replies | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Thread subscriptions, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -259,4 +260,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **65** features of the 195 compared.
+Only in fedtail — **66** features of the 196 compared.

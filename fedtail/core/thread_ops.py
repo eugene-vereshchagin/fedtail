@@ -216,16 +216,34 @@ class ThreadsMixin:
     def ensure_parents(self, statuses):
         self.bg.submit(self._fetch_parents, list(statuses))
 
-    def _fetch_parents(self, statuses):
+    PARENTS_WAIT = 30  # seconds a round's posts wait for their parents at most
+
+    def _parents_first(self):
+        """feed.parents_first: a reply goes into a lane only with its parent fetched, so
+        the "in reply to" strip is there from the start and nothing grows under the
+        reader later (a slow server filled the strips in seconds after, 10.11)."""
+        f = self.cfg["feed"]
+        return bool(f.get("parents_first", True) and f.get("show_reply_context", True))
+
+    def _fetch_parents(self, statuses, tell=True, budget=None):
+        """The parents of these replies, from the server, into the store. `tell`: say
+        "parents" when some came (the lanes draw them in); off before the posts are shown
+        at all. `budget`: seconds at most, the rest left for a call after."""
         want = []
         for st in statuses:
             pid = real(st).get("in_reply_to_id")
-            if pid and pid not in self._parent_inflight and not self.store.get_status(pid) \
-                    and not self.store.is_missing(pid):
+            if pid and pid not in self._parent_inflight and pid not in want and \
+                    not self.store.get_status(pid) and not self.store.is_missing(pid):
                 self._parent_inflight.add(pid)
                 want.append(pid)
         got = False
-        for pid in want:
+        start = time.monotonic()
+        for i, pid in enumerate(want):
+            if budget is not None and time.monotonic() - start > budget:
+                log.info("parents: %d left for later (waited %.0f s)", len(want) - i,
+                         time.monotonic() - start)
+                self._parent_inflight.difference_update(want[i:])
+                break
             try:
                 self.store.put_statuses([self.api.status(pid)])
                 got = True
@@ -237,7 +255,7 @@ class ThreadsMixin:
                 pass  # network hiccup: try again next time
             finally:
                 self._parent_inflight.discard(pid)
-        if got:
+        if got and tell:
             self.emit("parents")
 
     def thread(self, sid):

@@ -701,10 +701,12 @@ class PollMixin:
             # reply it is) sort a reply only once its parent is known: fetched first
             # (feeds.md §8, "atoms known late"), a few at most — the rest come after
             # (and "state" — "subscribed" is known up a reply's parents)
-            if any(c.routed and {"parent", "me", "state"} & set(c.needs)
-                   for c in self.customs):
-                self._fetch_parents([st for st in new_statuses
-                                     if real(st).get("in_reply_to_id")][:PARENTS_FIRST])
+            replies = [st for st in new_statuses if real(st).get("in_reply_to_id")]
+            if self._parents_first():  # whole: shown with their parents (feed.parents_first)
+                self._fetch_parents(replies, tell=False, budget=self.PARENTS_WAIT)
+            elif any(c.routed and {"parent", "me", "state"} & set(c.needs)
+                     for c in self.customs):
+                self._fetch_parents(replies[:PARENTS_FIRST], tell=False)
             new_by_source.update(self._route_custom(new_by_source))
             self._show_important()  # after routing: Unsorted may have got its first
             per_lane = self._split_by_lane(new_by_source)

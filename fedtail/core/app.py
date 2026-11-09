@@ -1860,6 +1860,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             self._limits[name] = limit + len(got)
             # history is not news: older posts count as read
             self.store.mark_read([st["id"] for st in got])
+            self._older_parents(got)
             self.emit("lanes_updated", {name: []})
             self._fetch_parents(got)
             return len(got)
@@ -1893,9 +1894,16 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         got = self._older_pages(name, lambda: self._older_custom_page(c))
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         self._limits[name] = limit + len(got)
+        self._older_parents(got)
         self.emit("lanes_updated", {name: []})
         self._fetch_parents(got)
         return len(got)
+
+    def _older_parents(self, got):
+        """A page older waits for its replies' parents (feed.parents_first): it comes
+        in whole, no strips growing over it afterwards."""
+        if self._parents_first():
+            self._fetch_parents(got, tell=False, budget=self.PARENTS_WAIT)
 
     def _older_custom_page(self, c):
         world, got = self._world(), []

@@ -35,6 +35,21 @@ details.ru = "Над ответом в ленте полоска «↪ в отв
 details.en = "Over a reply in a lane, a strip “↪ in reply to…” with the start of the original post; a click opens the whole thread. No reply in a lane hangs as a scrap."
 
 [[feature]]
+id = "parents-first"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Ответ приходит в ленту вместе с тем, на что отвечает"
+name.en = "A reply comes into a lane with what it answers"
+config = "`card.parents_first`"
+api = "`GET /api/v1/statuses/:id`"
+others.ru = "нет: у других полоска дорастает потом или её нет"
+others.en = "no: elsewhere the strip fills in later or isn't there"
+clients = []
+details.ru = "Посты опроса и страница «раньше» показываются, когда родители их ответов уже забраны (не дольше 30 секунд, остальные — следом): полоска «в ответ на…» над ответом есть сразу и не вырастает потом под глазами, лента не сдвигается. На медленном сервере новое приходит на несколько секунд позже."
+details.en = "A poll's posts and an \"Older\" page show once the parents of their replies are fetched (30 seconds at most, the rest after): the “in reply to…” strip is there from the start and doesn't grow under the reader later, the lane doesn't move. On a slow server the new posts come a few seconds later."
+
+[[feature]]
 id = "complete-threads"
 status = "has"
 android = "has"

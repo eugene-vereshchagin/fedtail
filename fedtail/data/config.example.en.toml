@@ -619,6 +619,12 @@ unfocused_seconds = 5
 # The "↪ in reply to…" strip over replies.
 show_reply_context = true
 
+# A reply comes into a lane whole: the post it answers is fetched first, and the round's posts
+# show after it — a slow server makes them a few seconds later, but no strip grows over a
+# reply afterwards and nothing moves under the reader. Also for "Older". false — at once, the
+# strips filling in later and the lane moving as they do.
+parents_first = true
+
 # How deep a thread indents: deeper, a branch goes on without more indent. A narrow screen —
 # fewer.
 thread_indent_max = 8

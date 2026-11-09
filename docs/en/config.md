@@ -196,6 +196,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `card.show_reply_context` | `true` | The "↪ in reply to…" strip over replies. |
+| `card.parents_first` | `true` | A reply comes into a lane whole: the post it answers is fetched first, and the round's posts show after it — a slow server makes them a few seconds later, but no strip grows over a reply afterwards and nothing moves under the reader. Also for "Older". false — at once, the strips filling in later and the lane moving as they do. |
 | `card.thread_indent_max` | `8` | How deep a thread indents: deeper, a branch goes on without more indent. A narrow screen — fewer. |
 | `card.reply_context_chars` | `160` | How many characters of the post answered stand over a reply ("↑ Bob: …"). |
 | `card.mute_tags_shown` | `3` | How many of a post's hashtags the ⋯ menu offers to mute in one click. |

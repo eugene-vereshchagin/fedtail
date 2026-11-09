@@ -2439,6 +2439,35 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["022", "021"])
 
+    def test_reply_comes_in_with_its_parent(self):
+        # feed.parents_first: when the lanes hear of a reply, its parent is in the store
+        # already — the "in reply to" strip drawn at once, not grown under the reader a
+        # few seconds later (a slow server, 10.11) — all of a round's, not only the 20 the
+        # rules wait for; and no "parents" redraw after
+        from fedtail.core.poll import PARENTS_FIRST
+        n = PARENTS_FIRST + 5
+        for first, base in ((True, 100), (False, 200)):
+            with self.subTest(parents_first=first):
+                core, w = self.make(feed={"parents_first": first}, lanes={"enabled": ["home"]})
+                core.connect().result()
+                core.poll_once()
+                pids = []
+                for i in range(n):  # their parents only on the server, not in my lanes
+                    parent = status(f"{base + 2 * i:03d}", BOB, minute=1)
+                    w.statuses[parent["id"]] = parent
+                    pids.append(parent["id"])
+                    w.add(status(f"{base + 2 * i + 1:03d}", BOB, parent["id"], "BOB",
+                                 minute=2), home=True)
+                known, heard = [], []
+                core.events.on("lanes_updated", lambda _n, _p, c=core, ps=pids, k=known:
+                               k.append(sum(c.store.get_status(p) is not None for p in ps)))
+                core.events.on("parents", lambda e, _p, h=heard: h.append(e))
+                core.poll_once()
+                self.assertTrue(known)
+                self.assertEqual(known[0], n if first else PARENTS_FIRST)
+                self.assertTrue(all(core.store.get_status(p) for p in pids))  # in the end
+                self.assertEqual(bool(heard), not first)
+
     def test_lane_cache_invalidates(self):
         core, w = self.make()
         core.connect().result()

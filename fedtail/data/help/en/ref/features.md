@@ -222,6 +222,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 |---|---|---|---|---|---|
 | A thread as a tree, comments numbered | has | 0.1.0 | `card.thread_indent_max` | `statuses/:id/context` | Phanpy — indented; numbers only in fedtail |
 | Over a reply — what it answers | has | 0.1.0 | `card.show_reply_context`, `card.reply_context_chars` | `in_reply_to_id` | Sengi and Megalodon — similar |
+| A reply comes into a lane with what it answers | has | next | `card.parents_first` | `GET /api/v1/statuses/:id` | no: elsewhere the strip fills in later or isn't there |
 | A whole thread: replies from the author's server | has | 0.3.0 | `threads.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
 | A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `threads.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
 | Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
@@ -238,6 +239,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A thread as a tree, comments numbered.** A thread opens as a tree: every reply under what it answers, every comment numbered `/1`, `/2`, `/2/1`, as on Point and Juick. The command line can address a comment by its number.
 
 **Over a reply — what it answers.** Over a reply in a lane, a strip “↪ in reply to…” with the start of the original post; a click opens the whole thread. No reply in a lane hangs as a scrap.
+
+**A reply comes into a lane with what it answers.** A poll's posts and an "Older" page show once the parents of their replies are fetched (30 seconds at most, the rest after): the “in reply to…” strip is there from the start and doesn't grow under the reader later, the lane doesn't move. On a slow server the new posts come a few seconds later.
 
 **A whole thread: replies from the author's server.** Your server knows only the replies that reached it, so other people's threads have holes. Open a thread — fedtail reads the list of replies straight from the author's server and asks your server to fetch what's missing; the thread grows by itself a couple of seconds later. Requests to other servers go without your token. `false` — make do with what your own server knows.
 
