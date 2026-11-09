@@ -7,6 +7,10 @@
 
 ## What's next
 
+- A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
+  posts: the lane's window of the latest `render_limit` posts keeps where you stopped and a
+  page above it, instead of letting the oldest go from under your eyes with every poll.
+
 ## 0.22.6 — 2026-11-09
 
 **In short: fixes from your reports.** On Android the Federated and Local lanes are no

@@ -69,6 +69,9 @@ log = logging.getLogger(__name__)
 
 FILTER_WINDOW = 2000
 KEEP_FLOOR = 300  # under size pressure a lane is never cut below this many entries
+# + a lane's name: the state key of where the reader last stood in it (the interfaces
+# set it, common/lane.py LaneModel.stood; the lane's window keeps it, lane_entries)
+STOOD = "stood."
 
 
 def next_keep(size_mb, max_mb, keep, wanted):
@@ -1440,6 +1443,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # lane shows: still news (feed.count_filtered) — a lane filtered to gifs and
         # forgotten so looked dead, nothing new counted nor notified (08.11)
         out_by_filter = []
+        # the reading place (where the reader last stood in this lane, any interface)
+        # stays in the window, a page of older ones above it: a busy list (hundreds a
+        # day) pushed the oldest posts out with every poll, from under the reader
+        # scrolled up to them — the lane jumped (09.11); looked for no further than
+        # twice the window
+        place = self.get_state(STOOD + name) or None
+        place_at, margin, reach = None, self.cfg["feed"]["page_size"], 2 * limit
         rows = self.store.iter_items(lane.source, max_rows=horizon)
         if not repeats:
             rows = self._without_repeats(lane.source, rows)
@@ -1463,9 +1473,16 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 continue
             if lanes.keeps(lane, st, ctx):
                 kept.append((item_id, st))
-                if len(kept) >= limit:
+                if place_at is None and place is not None and \
+                        place in (item_id, st["id"], real(st)["id"]):
+                    place_at = len(kept)
+                if len(kept) >= limit and (
+                        len(kept) >= place_at + margin if place_at is not None
+                        else place is None or len(kept) >= reach):
                     full = True
                     break
+        if place_at is None and len(kept) > limit:  # the place not near: the window as ever
+            kept, full = kept[:limit], True
         self._lang_out[name] = lang_out
         self._filter_out[name] = out_by_filter
         # what "Older" does next: the store has more to look through, or only the server

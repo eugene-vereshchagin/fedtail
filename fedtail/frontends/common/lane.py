@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field, replace
 
+from ...core.app import STOOD  # one key: the core keeps that place in the window
 from ...core.atoms import MEDIA_KINDS, VIDEO_EXT  # one list for the core and the cards
 from ...i18n import _
 from ...model import Share, real
@@ -545,7 +546,7 @@ class LaneModel:
         return specs
 
     # ---- where reading starts, what was read -------------------------------------------
-    STOOD = "stood."  # + a lane's name: the state key of where the reader stood in it
+    STOOD = STOOD  # + a lane's name: the state key of where the reader stood in it
 
     def stood(self, key, at_end=False):
         """The last card seen whole at the bottom of the screen, the scroll standing —

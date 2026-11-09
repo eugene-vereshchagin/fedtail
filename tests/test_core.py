@@ -1271,6 +1271,34 @@ class CoreTest(TmpDir):
         self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
         self.assertEqual(core.deep_find("home", "нету").result(), {"total": 0, "more": False})
 
+    def test_the_window_keeps_the_reading_place(self):
+        """A busy lane: new posts came, the newest render_limit moved on — the posts the
+        reader stood at (and a page above) stay in it; a place far off doesn't count."""
+        core, w = self.make(feed={"render_limit": 20, "page_size": 40})
+        for i in range(1, 41):
+            w.add(status(f"{i:03d}", BOB, minute=i % 60), home=True)
+        core.connect().result()
+        core.poll_once()
+
+        def ids():
+            return [st["id"] for _, st in core.lane_entries("home")]
+        self.assertEqual(ids()[0], "021")
+        core.set_state("stood.home", "025")
+        for i in range(41, 51):
+            w.add(status(f"{i:03d}", BOB, minute=i % 60), home=True)
+        core.poll_once()
+        core.cfg["feed"]["page_size"] = 3  # a page above the place
+        core._lane_cache.clear()
+        self.assertEqual(ids()[0], "022")
+        self.assertEqual(ids()[-1], "050")
+        core.set_state("stood.home", "002")  # beyond twice the window: as ever
+        core._lane_cache.clear()
+        self.assertEqual(ids()[0], "031")
+        self.assertEqual(len(ids()), 20)
+        core.set_state("stood.home", "")  # stood at the end: as ever
+        core._lane_cache.clear()
+        self.assertEqual(ids()[0], "031")
+
     def test_find_in_every_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

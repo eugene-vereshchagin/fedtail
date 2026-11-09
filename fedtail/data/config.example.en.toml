@@ -567,7 +567,8 @@ catch_up_limit = 400
 late_hours = 12
 late_minutes = 10
 
-# How many latest posts to keep on screen in a lane (older ones — with the "older" button).
+# How many latest posts to keep on screen in a lane (older ones — with the "older" button);
+# where you stopped reading stays in, with a page above it, however many came since.
 render_limit = 300
 
 # Read to the end of what a lane shows — fedtail fetches another page of older posts by
