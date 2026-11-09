@@ -373,12 +373,18 @@ def lane(name, keep=False):
     """A lane's cards as the browser page gets them, each with its text as plain words
     too (the screens draw text; links and emojis come in a later step)."""
     def go():
+        from fedtail.i18n import _
+        if not keep:
+            # the lane on screen, as the page's /api/active: a browse lane (federated,
+            # local) is fetched only then — never told, it stayed empty on the phone
+            _s["web"].activate(name)
         got = _s["web"].lane(name, bool(keep))
         _texts(got.get("posts", []))
         if got.get("empty_browse") and not got.get("posts"):
             # a browsed lane its server gives nothing for: said in the lane (the windows')
-            from fedtail.i18n import _
             got["info"] = _("browse_empty")
+        elif got.get("waiting") and not got.get("info"):
+            got["info"] = _("loading")  # a browse lane: its server asked
         return got
     return _answer(go)
 

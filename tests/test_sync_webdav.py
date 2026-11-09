@@ -48,6 +48,16 @@ class DavBackendTest(Devices):
         puts = [c for c in self.dav.calls if c[0] == "PUT" and "/media/" in c[1]]
         self.assertEqual(len(puts), 1)
 
+    def test_no_mkcol_for_a_folder_that_is_there(self):
+        """Every round has a new backend: a folder that is there is asked about, not made
+        again (nginx logs each MKCOL of an existing folder as an error)."""
+        a = "a" * 16
+        for i in range(3):
+            self.backend().push(f"blob{i}".encode(), a)
+            self.backend().media_put("c" * 48 if i else "d" * 48, b"pic")
+        mkcols = [c[1] for c in self.dav.calls if c[0] == "MKCOL"]
+        self.assertEqual(len(mkcols), 3, mkcols)  # the folder, the device's, media — once
+
     def test_no_dtd_in_an_answer(self):
         """Someone's server's XML: a DTD (the billion laughs, an entity to a file) is
         refused, not expanded."""

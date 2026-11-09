@@ -7,6 +7,12 @@
 
 ## What's next
 
+* Android: the Federated and Local lanes stayed empty — the phone never told the core the
+  lane was open, so their server was never asked. Now opening one fetches it ("loading…"
+  until the answer comes), as in the windows and on the web page.
+* Sync through WebDAV no longer sends MKCOL for folders that are there every round (nginx
+  logged each one as an error, "File exists"): a folder is asked about first.
+
 ## 0.22.5 — 2026-11-09
 
 **In short: a server down for a moment no longer logs fedtail out.** A single "not

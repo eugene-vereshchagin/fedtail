@@ -483,8 +483,14 @@ class DavTree:
     def mkdir(self, sub):
         if sub in self._made:
             return
-        r = self._call("MKCOL", f"{sub}/")
-        if r.status_code != 405:  # 405: it is there already
+        # asked first: a new backend each round would MKCOL a folder that is there, and
+        # a server's log fills with "File exists" (nginx logs every such 405 as an error)
+        r = self._call("PROPFIND", f"{sub}/", headers={"Depth": "0"})
+        if r.status_code == 404:
+            r = self._call("MKCOL", f"{sub}/")
+            if r.status_code != 405:  # 405: it is there already (made meanwhile)
+                self._check(r, sub)
+        else:
             self._check(r, sub)
         self._made.add(sub)
 

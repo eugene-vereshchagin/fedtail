@@ -249,6 +249,20 @@ class BridgeTest(_Base):
         self.assertNotIn("error", got, got.get("trace"))
         self.call("open")
 
+    def test_a_browse_lane_is_fetched_when_opened(self):
+        """The federated lane on the phone: opening it tells the core it is on screen
+        (as the page's /api/active), so its server is asked — it stayed empty before."""
+        self.demo()
+        core = self.bridge._core()
+        core.set_active_lane(None)
+        self.assertEqual(self.call("lane", "federated", True).get("posts"), [])
+        self.assertIsNone(core._active_lane)  # a reload of the lane on screen: not opening
+        self.call("lane", "federated", False)
+        self.assertEqual(core._active_lane, "federated")
+        self.assertEqual(core.get_state("lane"), "federated")  # opens there next time
+        core.poll_once()
+        self.assertTrue(self.call("lane", "federated", True)["posts"])
+
     def test_thread_and_writing(self):
         self.demo()
         th = self.call("thread", "101")
