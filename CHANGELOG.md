@@ -7,6 +7,9 @@
 
 ## What's next
 
+- Android: a post's words can be selected and copied again — a long press on them selects
+  (drag the handles, then copy or share); the post's menu is ⋮ and a long press beside the
+  words. `phone.hold_text` (`"select"`; `"menu"` — the long press opens the menu, as before).
 - A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
   posts: the lane's window of the latest `render_limit` posts keeps where you stopped and a
   page above it, instead of letting the oldest go from under your eyes with every poll.

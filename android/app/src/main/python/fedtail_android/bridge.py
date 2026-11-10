@@ -384,6 +384,7 @@ def open():  # noqa: A001 — what Kotlin calls it
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]
         out["to_new"] = core.cfg["phone"].get("to_new", "bottom")
+        out["hold_text"] = core.cfg["phone"].get("hold_text", "select")
         out["push"] = core.cfg["phone"]["push"]
         out["merged"] = bool(_s["web"].merged())
         out["accounts"] = sum(1 for p in _profiles() if p["logged_in"])

@@ -272,6 +272,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var overview by mutableStateOf("lanes") // phone.overview: lanes | all | list
     var layoutPref by mutableStateOf("auto") // phone.layout: auto | one | two | three
     var toNewBottom by mutableStateOf(true) // phone.to_new: the "↓ N" button by the thumb
+    var holdSelects by mutableStateOf(true) // phone.hold_text: a long press selects a post's words
     var columns = 1                          // what the screen fits now (Screens.kt says)
     private var startLane: String? = null
 
@@ -620,6 +621,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         overview = me.optString("overview", "lanes")
         layoutPref = me.optString("layout", "auto")
         toNewBottom = me.optString("to_new", "bottom") != "top"
+        holdSelects = me.optString("hold_text", "select") != "menu"
         merged = me.optBoolean("merged")
         accountCount = me.optInt("accounts", 1)
         // phone.push: UnifiedPush when a distributor is there (not in the demo: no server)

@@ -386,6 +386,7 @@ DEFAULTS = {
         "overview": "lanes",
         "layout": "auto",
         "to_new": "bottom",  # the "↓ N new" button: "bottom" (by the thumb), "top"
+        "hold_text": "select",  # a long press on a post's words: "select" them, "menu"
         "free_memory": "background",  # caches let go: "background", "low", "off"
         "lane_strip": "icons",  # the strip over a lane: main lanes "icons" or "names"
         "push": "auto",
@@ -456,6 +457,7 @@ CHOICES = {
     ("ui", "tiles"): {"lanes", "all", "none"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
     ("phone", "to_new"): {"bottom", "top"},
+    ("phone", "hold_text"): {"select", "menu"},
     ("phone", "free_memory"): {"background", "low", "off"},
     ("phone", "lane_strip"): {"icons", "names"},
     ("phone", "push"): {"auto", "off"},
@@ -669,7 +671,8 @@ FILE_LAYOUT = (
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout to_new free_memory lane_strip push stream")),
+    ("phone", _keys("phone", "overview layout to_new hold_text free_memory lane_strip push "
+                             "stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}

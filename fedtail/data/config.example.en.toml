@@ -1814,6 +1814,11 @@ layout = "auto"
 # by the thumb; "top" — in the lane's bar, beside its name.
 to_new = "bottom"
 
+# A long press on a post's words: "select" — selects them (drag the handles, then copy or
+# share as anywhere on the phone; the post's menu is ⋮ or a long press beside the words);
+# "menu" — opens the post's menu, as a long press anywhere on the card.
+hold_text = "select"
+
 # Memory given back when the phone asks (Android's onTrimMemory): "background" — as soon
 # as the app goes out of sight, the lanes' made lists and counts let go (made again when
 # you come back; the posts stay stored) and the freed memory back to the system; "low" —

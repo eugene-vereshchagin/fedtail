@@ -1,5 +1,6 @@
 package online.dmesg.fedtail
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -143,6 +144,7 @@ class CardActions(
     val pollRefresh: (PostItem) -> Unit = {},
     val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
+    val holdSelects: Boolean = true,                 // phone.hold_text: a long press selects words
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
@@ -159,7 +161,7 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     mediaMenu = { p, i -> Core.mediaMenu(p.sid, i).optJSONArray("items") ?: JSONArray() },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
-    bookmarkButton = bookmarkButton, aliasTaps = commandLine)
+    bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects)
 
 // a server's emoji as the core writes it (web/server.py with_emojis): its picture's address
 private val EMOJI = Regex("""<img\b[^>]*\bclass="emoji"[^>]*\bsrc="([^"]*)"[^>]*>""")
@@ -239,11 +241,13 @@ fun postText(html: String, plain: String, linkColor: Color): AnnotatedString {
 
 /** A post's words: a tap on a link follows it, a tap anywhere else is the card's own; a
  *  long press on a #tag — the windows' right-click menu of it (common/links.tag_menu: as
- *  its author writes it, everywhere, muted; the phone had none, 02.11). */
+ *  its author writes it, everywhere, muted; the phone had none, 02.11). Elsewhere a long
+ *  press selects the words (phone.hold_text = "select": the post's menu took it, and
+ *  nothing in a post could be copied, 10.11), or opens the post's menu ("menu"). */
 @Composable
 private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
                       runLink: (String) -> Unit, tagMenu: suspend (String, Boolean) -> List<Pair<String, String>>,
-                      onTap: () -> Unit) {
+                      selects: Boolean, onTap: () -> Unit) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val link by rememberUpdatedState(onLink)
     val tap by rememberUpdatedState(onTap)
@@ -256,16 +260,17 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
         val at = layout?.getOffsetForPosition(pos) ?: return null
         return words.getStringAnnotations("URL", at, at).firstOrNull()?.item
     }
-    Box {
+    val text = @Composable {
         Text(words, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, onTextLayout = { layout = it },
             inlineContent = emoji,
-            modifier = Modifier.pointerInput(words) {
+            modifier = Modifier.pointerInput(words, selects) {
                 detectTapGestures(
+                    // selecting: no long press of ours but a tag's, the selection takes it
                     onLongPress = { pos ->
                         val url = urlAt(pos)
                         if (url != null && url.startsWith("fedtail:tag/")) {
                             scope.launch { menu = tagMenu(url, false) }
-                        } else hold?.invoke()
+                        } else if (!selects) hold?.invoke()
                     },
                     onTap = { pos ->
                         val url = urlAt(pos)
@@ -281,6 +286,9 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
                         }
                     })
             })
+    }
+    Box {
+        if (selects) SelectionContainer { text() } else text()
         DropdownMenu(expanded = menu.isNotEmpty(), onDismissRequest = { menu = emptyList() }) {
             menu.forEach { (said, url) ->
                 DropdownMenuItem(text = { Text(said) }, onClick = { menu = emptyList(); runLink(url) })
@@ -823,7 +831,7 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     if (p.text.isNotBlank()) {
         val color = MaterialTheme.colorScheme.primary
         val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) }
-        PostWords(words, act.link, act.runLink, act.tagMenu) { act.open(p) }
+        PostWords(words, act.link, act.runLink, act.tagMenu, act.holdSelects) { act.open(p) }
     }
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive,

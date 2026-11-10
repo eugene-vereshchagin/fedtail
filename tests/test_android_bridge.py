@@ -533,6 +533,9 @@ class BridgeTest(_Base):
         got = self.call("open")
         self.assertEqual(got["me"]["overview"], "lanes")
         self.assertEqual(got["me"]["layout"], "auto")
+        # a long press on a post's words selects them (10.11: the menu took it, nothing
+        # could be copied); "menu" — as before
+        self.assertEqual(got["me"]["hold_text"], "select")
         self.assertIn("expand_cw", got["me"])  # ui.expand_cw / ui.arts_mode: CWs open
         m = self.call("menu", "103")
         self.assertIn("subscribed", m)
