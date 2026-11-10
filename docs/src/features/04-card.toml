@@ -190,7 +190,7 @@ details.en = "“Translate” in the ⋯ menu of a post in another language — 
 id = "translate-device"
 status = "partly"
 android = "has"
-since = "next"
+since = "0.22.7"
 name.ru = "Перевод на самом телефоне, без сети"
 name.en = "Translating on the phone itself, offline"
 config = "`card.translate_backend = \"device\"`"

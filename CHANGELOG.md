@@ -5,40 +5,50 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.7 — 2026-11-10
 
-- Android: a post's words can be selected and copied again — a long press on them selects
+**In short: the phone and the lane, from your reports.** On Android a post's words can be
+selected and copied again, a lane has ⟳ in its bar, the status bar is readable in a light
+theme on a dark phone, the editor has every emoji of your server, and posts and profiles
+can be translated offline on the phone itself. A busy lane no longer jumps under your
+eyes, the windows no longer freeze while you read, and a theme goes out and comes back
+as one zip file.
+
+<!-- For the site's builder (an agent): a release of the 0.22 branch, together
+     with fedtail-sync 0.22.7 (the same server under the new number; protocol 2). -->
+
+* Android: a post's words can be selected and copied again — a long press on them selects
   (drag the handles, then copy or share); the post's menu is ⋮ and a long press beside the
   words. `phone.hold_text` (`"select"`; `"menu"` — the long press opens the menu, as before).
-- A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
+* A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
   posts: the lane's window of the latest `render_limit` posts keeps where you stopped and a
   page above it, instead of letting the oldest go from under your eyes with every poll.
-- The Qt and GTK windows no longer freeze for a third of a second to a second while you
+* The Qt and GTK windows no longer freeze for a third of a second to a second while you
   read: the sidebar's numbers are never worked out between two frames (a stale one stays a
   moment and the new one comes from the background), and what you scroll past is marked
   read without waiting for the database while a poll tidies it up.
-- A reply comes into a lane with the post it answers already fetched — every reply of a
+* A reply comes into a lane with the post it answers already fetched — every reply of a
   poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
   grows over it seconds later on a slow server, moving the lane. `card.parents_first`
   (on; `false` — at once, as before).
-- Android: translating on the phone itself, offline — `card.translate_backend = "device"`
+* Android: translating on the phone itself, offline — `card.translate_backend = "device"`
   hands posts, the translation by itself and profiles to the Offline Translator app
   (F-Droid: `dev.davidv.translator`), as Fedilab does. Private posts too: nothing leaves the
   phone. No app, or no model for the language — fedtail says so.
-- A profile can be translated: "🌐 Translate" among its buttons puts the bio and the fields
+* A profile can be translated: "🌐 Translate" among its buttons puts the bio and the fields
   into your language, in every interface and on the phone. A server translates only posts,
   so this takes a translator of your own (LibreTranslate: `card.translate_backend`,
   `card.translate_url`); without one the place says what to set.
-- Android: "☺ Emoji" in the editor — every emoji of your server as pictures, with a search;
+* Android: "☺ Emoji" in the editor — every emoji of your server as pictures, with a search;
   a tap puts `:name:` at the cursor. The suggestions as you type `:` show the picture too.
-- A theme as one zip file, out and in: ≡ → "Try a theme" → "Save the theme to a file…" and
+* A theme as one zip file, out and in: ≡ → "Try a theme" → "Save the theme to a file…" and
   "Add a theme from a file…" (on the phone — in ≡ itself, where the themes folder is out of
   a file manager's reach), or `fedtail --theme-export NAME FILE.zip` / `--theme-import`.
   The archive carries the theme's pictures, sounds and fonts and a manual on changing,
   renaming and bringing it back; a theme of the same name is replaced only when you say so.
-- Android: in a light theme on a phone in dark mode the status bar's icons were white on a
+* Android: in a light theme on a phone in dark mode the status bar's icons were white on a
   light bar, hardly seen; the bars' icons now follow fedtail's theme, not the phone's mode.
-- Android: a lane has ⟳ in its bar, as every other screen does — refreshing it no longer
+* Android: a lane has ⟳ in its bar, as every other screen does — refreshing it no longer
   takes the ⋮ menu or a pull that, in a lane read oldest first, goes up from the bottom.
 
 ## 0.22.6 — 2026-11-09

@@ -5,16 +5,12 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.22.7:**
 
 - A reply comes into a lane with what it answers
 - Translating on the phone itself, offline
 - All the server's emoji as pictures — to pick in the editor
 - A theme as one file: take it out, change it, bring it in
-
-**0.22.6:**
-
-- A file the server won't take — said at once
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

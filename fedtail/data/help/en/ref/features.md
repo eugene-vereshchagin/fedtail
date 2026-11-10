@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.6 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.7**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -222,7 +222,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 |---|---|---|---|---|---|
 | A thread as a tree, comments numbered | has | 0.1.0 | `card.thread_indent_max` | `statuses/:id/context` | Phanpy — indented; numbers only in fedtail |
 | Over a reply — what it answers | has | 0.1.0 | `card.show_reply_context`, `card.reply_context_chars` | `in_reply_to_id` | Sengi and Megalodon — similar |
-| A reply comes into a lane with what it answers | has | next | `card.parents_first` | `GET /api/v1/statuses/:id` | no: elsewhere the strip fills in later or isn't there |
+| A reply comes into a lane with what it answers | has | 0.22.7 | `card.parents_first` | `GET /api/v1/statuses/:id` | no: elsewhere the strip fills in later or isn't there |
 | A whole thread: replies from the author's server | has | 0.3.0 | `threads.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
 | A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `threads.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
 | Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
@@ -341,7 +341,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Translation by the server | has | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Translating on the phone itself, offline | partly | next | `card.translate_backend = "device"` | the Offline Translator app's AIDL interface (`dev.davidv.translator`) | Fedilab |
+| Translating on the phone itself, offline | partly | 0.22.7 | `card.translate_backend = "device"` | the Offline Translator app's AIDL interface (`dev.davidv.translator`) | Fedilab |
 | Fact-check a post | has | 0.22.4 | `card.fact_check`, `card.fact_check_private` | none: a link opened in the browser | — |
 | Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
@@ -511,7 +511,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | A file the server won't take — said at once | has | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
-| All the server's emoji as pictures — to pick in the editor | partly | next | `post.complete_emoji` | `custom_emojis` | many have it |
+| All the server's emoji as pictures — to pick in the editor | partly | 0.22.7 | `post.complete_emoji` | `custom_emojis` | many have it |
 | CamelCase hint for hashtags | has | 0.2.0 | `post.camelcase_hint` | own | only in fedtail |
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |
 | A poll in a post | has | 0.8.0 | — | `poll[options]` | everyone |
@@ -755,7 +755,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 |---|---|---|---|---|---|
 | Themes as files | has | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | a TOML format of its own | others — light and dark, Ice Cubes and Megalodon — colours of your own |
 | Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
-| A theme as one file: take it out, change it, bring it in | has | next | ≡ → “Try a theme” → “Save the theme to a file…” / “Add a theme from a file…” (on the phone — in ≡ itself); `fedtail --theme-export NAME FILE.zip`, `--theme-import FILE.zip` | a zip laid out as the themes folder | no |
+| A theme as one file: take it out, change it, bring it in | has | 0.22.7 | ≡ → “Try a theme” → “Save the theme to a file…” / “Add a theme from a file…” (on the phone — in ≡ itself); `fedtail --theme-export NAME FILE.zip`, `--theme-import FILE.zip` | a zip laid out as the themes folder | no |
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
 | The settings reference | has | 0.13.0 | — | `tools/docs_build.py` | tut (a man page and a site), MediaWiki (an article per setting) |
 | Window, tray, keys | has | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |

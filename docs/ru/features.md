@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.22.6 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.22.7**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -224,7 +224,7 @@
 |---|---|---|---|---|---|
 | Тред деревом, комменты с номерами | есть | 0.1.0 | `card.thread_indent_max` | `statuses/:id/context` | Phanpy — отступами; номера только в fedtail |
 | Над ответом — на что он отвечает | есть | 0.1.0 | `card.show_reply_context`, `card.reply_context_chars` | `in_reply_to_id` | Sengi и Megalodon — похоже |
-| Ответ приходит в ленту вместе с тем, на что отвечает | есть | дальше | `card.parents_first` | `GET /api/v1/statuses/:id` | нет: у других полоска дорастает потом или её нет |
+| Ответ приходит в ленту вместе с тем, на что отвечает | есть | 0.22.7 | `card.parents_first` | `GET /api/v1/statuses/:id` | нет: у других полоска дорастает потом или её нет |
 | Тред целиком: ответы с сервера автора | есть | 0.3.0 | `threads.complete_threads` | коллекция `replies` по ActivityPub, `search?resolve=true` | только в fedtail (Mastodon 4.5+ умеет это на сервере) |
 | Тред дорастает, когда Mastodon дособрал ответы | есть | 0.8.0 | `threads.complete_threads` | заголовок `Mastodon-Async-Refresh` | Mastodon web |
 | Подписки на треды, как на Point | есть | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | своё | только в fedtail |
@@ -343,7 +343,7 @@
 | Результаты опроса без голосования | есть | 0.3.0 | — (кнопка «Результаты» у опроса) | — | Fedilab |
 | История правок | есть | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Перевод поста сервером | есть | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Перевод на самом телефоне, без сети | частично | дальше | `card.translate_backend = "device"` | AIDL-интерфейс приложения Offline Translator (`dev.davidv.translator`) | Fedilab |
+| Перевод на самом телефоне, без сети | частично | 0.22.7 | `card.translate_backend = "device"` | AIDL-интерфейс приложения Offline Translator (`dev.davidv.translator`) | Fedilab |
 | Проверить факты | есть | 0.22.4 | `card.fact_check`, `card.fact_check_private` | нет: ссылка открывается в браузере | — |
 | Эмодзи-реакции | есть | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Кто лайкнул и бустнул | есть | 0.11.0 | — | `favourited_by`, `reblogged_by` (и с сервера автора) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
@@ -513,7 +513,7 @@
 | Ужимать картинки под лимит сервера | есть | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | Файл, которого сервер не примет, — сразу | есть | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | нет |
 | Дополнение #тегов, @ников, :эмодзи: | есть | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | у всех |
-| Все эмодзи сервера картинками — выбрать в редакторе | частично | дальше | `post.complete_emoji` | `custom_emojis` | у многих |
+| Все эмодзи сервера картинками — выбрать в редакторе | частично | 0.22.7 | `post.complete_emoji` | `custom_emojis` | у многих |
 | Подсказка CamelCase для хэштегов | есть | 0.2.0 | `post.camelcase_hint` | своё | только в fedtail |
 | Язык поста | есть | 0.3.0 | `post.language`, `post.languages` | `language` | у всех |
 | Опрос в посте | есть | 0.8.0 | — | `poll[options]` | у всех |
@@ -757,7 +757,7 @@
 |---|---|---|---|---|---|
 | Темы файлами | есть | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | свой формат TOML | у других — светлая и тёмная, у Ice Cubes и Megalodon — свои цвета |
 | Попробовать тему без перезапуска | есть | 0.15.0 | ≡ → «Попробовать тему»; насовсем — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (их немного) |
-| Тема одним файлом: достать, переделать, загрузить | есть | дальше | ≡ → «Попробовать тему» → «Сохранить тему в файл…» / «Добавить тему из файла…» (на телефоне — прямо в ≡); `fedtail --theme-export ИМЯ ФАЙЛ.zip`, `--theme-import ФАЙЛ.zip` | zip, устроенный как папка тем | нет |
+| Тема одним файлом: достать, переделать, загрузить | есть | 0.22.7 | ≡ → «Попробовать тему» → «Сохранить тему в файл…» / «Добавить тему из файла…» (на телефоне — прямо в ≡); `fedtail --theme-export ИМЯ ФАЙЛ.zip`, `--theme-import ФАЙЛ.zip` | zip, устроенный как папка тем | нет |
 | Конфиг файлом по главам | есть | 0.6.1 | ключи запуска `--update-config`, `--rebuild-config` | — | tut — тоже TOML, но без сборки по главам |
 | Справочник настроек | есть | 0.13.0 | — | `tools/config_doc.py` | tut (man-страница и сайт), MediaWiki (статья на каждую настройку) |
 | Окно, трей, клавиши | есть | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | клавиши — Mastodon web, Phanpy, Elk, Ivory, tut |
