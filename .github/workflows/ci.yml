@@ -209,7 +209,7 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:bookworm
     steps:
-      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv python3-pip libpython3.11 binutils git ca-certificates libglib2.0-0 libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv python3-pip libpython3.11 binutils git ca-certificates libglib2.0-0 libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 qemu-user
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -220,7 +220,9 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 -m venv /tmp/venv
           {
-            /tmp/venv/bin/pip install requests PySide6-Essentials pyinstaller cryptography &&
+            # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): the binary
+            # died with SIGILL on a Phenom II. 6.9 is the last for every x86-64.
+            /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' pyinstaller cryptography &&
             /tmp/venv/bin/python packaging/build.py &&
             ./dist/fedtail --version
           } 2>&1 | tee build.log
@@ -233,6 +235,13 @@ jobs:
             echo "::warning::no Wayland platform plugin in the one-file build"
           fi
           echo "Qt plugin files: $(grep -c 'plugins' contents.txt || true)"
+      - name: Runs on an old processor (no SSSE3, SSE4, POPCNT)
+        shell: bash
+        run: |
+          # Opteron_G3 is a Phenom-era CPU; qemu refuses the instructions it lacks
+          qemu-x86_64 -cpu Opteron_G3 ./dist/fedtail --version
+          QT_QPA_PLATFORM=offscreen qemu-x86_64 -cpu Opteron_G3 /tmp/venv/bin/python -c \
+            "from PySide6 import QtCore, QtGui, QtWidgets; app = QtWidgets.QApplication([]); print(QtCore.qVersion())"
       - name: What went wrong
         if: failure()
         run: grep -iE 'error|traceback|no matching|not found|denied|requires' build.log | tail -n 9 | sed 's/^/::warning::/'
