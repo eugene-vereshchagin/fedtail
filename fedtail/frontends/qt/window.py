@@ -1766,7 +1766,7 @@ class MainWindow(QMainWindow):
 
     def update_badges(self):
         items = getattr(self, "lane_items", {})
-        numbers = sidebar.counts(self.ctx.view, items)
+        numbers = sidebar.counts(self.ctx.view, items, quick=True)  # the drawing thread
         total = sidebar.icon_total(self.ctx.view, self.cfg, numbers)
         for name, item in items.items():
             item.set_count(numbers[name], sidebar.fresh(self.ctx.view, name)

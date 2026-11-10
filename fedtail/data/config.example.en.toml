@@ -779,8 +779,11 @@ translate_all = false
 # LibreTranslate is given by itself only public posts: a private one is translated on a click.
 translate_auto = false
 
-# Who translates: "server" — your server (its /translate; not every one has it) or
-# "libretranslate" — your own or a public LibreTranslate at translate_url.
+# Who translates: "server" — your server (its /translate; not every one has it, and it
+# translates posts only); "libretranslate" — your own or a public LibreTranslate at
+# translate_url; "device" — on the phone, the Offline Translator app (F-Droid:
+# dev.davidv.translator) on the phone itself, no network: posts, profiles, by itself too.
+# A profile is translated only by "libretranslate" or "device".
 translate_backend = "server"
 
 # LibreTranslate's address: "https://translate.example" (http:// — on your own network).

@@ -109,6 +109,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true  // Offline Translator's API (src/main/aidl/dev/davidv/translator, MIT)
     }
 }
 

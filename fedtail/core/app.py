@@ -1398,6 +1398,24 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                                                     s.get("created_at", "")) for s in got]))
         return n
 
+    def _lane_key(self, name, lane):
+        """What lane_entries' made list for `name` holds good for: anything in it
+        changed, the lane is made anew."""
+        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        rule = next((c for c in self.customs if c.name == name), None)
+        state = rule is not None and "state" in rule.needs  # unread, new_replies…
+        return (self.store.items_version.get(lane.source, 0), self.store.status_version,
+                limit, self.me["id"] if self.me else None, self.posts_only(name),
+                self._lists_version, self._silence_version,
+                self.cfg["feed"].get("repeat_boosts", False), self._world_version,
+                self.store.read_version if state else 0, self.lane_filter(name),
+                self._horizons.get(name, max(FILTER_WINDOW, limit)),
+                str(self.choice(f"media.{name}")),
+                # a window moves with the clock (and density with the posts' age): anew
+                # each minute
+                int(time.time() // 60) if getattr(lane, "window", 0)
+                or getattr(lane, "sort", "") == "density" else 0)
+
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.
 
@@ -1411,19 +1429,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         only_posts = self.posts_only(name)
         repeats = self.cfg["feed"].get("repeat_boosts", False)
-        rule = next((c for c in self.customs if c.name == name), None)
-        state = rule is not None and "state" in rule.needs  # unread, new_replies…
         horizon = self._horizons.get(name, max(FILTER_WINDOW, limit))
         funnel = self._funnel(name)
-        key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
-               self.me["id"] if self.me else None, only_posts, self._lists_version,
-               self._silence_version, repeats, self._world_version,
-               self.store.read_version if state else 0, self.lane_filter(name),
-               horizon, str(self.choice(f"media.{name}")),
-               # a window moves with the clock (and density with the posts' age): anew
-               # each minute
-               int(time.time() // 60) if getattr(lane, "window", 0)
-               or getattr(lane, "sort", "") == "density" else 0)
+        key = self._lane_key(name, lane)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
@@ -1727,6 +1735,50 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         n += len(self.filter_hidden_unread(name))  # news, though the filters hide it
         cache[name] = (key, n)
         return n
+
+    def unread_count_now(self, name):
+        """unread_count for an interface's thread: never the work itself. A count still
+        good — it; one gone stale (a post came, a mark was made) — the last one, and the
+        lanes are worked out anew in the background, "counts_ready" said when done. The
+        sidebar asked unread_count between two frames, and a lane made anew there froze
+        the window for 0.3–0.9 s (the log of 10.11)."""
+        lane = self.lane_by_name.get(name)
+        if self._events_only(name) or lane is None or not lane.source or lane.lazy:
+            return self.unread_count(name)  # nothing to work out, or nothing kept
+        hit = self._lane_cache.get(name)
+        got = self.__dict__.get("_unread_cache", {}).get(name)
+        if hit and got and hit[0] == self._lane_key(name, lane) and \
+                got[0] == (hit[0], id(hit[1]), self.store.read_version):
+            return got[1]
+        if not self._warm_soon():  # warmed since, and still stale: here, as it was
+            return self.unread_count(name)
+        return got[1] if got else 0
+
+    def _warm_soon(self):
+        """The lanes and counts worked out in the read thread, then "counts_ready" (once
+        at a time). False: warmed already for the store as it is — no use doing it
+        again (a lane that can't be kept would ask for ever)."""
+        now = (self.store.status_version, self.store.read_version,
+               tuple(sorted(self.store.items_version.items())))
+        if self.__dict__.get("_warming"):
+            return True
+        if self.__dict__.get("_warmed_for") == now:
+            return False
+        self._warming = True
+
+        def job():
+            try:
+                self._warm_lanes()
+            finally:
+                self._warmed_for = now
+                self._warming = False
+            self.emit("counts_ready", None)
+        try:
+            self.reads.submit(job)
+        except RuntimeError:  # shut down
+            self._warming = False
+            return False
+        return True
 
     def lighten(self):
         """Every lane's made list and count let go — made again when next asked (the

@@ -100,6 +100,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Poll results without voting | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Edit history | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Translation by the server | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
+| Translating on the phone itself, offline | ◐ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Fact-check a post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 | Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
@@ -262,4 +263,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **67** features of the 198 compared.
+Only in fedtail — **67** features of the 199 compared.

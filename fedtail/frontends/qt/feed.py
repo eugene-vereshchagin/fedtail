@@ -411,8 +411,8 @@ class LaneWidget(QWidget):
         ids = self.lm.read(ids)  # a conversation card seen = its new messages seen;
         if events:                # an event's row seen: the events up to it (core)
             self.view.set_unread(events, False)
-        if ids:
-            self.core.mark_read(ids)
+        if ids:  # seen while scrolling: written in the background (View.mark_read)
+            self.core.mark_read(ids, later=True)
 
     def unread_only_on(self):
         return self.filter_seg is not None and self.filter_seg.current == "unread"

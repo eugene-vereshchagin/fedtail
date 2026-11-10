@@ -385,8 +385,29 @@ class View:
     def mute_tag(self, name, on=True):
         return self._core.mute_tag(name, on)
 
-    def mark_read(self, ids):
-        self._core.mark_read([i if isinstance(i, str) else i.id for i in ids])
+    def mark_read(self, ids, later=False):
+        """These read. `later`: written in the core's read thread — for what a window
+        marks as it scrolls past, from its drawing thread, which must not wait for the
+        store (a round's clean-up held it 0.9 s under a reader, 10.11); the cards hear
+        "read_changed" as ever, the marks keep their order (one thread). Without it —
+        at once, as the web page and the phone want (a count asked right after)."""
+        ids = [i if isinstance(i, str) else i.id for i in ids]
+        if not ids:
+            return
+        core = self._core
+        reads = getattr(core, "reads", None)
+        if not later or reads is None:
+            core.mark_read(ids)
+            return
+        try:
+            reads.submit(core.mark_read, ids)
+        except RuntimeError:  # shut down: written here, as before
+            core.mark_read(ids)
+
+    def unread_count_now(self, lane):
+        """The lane's count without the work (core.unread_count_now)."""
+        now = getattr(self._core, "unread_count_now", None)
+        return now(lane) if now is not None else self._core.unread_count(lane)
 
     def mark_lane_read(self, lane):
         """Every post of the lane read — and its events seen, if it takes any."""

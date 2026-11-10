@@ -102,6 +102,39 @@ def start(files_dir, cache_dir, lang="", demo=False, logs=False, device_json=Non
     return info()
 
 
+def _device_translate(text, source, target):
+    """core/translate.DEVICE on the phone: the Offline Translator app (DeviceTranslator.kt,
+    its AIDL API), waited for here, on the core's thread; its errors in the user's words."""
+    from java import jclass
+
+    from fedtail.i18n import _
+    try:
+        return str(jclass("online.dmesg.fedtail.DeviceTranslator")
+                   .translate(text, source or "", target, 90_000))
+    except Exception as e:  # noqa: BLE001 — a Java exception: its message is the code
+        get = getattr(e, "getMessage", None)
+        why = str((get() if callable(get) else "") or e)
+        why = why.split(": ", 1)[-1] if "Exception: " in why else why
+        if why == "missing":
+            raise ValueError(_("translate_device_missing")) from None
+        if why == "unknown":
+            raise ValueError(_("translate_device_unknown")) from None
+        if why.startswith("lang:"):
+            raise ValueError(_("translate_device_lang", lang=why[5:])) from None
+        raise ValueError(f"Offline Translator: {why}") from None
+
+
+def _device_on():
+    """The phone's own translator offered to the core — only where Java is (the app),
+    not in the tests on a desktop."""
+    try:
+        import java  # noqa: F401 — Chaquopy's bridge to Kotlin
+    except ImportError:
+        return
+    from fedtail.core import translate
+    translate.DEVICE = _device_translate
+
+
 def _make(demo):
     from fedtail import i18n
     from fedtail.core import auth, paths
@@ -109,6 +142,7 @@ def _make(demo):
     from fedtail.frontends.web import server as web_server
     from fedtail.frontends.web.server import Web
     web_server.PIC_THROUGH = False  # the phone loads pictures by their own addresses
+    _device_on()  # feed.translate_backend = "device": Offline Translator
     old = _s["core"]
     if old is not None:
         old.shutdown()

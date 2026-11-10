@@ -1243,8 +1243,14 @@ _STRINGS = {
         "translate_profile_tip": "Описание и поля — на твой язык. Переводит свой "
                                  "переводчик: сервер переводит только посты",
         "translate_profile_needs": "Профиль переводит только свой переводчик: сервер умеет "
-                                   "лишь посты. Укажи LibreTranslate — feed.translate_backend "
-                                   "= \"libretranslate\" и feed.translate_url.",
+                                   "лишь посты. Укажи LibreTranslate — card.translate_backend "
+                                   "= \"libretranslate\" и card.translate_url, а на телефоне "
+                                   "— \"device\" (приложение Offline Translator).",
+        "translate_device_missing": "Нет приложения Offline Translator (F-Droid: "
+                                    "dev.davidv.translator): поставь его — или выбери другой "
+                                    "card.translate_backend.",
+        "translate_device_lang": "В Offline Translator нет языка «{lang}»: скачай его там.",
+        "translate_device_unknown": "Offline Translator не понял, на каком это языке.",
         "server_cant": "Твой сервер этого не умеет.",
         "who_favourited_by_n": "Кто лайкнул ({n})",
         "who_reblogged_by_n": "Кто бустнул ({n})",
@@ -3158,8 +3164,14 @@ _STRINGS = {
                                  "own does it: a server translates posts only",
         "translate_profile_needs": "Only a translator of your own translates a profile: a "
                                    "server does posts only. Name a LibreTranslate — "
-                                   "feed.translate_backend = \"libretranslate\" and "
-                                   "feed.translate_url.",
+                                   "card.translate_backend = \"libretranslate\" and "
+                                   "card.translate_url, or on the phone \"device\" (the "
+                                   "Offline Translator app).",
+        "translate_device_missing": "The Offline Translator app isn't there (F-Droid: "
+                                    "dev.davidv.translator): install it — or pick another "
+                                    "card.translate_backend.",
+        "translate_device_lang": "Offline Translator has no \"{lang}\": download it there.",
+        "translate_device_unknown": "Offline Translator couldn't tell the language.",
         "server_cant": "Your server can't do that.",
         "who_favourited_by_n": "Who liked it ({n})",
         "who_reblogged_by_n": "Who boosted it ({n})",

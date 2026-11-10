@@ -5,6 +5,7 @@ import os
 import sqlite3
 import stat
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -2467,6 +2468,32 @@ class CoreTest(TmpDir):
                 self.assertEqual(known[0], n if first else PARENTS_FIRST)
                 self.assertTrue(all(core.store.get_status(p) for p in pids))  # in the end
                 self.assertEqual(bool(heard), not first)
+
+    def test_the_sidebar_count_never_works_in_the_interface(self):
+        # unread_count_now (the sidebar's): a stale count is the last one, the lanes
+        # are worked out in the read thread and "counts_ready" says so — the window
+        # froze 0.3–0.9 s working a lane out between two frames (10.11)
+        from fedtail.core.view import View
+        core, w = self.make(lanes={"enabled": ["home"]})
+        core.connect().result()
+        w.add(status("060", BOB, minute=1), home=True)
+        core.poll_once()
+        self.assertEqual(core.unread_count_now("home"), core.unread_count("home"))
+        w.add(status("061", BOB, minute=2), home=True)
+        core.poll_once()
+        before = core.unread_count("home")
+        core.store.mark_read(["060"])  # stale now: nothing worked out for it yet
+        ready = threading.Event()
+        core.events.on("counts_ready", lambda _n, _p: ready.set())
+        self.assertEqual(core.unread_count_now("home"), before)  # the last one, at once
+        self.assertTrue(ready.wait(5))
+        self.assertEqual(core.unread_count_now("home"), before - 1)
+        # a read mark from an interface: written in the read thread, heard as before
+        heard = threading.Event()
+        core.events.on("read_changed", lambda _n, ids: "061" in ids and heard.set())
+        View(core).mark_read(["061"], later=True)
+        self.assertTrue(heard.wait(5))
+        self.assertIn("061", core.store.read_set(["061"]))
 
     def test_lane_cache_invalidates(self):
         core, w = self.make()

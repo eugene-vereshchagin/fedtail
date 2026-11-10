@@ -284,6 +284,11 @@ class MergedCore:
         return len(self.unread_ids(self.lane_entries(name))) + \
             len(self.filter_hidden_unread(name))
 
+    def unread_count_now(self, name):
+        """Every account's share, as unread_count (the single core's quick count knows
+        its own lanes only; a merged lane sums several)."""
+        return self.unread_count(name)
+
     def filter_hidden_unread(self, name):
         """Every account's unread posts the lane's filters keep out of sight (ids in this
         window's terms; Core.filter_hidden_unread)."""

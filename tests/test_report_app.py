@@ -215,6 +215,44 @@ class TranslateTest(FreeBase):
         self.assertIn("hello", page.rows[0].title)
         self.assertIn("LibreTranslate", page.hint)
 
+    def test_the_devices_own_translator(self):
+        # feed.translate_backend = "device": the phone's Offline Translator (its bridge
+        # sets core/translate.DEVICE) — plain text in, paragraphs back; a profile too; a
+        # private post may go by itself, it never leaves the phone
+        from fedtail.core import translate
+        core, w = self.make([])
+        ana = dict(BOB, id="A", acct="ana@es.example", note="<p>hola</p>")
+        st = status("001", ana, minute=1, vis="private", text="hola")
+        st["content"] = "<p>hola</p><p>amigos</p>"
+        st["language"] = "es"
+        w.add(st, home=True)
+        core.connect().result()
+        core.poll_once()
+        core.cfg["feed"]["translate_backend"] = "device"
+        self.assertFalse(core._own_translator())  # a desktop: no such translator here
+        asked = []
+
+        def device(text, source, target):
+            asked.append((text, source, target))
+            return text.replace("hola", "hello").replace("amigos", "friends")
+        old = translate.DEVICE
+        translate.DEVICE = device
+        self.addCleanup(setattr, translate, "DEVICE", old)
+        self.assertTrue(core._own_translator())
+        got = core.translate(core.store.get_status("001")).result()
+        self.assertEqual(got["content"], "<p>hello</p><p>friends</p>")
+        self.assertEqual(got["provider"], "Offline Translator")
+        self.assertEqual(asked[0], ("hola\n\namigos", "", "en"))
+        self.assertTrue(core._wants_translation(core.store.get_status("001")))
+        page = Places(View(core)).page("profile_translate", "A")
+        self.assertIn("hello", page.rows[0].title)
+
+        def broken(text, source, target):
+            raise ValueError("no such language there")
+        translate.DEVICE = broken
+        with self.assertRaises(ValueError):
+            core.translate(core.store.get_status("001")).result()
+
     def test_translated_by_itself(self):
         core, w = self.make([])
         st = status("001", BOB, minute=1, vis="public", text="hola amigos")

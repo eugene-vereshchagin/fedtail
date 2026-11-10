@@ -13,6 +13,11 @@ from .model import real
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
+# a translator on this very device — the phone's Offline Translator app (dev.davidv.
+# translator, through its AIDL API): fn(text, source, target) -> text, set by the phone's
+# bridge; None anywhere else (feed.translate_backend = "device" then does nothing)
+DEVICE = None
+
 
 class TranslateMixin:
     """A part of Core (core/app.py): see the module's words."""
@@ -24,7 +29,7 @@ class TranslateMixin:
         from ..i18n import current_language
         if self._own_translator():
             st = real(status)
-            return self.submit(lambda: self._libre(st, current_language()))
+            return self.submit(lambda: self._translate_own(st, current_language()))
         return self.call_api("translate", real(status)["id"], current_language())
 
     def translate_html(self, html):
@@ -36,13 +41,40 @@ class TranslateMixin:
         def job():
             if not self._own_translator():
                 raise ValueError(_("translate_profile_needs"))
-            return self._libre({"content": html}, current_language())
+            return self._translate_own({"content": html}, current_language())
         return self.submit(job)
 
     def _own_translator(self):
+        """A translator other than my server's: LibreTranslate at translate_url, or the
+        device's own (the phone's Offline Translator)."""
         feed = self.cfg["feed"]
+        if feed.get("translate_backend") == "device":
+            return DEVICE is not None
         return feed.get("translate_backend") == "libretranslate" and \
             str(feed.get("translate_url") or "").startswith(("https://", "http://"))
+
+    def _on_device(self):
+        return self.cfg["feed"].get("translate_backend") == "device" and DEVICE is not None
+
+    def _translate_own(self, st, into):
+        """The post (its HTML, its warning) by my own translator — the device's or
+        LibreTranslate."""
+        return self._device(st, into) if self._on_device() else self._libre(st, into)
+
+    def _device(self, st, into):
+        """The device's translator takes plain text: the post's paragraphs, translated in
+        one go, come back as paragraphs (its links and markup are the original's)."""
+        from ..model.text import html_to_text
+        text = html_to_text(st.get("content") or "").strip()
+        out = DEVICE(text, "", into) if text else ""
+        paras = [p.strip() for p in str(out or "").split("\n\n") if p.strip()]
+        content = "".join("<p>" + html_escape(p).replace("\n", "<br>") + "</p>"
+                          for p in paras)
+        spoiler = str(DEVICE(st["spoiler_text"], "", into) or "") \
+            if st.get("spoiler_text") else ""
+        return {"content": content, "spoiler_text": spoiler,
+                "detected_source_language": st.get("language") or "",
+                "provider": "Offline Translator"}
 
     def _libre(self, st, into):
         """LibreTranslate's /translate: the post's HTML (and its warning) into `into`."""
@@ -105,7 +137,8 @@ class TranslateMixin:
         lang = langs.base(st.get("language"))
         if not lang or not (st.get("content") or "").strip():
             return False
-        if self._own_translator() and st.get("visibility") not in ("public", "unlisted"):
+        if self._own_translator() and not self._on_device() and \
+                st.get("visibility") not in ("public", "unlisted"):
             # by itself, no private post goes to a translator outside the server (the
             # server's own /translate refuses them too): such a one only on a click
             return False
@@ -127,7 +160,7 @@ class TranslateMixin:
         def job():
             from ..i18n import current_language
             try:
-                got = self._libre(st, current_language()) if self._own_translator() else \
+                got = self._translate_own(st, current_language()) if self._own_translator() else \
                     self.api.translate(sid, current_language())
             except Exception as e:  # noqa: BLE001 — not translated: the post as it is
                 log.info("auto translation of %s: %s", sid, e)

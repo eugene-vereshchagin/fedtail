@@ -12,6 +12,11 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- allowBackup off: the token and the read marks never go into anybody's cloud backup -->
+    <!-- the on-device translator other apps may bind to (feed.translate_backend = "device") -->
+    <queries>
+        <package android:name="dev.davidv.translator" />
+    </queries>
+
     <application
         android:name=".FedtailApp"
         android:allowBackup="false"

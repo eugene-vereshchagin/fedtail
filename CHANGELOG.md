@@ -10,14 +10,22 @@
 - A busy lane (a list of hundreds of posts a day) no longer jumps while you read its older
   posts: the lane's window of the latest `render_limit` posts keeps where you stopped and a
   page above it, instead of letting the oldest go from under your eyes with every poll.
+- The Qt and GTK windows no longer freeze for a third of a second to a second while you
+  read: the sidebar's numbers are never worked out between two frames (a stale one stays a
+  moment and the new one comes from the background), and what you scroll past is marked
+  read without waiting for the database while a poll tidies it up.
 - A reply comes into a lane with the post it answers already fetched — every reply of a
   poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
   grows over it seconds later on a slow server, moving the lane. `card.parents_first`
   (on; `false` — at once, as before).
+- Android: translating on the phone itself, offline — `card.translate_backend = "device"`
+  hands posts, the translation by itself and profiles to the Offline Translator app
+  (F-Droid: `dev.davidv.translator`), as Fedilab does. Private posts too: nothing leaves the
+  phone. No app, or no model for the language — fedtail says so.
 - A profile can be translated: "🌐 Translate" among its buttons puts the bio and the fields
   into your language, in every interface and on the phone. A server translates only posts,
-  so this takes a translator of your own (LibreTranslate: `feed.translate_backend`,
-  `feed.translate_url`); without one the place says what to set.
+  so this takes a translator of your own (LibreTranslate: `card.translate_backend`,
+  `card.translate_url`); without one the place says what to set.
 - Android: "☺ Emoji" in the editor — every emoji of your server as pictures, with a search;
   a tap puts `:name:` at the cursor. The suggestions as you type `:` show the picture too.
 - A theme as one zip file, out and in: ≡ → "Try a theme" → "Save the theme to a file…" and

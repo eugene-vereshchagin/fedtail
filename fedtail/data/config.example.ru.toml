@@ -773,8 +773,11 @@ translate_all = false
 # LibreTranslate сам получает только публичные посты: приватный переводится по щелчку.
 translate_auto = false
 
-# Кто переводит: "server" — твой сервер (его /translate; есть не у всех) или
-# "libretranslate" — свой или публичный LibreTranslate по адресу translate_url.
+# Кто переводит: "server" — твой сервер (его /translate; есть не у всех, и переводит он
+# только посты); "libretranslate" — свой или публичный LibreTranslate по адресу
+# translate_url; "device" — на телефоне приложение Offline Translator (F-Droid:
+# dev.davidv.translator) на самом телефоне, без сети: посты, профили, и сам по себе тоже.
+# Профиль переводят только "libretranslate" и "device".
 translate_backend = "server"
 
 # Адрес LibreTranslate: "https://translate.example" (http:// — только в своей сети).

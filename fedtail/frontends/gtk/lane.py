@@ -879,8 +879,8 @@ class LaneView(Gtk.Box):
             self.rows[k].set_unread(False)
         self.unread -= set(done)
         self._glimpsed -= set(done)
-        if ids:
-            self.ctx.view.mark_read(ids)
+        if ids:  # seen while scrolling: written in the background (View.mark_read)
+            self.ctx.view.mark_read(ids, later=True)
         if done:
             self._pill(len(self.unread))
         return GLib.SOURCE_REMOVE

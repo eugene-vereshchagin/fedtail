@@ -15,6 +15,7 @@ class FedtailApp : Application() {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
+        DeviceTranslator.context = applicationContext
         Notifier.channel(this)
         Notifier.schedule(this)
     }

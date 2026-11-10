@@ -169,7 +169,7 @@ DEFAULTS = {
         "translate": True,
         "translate_all": False,
         "translate_auto": False,   # posts in languages I neither read nor write: translated
-        "translate_backend": "server",  # "server" (its /translate) or "libretranslate"
+        "translate_backend": "server",  # "server" (its /translate), "libretranslate", "device"
         "translate_url": "",       # LibreTranslate's address (https://…)
         "translate_key": "",       # its API key, if it asks for one
         # a post's menu: check what it says there (core/lookup.py; "Name|URL", {query})
@@ -407,7 +407,7 @@ CHOICES = {
     ("feed", "tag_click"): {"menu", "author", "everywhere"},
     ("ui", "code_click"): {"auto", "thread", "line"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
-    ("feed", "translate_backend"): {"server", "libretranslate"},
+    ("feed", "translate_backend"): {"server", "libretranslate", "device"},
     ("phone", "stream"): {"always", "wifi", "off"},
     ("ui", "layout"): {'single', 'split'},
     ("ui", "themes_by_layout"): {"auto", "on", "off"},

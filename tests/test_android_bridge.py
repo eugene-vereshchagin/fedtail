@@ -803,6 +803,45 @@ class BridgeAccountsTest(_Base):
         self.assertTrue(self.call("open")["lanes"])  # the screens come up on it
 
 
+class BridgeDeviceTranslatorTest(_Base):
+    """The phone's Offline Translator (DeviceTranslator.kt) seen from the bridge: offered
+    to the core only where Java is, its errors said in the reader's words."""
+
+    def test_offered_and_its_errors_said(self):
+        import sys
+        import types
+
+        from fedtail import i18n
+        from fedtail.core import translate
+        old = translate.DEVICE
+        self.addCleanup(setattr, translate, "DEVICE", old)
+        self.bridge._device_on()  # no Java here: nothing offered
+        self.assertIs(translate.DEVICE, old)
+        answers = {}
+
+        class Kt:
+            @staticmethod
+            def translate(text, source, target, timeout):
+                if text in answers:
+                    raise Exception("java.lang.IllegalStateException: " + answers[text])
+                return "[" + target + "] " + text
+        fake = types.ModuleType("java")
+        fake.jclass = lambda name: Kt
+        sys.modules["java"] = fake
+        self.addCleanup(sys.modules.pop, "java", None)
+        self.bridge._device_on()
+        self.assertEqual(translate.DEVICE("hola", "", "en"), "[en] hola")
+        i18n.setup("en")
+        for text, code, words in (("a", "missing", "dev.davidv.translator"),
+                                  ("b", "unknown", "couldn't tell"),
+                                  ("c", "lang:Basque", "Basque"),
+                                  ("d", "timeout", "Offline Translator: timeout")):
+            answers[text] = code
+            with self.assertRaises(ValueError) as e:
+                translate.DEVICE(text, "", "en")
+            self.assertIn(words, str(e.exception))
+
+
 class BridgeThemeTest(_Base):
     """The phone in the windows' themes: ui.theme's colours, read as the web page reads
     them; "system" — the phone's own light or dark."""

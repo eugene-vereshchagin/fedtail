@@ -132,16 +132,19 @@ def lane_label(view, name, width=22):
     return title, n
 
 
-def count(view, name):
+def count(view, name, quick=False):
     """The number on a lane's row: unread posts — events not seen, in a lane of events
     (the core counts both); nothing for browse lanes (no "unread" there) or before
-    login."""
+    login. quick: asked from a window's drawing thread — the count as it is made, a
+    stale one made in the background and brought by "counts_ready" (no lane worked out
+    between two frames); the web page and the phone ask off any drawing thread."""
     try:
         if not view.me:
             return 0
         if getattr(view.lane_by_name.get(name), "lazy", False):
             return 0
-        return int(view.unread_count(name) or 0)
+        now = getattr(view, "unread_count_now", None) if quick else None
+        return int((now(name) if now is not None else view.unread_count(name)) or 0)
     except Exception:  # noqa: BLE001 — a lane the core doesn't count
         return 0
 
@@ -214,8 +217,8 @@ def status_words(view):
     return " · ".join(x for x in (poll_words(view), slow_words(view)) if x)
 
 
-def counts(view, names):
-    return {name: count(view, name) for name in names}
+def counts(view, names, quick=False):
+    return {name: count(view, name, quick) for name in names}
 
 
 def icon_total(view, cfg, numbers):

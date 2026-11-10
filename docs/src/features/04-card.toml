@@ -183,8 +183,24 @@ config = "`card.translate`, `card.translate_all`"
 api = "`statuses/:id/translate`"
 others = "Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
-details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `card.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного. Профиль — описание и поля — переводит «🌐 Перевести» среди его кнопок, но только свой переводчик (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): сервер умеет переводить лишь посты."
-details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): a server translates posts only."
+details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `card.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного. Профиль — описание и поля — переводит «🌐 Перевести» среди его кнопок, но только свой переводчик (LibreTranslate: `card.translate_backend`, `card.translate_url`): сервер умеет переводить лишь посты."
+details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `card.translate_backend`, `card.translate_url`): a server translates posts only."
+
+[[feature]]
+id = "translate-device"
+status = "partly"
+android = "has"
+since = "next"
+name.ru = "Перевод на самом телефоне, без сети"
+name.en = "Translating on the phone itself, offline"
+config = "`card.translate_backend = \"device\"`"
+api.ru = "AIDL-интерфейс приложения Offline Translator (`dev.davidv.translator`)"
+api.en = "the Offline Translator app's AIDL interface (`dev.davidv.translator`)"
+others.ru = "Fedilab"
+others.en = "Fedilab"
+clients = ["Fedilab"]
+details.ru = "На телефоне переводит приложение Offline Translator (F-Droid, модели Bergamot из Firefox Translations): посты по «Перевести», автоперевод, профили — без сети и без чужих серверов, поэтому и приватные посты тоже. Модели языков скачиваются в нём самом; нет приложения или языка — fedtail так и скажет. Переводится текст по абзацам: ссылки и разметка — у оригинала. На компьютере такого переводчика нет: там `\"device\"` значит сервер."
+details.en = "On the phone the Offline Translator app translates (F-Droid, Bergamot's models from Firefox Translations): posts by “Translate”, the translation by itself, profiles — offline and with no one else's server, so private posts too. The languages' models are downloaded in that app; no app or no language — fedtail says so. The text is translated paragraph by paragraph: links and markup are the original's. A computer has no such translator: there `\"device\"` means the server."
 
 [[feature]]
 id = "fact-check"

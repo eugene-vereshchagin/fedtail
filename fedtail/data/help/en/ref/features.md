@@ -341,6 +341,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Translation by the server | has | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| Translating on the phone itself, offline | partly | next | `card.translate_backend = "device"` | the Offline Translator app's AIDL interface (`dev.davidv.translator`) | Fedilab |
 | Fact-check a post | has | 0.22.4 | `card.fact_check`, `card.fact_check_private` | none: a link opened in the browser | — |
 | Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
@@ -378,7 +379,9 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Edit history.** An edited post is marked so and has all its earlier versions.
 
-**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): a server translates posts only.
+**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `card.translate_backend`, `card.translate_url`): a server translates posts only.
+
+**Translating on the phone itself, offline.** On the phone the Offline Translator app translates (F-Droid, Bergamot's models from Firefox Translations): posts by “Translate”, the translation by itself, profiles — offline and with no one else's server, so private posts too. The languages' models are downloaded in that app; no app or no language — fedtail says so. The text is translated paragraph by paragraph: links and markup are the original's. A computer has no such translator: there `"device"` means the server.
 
 **Fact-check a post.** In a post's menu (a right click, ⋯, a long press on the phone): “Fact-check — Google Fact Check” opens a search among claims already checked, in the browser. It searches for the title of the link the post shares, and without one its first sentence (no mentions, tags or addresses, up to 120 characters). Public posts only: the words of followers-only and direct posts don't go to a stranger's service unless `card.fact_check_private` is on. The list is templates, `"Name|https://…{query}"` (also `{link}` — the post's link, `{lang}` — the interface's language); `[]` — no such item.
 

@@ -1620,7 +1620,7 @@ class MainWindow(Gtk.ApplicationWindow):
         return self.tabs.get_current_page() == 0 and self._current_lane() == name
 
     def update_badges(self):
-        numbers = sidebar.counts(self.view, self.lane_rows)
+        numbers = sidebar.counts(self.view, self.lane_rows, quick=True)  # the drawing thread
         for name, row in self.lane_rows.items():
             row.set_count(numbers[name], sidebar.fresh(self.view, name) if numbers[name] else 0)
         self._slow_text()
