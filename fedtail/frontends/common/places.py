@@ -128,7 +128,8 @@ PLACES = {
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
-    "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
+    "long_form": "long_form_title", "translate": "translate",
+    "profile_translate": "translate", "taglanes": "tags_lanes_menu",
     "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
     "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
@@ -1177,6 +1178,21 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
     def _p_translate(self, sid, _tab, _cur):
         page = Page("translate", _("translate"), arg=sid, empty=_("translate_none"))
         tr = _wait(self.view.translate(self._post(sid)))
+        if tr and tr.html:
+            page.hint = _("translated_from", lang=tr.lang or "?", provider=tr.provider or "")
+            page.rows.append(Row("html", tr.html))
+        return page
+
+    def _p_profile_translate(self, acc_id, _tab, _cur):
+        """A profile's bio and fields in my language (common/profile.py's "Translate")."""
+        acc = _wait(self.view.account(acc_id))
+        page = Page("profile_translate", f"{_('translate')}: @{acc.handle}", arg=acc_id,
+                    empty=_("translate_none"))
+        try:
+            tr = _wait(self.view.translate_profile(acc))
+        except ValueError as e:  # no translator of my own: what to set, said in place
+            page.empty = str(e)
+            return page
         if tr and tr.html:
             page.hint = _("translated_from", lang=tr.lang or "?", provider=tr.provider or "")
             page.rows.append(Row("html", tr.html))

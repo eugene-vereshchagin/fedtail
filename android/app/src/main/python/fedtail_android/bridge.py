@@ -649,6 +649,11 @@ def preview(body_json):
     return _answer(lambda: _s["web"].preview(json.loads(body_json or "{}")))
 
 
+def emoji_list():
+    """The editor's picker: every emoji of my server (Web.emoji_list)."""
+    return _answer(lambda: _s["web"].emoji_list())
+
+
 def complete(before):
     """#tags, @names, :emoji: for what is being typed (Web.complete)."""
     return _answer(lambda: _s["web"].complete(before))

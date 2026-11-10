@@ -27,6 +27,18 @@ class TranslateMixin:
             return self.submit(lambda: self._libre(st, current_language()))
         return self.call_api("translate", real(status)["id"], current_language())
 
+    def translate_html(self, html):
+        """Any HTML (a profile's bio and fields) in the interface's language — a future
+        of {content, detected_source_language, provider}. Only a translator of my own
+        can (feed.translate_backend = "libretranslate"): a server translates its posts,
+        by their id, and nothing else (Mastodon's /translate)."""
+        from ..i18n import _, current_language
+        def job():
+            if not self._own_translator():
+                raise ValueError(_("translate_profile_needs"))
+            return self._libre({"content": html}, current_language())
+        return self.submit(job)
+
     def _own_translator(self):
         feed = self.cfg["feed"]
         return feed.get("translate_backend") == "libretranslate" and \

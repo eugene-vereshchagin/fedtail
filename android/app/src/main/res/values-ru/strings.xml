@@ -174,4 +174,7 @@
     <string name="share">Поделиться…</string>
     <string name="reply_in_thread">Ответить @%1$s…</string>
     <string name="vis_as_parent_short">видят: как у оригинала</string>
+    <string name="emoji_pick">☺ Эмодзи</string>
+    <string name="emoji_search">Найти по имени</string>
+    <string name="emoji_none">Таких эмодзи на твоём сервере нет</string>
 </resources>

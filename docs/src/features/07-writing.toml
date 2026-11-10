@@ -166,6 +166,21 @@ details.ru = "`#ге` — сначала теги, на которые подп�
 details.en = "`#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, Tab or Enter puts it in."
 
 [[feature]]
+id = "emoji-picker"
+status = "partly"
+android = "has"
+since = "next"
+name.ru = "Все эмодзи сервера картинками — выбрать в редакторе"
+name.en = "All the server's emoji as pictures — to pick in the editor"
+config = "`post.complete_emoji`"
+api = "`custom_emojis`"
+others.ru = "у многих"
+others.en = "many have it"
+clients = ["Tusky", "Fedilab", "Elk", "Phanpy"]
+details.ru = "На телефоне — «☺ Эмодзи» под текстом: все эмодзи твоего сервера сеткой картинок, с поиском по имени, касание ставит `:имя:` у курсора; подсказки при наборе `:` — тоже с картинкой. В окнах, терминале и вебе пока только дополнение при наборе `:`."
+details.en = "On the phone — “☺ Emoji” under the text: every emoji of your server as a grid of pictures, with a search by name, a tap puts `:name:` at the cursor; the suggestions as you type `:` have their picture too. The windows, the terminal and the web page so far only complete as you type `:`."
+
+[[feature]]
 id = "camelcase"
 status = "has"
 android = "has"

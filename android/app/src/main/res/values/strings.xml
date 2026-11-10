@@ -175,4 +175,7 @@
     <string name="share">Share…</string>
     <string name="reply_in_thread">Reply to @%1$s…</string>
     <string name="vis_as_parent_short">who sees it: as the post</string>
+    <string name="emoji_pick">☺ Emoji</string>
+    <string name="emoji_search">Find by name</string>
+    <string name="emoji_none">No such emoji on your server</string>
 </resources>

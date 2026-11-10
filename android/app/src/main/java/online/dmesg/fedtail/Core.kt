@@ -94,6 +94,7 @@ object Core {
     suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
     suspend fun editor() = obj("editor")
     suspend fun complete(before: String) = obj("complete", before)
+    suspend fun emojiList() = obj("emoji_list")
     suspend fun composeCheck(body: JSONObject) = obj("compose_check", body.toString())
     suspend fun formatText(name: String, text: String, start: Int, end: Int) = obj(
         "format_text", JSONObject().put("name", name).put("text", text).put("start", start)

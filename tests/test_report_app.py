@@ -177,6 +177,44 @@ class TranslateTest(FreeBase):
         with self.assertRaises(ValueError):
             core._libre(core.store.get_status("001"), "en")
 
+    def test_a_profile_translated(self):
+        # the profile's "Translate" (common/profile.py) opens a place every interface
+        # draws: the bio and the fields, by a translator of my own — no server does it
+        from fedtail.frontends.common import profile as prof
+        core, w = self.make([])
+        ana = dict(BOB, id="A", acct="ana@es.example", note="<p>hola</p>",
+                   fields=[{"name": "web", "value": "<a href='https://ana.es'>ana.es</a>"}])
+        w.add(status("001", ana, minute=1, vis="public"), home=True)
+        core.connect().result()
+        core.poll_once()
+        view = View(core)
+        acc = view.account("A").result()
+        keys = [a.key for a in prof.actions(acc, None, False, core.cfg, core.supports)]
+        self.assertIn("translate", keys)
+        import dataclasses
+        bare = dataclasses.replace(acc, note="", fields=())  # nothing to translate
+        self.assertNotIn("translate", [a.key for a in prof.actions(
+            bare, None, False, core.cfg, core.supports)])
+        places = Places(view)
+        page = places.page("profile_translate", "A")  # the server alone: said why not
+        self.assertEqual(page.rows, [])
+        self.assertIn("translate_backend", page.empty)
+        core.cfg["feed"].update(translate_backend="libretranslate",
+                                translate_url="https://lt.example")
+        asked = []
+
+        def post(url, json=None, **_kw):
+            asked.append(json["q"])
+            return mock.Mock(status_code=200, json=lambda: {
+                "translatedText": "<p>hello</p><p><b>web</b>: ana.es</p>",
+                "detectedLanguage": {"language": "es"}})
+        with mock.patch("fedtail.core.app.requests.post", post):
+            page = places.page("profile_translate", "A")
+        self.assertIn("<p>hola</p>", asked[0])
+        self.assertIn("<b>web</b>", asked[0])  # the fields go along, under the bio
+        self.assertIn("hello", page.rows[0].title)
+        self.assertIn("LibreTranslate", page.hint)
+
     def test_translated_by_itself(self):
         core, w = self.make([])
         st = status("001", BOB, minute=1, vis="public", text="hola amigos")

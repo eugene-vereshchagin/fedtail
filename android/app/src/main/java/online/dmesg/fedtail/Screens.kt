@@ -520,6 +520,7 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // the text with its cursor: what is typed right before it is completed, and
             // where a quoted piece of the post answered goes
+            var emojiOpen by remember { mutableStateOf(false) }
             var field by remember { mutableStateOf(TextFieldValue(model.composeText,
                 TextRange(model.composeText.length))) }
             if (field.text != model.composeText) {  // set from outside (a quote, a redraft)
@@ -612,6 +613,7 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     modifier = Modifier.fillMaxWidth())
             }
             var offer by remember { mutableStateOf<Pair<String, List<Pair<String, String>>>?>(null) }
+            var offerPics by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
             LaunchedEffect(field.text, field.selection) {
                 offer = null
                 if (!field.selection.collapsed) return@LaunchedEffect
@@ -624,6 +626,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     val o = items.getJSONObject(it)
                     o.optString("insert") to o.optString("label")
                 }
+                offerPics = (0 until items.length()).map { items.getJSONObject(it) }
+                    .filter { it.optString("picture").isNotBlank() }
+                    .associate { it.optString("insert") to it.optString("picture") }
                 if (list.isNotEmpty()) offer = got.optString("word") to list
             }
             offer?.let { (word, items) ->
@@ -638,7 +643,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                             field = TextFieldValue(text, TextRange(at))
                             model.composeText = text
                             offer = null
-                        }, label = { Text(label, maxLines = 1) })
+                        }, label = { Text(label, maxLines = 1) }, leadingIcon = offerPics[insert]?.let { url ->
+                            { AsyncImage(model = url, contentDescription = null, modifier = Modifier.size(20.dp)) }
+                        })
                     }
                 }
             }
@@ -755,6 +762,19 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                         label = { Text(stringResource(R.string.poll)) })
                     LanguagePick(model)
                 }
+                // my server's own emoji, all of them as pictures: a tap puts ":code: " at
+                // the cursor (typing ":" offers them too, in the chips over the keyboard)
+                FilterChip(selected = false, onClick = { emojiOpen = true },
+                    label = { Text(stringResource(R.string.emoji_pick)) })
+            }
+            if (emojiOpen) EmojiSheet(onClose = { emojiOpen = false }) { code ->
+                val at = field.selection.min
+                val pad = if (at > 0 && !field.text[at - 1].isWhitespace()) " " else ""
+                val put = "$pad$code "
+                val text = field.text.substring(0, at) + put + field.text.substring(field.selection.max)
+                field = TextFieldValue(text, TextRange(at + put.length))
+                model.composeText = text
+                emojiOpen = false
             }
             if (model.uploading > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically,
@@ -968,3 +988,47 @@ private fun ConfigPlace(model: AppModel, snack: SnackbarHostState) {
     }
 }
 
+
+
+/** The editor's picker: every emoji of my server (bridge.emoji_list), a search over
+ *  their codes, a tap — the code ("`:blobcat:`") to put at the cursor. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EmojiSheet(onClose: () -> Unit, onPick: (String) -> Unit) {
+    var items by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
+    var error by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        val got = Core.emojiList()
+        val failed = Core.failed(got)
+        if (failed != null) { error = failed; items = emptyList(); return@LaunchedEffect }
+        val arr = got.optJSONArray("items") ?: org.json.JSONArray()
+        items = (0 until arr.length()).map { arr.getJSONObject(it) }
+            .map { it.optString("code") to it.optString("url") }
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().heightIn(min = 240.dp, max = 520.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                label = { Text(stringResource(R.string.emoji_search)) }, modifier = Modifier.fillMaxWidth())
+            val want = query.trim().trim(':')
+            val shown = items?.filter { want.isEmpty() || it.first.contains(want, ignoreCase = true) }
+            when {
+                shown == null -> CircularProgressIndicator()
+                error.isNotBlank() -> Text(error)
+                shown.isEmpty() -> Text(stringResource(R.string.emoji_none))
+                else -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    androidx.compose.foundation.lazy.grid.GridCells.Adaptive(52.dp)) {
+                    items(shown.size, key = { shown[it].first }) { i ->
+                        val (code, url) = shown[i]
+                        Box(Modifier.size(52.dp).clickable { onPick(":$code:") }
+                            .semantics { contentDescription = ":$code:" },
+                            contentAlignment = Alignment.Center) {
+                            AsyncImage(model = url, contentDescription = null, modifier = Modifier.size(36.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

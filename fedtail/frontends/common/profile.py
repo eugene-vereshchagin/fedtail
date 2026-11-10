@@ -108,6 +108,9 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
             out.append(Act("alias", "✎ " + _("alias_edit"), _("alias_tip")))
         if cfg["feed"].get("nick_colors"):  # their name in my colour, here only
             out.append(Act("nick_color", "🎨 " + _("color_edit"), _("color_tip")))
+    if not mine and cfg["feed"].get("translate", True) and \
+            ((getattr(acc, "note", "") or "").strip() or getattr(acc, "fields", ())):
+        out.append(Act("translate", "🌐 " + _("translate"), _("translate_profile_tip")))
     out.append(Act("copy_handle", _("copy_handle"), _("copy_handle_tip")))
     if acc.url:
         out.append(Act("open_browser", _("open_browser")))
@@ -216,5 +219,7 @@ def do(key, acc, rel, view, host, changed):
         host._place("profile_info", acc.id)
     elif key == "collections":  # theirs, or mine (common/places.py)
         host._place("collections", "" if view.me and acc.id == view.me.id else acc.id)
+    elif key == "translate":  # the bio and fields in my language (places: profile_translate)
+        host._place("profile_translate", acc.id)
     elif key == "collect":  # "Add to collection": mine, a tick where they are
         host._place("collect", acc.id)

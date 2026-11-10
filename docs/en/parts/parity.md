@@ -34,6 +34,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| All the server's emoji in the editor | — | — | · | — | ✓ | A grid of all the server's emoji with a search — on the phone only so far: typing `:name` is awkward there. The windows and the web page complete `:name:` as you type; the terminal can't draw the pictures. |
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
 | Formatting buttons in the editor | ✓ | ✓ | ◐ | ✓ | ✓ | post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab). |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |

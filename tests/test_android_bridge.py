@@ -843,6 +843,14 @@ class BridgeThemeTest(_Base):
         for word in ("reply", "boost", "like", "liked", "more", "refresh", "send"):
             self.assertIn("<svg", pics[word].get("svg", "") or open(pics[word]["png"]).read(4))
 
+    def test_emoji_picker(self):
+        # the editor's ☺: every emoji of my server, as the picker draws them
+        self.demo()
+        got = self.call("emoji_list")
+        self.assertIsInstance(got["items"], list)
+        for e in got["items"]:
+            self.assertTrue(e["code"] and "url" in e)
+
     def test_theme_out_and_back(self):
         # ≡ → Save the theme to a file / Add a theme from a file: the phone's themes
         # folder is out of a file manager's reach, a zip is the way in and out

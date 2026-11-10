@@ -274,6 +274,25 @@ class WebProfileTest(TmpDir):
         self.assertIn("#fediverse", [i["insert"] for i in got["items"]])
         self.assertEqual(self.web.complete("просто слово")["items"], [])
 
+    def test_emoji_with_pictures_and_all_of_them(self):
+        """The server's emoji: completed with their pictures (the phone's chips), and the
+        picker's list of all of them — fetched when opened first, by category."""
+        self.w.emoji = [{"shortcode": "blobcat", "static_url": "https://e/bc.png",
+                         "category": "blobs"},
+                        {"shortcode": "catjam", "url": "https://e/cj.gif"},
+                        {"shortcode": "hidden", "url": "https://e/h.png",
+                         "visible_in_picker": False}]
+        got = self.web.emoji_list()["items"]  # before any completion warmed them
+        self.assertEqual([e["code"] for e in got], ["catjam", "blobcat"])
+        self.assertEqual(got[1], {"code": "blobcat", "url": "https://e/bc.png",
+                                  "category": "blobs"})
+        self.web.complete("")
+        got = self.web.complete("ну :cat")
+        self.assertEqual(got["word"], ":cat")
+        pics = {i["insert"]: i.get("picture") for i in got["items"]}
+        self.assertEqual(pics[":catjam:"], "https://e/cj.gif")
+        self.assertEqual(pics[":blobcat:"], "https://e/bc.png")
+
 
 def _done(value):
     from concurrent.futures import Future

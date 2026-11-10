@@ -386,7 +386,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
 WEB_PROFILE_ACTS = ("details", "edit_profile", "follow", "bell", "boosts", "langs",
                     "mention", "mute", "block", "remove_follower", "endorse", "lists",
                     "collections", "collect",
-                    "following", "followers", "note", "copy_handle", "open_browser")
+                    "following", "followers", "note", "copy_handle", "open_browser", "translate")
 
 
 def _chosen(body):
@@ -1868,7 +1868,20 @@ class Web:
                 log.debug("complete: %s", e)
         if not cc.worth_offering(items, word):
             items = []
-        return {"word": sigil + word, "items": [{"insert": i, "label": lb} for i, lb in items]}
+        # an emoji's own picture by its words (the phone draws it in the chip)
+        pics = {f":{e['shortcode']}:": e.get("static_url") or e.get("url") or ""
+                for _c, e in core.emoji_suggestions(word, limit=50)} if sigil == ":" else {}
+        return {"word": sigil + word, "items": [
+            dict({"insert": i, "label": lb}, **({"picture": pics[i]} if pics.get(i) else {}))
+            for i, lb in items]}
+
+    def emoji_list(self):
+        """Every emoji of my server, for the editor's picker: {"items": [{code, url,
+        category}]} by category and shortcode (common/compose inserts ":code:")."""
+        got = self.core.emoji_all().result(timeout=30)
+        return {"items": [{"code": e["shortcode"],
+                           "url": e.get("static_url") or e.get("url") or "",
+                           "category": str(e.get("category") or "")} for e in got]}
 
     def compose_check(self, body):
         """What the editor shows beside the text as it is typed (common/compose.count, the

@@ -59,6 +59,24 @@ class WritingMixin:
                 log.info("custom emoji: %s", e)
         self.bg.submit(job)
 
+    def emoji_all(self):
+        """Future: every emoji of my server the picker shows ([emoji dict], by category
+        and shortcode) — fetched now if not yet (prepare_emoji fetches in the
+        background: a picker opened first must not be empty)."""
+        def job():
+            have = getattr(self, "_emoji", None)
+            if not have and self.api:
+                try:
+                    have = [e for e in self.api.custom_emojis()
+                            if e.get("shortcode") and e.get("visible_in_picker", True)]
+                except Exception as e:  # noqa: BLE001 — said by the caller
+                    log.info("custom emoji: %s", e)
+                    raise
+                self._emoji = have
+            return sorted(have or (), key=lambda e: (str(e.get("category") or ""),
+                                                      e["shortcode"].casefold()))
+        return self.submit(job)
+
     def emoji_suggestions(self, prefix, limit=8):
         """The server's emoji whose shortcode has prefix (no ":"): starting with it
         first, then containing it. [(shortcode, emoji dict)]."""

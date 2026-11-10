@@ -14,6 +14,12 @@
   poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
   grows over it seconds later on a slow server, moving the lane. `card.parents_first`
   (on; `false` — at once, as before).
+- A profile can be translated: "🌐 Translate" among its buttons puts the bio and the fields
+  into your language, in every interface and on the phone. A server translates only posts,
+  so this takes a translator of your own (LibreTranslate: `feed.translate_backend`,
+  `feed.translate_url`); without one the place says what to set.
+- Android: "☺ Emoji" in the editor — every emoji of your server as pictures, with a search;
+  a tap puts `:name:` at the cursor. The suggestions as you type `:` show the picture too.
 - A theme as one zip file, out and in: ≡ → "Try a theme" → "Save the theme to a file…" and
   "Add a theme from a file…" (on the phone — in ≡ itself, where the themes folder is out of
   a file manager's reach), or `fedtail --theme-export NAME FILE.zip` / `--theme-import`.

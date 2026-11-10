@@ -1240,6 +1240,11 @@ _STRINGS = {
         "translate": "Перевести", "show_original": "оригинал",
         "translated_from": "переведено с «{lang}» · {provider}",
         "translate_none": "Твой сервер не умеет переводить посты.",
+        "translate_profile_tip": "Описание и поля — на твой язык. Переводит свой "
+                                 "переводчик: сервер переводит только посты",
+        "translate_profile_needs": "Профиль переводит только свой переводчик: сервер умеет "
+                                   "лишь посты. Укажи LibreTranslate — feed.translate_backend "
+                                   "= \"libretranslate\" и feed.translate_url.",
         "server_cant": "Твой сервер этого не умеет.",
         "who_favourited_by_n": "Кто лайкнул ({n})",
         "who_reblogged_by_n": "Кто бустнул ({n})",
@@ -3149,6 +3154,12 @@ _STRINGS = {
         "translate": "Translate", "show_original": "original",
         "translated_from": "translated from “{lang}” · {provider}",
         "translate_none": "Your server doesn't translate posts.",
+        "translate_profile_tip": "The bio and fields in your language. A translator of your "
+                                 "own does it: a server translates posts only",
+        "translate_profile_needs": "Only a translator of your own translates a profile: a "
+                                   "server does posts only. Name a LibreTranslate — "
+                                   "feed.translate_backend = \"libretranslate\" and "
+                                   "feed.translate_url.",
         "server_cant": "Your server can't do that.",
         "who_favourited_by_n": "Who liked it ({n})",
         "who_reblogged_by_n": "Who boosted it ({n})",

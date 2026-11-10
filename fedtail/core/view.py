@@ -560,6 +560,21 @@ class View:
                                str(tr.get("provider") or ""))
         return _then(self._core.translate(self._raw(real(post))), made)
 
+    def translate_profile(self, acc):
+        """Future: a Translation of a profile's bio and fields, one piece of HTML (the
+        fields as "name: value" lines under it) — by a translator of my own only
+        (core.translate_html: no server translates a profile)."""
+        from html import escape
+        parts = [acc.note or ""]
+        parts += [f"<p><b>{escape(f.name)}</b>: {f.value}</p>" for f in acc.fields or ()]
+
+        def made(tr):
+            tr = tr if isinstance(tr, dict) else {}
+            return Translation(str(tr.get("content") or ""),
+                               str(tr.get("detected_source_language") or ""),
+                               str(tr.get("provider") or ""))
+        return _then(self._core.translate_html("".join(parts)), made)
+
     def history(self, post):
         """Future: [Post] — the versions of an edited post, oldest first."""
         def made(versions):

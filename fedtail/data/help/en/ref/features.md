@@ -378,7 +378,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Edit history.** An edited post is marked so and has all its earlier versions.
 
-**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
+**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): a server translates posts only.
 
 **Fact-check a post.** In a post's menu (a right click, ⋯, a long press on the phone): “Fact-check — Google Fact Check” opens a search among claims already checked, in the browser. It searches for the title of the link the post shares, and without one its first sentence (no mentions, tags or addresses, up to 120 characters). Public posts only: the words of followers-only and direct posts don't go to a stranger's service unless `card.fact_check_private` is on. The list is templates, `"Name|https://…{query}"` (also `{link}` — the post's link, `{lang}` — the interface's language); `[]` — no such item.
 
@@ -508,6 +508,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | A file the server won't take — said at once | has | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
+| All the server's emoji as pictures — to pick in the editor | partly | next | `post.complete_emoji` | `custom_emojis` | many have it |
 | CamelCase hint for hashtags | has | 0.2.0 | `post.camelcase_hint` | own | only in fedtail |
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |
 | A poll in a post | has | 0.8.0 | — | `poll[options]` | everyone |
@@ -549,6 +550,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A file the server won't take — said at once.** The server says which file types it takes (usually pictures, video, sound). PDF, EPUB, FB2 and anything else not on its list fedtail doesn't upload but says at once: “The server doesn't take such files: book.pdf (it takes: pictures, video, sound)” — the text stays in the draft. fedtail knows a file's type itself, the same on every system (.md, .fb2, .epub — on Windows too), so a server that takes documents (Akkoma, Pleroma) gets them with the right type. A server that gives no list decides itself. `post.check_media_types = false` — no check.
 
 **Completing #tags, @nicks, :emoji:.** `#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, Tab or Enter puts it in.
+
+**All the server's emoji as pictures — to pick in the editor.** On the phone — “☺ Emoji” under the text: every emoji of your server as a grid of pictures, with a search by name, a tap puts `:name:` at the cursor; the suggestions as you type `:` have their picture too. The windows, the terminal and the web page so far only complete as you type `:`.
 
 **CamelCase hint for hashtags.** A hashtag in one case (`#georgianews`) gets a hint: screen readers read `#GeorgiaNews` word by word.
 
@@ -919,6 +922,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| All the server's emoji in the editor | — | — | · | — | ✓ | A grid of all the server's emoji with a search — on the phone only so far: typing `:name` is awkward there. The windows and the web page complete `:name:` as you type; the terminal can't draw the pictures. |
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
 | Formatting buttons in the editor | ✓ | ✓ | ◐ | ✓ | ✓ | post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab). |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |

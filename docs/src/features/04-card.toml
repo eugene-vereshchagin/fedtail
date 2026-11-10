@@ -183,8 +183,8 @@ config = "`card.translate`, `card.translate_all`"
 api = "`statuses/:id/translate`"
 others = "Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
-details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `card.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного."
-details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given."
+details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `card.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного. Профиль — описание и поля — переводит «🌐 Перевести» среди его кнопок, но только свой переводчик (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): сервер умеет переводить лишь посты."
+details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given. A profile — the bio and fields — is translated by “🌐 Translate” among its buttons, but only by a translator of your own (LibreTranslate: `feed.translate_backend`, `feed.translate_url`): a server translates posts only."
 
 [[feature]]
 id = "fact-check"

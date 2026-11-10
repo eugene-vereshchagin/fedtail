@@ -59,6 +59,19 @@ note.ru = "Окна на Qt и GTK и веб рисуют :blobcat: картин
 note.en = "The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text."
 
 [[capability]]
+id = "emoji-picker"
+area = "writing"
+qt = "no"
+gtk = "no"
+tui = "na"
+web = "no"
+android = "has"
+name.ru = "Все эмодзи сервера в редакторе"
+name.en = "All the server's emoji in the editor"
+note.ru = "Сетка всех эмодзи сервера с поиском — пока только на телефоне: там набирать `:имя` неудобно. Окна и веб дополняют `:имя:` при наборе; терминалу картинки не нарисовать."
+note.en = "A grid of all the server's emoji with a search — on the phone only so far: typing `:name` is awkward there. The windows and the web page complete `:name:` as you type; the terminal can't draw the pictures."
+
+[[capability]]
 id = "hover-tools"
 area = "reading"
 tui = "na"
