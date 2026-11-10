@@ -198,6 +198,32 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: not any(c.unread for c in lane.rows.values()), 5))
         self.assertFalse(self.view.unread([c.entry for c in lane.rows.values()]))
 
+    def test_a_card_scrolled_over_whole_is_read(self):
+        """A card the screen went over whole between two ticks is read, as in Qt and on
+        the web page (a quick scroll through pictures left them unread, 10.11); a jump
+        of more than a screen counts nothing."""
+        import time as _time
+        from types import SimpleNamespace
+        lane = self._lane("home")
+        strip, adj = lane.strip, lane.adj
+        val = {"v": 0.0}
+        try:
+            lane.adj = SimpleNamespace(get_value=lambda: val["v"], get_page_size=lambda: 300.0)
+            lane.strip = SimpleNamespace(ys={"a": 320.0, "b": 2000.0},
+                                         h={"a": (0, 200.0), "b": (0, 200.0)})
+            lane.unread = {"a", "b"}
+            lane._touched_at = _time.monotonic()
+            lane._last_value = 0.0
+            val["v"] = 250.0  # the screen 0–300 went to 250–550: "a" (320–520) passed whole
+            lane._sweep()
+            self.assertEqual(lane._swept, {"a"})
+            val["v"] = 1900.0  # a jump: nothing
+            lane._sweep()
+            self.assertEqual(lane._swept, {"a"})
+        finally:
+            lane.strip, lane.adj = strip, adj
+            lane._swept = set()
+
     def test_all_read_clears_badge(self):
         lane = self._lane("home")
         lane.mark_all_read()
@@ -704,6 +730,32 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: self.world.collections[cid]["members"], 3))
         pw.window.close()
         put.window.close()
+
+    def test_a_places_button_keeps_the_page_where_it_was(self):
+        """≡ → Lanes, ↓ on a lane mid-page: the page drawn again stays where it was (GTK
+        handed the focus on and the viewport ran after it, 10.11), as Qt's."""
+        pw = self.win.open_place("lanes")
+        pw.window.set_default_size(640, 300)
+        self.assertTrue(pump(lambda: pw.page is not None, 3))
+        pump(timeout=0.4)
+        scroll = pw.rows.get_ancestor(Gtk.ScrolledWindow)
+        adj = scroll.get_vadjustment()
+        adj.set_value((adj.get_upper() - adj.get_page_size()) / 2)
+        pump(timeout=0.2)
+        before = adj.get_value()
+
+        def on_screen(b):
+            ok, r = b.compute_bounds(scroll)
+            return ok and 0 < r.get_y() < scroll.get_height() - 20
+        b = next(w for w in _walk(pw.rows) if isinstance(w, Gtk.Button)
+                 and w.get_label() == "↓" and on_screen(w))
+        b.grab_focus()
+        page0 = pw.page
+        b.emit("clicked")
+        self.assertTrue(pump(lambda: pw.page is not page0, 3))
+        pump(timeout=0.4)
+        self.assertLess(abs(adj.get_value() - before), adj.get_page_size())
+        pw.window.close()
 
     def test_place_and_settings_scrollbars_beside_the_buttons(self):
         """A place (≡ → Lanes) and the settings: the scrollbar takes a strip of its own,

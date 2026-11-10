@@ -171,6 +171,23 @@ class LaneModelTest(unittest.TestCase):
         state["stood.home"] = "i2"
         self.assertEqual(lane.LaneModel(v, "home").start(specs), (None, "end"))
 
+    def test_read_on_elsewhere_moves_the_place(self):
+        """Stood at post 1 here, read on to 3 on the phone (sync brings the read marks,
+        not the place): the lane opens at the first unread after them, not at post 1
+        (10.11); everything read after it — at the last of them, at the bottom."""
+        v = View([(f"i{n}", post(str(n))) for n in range(1, 6)], unread={"4", "5"},
+                 name="home")
+        state = {"stood.home": "i1"}
+        v.get_state = lambda k, d=None: state.get(k, d)
+        m = lane.LaneModel(v, "home")
+        specs = m.build(positioned=True).specs
+        keys = [s.key for s in specs if s.entry is not None]
+        self.assertEqual(m.start(specs), ("i4", "top"))
+        everything = [s for s in specs if s.key in keys]
+        for s in everything:
+            s.unread = False
+        self.assertEqual(lane.LaneModel(v, "home").start(everything), ("i5", "bottom"))
+
     def test_a_card_twice_is_shown_once(self):
         """The same item twice in what the view gives (a post come by two ways): one card
         — a key twice left a blank place and threw the windows' places off (29.10)."""

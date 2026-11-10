@@ -2500,6 +2500,7 @@ function placeButton(b, values) {
   const x = el("button", b.primary ? "primary small" : "tool small", b.label);
   x.type = "button";
   if (b.tip) x.title = b.tip;
+  x.dataset.act = JSON.stringify(b.act);  // found again after a redraw (placeAct)
   x.onclick = () => placeAct(b.act, values ? values() : null);
   return x;
 }
@@ -2603,7 +2604,18 @@ async function placeAct(act, values, confirmed, answer) {
   if (r.open) { openThing(r.open); if (!r.refresh) return; }
   if (r.refresh && state.place) {
     const pl = state.place;
+    // the page drawn again where it was, the same button of the same row focused (↓ in
+    // the lane editor moves it): not back at the top (10.11)
+    const box = pl.into === "side" ? $("#side-body") : $("#posts");
+    const top = box.scrollTop;
     await openPlace(pl.name, pl.arg, pl.tab, "", pl.into);
+    if (state.place && state.place.name === pl.name) {
+      box.scrollTop = top;
+      const key = JSON.stringify(act);
+      const again = [...box.querySelectorAll("button[data-act]")]
+        .find((b) => b.dataset.act === key);
+      if (again) again.focus({ preventScroll: true });
+    }
     if (pl.into === "main") loadLanes();
   }
 }

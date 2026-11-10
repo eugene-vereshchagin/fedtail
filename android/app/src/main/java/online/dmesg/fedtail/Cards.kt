@@ -301,26 +301,58 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
  *  the windows' own (common/lane.seen): whole on screen, or a card taller than the
  *  screen whose end came into view, or anything on screen at the list's end, or a card
  *  glimpsed and then scrolled past. The phone counted only cards whole on screen, and a
- *  tall one never was (31.10). */
+ *  tall one never was (31.10). And, as the windows' and the web page's: a card the
+ *  screen went over whole while the finger scrolled it — a quick run through pictures
+ *  never stopped on them and left them unread (10.11). Not a jump ("to the new"). */
 @Composable
 fun MarkWhileScrolling(state: LazyListState, on: Boolean, dwellMs: Long,
                        mark: (List<String>) -> Unit) {
     val glimpsed = remember(state) { mutableSetOf<String>() }
     val where = remember(state) { HashMap<String, Int>() }  // a card's index, last seen
+    val swept = remember(state) { mutableSetOf<String>() }  // whole on screen, scrolling
+    val byHand = remember(state) { booleanArrayOf(false) }  // this scroll is the finger's
+    LaunchedEffect(state, on) {
+        if (!on) return@LaunchedEffect
+        launch {
+            state.interactionSource.interactions.collect {
+                if (it is DragInteraction.Start) byHand[0] = true
+            }
+        }
+        // every frame of a scroll by hand (the fling after it too): who is whole on screen
+        snapshotFlow { state.layoutInfo }.collect { info ->
+            if (!state.isScrollInProgress || !byHand[0]) return@collect
+            val vtop = info.viewportStartOffset
+            val vbot = info.viewportEndOffset
+            info.visibleItemsInfo.forEach {
+                val key = it.key as? String ?: return@forEach
+                val end = it.offset + it.size
+                val whole = it.offset >= vtop - 2 && end <= vbot + 2
+                val tallDone = it.size > vbot - vtop && end in (vtop + 1)..(vbot + 2)
+                if (whole || tallDone) swept += key
+            }
+        }
+    }
     LaunchedEffect(state, on, dwellMs) {
         if (!on) return@LaunchedEffect
         snapshotFlow { state.isScrollInProgress to state.layoutInfo.visibleItemsInfo.size }
             .collect { (scrolling, _) ->
                 if (scrolling) return@collect
+                byHand[0] = false
                 delay(dwellMs)  // read.dwell_ms, as the windows'
                 val info = state.layoutInfo
                 val vtop = info.viewportStartOffset
                 val cards = JSONArray()
                 val shown = HashSet<String>()
+                // seen whole on the way: said to the core as whole on screen
+                val went = swept.toList()
+                swept.clear()
+                went.forEach { cards.put(JSONObject().put("key", it).put("top", vtop)
+                    .put("bottom", vtop + 1)) }
                 info.visibleItemsInfo.forEach {
                     val key = it.key as? String ?: return@forEach
                     shown += key
                     where[key] = it.index
+                    if (key in went) return@forEach
                     cards.put(JSONObject().put("key", key).put("top", it.offset)
                         .put("bottom", it.offset + it.size))
                 }
@@ -373,7 +405,9 @@ suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolea
                 bottom: Boolean = false): Int {
     if (posts.isEmpty()) return -1
     val firstUnread = posts.indexOfFirst { it.unread }
-    val chosen = if (byCore) posts.indexOfFirst { it.key == start } else firstUnread
+    // the core says the post's id; a card's key may be its own ("conv:…"): either
+    val chosen = if (byCore) posts.indexOfFirst { it.key == start || it.id == start }
+        else firstUnread
     val at = when {
         chosen >= 0 -> chosen
         newestFirst -> 0

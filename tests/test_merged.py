@@ -441,6 +441,37 @@ class MergedRoutingTest(TmpDir):
             self.p.connect = lambda: done(None)
             m.connect().result(timeout=T)  # one not logged in isn't connected at all
 
+    def test_followed_tags_are_every_accounts(self):
+        """"Tags you follow" (g in the terminal) lists the other account's too (10.11),
+        each once; "unfollow" takes it out of every account that follows it."""
+        self.home.followed_tags.update({"linux"})
+        self.work.followed_tags.update({"linux", "georgia"})
+        names = [getattr(t, "name", None) or t["name"]
+                 for t in self.m.followed_tags().result(timeout=T)]
+        self.assertEqual(names, ["linux", "georgia"])
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+        page = Places(View(self.m)).page("tags", None, None, None)
+        self.assertEqual([r.key for r in page.rows], ["linux", "georgia"])
+        self.w.followed_tags().result(timeout=T)
+        self.w._followed_tag_names = {"linux", "georgia"}
+        self.p._followed_tag_names = {"linux"}
+        self.assertTrue(self.m.tag_followed("Georgia"))
+        self.assertTrue(self.m.tag_info("georgia").result(timeout=T)["following"])
+        self.m.follow_tag("georgia", False).result(timeout=T)
+        for _ in range(100):
+            if "georgia" not in self.work.followed_tags:
+                break
+            import time
+            time.sleep(0.02)
+        self.assertNotIn("georgia", self.work.followed_tags)
+        self.assertEqual(self.home.followed_tags, {"linux"})
+        # the other account down: the main one's tags still come
+        bad = Future()
+        bad.set_exception(OSError("down"))
+        self.w.followed_tags = lambda: bad
+        self.assertEqual(len(self.m.followed_tags().result(timeout=T)), 1)
+
     # ---- the web page (and the phone, through it) -----------------------------------
     def test_web_act_as_from_the_menu(self):
         """A post's ⋯ on the page offers ★ ♻ ↩ from the other account, as the windows'

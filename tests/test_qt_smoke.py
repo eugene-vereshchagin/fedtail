@@ -95,6 +95,38 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.1)
         self._tmp.cleanup()
 
+    def test_a_places_button_keeps_the_page_where_it_was(self):
+        """≡ → Lanes, ↓ on a lane mid-page: the page drawn again stays where it was, the
+        focus on that lane's ↓ — the focus handed on to the last button scrolled it to
+        the end (10.11)."""
+        from PySide6.QtWidgets import QPushButton, QScrollArea
+        dlg = self.win.open_place("lanes")
+        dlg.resize(640, 300)
+        self.pump(until=lambda: dlg.page is not None)
+        self.pump(0.2)
+        sc = dlg.findChild(QScrollArea)
+        bar = sc.verticalScrollBar()
+        bar.setValue(bar.maximum() // 2)
+        self.pump(0.1)
+        before = bar.value()
+
+        def on_screen(b):
+            y = b.mapTo(sc.viewport(), b.rect().center()).y()
+            return 0 < y < sc.viewport().height()
+        b = next(b for b in sc.widget().findChildren(QPushButton)
+                 if b.text() == "↓" and b.isVisible() and on_screen(b))
+        dlg.activateWindow()
+        b.setFocus()
+        page0 = dlg.page
+        b.click()
+        self.pump(until=lambda: dlg.page is not page0)
+        self.pump(0.3)
+        self.assertLess(abs(bar.value() - before), sc.viewport().height())
+        focused = self.app.focusWidget()
+        self.assertIsInstance(focused, QPushButton)
+        self.assertEqual(focused.text(), "↓")
+        dlg.close()
+
     def test_about_checks_for_updates_now(self):
         """About's "Updates" row: "Check now" asks the website at once, the row says
         the answer and offers the release's page (as GTK's, as the common place's)."""

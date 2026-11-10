@@ -103,6 +103,7 @@ class LaneView(Gtk.Box):
         self.order = []          # keys of the cards that exist, top to bottom
         self.sep_above = None    # the key the "new below" line sits above
         self._glimpsed = set()   # unread cards seen in part (common/lane.py seen())
+        self._swept = set()      # unread cards the screen went over whole while scrolling
         self.positioned = False
         self.dirty = True        # the lane changed while not on screen
         self.stopped = False     # the window closed: no more work queued
@@ -816,8 +817,26 @@ class LaneView(Gtk.Box):
             else:  # moved by the reader: it goes where the reader goes
                 self._target = None
                 self._held = set()
+        self._sweep()
         self._schedule_seen()
         self._realize()
+
+    def _sweep(self):
+        """What the screen went over on its way here, as Qt's: a card the window passed
+        whole is read though no tick caught it standing — the tick comes every
+        read.dwell_ms, and a quick scroll through pictures left them unread (10.11). A
+        jump (the scroll bar dragged, End, "to the new") counts nothing."""
+        value, vh = self.adj.get_value(), self.adj.get_page_size()
+        old = getattr(self, "_last_value", value)
+        self._last_value = value
+        if old == value or abs(value - old) > vh or \
+                time.monotonic() - self._touched_at >= 1.0:
+            return
+        lo, hi = min(old, value), max(old, value) + vh
+        for k in self.unread:
+            y, h = self.strip.ys.get(k), self.strip.h.get(k)
+            if y is not None and h is not None and y >= lo - 2 and y + h[1] <= hi + 2:
+                self._swept.add(k)
 
     def _schedule_seen(self):
         if self._seen_timer or self.lazy:
@@ -862,11 +881,12 @@ class LaneView(Gtk.Box):
                 unplaced = True  # not measured yet: look again in a moment
                 continue
             got = seen(y, y + h[1], vtop, vbot, at_end, k in self._glimpsed)
-            if got == "read":
+            if got == "read" or k in self._swept:
                 keys.append(k)
             elif got == "glimpsed":
                 glimpsed.add(k)
         self._glimpsed = (self._glimpsed & self.unread) | glimpsed
+        self._swept = set()
         if unplaced:
             self._schedule_seen()
         # an event's row goes by its key ("event:<id>"): LaneModel.read marks the events

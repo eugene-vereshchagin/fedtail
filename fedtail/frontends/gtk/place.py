@@ -30,6 +30,8 @@ class PlaceWindow:
         self.name, self.arg, self.tab, self.cursor = name, arg, tab, ""
         self.fields = {}
         self.page = None  # the page drawn last (as Qt's PlaceDialog keeps it)
+        self._buttons = {}  # a button's act -> its widget (focus kept over a redraw)
+        self._keep = None   # (scroll position, act of the pressed button) for the redraw
         self.window = _window(win, _(PLACES.get(name, name)), 640, 640)
         outer = _box()
         self.hint = Gtk.Label(wrap=True, xalign=0)
@@ -37,7 +39,7 @@ class PlaceWindow:
         outer.append(self.hint)
         self.tabs = Gtk.Box(spacing=6)
         outer.append(self.tabs)
-        scroll = vscroll(vexpand=True)
+        scroll = self.scroll = vscroll(vexpand=True)
         self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         scroll.set_child(self.rows)
         outer.append(scroll)
@@ -68,6 +70,7 @@ class PlaceWindow:
         if b.tip:
             tip(w, b.tip)
         w.connect("clicked", lambda _w, btn=b: self.press(btn))
+        self._buttons[tuple(b.act)] = w
         return w
 
     def draw(self, page):
@@ -80,7 +83,13 @@ class PlaceWindow:
             b = Gtk.ToggleButton(label=words, active=key == page.tab)
             b.connect("clicked", lambda _b, k=key: self.go(self.name, self.arg, k))
             self.tabs.append(b)
+        keep, self._keep = self._keep, None
         if not self.cursor:
+            if keep is not None:
+                # the pressed button goes with its row: GTK hands the focus on and the
+                # viewport scrolls to it, far from where one was (10.11)
+                self.window.set_focus(None)
+            self._buttons = {}
             self._empty(self.rows)
         for r in page.rows:
             self.rows.append(self.row(r))
@@ -97,6 +106,23 @@ class PlaceWindow:
             if b is not None:
                 buttons.append(self._button(b))
         self.form.append(buttons)
+        if keep is not None:
+            self._restore(*keep)
+
+    def _restore(self, value, act):
+        """After a button's redraw: the page where it was, the focus on the same button
+        of the same row (↓ moves it — the focus goes with it), as in Qt."""
+        from gi.repository import GLib
+        adj = self.scroll.get_vadjustment()
+
+        def back():
+            adj.set_value(min(value, max(0.0, adj.get_upper() - adj.get_page_size())))
+            w = self._buttons.get(act)
+            if w is not None and w.get_root() is not None:
+                w.grab_focus()
+            return False
+        back()
+        GLib.idle_add(back)  # once the new rows have their sizes
 
     def row(self, r):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -280,6 +306,7 @@ class PlaceWindow:
             return
         if out.refresh:
             self.cursor = ""
+            self._keep = (self.scroll.get_vadjustment().get_value(), tuple(btn.act))
             self.load()
 
     def go(self, name, arg="", tab="", cursor=""):

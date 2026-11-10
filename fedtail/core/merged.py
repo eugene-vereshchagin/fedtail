@@ -205,6 +205,62 @@ class MergedCore:
         out += [(c, t, name) for t, c in self.others.items() if name in c.lane_by_name]
         return out
 
+    # ---- followed hashtags: every account's -----------------------------------------
+    def _cores(self):
+        return [self.primary, *self.others.values()]
+
+    def followed_tags(self):
+        """The hashtags any account of this window follows, each once (the main
+        account's first): not the main account's alone (10.11). One account failing
+        leaves the others' tags; the main one failing fails the list."""
+        futs = [core.followed_tags() for core in self._cores()]
+        out = Future()
+
+        def done(_f):
+            if out.done() or not all(f.done() for f in futs):
+                return
+            tags, seen = [], set()
+            for i, f in enumerate(futs):
+                if f.exception() is not None:
+                    if i == 0:
+                        out.set_exception(f.exception())
+                        return
+                    log.info("followed tags of another account: %s", f.exception())
+                    continue
+                for t in f.result() or ():
+                    key = _tag_name(t).lower()
+                    if key and key not in seen:
+                        seen.add(key)
+                        tags.append(t)
+            out.set_result(tags)
+        for f in futs:
+            f.add_done_callback(done)
+        return out
+
+    def tag_followed(self, name):
+        """Does any account follow it; None while none knows yet."""
+        said = [core.tag_followed(name) for core in self._cores()]
+        return True if any(said) else (None if all(s is None for s in said) else False)
+
+    def follow_tag(self, name, on=True):
+        """Follow from the main account; stop following on every account that does —
+        the list shows them all as one, so "unfollow" takes it out of all of them."""
+        if on:
+            return self.primary.follow_tag(name, True)
+        for core in self.others.values():
+            if core.tag_followed(name):
+                core.follow_tag(name, False)
+        return self.primary.follow_tag(name, False)
+
+    def tag_info(self, name):
+        """The main account's view of the tag, followed if any account follows it."""
+        def fix(t):
+            if isinstance(t, dict) and t.get("following") is False and \
+                    any(c.tag_followed(name) for c in self.others.values()):
+                return dict(t, following=True)
+            return t
+        return self._then(self.primary.tag_info(name), fix)
+
     # ---- lanes --------------------------------------------------------------------
     @property
     def lists(self):
@@ -737,3 +793,15 @@ class _Store:
 def _renamed(lane, name):
     from dataclasses import replace
     return replace(lane, name=name)
+
+
+def _tag_name(t):
+    """A followed hashtag's name, from the model's Tag or the server's dict."""
+    name = t.get("name") if isinstance(t, dict) else getattr(t, "name", "")
+    return str(name or "").lstrip("#")
+
+
+def _tag_name(t):
+    """A followed hashtag's name, from the model's Tag or the server's dict."""
+    name = t.get("name") if isinstance(t, dict) else getattr(t, "name", "")
+    return str(name or "").lstrip("#")

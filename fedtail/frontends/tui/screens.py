@@ -370,10 +370,17 @@ class PlaceScreen(Screen):
         self.query_one("#tabs", Static).display = bool(page.tabs)
         await self.show_form(page)
         lv = self.query_one("#posts", ListView)
+        keep, self._keep_key = getattr(self, "_keep_key", None), None
         await lv.clear()
         await lv.extend(self.items(page))
         if len(lv.children):
-            lv.index = 0
+            # after a button of a row (↓ in the lane editor): that row again, where it is
+            # now — not the first one (10.11)
+            at = next((i for i, x in enumerate(lv.children)
+                       if keep is not None and getattr(x, "key", None) == keep), 0)
+            lv.index = at
+            if at:
+                lv.scroll_to_widget(lv.children[at], animate=False)
         self.app.load_pictures([x for x in lv.children if hasattr(x, "entry")])
 
     def items(self, page):
@@ -512,6 +519,8 @@ class PlaceScreen(Screen):
             return
         if out.refresh:
             self.cursor = ""
+            item = self.current_item()
+            self._keep_key = getattr(item, "key", None)
             await self.load()
 
     def current_item(self):

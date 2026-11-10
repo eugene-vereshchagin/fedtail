@@ -85,6 +85,35 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: "9.0.0" in next(
                 r for r in app.screen.page.rows if r.key == "update").title, what="answer")
 
+    async def test_a_rows_button_keeps_that_row(self):
+        """≡ → Lanes, ↓ on a lane in the middle: the page is drawn again with the same
+        lane chosen where it is now — not the first row (10.11, as the windows keep
+        their place)."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp
+        from fedtail.frontends.tui.screens import PlaceScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, text="bob's", vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(140, 30)) as pilot:
+            await self.start(pilot, app, core)
+            app.open_thing({"page": "lanes"})
+            await self.wait(pilot, lambda: isinstance(app.screen, PlaceScreen) and
+                            app.screen.page is not None, what="lanes")
+            rows = [r for r in app.screen.page.rows
+                    if any(b.label == "↓" for b in r.buttons)]
+            row = rows[len(rows) // 2]
+            lv = app.screen.query_one("#posts", ListView)
+            lv.index = [getattr(x, "key", None) for x in lv.children].index(row.key)
+            await pilot.pause(0.1)
+            page0 = app.screen.page
+            await app.screen.act(next(b for b in row.buttons if b.label == "↓"))
+            await self.wait(pilot, lambda: app.screen.page is not page0, what="redrawn")
+            await pilot.pause(0.1)
+            self.assertEqual(lv.highlighted_child.key, row.key)
+            self.assertGreater(lv.index, 0)
+
     async def test_post_menu_profile_editor_places(self):
         from fedtail.frontends.tui.app import FedtailApp, ProfileScreen
         from fedtail.frontends.tui.screens import (

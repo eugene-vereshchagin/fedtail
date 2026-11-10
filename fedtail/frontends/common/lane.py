@@ -583,6 +583,22 @@ class LaneModel:
             if got:
                 self._stood = place
                 at = next(i for i, s in enumerate(specs) if s.key == got)
+                # read on past it since — on another device (sync brings the read marks,
+                # not the place), in another interface: where that reading ended, not
+                # where this one stood (the desktop opened at post 1 with 1–50 read on
+                # the phone, 10.11)
+                on = at
+                for i in range(at + 1, len(specs)):
+                    if specs[i].key == SEPARATOR:
+                        continue
+                    if specs[i].unread:
+                        break
+                    on = i
+                if on > at:
+                    nxt = next((s.key for s in specs[on + 1:] if s.unread), None)
+                    if nxt is not None:
+                        return nxt, "top"
+                    return specs[on].key, "bottom"
                 news = any(s.unread for s in specs[at + 1:])
                 return got, "top" if news else "bottom"
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:

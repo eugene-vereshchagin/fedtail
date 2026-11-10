@@ -7,6 +7,21 @@
 
 ## What's next
 
+- The Linux binary runs on processors without SSE4.2 again (an AMD Phenom II died with
+  "illegal hardware instruction"): it is built with Qt 6.9 — Qt's wheels from 6.10 on need
+  x86-64-v2 — and CI starts it on an emulated processor of that age.
+- A lane opens where you read to, not where you stood on this device: read on further on
+  another one (sync brings the read marks) and it opens at the first unread after them.
+  The phone found its starting card by the wrong id at times and stood at the lane's end.
+- Posts the screen went over whole while you scrolled by hand are read on the phone and in
+  the GTK window too, as in Qt and on the web page: pictures flipped through quickly no
+  longer stay unread.
+- A button in the lane editor (↓, show, hide) no longer throws the page to its end (Qt), to
+  its top (the web page, the terminal) or elsewhere (GTK): the page stays, the focus on the
+  same button.
+- All accounts in one window: "Tags you follow" lists every account's, not the main one's
+  only; "Unfollow" takes the tag out of every account that follows it.
+
 ## 0.22.7 — 2026-11-10
 
 **In short: the phone and the lane, from your reports.** On Android a post's words can be

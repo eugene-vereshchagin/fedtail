@@ -43,6 +43,8 @@ class PlaceDialog(QDialog):
         self.name, self.arg, self.tab, self.cursor = name, arg, tab, ""
         self.page = None
         self.fields = {}  # name -> (kind, widget(s))
+        self._buttons = {}  # a row button's act -> its widget (focus kept over a redraw)
+        self._keep = None   # (scroll position, act of the pressed button) for the redraw
         self.setWindowTitle(_(PLACES.get(name, name)))
         self.resize(640, 640)
         lay = QVBoxLayout(self)
@@ -52,7 +54,7 @@ class PlaceDialog(QDialog):
         lay.addWidget(self.hint)
         self.tabs = QHBoxLayout()
         lay.addLayout(self.tabs)
-        scroll = QScrollArea()
+        scroll = self.scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         body = QWidget()
         self.rows = QVBoxLayout(body)
@@ -100,7 +102,13 @@ class PlaceDialog(QDialog):
             self.tabs.addWidget(b)
         if page.tabs:
             self.tabs.addStretch(1)
+        keep, self._keep = self._keep, None
         if not self.cursor:
+            if keep is not None:
+                # the pressed button goes with its row: focus handed on to the last button
+                # would scroll the page to the end (10.11) — the scroll area holds it
+                self.scroll.setFocus()
+            self._buttons = {}
             clear(self.rows)
         for row in page.rows:
             self.rows.addWidget(self.row(row))
@@ -123,6 +131,24 @@ class PlaceDialog(QDialog):
                 w.clicked.connect(lambda _c=False, btn=b: self.press(btn))
                 buttons.addWidget(w)
         self.form.addLayout(buttons)
+        if keep is not None:
+            self._restore(*keep)
+
+    def _restore(self, value, act):
+        """After a button's redraw: the page where it was, the focus on the same button
+        of the same row (↓ moves it — the focus goes with it), not at the page's top or
+        end."""
+        from PySide6.QtCore import QTimer
+        bar = self.scroll.verticalScrollBar()
+
+        def back():
+            bar.setValue(min(value, bar.maximum()))
+            w = self._buttons.get(act)
+            if w is not None:
+                w.setFocus()
+                self.scroll.ensureWidgetVisible(w, 0, 0)
+        back()
+        QTimer.singleShot(0, self, back)  # once the new rows have their sizes
 
     def row(self, r):
         box = QWidget()
@@ -176,6 +202,7 @@ class PlaceDialog(QDialog):
                 if b.tip:
                     w.setToolTip(b.tip)
                 w.clicked.connect(lambda _c=False, btn=b: self.press(btn))
+                self._buttons[tuple(b.act)] = w
                 row.addWidget(w)
             lay.addLayout(row)
         return box
@@ -323,6 +350,7 @@ class PlaceDialog(QDialog):
             return
         if out.refresh:
             self.cursor = ""
+            self._keep = (self.scroll.verticalScrollBar().value(), tuple(btn.act))
             self.load()
 
     def _pictures(self):
