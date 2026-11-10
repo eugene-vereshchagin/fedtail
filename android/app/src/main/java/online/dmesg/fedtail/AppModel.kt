@@ -515,6 +515,55 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** ≡ → Save the theme to a file: the core packs the theme on screen with its manual
+     *  (frontends/themepack), written where the reader chose (the system's picker). */
+    fun themeSaveTo(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val got = Core.themeSave()
+            Core.failed(got)?.let { message = it; return@launch }
+            try {
+                withContext(Dispatchers.IO) {
+                    val out = app.contentResolver.openOutputStream(uri, "wt") ?: error("unwritable")
+                    out.use { o -> File(got.optString("path")).inputStream().use { it.copyTo(o) } }
+                }
+                message = str(got, "message")
+            } catch (e: Exception) {
+                message = e.message ?: e.toString()
+            }
+        }
+    }
+
+    /** ≡ → Add a theme from a file: the zip picked, copied here and taken by the core
+     *  into the themes folder; one of the same name — asked first. */
+    fun themeAddFrom(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val file = File(app.cacheDir, "theme-in-${System.nanoTime()}.zip")
+            try {
+                withContext(Dispatchers.IO) {
+                    val inp = app.contentResolver.openInputStream(uri) ?: error("unreadable")
+                    inp.use { i -> file.outputStream().use { i.copyTo(it) } }
+                }
+            } catch (e: Exception) {
+                message = e.message ?: e.toString(); return@launch
+            }
+            suspend fun take(replace: Boolean) {
+                val got = Core.themeAdd(file.absolutePath, replace)
+                Core.failed(got)?.let { message = it; file.delete(); return }
+                if (got.has("ask")) {
+                    asking = Asking.Confirm(str(got, "ask"), {
+                        viewModelScope.launch { take(true) }
+                    })
+                    return
+                }
+                file.delete()
+                message = str(got, "message")
+            }
+            take(false)
+        }
+    }
+
     /** ≡ → All accounts in one window: the core made anew with (or without) the others. */
     fun toggleMerge() {
         viewModelScope.launch {
@@ -526,6 +575,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     var themeColors by mutableStateOf<Map<String, String>>(emptyMap()) // ui.theme's; {}: system
     var themeLight by mutableStateOf(true)
+    var themeName by mutableStateOf("")  // the theme on screen: the saved file's name
 
     var themeFont by mutableStateOf<androidx.compose.ui.text.font.FontFamily?>(null)
     var themeScale by mutableStateOf(1f)
@@ -537,6 +587,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val c = got.optJSONObject("colors") ?: JSONObject()
         themeColors = c.keys().asSequence().associateWith { c.optString(it) }
         themeLight = got.optBoolean("light", true)
+        themeName = got.optString("name")
         val font = got.optJSONObject("font") ?: JSONObject()
         val text = font.optJSONObject("text")
         themeFont = fontFamilyOf(text?.let { t -> t.keys().asSequence().associateWith { t.optString(it) } })

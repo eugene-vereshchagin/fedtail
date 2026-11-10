@@ -24,6 +24,9 @@
 #   --layout single|split  the window's layout for one run (for good — window.layout); columns — single
 #                        with its lanes side by side (window.open_columns)
 #   --theme NAME         the theme for one run (for good — appearance.theme)
+#   --theme-export NAME FILE.zip  a theme into an archive, with a manual on changing it — and exit
+#   --theme-import FILE.zip  a theme from an archive into the themes folder (--replace: over one
+#                        of the same name) — and exit
 #   --profiles           which profiles there are — and exit
 #   --update-config      add this version's new settings to this file with explanations — and exit
 #   --rebuild-config     rebuild this file by chapters, with your values — and exit

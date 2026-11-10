@@ -74,6 +74,15 @@ import androidx.compose.ui.unit.sp
 fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) {
     var menu by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    // a theme as a zip: in from a file, out to one (themepack), through the system's picker
+    val themeIn = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) model.themeAddFrom(uri)
+    }
+    val themeOut = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) model.themeSaveTo(uri)
+    }
     val tiles = model.overview != "list"
     Scaffold(
         // tiles: grey tiles on white, as the switcher's sheet (mockup "3"); a list: white rows on grey
@@ -146,6 +155,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                     onClick = { menu = false; model.compose(null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.try_theme)) },
                                     onClick = { menu = false; model.tryTheme() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.theme_add)) },
+                                    onClick = { menu = false; themeIn.launch(arrayOf("application/zip",
+                                        "application/x-zip-compressed", "application/octet-stream")) })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.theme_save)) },
+                                    onClick = { menu = false; themeOut.launch("fedtail-theme-${model.themeName.ifBlank { "mine" }}.zip") })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },
                                     onClick = { menu = false; model.openSync() })
                                 // the lane editor: the set, the order, one's own lanes, their rules

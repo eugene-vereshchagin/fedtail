@@ -14,6 +14,11 @@
   poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
   grows over it seconds later on a slow server, moving the lane. `card.parents_first`
   (on; `false` — at once, as before).
+- A theme as one zip file, out and in: ≡ → "Try a theme" → "Save the theme to a file…" and
+  "Add a theme from a file…" (on the phone — in ≡ itself, where the themes folder is out of
+  a file manager's reach), or `fedtail --theme-export NAME FILE.zip` / `--theme-import`.
+  The archive carries the theme's pictures, sounds and fonts and a manual on changing,
+  renaming and bringing it back; a theme of the same name is replaced only when you say so.
 - Android: in a light theme on a phone in dark mode the status bar's icons were white on a
   light bar, hardly seen; the bars' icons now follow fedtail's theme, not the phone's mode.
 - Android: a lane has ⟳ in its bar, as every other screen does — refreshing it no longer

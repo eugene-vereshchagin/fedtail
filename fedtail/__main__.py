@@ -67,6 +67,13 @@ def parse_args(argv):
                         "window and a messages window (split)")
     p.add_argument("--theme", metavar="NAME",
                    help="the theme for this run (ui.theme), the config untouched")
+    p.add_argument("--theme-export", nargs=2, metavar=("NAME", "FILE"),
+                   help="a theme (yours or a built-in one) into a zip, with the manual on "
+                        "changing, renaming and bringing it back — and exit")
+    p.add_argument("--theme-import", metavar="FILE",
+                   help="a theme from a zip into the themes folder — and exit")
+    p.add_argument("--replace", action="store_true",
+                   help="with --theme-import: over a theme of the same name")
     p.add_argument("--update-config", action="store_true",
                    help="add options your config doesn't mention yet (with explanations; "
                         "a .bak copy is kept) and exit")
@@ -143,6 +150,27 @@ def _config_trouble(path, err):
     return box.clickedButton() is go
 
 
+def _theme_file(args):
+    """--theme-export NAME FILE / --theme-import FILE [--replace] (frontends/themepack)."""
+    from .frontends import themepack
+    try:
+        if args.theme_export:
+            name, dest = args.theme_export
+            names = themepack.pack(name, dest)
+            print(f"fedtail: theme {name} → {dest} ({len(names)} files, README.*.md inside)")
+            return 0
+        got = themepack.unpack(args.theme_import, replace=args.replace)
+    except (themepack.PackError, OSError) as e:
+        print(f"fedtail: {e}", file=sys.stderr)
+        return 1
+    for line in got["warnings"]:
+        print(f"fedtail: {line}", file=sys.stderr)
+    if got["skipped"]:
+        print("fedtail: left out: " + ", ".join(got["skipped"]), file=sys.stderr)
+    print("fedtail: themes added: " + ", ".join(got["themes"]))
+    return 0
+
+
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if args.check:
@@ -154,6 +182,8 @@ def main(argv=None):
             mark = "*" if prof["main"] else " "
             print(f"{mark} {prof['name']:<16} {profiles.label(prof)}{state}")
         return 0
+    if args.theme_export or args.theme_import:
+        return _theme_file(args)
     if args.install_desktop:
         from .desktop import install
         entry, icon = install(args.profile or paths.main_profile())

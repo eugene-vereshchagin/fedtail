@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **What's next:**
 
 - A reply comes into a lane with what it answers
+- A theme as one file: take it out, change it, bring it in
 
 **0.22.6:**
 

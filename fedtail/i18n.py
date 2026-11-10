@@ -631,6 +631,15 @@ _STRINGS = {
         "try_theme": "Попробовать тему",
         "try_theme_tip": "Сразу, до перезапуска; насовсем — appearance.theme в конфиге",
         "theme_in_config": "в конфиге",
+        "theme_add": "Добавить тему из файла…",
+        "theme_save": "Сохранить тему в файл…",
+        "theme_file_kind": "Архив темы (*.zip)",
+        "theme_saved": "Тема «{name}» — в {path}; внутри README.ru.md: как её переделать, "
+                       "переназвать и загрузить обратно",
+        "theme_added": "Добавлено тем: {names}. Они в «Попробовать тему»",
+        "theme_replace_q": "Уже есть: {names}. Заменить?",
+        "theme_left_out": "не взято из архива: {names}",
+        "theme_file_failed": "Тема из файла: {error}",
         "theme_tried": "Тема «{name}» — до перезапуска. Насовсем: theme = \"{name}\" "
                        "в [appearance] (сейчас там «{configured}»). Кнопки над лентой "
                        "примут её вид после перезапуска.",
@@ -2542,6 +2551,15 @@ _STRINGS = {
         "try_theme": "Try a theme",
         "try_theme_tip": "Right away, until restart; for good — appearance.theme in the config",
         "theme_in_config": "in config",
+        "theme_add": "Add a theme from a file…",
+        "theme_save": "Save the theme to a file…",
+        "theme_file_kind": "Theme archive (*.zip)",
+        "theme_saved": "Theme \"{name}\" is in {path}; README.en.md inside says how to change "
+                       "it, rename it and bring it back",
+        "theme_added": "Themes added: {names}. They are in \"Try a theme\"",
+        "theme_replace_q": "Already there: {names}. Replace?",
+        "theme_left_out": "left out of the archive: {names}",
+        "theme_file_failed": "Theme from a file: {error}",
         "theme_tried": "Theme \"{name}\" until restart. For good: theme = \"{name}\" "
                        "in [appearance] (it says \"{configured}\" now). The buttons above "
                        "a lane take its look after a restart.",

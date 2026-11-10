@@ -34,6 +34,23 @@ others.en = "Phanpy, Elk, Ice Cubes (they have few)"
 clients = ["Phanpy", "Elk", "Ice Cubes"]
 
 [[feature]]
+id = "theme-files"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Тема одним файлом: достать, переделать, загрузить"
+name.en = "A theme as one file: take it out, change it, bring it in"
+config.ru = "≡ → «Попробовать тему» → «Сохранить тему в файл…» / «Добавить тему из файла…» (на телефоне — прямо в ≡); `fedtail --theme-export ИМЯ ФАЙЛ.zip`, `--theme-import ФАЙЛ.zip`"
+config.en = "≡ → “Try a theme” → “Save the theme to a file…” / “Add a theme from a file…” (on the phone — in ≡ itself); `fedtail --theme-export NAME FILE.zip`, `--theme-import FILE.zip`"
+api.ru = "zip, устроенный как папка тем"
+api.en = "a zip laid out as the themes folder"
+others.ru = "нет"
+others.en = "no"
+clients = []
+details.ru = "Любая тема, встроенная тоже, — в zip: её `.toml`, картинки и звуки, шрифты, твои темы, на которых она стоит, и руководство (`README.ru.md`, `README.en.md`): как её переделать, переназвать, чтобы встала рядом с исходной, и загрузить обратно. Так тема попадает на телефон и с него, где папка тем закрыта для файлового менеджера. Из архива берётся только то, что бывает у темы, пути — только внутри папки тем, до 64 МБ; тема с тем же именем заменяется, только если ответить «да»."
+details.en = "Any theme, a built-in one too, into a zip: its `.toml`, pictures and sounds, fonts, the themes of yours it rests on, and a manual (`README.ru.md`, `README.en.md`): how to change it, rename it so it stands next to the one it came from, and bring it back. That is how a theme gets onto a phone and off it, where the themes folder is shut to a file manager. Only a theme's kinds of files are taken from an archive, paths only inside the themes folder, 64 MB at most; a theme of the same name is replaced only on a “yes”."
+
+[[feature]]
 id = "config-chapters"
 status = "has"
 android = "has"

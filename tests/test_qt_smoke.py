@@ -3611,6 +3611,44 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("🔥", texts)
         self.assertNotIn(":blob:", texts)
 
+    def test_theme_to_a_file_and_back(self):
+        """≡ → Try a theme → Save the theme to a file / Add a theme from a file: the zip
+        with its manual out, a renamed one in, asked before one of the same name goes."""
+        import os
+        import zipfile
+        from unittest import mock
+
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+        from fedtail.frontends import themefile
+        tmp = Path(self._tmp.name)
+        old = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = str(tmp / "xdg")
+        self.addCleanup(lambda: os.environ.__setitem__("XDG_CONFIG_HOME", old) if old
+                        else os.environ.pop("XDG_CONFIG_HOME", None))
+        menu = self.win._try_theme_menu(self.win)
+        words = [a.text() for a in menu.actions()]
+        self.assertIn(i18n._("theme_add"), words)
+        self.assertIn(i18n._("theme_save"), words)
+        out = tmp / "out.zip"
+        with mock.patch.object(QFileDialog, "getSaveFileName", return_value=(str(out), "")):
+            self.win.theme_to_file()
+        with zipfile.ZipFile(out) as z:
+            self.assertIn(f"{self.win.theme.id}.toml", z.namelist())
+            self.assertIn("README.en.md", z.namelist())
+        mine = tmp / "mine.zip"
+        with zipfile.ZipFile(mine, "w") as z:
+            z.writestr("mine.toml", 'name = "Mine"\ninherit = "night"\n')
+        with mock.patch.object(QFileDialog, "getOpenFileName", return_value=(str(mine), "")):
+            self.win.theme_from_file()
+            self.assertIn("mine", self.win.statusBar().currentMessage())
+            self.assertIn("mine", themefile.available())
+            asked = []
+            with mock.patch.object(QMessageBox, "question", lambda *a: asked.append(a) or
+                                   QMessageBox.StandardButton.No):
+                self.win.theme_from_file()  # there: asked, and "no" leaves it
+            self.assertEqual(len(asked), 1)
+
     def test_messenger_themes_write_posts_as_chat(self):
         """The QIP / Agent / Psi themes: "Name (time)" over each post, mine and the
         others' in their own colours; a theme's own brackets stay text."""

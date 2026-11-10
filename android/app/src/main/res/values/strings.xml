@@ -143,6 +143,8 @@
     <string name="pinned">pinned</string>
     <string name="merge_accounts">All accounts in one window</string>
     <string name="try_theme">Try a theme…</string>
+    <string name="theme_add">Add a theme from a file…</string>
+    <string name="theme_save">Save the theme to a file…</string>
     <string name="act_as_wait">Looking the post up on the other account\'s server…</string>
     <string name="saving">Saving…</string>
     <string name="media_menu">Picture menu</string>

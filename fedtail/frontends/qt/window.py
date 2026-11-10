@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from PySide6.QtCore import (
     QCoreApplication,
@@ -841,7 +842,58 @@ class MainWindow(QMainWindow):
             act = t.addAction(label, lambda n=name: self.try_theme(n))
             act.setCheckable(True)
             act.setChecked(name == self.theme.id)
+        t.addSeparator()  # a theme as a zip: in, and out to change it (themepack)
+        t.addAction(_("theme_add"), self.theme_from_file)
+        t.addAction(_("theme_save"), self.theme_to_file)
         return t
+
+    def theme_from_file(self):
+        """≡ → Try a theme → Add a theme from a file: a zip into the themes folder
+        (frontends/themepack: what it takes and what it leaves out), asked before one of
+        the same name is replaced."""
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+        from .. import themepack
+        path, _f = QFileDialog.getOpenFileName(self, _("theme_add"), str(Path.home()),
+                                               _("theme_file_kind"))
+        if not path:
+            return
+        try:
+            have = [n for n in themepack.themes_in(path)
+                    if (themefile.user_dir() / f"{n}.toml").exists()]
+            if have and QMessageBox.question(
+                    self, _("theme_add"), _("theme_replace_q", names=", ".join(have))) \
+                    != QMessageBox.StandardButton.Yes:
+                return
+            got = themepack.unpack(path, replace=bool(have))
+        except (themepack.PackError, OSError, ValueError) as e:
+            self.statusBar().showMessage(_("theme_file_failed", error=e), 10000)
+            return
+        for w in got["warnings"]:
+            log.warning("theme from a file: %s", w)
+        words = _("theme_added", names=", ".join(got["themes"]))
+        if got["skipped"]:
+            words += " · " + _("theme_left_out", names=", ".join(got["skipped"]))
+        self.statusBar().showMessage(words, 10000)
+
+    def theme_to_file(self):
+        """≡ → Try a theme → Save the theme to a file: the theme on screen as a zip, the
+        manual inside (frontends/themepack.pack)."""
+        from PySide6.QtWidgets import QFileDialog
+
+        from .. import themepack
+        name = self.theme.id
+        path, _f = QFileDialog.getSaveFileName(self, _("theme_save"),
+                                               str(Path.home() / f"fedtail-theme-{name}.zip"),
+                                               _("theme_file_kind"))
+        if not path:
+            return
+        try:
+            themepack.pack(name, path)
+        except (themepack.PackError, OSError) as e:
+            self.statusBar().showMessage(_("theme_file_failed", error=e), 10000)
+            return
+        self.statusBar().showMessage(_("theme_saved", name=name, path=path), 10000)
 
     def try_theme(self, name):
         """Restyle the running window in another theme; the config stays as it is."""

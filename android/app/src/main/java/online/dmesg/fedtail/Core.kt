@@ -110,6 +110,8 @@ object Core {
     suspend fun actAs(id: String, tag: String, action: String) = obj("act_as", id, tag, action)
     suspend fun themes() = obj("themes")
     suspend fun tryTheme(name: String) = obj("try_theme", name)
+    suspend fun themeSave() = obj("theme_save")
+    suspend fun themeAdd(path: String, replace: Boolean) = obj("theme_add", path, replace)
     suspend fun pushOn(endpoint: String, key: String, auth: String) = obj("push_on", endpoint, key, auth)
     suspend fun pushOff() = obj("push_off")
     suspend fun notes(since: Int) = obj("notes", since)

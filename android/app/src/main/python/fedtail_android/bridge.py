@@ -1052,6 +1052,45 @@ def try_theme(name):
     return _answer(lambda: _s["web"].try_theme(name))
 
 
+def theme_save():
+    """≡ → Save the theme to a file: the theme on screen as a zip in the cache, the manual
+    inside (frontends/themepack) → {"path", "name", "message"}; the phone then writes it
+    where the reader chose (the system's file picker)."""
+    def go():
+        from fedtail.frontends import themepack
+        from fedtail.i18n import _
+        name = _s["web"].theme_name()
+        out = os.path.join(_s["cache_dir"], "themes-out", f"fedtail-theme-{name}.zip")
+        themepack.pack(name, out)
+        return {"path": out, "name": name,
+                "message": _("theme_saved", name=name, path=f"fedtail-theme-{name}.zip")}
+    return _answer(go)
+
+
+def theme_add(path, replace=False):
+    """≡ → Add a theme from a file: the zip the reader picked (copied to `path`) into the
+    themes folder (frontends/themepack.unpack) → {"themes", "message"}; one of the same
+    name there and `replace` false: {"ask": the question, "have": [names]}, nothing done
+    (the phone asks, then calls again with replace)."""
+    def go():
+        from fedtail.frontends import themefile, themepack
+        from fedtail.i18n import _
+        try:
+            if not replace:
+                have = [n for n in themepack.themes_in(path)
+                        if (themefile.user_dir() / f"{n}.toml").exists()]
+                if have:
+                    return {"ask": _("theme_replace_q", names=", ".join(have)), "have": have}
+            got = themepack.unpack(path, replace=bool(replace))
+        except (themepack.PackError, ValueError) as e:
+            return {"error": _("theme_file_failed", error=e)}
+        words = _("theme_added", names=", ".join(got["themes"]))
+        if got["skipped"]:
+            words += " · " + _("theme_left_out", names=", ".join(got["skipped"]))
+        return {"themes": got["themes"], "warnings": got["warnings"], "message": words}
+    return _answer(go)
+
+
 def merge(on):
     """All accounts in one window, on or off (the windows' menu item; kept in the main
     profile's state): the core made anew at once — the screens then start again."""

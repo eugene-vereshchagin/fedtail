@@ -843,6 +843,34 @@ class BridgeThemeTest(_Base):
         for word in ("reply", "boost", "like", "liked", "more", "refresh", "send"):
             self.assertIn("<svg", pics[word].get("svg", "") or open(pics[word]["png"]).read(4))
 
+    def test_theme_out_and_back(self):
+        # ≡ → Save the theme to a file / Add a theme from a file: the phone's themes
+        # folder is out of a file manager's reach, a zip is the way in and out
+        import zipfile
+        self.demo()
+        self.call("try_theme", "night")
+        got = self.call("theme_save")
+        self.assertEqual(got["name"], "night")
+        with zipfile.ZipFile(got["path"]) as z:
+            names = z.namelist()
+        self.assertIn("night.toml", names)
+        self.assertIn("README.ru.md", names)
+        renamed = os.path.join(os.path.dirname(got["path"]), "mine.zip")
+        with zipfile.ZipFile(got["path"]) as z, zipfile.ZipFile(renamed, "w") as out:
+            for n in z.namelist():
+                data = z.read(n)
+                out.writestr(n.replace("night", "mine", 1) if n.startswith("night") else n,
+                             data)
+        added = self.call("theme_add", renamed, False)
+        self.assertEqual(added["themes"], ["mine"])
+        self.assertTrue(added["message"])
+        self.assertIn("mine", [t["name"] for t in self.call("themes")["themes"]])
+        again = self.call("theme_add", renamed, False)  # there already: asked, not done
+        self.assertEqual(again["have"], ["mine"])
+        self.assertTrue(again["ask"])
+        self.assertEqual(self.call("theme_add", renamed, True)["themes"], ["mine"])
+        self.assertIn("error", json.loads(self.bridge.theme_add(got["path"] + ".no", False)))
+
 
 class BridgePushTest(_Base):
     """UnifiedPush: the server is told the distributor's address and the phone's keys;

@@ -237,6 +237,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Themes as files | ✓ |   |   |   |   |   |   | ✓ |   |   | ✓ |   |   |   |
 | Trying a theme without a restart | ✓ |   |   |   | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
+| A theme as one file: take it out, change it, bring it in | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The config as a file in chapters | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | The settings reference | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Window, tray, keys | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
@@ -260,4 +261,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **66** features of the 196 compared.
+Only in fedtail — **67** features of the 197 compared.

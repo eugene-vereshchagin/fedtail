@@ -142,6 +142,8 @@
     <string name="pinned">закреплено</string>
     <string name="merge_accounts">Все аккаунты в одном окне</string>
     <string name="try_theme">Примерить тему…</string>
+    <string name="theme_add">Добавить тему из файла…</string>
+    <string name="theme_save">Сохранить тему в файл…</string>
     <string name="act_as_wait">Ищу пост на сервере другого аккаунта…</string>
     <string name="saving">Сохраняю…</string>
     <string name="media_menu">Меню картинки</string>

@@ -541,8 +541,8 @@ keys = ["settings", "settings_changed_outside", "settings_default", "settings_op
 id = "themes"
 area = "app"
 android = "partly"
-android_note.ru = "цвета, шрифты и картинки тем окон, «примерить» — в меню; папки тем нет"
-android_note.en = "the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder"
+android_note.ru = "цвета, шрифты и картинки тем окон, «примерить» — в меню; папка тем закрыта, свои темы — zip-файлом (≡ → «Добавить тему из файла…»)"
+android_note.en = "the windows' themes' colours, fonts and pictures, “try” in the menu; the themes folder is shut, themes of your own come as a zip (≡ → “Add a theme from a file…”)"
 name.ru = "Темы: попробовать"
 name.en = "Themes: try one"
 tui = "partly"
@@ -550,6 +550,20 @@ web = "partly"
 note.ru = "У терминала свои темы (`tui.theme`). Веб берёт из тем окон цвета и шрифт и пробует их из меню ≡, но папку тем не открывает: страница — гость в браузере."
 note.en = "The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser."
 keys = ["try_theme", "theme_in_config", "theme_tried"]
+
+[[capability]]
+id = "theme-files"
+area = "app"
+android = "has"
+name.ru = "Тема одним файлом: выгрузить и загрузить"
+name.en = "A theme as one file: out and in"
+gtk = "no"
+tui = "no"
+web = "na"
+note.ru = "GTK пока без этих пунктов: папка тем там открыта, а архив делает и берёт командная строка (`--theme-export`, `--theme-import`) — она же для терминала. Веб — гость в браузере: класть файлы в папку тем ему не положено."
+note.en = "GTK has no such items yet: the themes folder is open there, and the command line makes and takes the archive (`--theme-export`, `--theme-import`) — the same for the terminal. The web page is a guest in the browser: putting files into the themes folder isn't its to do."
+keys = ["theme_add", "theme_save", "theme_file_kind", "theme_saved", "theme_added",
+        "theme_replace_q", "theme_left_out", "theme_file_failed"]
 
 [[capability]]
 id = "help-browse"
