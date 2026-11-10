@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -60,6 +61,20 @@ fun FedtailTheme(colors: Map<String, String>? = null, light: Boolean = true,
     val scheme = colors?.takeIf { it.isNotEmpty() }?.let { themeScheme(it, light) }
         ?: if (isSystemInDarkTheme()) Dark else Light
     val type = androidx.compose.material3.Typography().let { t -> font?.let { t.inFamily(it) } ?: t }
+    // the status and navigation bars' icons by the theme's own ground, not by the phone's
+    // dark mode: enableEdgeToEdge() picks them by the latter, and a light theme on a phone
+    // in dark mode got white icons on a light bar, hardly seen (Android 11, 10.11)
+    val view = androidx.compose.ui.platform.LocalView.current
+    val lightBars = scheme.background.luminance() > 0.5f
+    if (!view.isInEditMode) androidx.compose.runtime.SideEffect {
+        var ctx = view.context
+        while (ctx !is android.app.Activity && ctx is android.content.ContextWrapper) ctx = ctx.baseContext
+        val window = (ctx as? android.app.Activity)?.window ?: return@SideEffect
+        androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = lightBars
+            isAppearanceLightNavigationBars = lightBars
+        }
+    }
     androidx.compose.runtime.CompositionLocalProvider(LocalPictures provides pictures,
         LocalPostScale provides postScale) {
         MaterialTheme(colorScheme = scheme, typography = type, content = content)

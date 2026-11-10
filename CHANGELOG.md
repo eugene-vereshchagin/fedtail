@@ -14,6 +14,10 @@
   poll and of an "Older" page, not only the first twenty: the "in reply to" strip no longer
   grows over it seconds later on a slow server, moving the lane. `card.parents_first`
   (on; `false` — at once, as before).
+- Android: in a light theme on a phone in dark mode the status bar's icons were white on a
+  light bar, hardly seen; the bars' icons now follow fedtail's theme, not the phone's mode.
+- Android: a lane has ⟳ in its bar, as every other screen does — refreshing it no longer
+  takes the ⋮ menu or a pull that, in a lane read oldest first, goes up from the bottom.
 
 ## 0.22.6 — 2026-11-09
 

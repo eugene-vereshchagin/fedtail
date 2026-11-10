@@ -335,6 +335,12 @@ private fun LaneHeader(model: AppModel, name: String, pane: Boolean, state: Lazy
                                    else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                // ⟳ in sight, as on every other screen: the pull alone was hard to find,
+                // up from the bottom in a lane read as a forum (10.11)
+                IconButton(onClick = { model.refresh() }, enabled = !model.refreshing && !model.pulling,
+                    modifier = Modifier.size(48.dp)) {
+                    ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
+                }
                 LaneMore(model, name, state, scope, onSwitcher)
             }
             val unseen = stringResource(R.string.offline)
