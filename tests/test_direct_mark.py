@@ -32,6 +32,20 @@ class DirectMarkTest(unittest.TestCase):
         self.assertEqual(direct_mark(cfg("fill"), None, dm, lane_private=True), "none")
 
 
+class OnlyPrivateThreadTest(unittest.TestCase):
+    """A thread of private messages only: none marked out, as in such a lane (11.11: the
+    frame on every card of a private talk)."""
+
+    def test_the_rule(self):
+        from fedtail.model import ThreadItem, only_private
+        dm, dm2, public = (post("1", visibility="direct"), post("2", visibility="direct"),
+                           post("3", visibility="public"))
+        self.assertTrue(only_private([ThreadItem(dm, 0, 0), ThreadItem(dm2, 1, 1)]))
+        self.assertFalse(only_private([ThreadItem(public, 0, 0), ThreadItem(dm, 1, 1)]))
+        self.assertTrue(only_private([dm]))
+        self.assertFalse(only_private([]))
+
+
 class OnlyPrivateTest(TmpDir):
     """"Private messages" takes nothing else: no frame there; "To me" takes replies and
     mentions too: a private one among them is marked."""

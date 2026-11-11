@@ -30,7 +30,7 @@ from ... import __version__, i18n, version
 from ...core import config
 from ...core.view import View
 from ...i18n import _
-from ...model import Account, Share, real
+from ...model import Account, Share, only_private, real
 from ...model.text import reply_mentions, snippet
 from ..common import actions, timed
 from ..common.cardtext import context_chars, direct_mark, indent_of, shown_text
@@ -1379,6 +1379,9 @@ class Web:
         unread = core.unread(posts)
         out = [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
                          number=n.number, depth=n.depth) for n in items]
+        if only_private(items):  # all private: none marked out (model.only_private)
+            for p in out:
+                p["lane_private"] = True
         for p in out:  # the post the thread was opened from: "you came from here"
             if p["sid"] == sid or p["id"] == sid:
                 p["came_from"] = _("came_from")

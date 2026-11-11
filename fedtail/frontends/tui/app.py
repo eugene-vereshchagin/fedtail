@@ -32,7 +32,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from ... import sysenv
 from ...core.view import View
 from ...i18n import _
-from ...model import Share, real
+from ...model import Share, only_private, real
 from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
@@ -579,10 +579,13 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         if self.stand is None:  # the first time: where it was asked to stand
             self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
+        private = only_private(items_in)  # all private: none marked out (model.only_private)
         for i, n in enumerate(items_in):
             pad = "  " * indent_of(core.cfg, n.depth)
+            dm = direct_mark(core.cfg, None, n.post, private)
+            wide = width - len(pad) - (4 if dm == "frame" else 0)  # the frame's own columns
             shown = show_post(core, n.post, short.get(n.post.id), n.post.id in unread,
-                              n.number, width - len(pad), open_cw=self.cw_open)
+                              n.number, wide, open_cw=self.cw_open, lane_private=private)
             if n.post.id == self.status_id and i:  # where the reader came from
                 shown.above.insert(0, ("conv", "↘ " + _("came_from")))
             text = render(shown)
@@ -590,6 +593,8 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
                 text = Text("\n").join(Text(pad) + line for line in text.split())
             item = PostItem(n.post, text, key=n.post.id)
             item.depth = n.depth
+            if dm in ("frame", "fill"):
+                item.add_class("dm-" + dm)
             items.append(item)
             if n.post.id == self.stand:
                 focus = i

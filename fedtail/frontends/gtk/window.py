@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from ...core import lanes as lanes_mod
 from ...i18n import _
-from ...model import real
+from ...model import only_private, real
 from ...version import NAME
 from .. import richtext
 from ..common import results, sidebar
@@ -1817,10 +1817,11 @@ class MainWindow(Gtk.ApplicationWindow):
             short = self.view.short_ids(posts)
             stand = self.view.thread_focus(root, items, at)
             focus = None
+            private = only_private(items)  # all private: none marked out (model)
             for it in items:
                 card = Card(ctx, it.post.id, it.post, unread=it.post.id in unread,
                             short_id=short.get(it.post.id), depth=it.depth,
-                            number=it.number)
+                            number=it.number, lane_private=private)
                 if it.post.id == stand:
                     card.add_css_class("ft-focus")
                     if len(items) > 1:

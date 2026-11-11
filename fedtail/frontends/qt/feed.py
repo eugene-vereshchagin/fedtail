@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from ... import diag
 from ...i18n import _
-from ...model import Relationship
+from ...model import Relationship, only_private
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity, timed
@@ -847,11 +847,13 @@ class ThreadWidget(QWidget):
         self.statuses = {p.id for p in posts}
         unread = self.core.unread(posts)
         short = self.core.short_ids(posts)
+        private = only_private(items)  # all private: none marked out (model.only_private)
         specs = [make_spec(self.core, n.post.id, n.post, depth=n.depth,
                            number=n.number or None, in_thread=True,
                            focus=(n.post.id == self.focus_id and len(items) > 1),
                            unread=n.post.id in unread,
-                           extra={"short_id": short.get(n.post.id)}) for n in items]
+                           extra={"short_id": short.get(n.post.id),
+                                  "lane_private": private}) for n in items]
         self.view.set_specs(specs, keep_position=self.loaded)
         root = posts[0] if posts else None
         self.root, self.posts = root, posts

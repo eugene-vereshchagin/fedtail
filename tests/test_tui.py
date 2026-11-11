@@ -135,6 +135,31 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
             await pilot.press("q")
 
+    async def test_private_thread_frames_none(self):
+        """The thread screen marks a private message as the lanes do (a frame), and none
+        in a thread of private messages only (model.only_private)."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, ThreadScreen
+        core, w = self.make()
+        core.cfg["ui"]["direct_highlight"] = "frame"
+        w.add(status("001", BOB, minute=1, text="open", vis="public"), home=True)
+        w.add(status("002", ME, "001", "B", minute=2, text="dm", vis="direct"))
+        w.add(status("010", BOB, minute=10, text="psst", vis="direct"), mention=True)
+        w.add(status("011", ME, "010", "B", minute=11, text="ok", vis="direct"))
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            for sid, framed in (("002", ["002"]), ("011", [])):
+                app.push_screen(ThreadScreen(sid))
+                await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen) and
+                                len(app.screen.query_one("#posts", ListView).children) == 2)
+                items = app.screen.query_one("#posts", ListView).children
+                self.assertEqual([i.key for i in items if i.has_class("dm-frame")], framed)
+                app.pop_screen()
+                await pilot.pause(0.1)
+            await pilot.press("q")
+
     async def test_new_posts_while_another_screen_is_on_top(self):
         """A poll lands while a thread is open (or the composer, after sending): the
         lanes live on the main screen, and the update must find them there."""

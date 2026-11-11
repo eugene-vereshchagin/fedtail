@@ -375,6 +375,19 @@ class WebTest(TmpDir):
                                                        "direct"))  # our words, not the API's
         self.assertEqual(self.req("/api/lane?name=nosuch")[0], 400)
 
+    def test_private_thread_marks_none(self):
+        """A thread of private messages only: every post says lane_private (the page and
+        the phone draw no frame then); a public one among them — none says it."""
+        self.w.add(status("060", BOB, minute=60, text="psst", vis="direct"), mention=True)
+        self.w.add(status("061", ME, "060", "B", minute=61, text="ok", vis="direct"))
+        self.core.poll_once()
+        posts = json.loads(self.req("/api/thread?id=061")[2])["posts"]
+        self.assertEqual(len(posts), 2)
+        self.assertTrue(all(p.get("lane_private") for p in posts))
+        self.w.add(status("062", ME, "002", "B", minute=62, text="dm", vis="direct"))
+        posts = json.loads(self.req("/api/thread?id=062")[2])["posts"]
+        self.assertFalse(any(p.get("lane_private") for p in posts))
+
     def test_read_act_post_command(self):
         code, _h, _b = self.req("/api/read", {"ids": ["002"]})
         self.assertEqual(code, 200)

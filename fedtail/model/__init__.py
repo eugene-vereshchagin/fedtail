@@ -564,6 +564,14 @@ class ThreadItem:
         return indent(self.depth)
 
 
+def only_private(items):
+    """Whether a thread is private messages and nothing else ([ThreadItem] or [Post]):
+    there none is marked out among the others (common/cardtext.direct_mark, as in a lane of
+    private messages only: Core.only_private) — every interface asks this, none decides."""
+    posts = [getattr(i, "post", i) for i in items]
+    return bool(posts) and all(getattr(real(p), "visibility", "") == "direct" for p in posts)
+
+
 def real(entry):
     """The post a lane entry is about: the boosted one for a Share, else the post."""
     return entry.post if isinstance(entry, Share) else entry

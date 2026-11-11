@@ -52,13 +52,13 @@ def poll_line(poll, date=None):
 
 
 def show_post(core, entry, alias=None, unread=False, number=None, width=80, parent=None,
-              spec=None, open_cw=False):
+              spec=None, open_cw=False, lane_private=False):
     """entry: a Post or a Share (core.view). parent: the Post this one answers (for the
     context line), "missing", or None. spec: its CardSpec (common/lane.py) — the card's
     words then are the windows' (common/cardtext.py): who boosted it and when, edited,
     old, the warning a filter folds, the quote, reactions, "you replied", the
     conversation. open_cw: the text under a warning shown too (a thread's "open every
-    CW")."""
+    CW"). lane_private: its lane or thread is private messages only (none marked out)."""
     p = real(entry)
     acc = p.author
     tcfg = core.cfg.get("tui", {})
@@ -91,7 +91,7 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if p.visibility == "direct":
         out.head.append(("direct", "✉"))
         from ..common.cardtext import direct_mark
-        private = spec is not None and spec.extra.get("lane_private", False)
+        private = lane_private or spec is not None and spec.extra.get("lane_private", False)
         if direct_mark(core.cfg, None, p, private) == "badge":  # a red plate (frame, fill: row's)
             out.head.append(("dm_badge", f" {_('direct_badge')} "))
     elif p.visibility == "followers":
