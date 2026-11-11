@@ -193,6 +193,23 @@ def last_release():
 NEXT = "next"  # since: done, not released yet — the number comes with the release
 
 
+def check_changelog(ver, text):
+    """The CHANGELOG as the site reads it from a release's tag: a release's commit
+    (no "dev" in the version) has its "## X.Y.Z — date" on top and no "## What's next" —
+    the site's builder took an empty one left above 0.22.9 for a version and failed
+    (12.11); a development version has the section, the release under it."""
+    nxt = re.search(r"^## What's next\s*$", text, re.M)
+    if "dev" not in ver:
+        if nxt:
+            raise DocsError(f"CHANGELOG: {ver} is a release — no \"## What's next\" in its "
+                            "commit (it comes back with the .dev0 bump after)")
+        if not re.search(rf"^## {re.escape(ver)} — \d{{4}}-\d\d-\d\d", text, re.M):
+            raise DocsError(f"CHANGELOG: no \"## {ver} — <date>\" for the release")
+    elif not nxt:
+        raise DocsError(f"CHANGELOG: {ver} is a development version — "
+                        "\"## What's next\" goes on top")
+
+
 def _vkey(v):
     return tuple(int(x) for x in v.split("."))
 
@@ -686,6 +703,7 @@ def doc_files():
 
 def build():
     """{path: text} of every file this script owns, as it should be now."""
+    check_changelog(version(), (ROOT / "CHANGELOG.md").read_text("utf-8"))
     chapters = load_features()
     out = {}
     for lang in LANGS:

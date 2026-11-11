@@ -206,6 +206,20 @@ class DocsBuildTest(unittest.TestCase):
         self.assertIn("since — only for what fedtail has", msg)
         self.assertIn("name has no en", msg)
 
+    def test_a_releases_changelog(self):
+        """A release's commit has no "## What's next" (the site's builder read an empty
+        one left above 0.22.9 as a version, 12.11); a development version has it."""
+        ok_dev = "# C\n\n## What's next\n\n* x\n\n## 0.22.9 — 2026-11-11\n"
+        ok_rel = "# C\n\n## 0.22.9 — 2026-11-11\n\n* x\n"
+        self.mod.check_changelog("0.22.10.dev0", ok_dev)
+        self.mod.check_changelog("0.22.9", ok_rel)
+        for ver, text, words in (("0.22.9", ok_dev, "no \"## What's next\""),
+                                 ("0.22.10", ok_rel, "no \"## 0.22.10 — <date>\""),
+                                 ("0.22.10.dev0", ok_rel, "goes on top")):
+            with self.assertRaises(self.mod.DocsError) as e:
+                self.mod.check_changelog(ver, text)
+            self.assertIn(words, str(e.exception))
+
     def test_unreleased_is_next(self):
         """Done since the last release: since = "next", shown as "next" — the next
         number is not known before it comes out; a version past the last release is
