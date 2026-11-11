@@ -177,7 +177,7 @@ def with_playwright(base, key, out, core):
             for name in lanes:
                 page.click(f'#lanes a[data-lane="{name}"]')
                 page.wait_for_timeout(500)
-                page.screenshot(path=str(out / f"desktop-02-lane-{name}.png"))
+                page.screenshot(path=str(out / f"desktop-02-lane-{name.replace(':', '-')}.png"))
             page.click('#lanes a[data-lane="home"]' if "home" in lanes else "#refresh")
             page.wait_for_timeout(400)
             main_menu(page, out)
