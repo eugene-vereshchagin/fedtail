@@ -24,11 +24,21 @@ FRONTENDS = {
 }
 
 
+# the one-file build (PyInstaller) carries Qt, the terminal and the web page; GTK comes
+# from the system, and a binary can't take it
+FROZEN_HINT = ("The one-file build has the Qt window (--ui qt), the terminal (--ui tui) and\n"
+               "  the web page (--ui web). The GTK window needs the system's GTK 4: install\n"
+               "  the .deb package, or run fedtail from the source (python3 -m fedtail).")
+
+
 def load(name):
     module, hint = FRONTENDS[name]
     try:
         return importlib.import_module(module)
     except ImportError as e:
+        if getattr(sys, "frozen", False):  # nothing to install into a binary: what it has
+            print(f"fedtail: {FROZEN_HINT}", file=sys.stderr)
+            sys.exit(3)
         if any(x in str(e) for x in ("PySide6", "shiboken", "textual", "rich", "GTK 4")):
             print(f"fedtail: {hint}", file=sys.stderr)
             sys.exit(3)

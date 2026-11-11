@@ -147,6 +147,32 @@ subprocess.Popen(argv, cwd=cwd)
 """
 
 
+# the one-file build has no Python to give `-c` to — its executable is fedtail itself,
+# which took "-c …" for its own arguments and left: the restart only quit (11.11). There
+# the helper goes in this variable, and the build's entry runs it before anything else
+RELAUNCH_ENV = "FEDTAIL_RELAUNCH"
+
+
+def relaunch_from_env(environ=None):
+    """The one-file build's entry (packaging/fedtail_main.py): started as the restart's
+    helper (RELAUNCH_ENV set) — run it and say True (the caller exits); else False.
+    Taken out of the environment first: the fedtail it starts is not a helper — nor a
+    child of this unpacked copy (sysenv.child_env: the loader's _PYI_* would have it live
+    in the helper's folder, gone when the helper leaves)."""
+    environ = os.environ if environ is None else environ
+    code = environ.pop(RELAUNCH_ENV, None)
+    if code is None:
+        return False
+    if environ is os.environ:
+        from .. import sysenv
+        clean = sysenv.child_env()
+        if clean is not None:
+            os.environ.clear()
+            os.environ.update(clean)
+    exec(compile(code, "<fedtail relaunch>", "exec"), {"__name__": "__relaunch__"})  # noqa: S102
+    return True
+
+
 def launch(profile, after=0.0, wait_for=None):
     """Start fedtail with that profile, detached. If it is already running, the new
     process asks it to show itself and leaves (SingleInstance). after: seconds to
@@ -158,8 +184,13 @@ def launch(profile, after=0.0, wait_for=None):
     from .. import sysenv
     env = sysenv.child_env() or dict(os.environ)
     if after or wait_for:  # a small Python waits, then starts it: the same everywhere
-        argv = [sys.executable, "-c", _RELAUNCH.format(
-            pid=int(wait_for or 0), after=float(after), argv=argv, cwd=cwd)]
+        code = _RELAUNCH.format(pid=int(wait_for or 0), after=float(after), argv=argv,
+                                cwd=cwd)
+        if getattr(sys, "frozen", False):  # no `-c` there: the build's entry runs it
+            env[RELAUNCH_ENV] = code
+            argv = [sys.executable]
+        else:
+            argv = [sys.executable, "-c", code]
     detached = {"creationflags": 0x00000008 | 0x00000200} if paths.WINDOWS else \
         {"start_new_session": True}  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,

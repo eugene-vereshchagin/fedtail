@@ -162,7 +162,7 @@ jobs:
           python-version: "3.13"
       # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): as the Linux
       # binary, the exe died on old processors. 6.9 is the last for every x86-64.
-      - run: pip install requests "PySide6-Essentials<6.10" pyinstaller cryptography
+      - run: pip install requests "PySide6-Essentials<6.10" "textual>=0.86" pyinstaller cryptography
       - run: python -c "from PySide6 import QtCore; v = QtCore.qVersion(); print(v); assert tuple(map(int, v.split('.')[:2])) < (6, 10), v"
       - run: python packaging/build.py
       - name: Starts
@@ -225,7 +225,8 @@ jobs:
           {
             # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): the binary
             # died with SIGILL on a Phenom II. 6.9 is the last for every x86-64.
-            /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' pyinstaller cryptography &&
+            # textual: the terminal interface goes in too (--ui tui; 11.11: "No module 'rich'")
+            /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'textual>=0.86' pyinstaller cryptography &&
             /tmp/venv/bin/python packaging/build.py &&
             ./dist/fedtail --version
           } 2>&1 | tee build.log

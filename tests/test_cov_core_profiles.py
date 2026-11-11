@@ -65,6 +65,27 @@ class ProfilesTest(unittest.TestCase):
             self.assertIn("pid, after, argv, cwd = 123, 0.5", argv[2])
             self.assertEqual(popen.call_args[1]["creationflags"], 0x00000208)
 
+    def test_launch_from_the_one_file_build(self):
+        """The one-file build's executable is fedtail itself — no `-c`: the helper goes in
+        the environment, and the build's entry runs it (11.11: the restart only quit)."""
+        with mock.patch.object(profiles.subprocess, "Popen") as popen, \
+                mock.patch.object(profiles.sys, "frozen", True, create=True), \
+                mock.patch.object(profiles.paths, "WINDOWS", False):
+            profiles.launch("w", after=0.5, wait_for=123)
+        self.assertEqual(popen.call_args[0][0], [sys.executable])
+        code = popen.call_args[1]["env"][profiles.RELAUNCH_ENV]
+        self.assertIn("pid, after, argv, cwd = 123, 0.5", code)
+        self.assertIn("'--profile', 'w'", code)
+
+    def test_relaunch_from_env(self):
+        env = {"PATH": "/bin"}
+        self.assertFalse(profiles.relaunch_from_env(env))
+        mark = self.tmp / "ran"
+        env[profiles.RELAUNCH_ENV] = f"open({str(mark)!r}, 'w').write('yes')"
+        self.assertTrue(profiles.relaunch_from_env(env))
+        self.assertEqual(mark.read_text(), "yes")
+        self.assertNotIn(profiles.RELAUNCH_ENV, env)  # the fedtail it starts: no helper
+
     def test_the_relaunch_helper_waits_for_the_old_process(self):
         """The helper itself, run for real: it starts the program once the process it
         waits for has gone."""

@@ -96,6 +96,23 @@ class SoundsHelpLoadTest(unittest.TestCase):
             with self.assertRaises(ImportError):
                 frontends.load("qt")
 
+    def test_a_frontend_the_binary_lacks(self):
+        """The one-file build: GTK can't be in it, and nothing can be installed into it —
+        it says which interfaces it has, not a traceback nor an apt line (11.11)."""
+        import io
+
+        from fedtail import frontends
+        err = ImportError("No module named 'fedtail.frontends.gtk'")
+        out = io.StringIO()
+        with mock.patch.object(sys, "stderr", out), \
+                mock.patch.object(sys, "frozen", True, create=True), \
+                mock.patch.object(frontends.importlib, "import_module", side_effect=err):
+            with self.assertRaises(SystemExit) as e:
+                frontends.load("gtk")
+        self.assertEqual(e.exception.code, 3)
+        self.assertIn("--ui tui", out.getvalue())
+        self.assertIn(".deb", out.getvalue())
+
 
 class DesktopTest(unittest.TestCase):
     def setUp(self):
