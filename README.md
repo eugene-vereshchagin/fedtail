@@ -177,7 +177,7 @@ command line, likes & boosts and follow requests are the main account's.
 | config (read-only for the app) | `~/.config/fedtail/<profile>/config.toml` |
 | token, mode 0600 | `~/.local/share/fedtail/<profile>/auth.json` |
 | cache, read marks, drafts | `~/.local/share/fedtail/<profile>/state.db` |
-| images | `~/.local/share/fedtail/<profile>/cache/` |
+| images | `~/.cache/fedtail/<profile>/` (`$XDG_CACHE_HOME`) |
 
 The config is created on first run as a copy of
 [`fedtail/data/config.example.en.toml`](fedtail/data/config.example.en.toml) (or of

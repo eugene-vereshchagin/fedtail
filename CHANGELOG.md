@@ -7,6 +7,14 @@
 
 ## What's next
 
+* The Linux and Windows binaries carry the terminal interface (`--ui tui` said "No module
+  named 'rich'"); `--ui gtk` there says which interfaces the binary has and where the GTK
+  window comes from (the .deb, the source) instead of a traceback.
+* "Restart" in the settings starts the binary again — it only quit: the restart's helper
+  asked the binary for `-c`, as if it were Python.
+* Pictures and videos are cached in `$XDG_CACHE_HOME/fedtail/<profile>` (`~/.cache`), the
+  user's only (0700), not in `~/.local/share`: whatever cleans caches finds them. The old
+  cache folder moves there by itself. On the phone it is Android's cache of the app.
 * A thread of private messages only no longer frames every card of it, as a lane of them
   doesn't (Qt, GTK, the terminal, the web page, the phone); the terminal's thread frames or
   tints a private message as its lanes do (`card.direct_highlight`), not only the plate.

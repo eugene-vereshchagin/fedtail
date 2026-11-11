@@ -68,7 +68,7 @@ In detail → [Several accounts](ref/features.md#several-accounts)
 | Themes | `~/.config/fedtail/themes/` — ≡ → "Open themes folder" |
 | The token (mode 0600) | `~/.local/share/fedtail/<profile>/auth.json` |
 | Database, drafts, read marks | `~/.local/share/fedtail/<profile>/state.db` |
-| Pictures and videos | `~/.local/share/fedtail/<profile>/cache/` |
+| Pictures and videos | `~/.cache/fedtail/<profile>/` (`$XDG_CACHE_HOME`) |
 | Logs | `~/.local/share/fedtail/<profile>/logs/` — ≡ → "Debugging" → "Open the logs folder" |
 
 On Windows the config is in `%APPDATA%\fedtail\<profile>\`, the data in `%LOCALAPPDATA%\fedtail\<profile>\`.

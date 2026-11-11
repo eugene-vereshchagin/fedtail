@@ -66,7 +66,7 @@ fedtail — клиент федиверса (GoToSocial, Mastodon, Akkoma и в�
 | Темы | `~/.config/fedtail/themes/` — ≡ → «Открыть папку тем» |
 | Токен (права 0600) | `~/.local/share/fedtail/<профиль>/auth.json` |
 | База, черновики, прочитанное | `~/.local/share/fedtail/<профиль>/state.db` |
-| Картинки и видео | `~/.local/share/fedtail/<профиль>/cache/` |
+| Картинки и видео | `~/.cache/fedtail/<профиль>/` (`$XDG_CACHE_HOME`) |
 | Логи | `~/.local/share/fedtail/<профиль>/logs/` — ≡ → «Отладка» → «Открыть папку логов» |
 
 На Windows конфиг — в `%APPDATA%\fedtail\<профиль>\`, данные — в `%LOCALAPPDATA%\fedtail\<профиль>\`.

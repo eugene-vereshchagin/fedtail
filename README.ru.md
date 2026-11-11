@@ -178,7 +178,7 @@ python3 -m fedtail -c ~/my.toml -d ~/fd/  # явно: файл конфига и
 | конфиг (программа только читает) | `~/.config/fedtail/<профиль>/config.toml` |
 | токен, права 0600 | `~/.local/share/fedtail/<профиль>/auth.json` |
 | кеш, прочитанное, черновики | `~/.local/share/fedtail/<профиль>/state.db` |
-| картинки | `~/.local/share/fedtail/<профиль>/cache/` |
+| картинки | `~/.cache/fedtail/<профиль>/` (`$XDG_CACHE_HOME`) |
 
 Конфиг создаётся при первом запуске — копия
 [`fedtail/data/config.example.ru.toml`](fedtail/data/config.example.ru.toml) (на нерусском

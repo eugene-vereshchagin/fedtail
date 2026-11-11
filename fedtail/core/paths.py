@@ -48,6 +48,10 @@ class Paths:
     profile: str
     config_file: Path
     data_dir: Path
+    # the pictures' and videos' cache: $XDG_CACHE_HOME/fedtail/<profile> (11.11: a cache
+    # in ~/.local/share escapes whoever cleans caches by cron); None — in data_dir (a
+    # --data given, Windows without XDG_CACHE_HOME: %LOCALAPPDATA% is local already)
+    cache: Path | None = None
 
     @property
     def auth_file(self):
@@ -65,7 +69,7 @@ class Paths:
 
     @property
     def cache_dir(self):
-        return self.data_dir / "cache"
+        return self.cache if self.cache is not None else self.data_dir / "cache"
 
     @property
     def socket_file(self):
@@ -75,8 +79,30 @@ class Paths:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         if not WINDOWS:  # Windows keeps a user's AppData to that user anyway
             os.chmod(self.data_dir, 0o700)
-        self.cache_dir.mkdir(exist_ok=True)
+        self._ensure_cache()
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def _ensure_cache(self):
+        """The cache folder, the user's only (0700, as the data); the old one inside the
+        data folder (before 0.22.9) moved there — or, on another disk, dropped: a cache."""
+        new = self.cache_dir
+        old = self.data_dir / "cache"
+        if new != old:
+            new.parent.mkdir(parents=True, exist_ok=True)
+            if old.is_dir():
+                try:
+                    if new.exists():
+                        raise OSError("both there")
+                    old.rename(new)
+                except OSError:
+                    import shutil
+                    import threading
+                    threading.Thread(target=shutil.rmtree, args=(old, True),
+                                     daemon=True, name="old-cache").start()
+        new.mkdir(parents=True, exist_ok=True)
+        if not WINDOWS:
+            for d in {new.parent, new} if new != old else {new}:
+                os.chmod(d, 0o700)
 
 
 def main_profile():
@@ -112,4 +138,7 @@ def resolve(profile=None, config=None, data=None):
         config_base() / profile / "config.toml"
     dat = Path(data).expanduser() if data else \
         data_base() / profile
-    return Paths(profile, cfg, dat)
+    cache = None
+    if not data and not (WINDOWS and not os.environ.get("XDG_CACHE_HOME")):
+        cache = cache_base() / profile
+    return Paths(profile, cfg, dat, cache)
