@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.9 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.23.0**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -287,6 +287,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 | News behind the filters still counts | has | 0.22.4 | `reading.count_filtered` | own | only in fedtail |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
+| Sync through a folder on the phone — by picking the folder | has | 0.23.0 | ≡ → Sync → "Choose a folder" (`sync.folder` = a `content://…` address) | Android's Storage Access Framework (the folder picker, a lasting permission) | — |
 | "A device joined" in Activity — on it and on the others | has | 0.22.3 | `sync.device_name`; `event = "device"`; can't be turned off | own: the device's name in every batch of the journal (sealed by the key) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
 
@@ -319,6 +320,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **News behind the filters still counts.** A lane's quick filters ("Posts only", a tag, "New"…) and its content filter ("only gifs") hide posts from the screen, not from the count: new ones behind them still go into the lane's number and its notifications, and the lane's line says "N more new ones hidden by the filters". A filter forgotten no longer makes a lane look dead. "Mark all read" takes them too. `false` — only what shows counts.
 
 **Sync set up in the window step by step, a new device by a password alone.** Steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), a login — to a WebDAV folder only, and the fork — "this is my first device" (the key made here) or "adding to those set up" (the key from another device — there "Show the key" gives a QR code the phone scans, and the text to paste; with a sync server the QR code carries its address too, so it can be scanned at once, with no first step; or the key taken out of the journal with the password for new devices). Until the setup is done, the page says so: "Sync doesn't work yet". The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone.
+
+**Sync through a folder on the phone — by picking the folder.** Android 11 and newer let an app into a shared folder — Syncthing's, say — only through the system's folder picker: a path typed by hand can't be read. "Choose a folder" beside the field opens that picker, and the permission stays after the phone restarts; lost, sync says so: choose the folder again.
 
 **"A device joined" in Activity — on it and on the others.** A device took the key (or the first began the journal) — a row in Activity, "Android · Pixel 7 — joined sync": on it at once, on the others with its first batch. The name is `sync.device_name`, empty — the system and the machine's name (a phone: its model); two of one name — with a bit of the id after it. A click on the name — ≡ → Sync. What is old in the journal (taking the key reads it from its start) is no news; a rename neither. A lane of rules takes it as `event = "device"` (Activity: under "Other"). There is no switch on purpose: a device nobody expected in the journal is exactly what must be said.
 

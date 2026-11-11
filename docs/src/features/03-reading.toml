@@ -222,6 +222,22 @@ details.ru = "Шаги с отметками ✓ / ▶ / ·: где встреч
 details.en = "Steps marked ✓ / ▶ / ·: where the devices meet (a server's address or a folder — into config.toml at once, no restart), a login — to a WebDAV folder only, and the fork — \"this is my first device\" (the key made here) or \"adding to those set up\" (the key from another device — there \"Show the key\" gives a QR code the phone scans, and the text to paste; with a sync server the QR code carries its address too, so it can be scanned at once, with no first step; or the key taken out of the journal with the password for new devices). Until the setup is done, the page says so: \"Sync doesn't work yet\". The password is optional: one you make up, not the account's. The same in the terminal, on the web page and on the phone."
 
 [[feature]]
+id = "sync-folder-phone"
+status = "has"
+android = "has"
+since = "0.23.0"
+name.ru = "Синхронизация через папку на телефоне — выбором папки"
+name.en = "Sync through a folder on the phone — by picking the folder"
+config.ru = "≡ → Синхронизация → «Выбрать папку» (`sync.folder` = адрес `content://…`)"
+config.en = "≡ → Sync → \"Choose a folder\" (`sync.folder` = a `content://…` address)"
+api.ru = "Storage Access Framework Android (выбор папки, постоянное разрешение)"
+api.en = "Android's Storage Access Framework (the folder picker, a lasting permission)"
+others = "—"
+clients = []
+details.ru = "Android 11 и новее пускают приложение в общую папку — например, папку Syncthing — только через системный выбор папки: путь, написанный руками, не читается. Кнопка «Выбрать папку» рядом с полем открывает этот выбор, разрешение остаётся и после перезапуска телефона; потеряется — синхронизация так и скажет: выбрать папку заново."
+details.en = "Android 11 and newer let an app into a shared folder — Syncthing's, say — only through the system's folder picker: a path typed by hand can't be read. \"Choose a folder\" beside the field opens that picker, and the permission stays after the phone restarts; lost, sync says so: choose the folder again."
+
+[[feature]]
 id = "sync-devices"
 status = "has"
 android = "has"

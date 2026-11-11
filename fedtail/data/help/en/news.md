@@ -5,9 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.22.9:**
+**0.23.0:**
 
-- Home without other people's conversations
+- Sync through a folder on the phone — by picking the folder
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

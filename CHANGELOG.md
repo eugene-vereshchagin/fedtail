@@ -5,7 +5,14 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.0 — 2026-11-12
+
+**In short: sync through a folder on the phone.** Android 11 and newer let an app into a
+shared folder only when it is picked in the system's picker — now the phone has a "Choose
+a folder" button for it, so Syncthing's folder works for sync there too.
+
+<!-- For the site's builder (an agent): the 0.23 branch begins, together with
+     fedtail-sync 0.23.0 (the same server under the new number; protocol 2). -->
 
 * Sync through a folder works on the phone: Android 11 and newer let an app into a shared
   folder (Syncthing's) only through the system's folder picker, so a typed path had no

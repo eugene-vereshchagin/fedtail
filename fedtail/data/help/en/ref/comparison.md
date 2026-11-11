@@ -82,6 +82,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
 | News behind the filters still counts | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Sync set up in the window step by step, a new device by a password alone | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Sync through a folder on the phone — by picking the folder | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | "A device joined" in Activity — on it and on the others | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A lane without a seam: older posts come by themselves | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
@@ -265,4 +266,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **68** features of the 201 compared.
+Only in fedtail — **69** features of the 202 compared.

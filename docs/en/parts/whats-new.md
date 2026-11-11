@@ -1,3 +1,3 @@
-**0.22.9:**
+**0.23.0:**
 
-- Home without other people's conversations
+- Sync through a folder on the phone — by picking the folder
