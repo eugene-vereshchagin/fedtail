@@ -7,6 +7,17 @@
 
 ## What's next
 
+* A thread of private messages only no longer frames every card of it, as a lane of them
+  doesn't (Qt, GTK, the terminal, the web page, the phone); the terminal's thread frames or
+  tints a private message as its lanes do (`card.direct_highlight`), not only the plate.
+* The Windows program runs on old processors too: it is built with Qt 6.9, as the Linux
+  binary — Qt's wheels from 6.10 on need SSE4.2.
+* Home no longer carries other people's conversations: Mastodon puts there what the people
+  you follow reply to each other, bits of threads you have nothing to do with. A reply
+  stays in Home when it is yours, to you, in a thread you wrote in or follow, or an author
+  going on with their own post; the rest waits in Unsorted. The `mastodon` and `tusky`
+  sets of lanes keep the server's Home as it is.
+
 ## 0.22.8 — 2026-11-11
 
 **In short: private messages stand out, and the lane keeps your place.** A private message

@@ -258,7 +258,7 @@ The built-in lanes become presets written in rules; their words stay (and the ol
 
 | preset | rule |
 |---|---|
-| `home` | source `home`, `none = [{ author = "bot" }]` |
+| `home` | source `home`, `none = [{ author = "bot" }]`; a reply only if mine, to me, `in_my_thread`, `subscribed` or `self_reply` (the followed talking to each other in others' threads — out, 11.11) |
 | `bots` | source `home`, `any = [{ author = "bot" }]` |
 | `my_posts` | `any = [{ author = "me" }]` |
 | `direct` | `any = [{ me = "direct" }]` |

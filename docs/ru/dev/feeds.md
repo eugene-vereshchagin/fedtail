@@ -255,7 +255,7 @@ none = [{ kind = "boost", age = ">2d", age_of = "original" }]   # старьё, 
 
 | заготовка | правило |
 |---|---|
-| `home` | источник `home`, `none = [{ author = "bot" }]` |
+| `home` | источник `home`, `none = [{ author = "bot" }]`; ответ — только мой, мне, `in_my_thread`, `subscribed` или `self_reply` (подписанные друг другу в чужих тредах — нет, 11.11) |
 | `bots` | источник `home`, `any = [{ author = "bot" }]` |
 | `my_posts` | `any = [{ author = "me" }]` |
 | `direct` | `any = [{ me = "direct" }]` |

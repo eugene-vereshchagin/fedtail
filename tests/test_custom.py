@@ -620,6 +620,37 @@ class NewDefaultsTest(FreeBase):
         core.set_lane_filter("home", "chip:2")
         self.assertEqual(self.ids(core, "home"), ["003"])
 
+    def test_home_leaves_out_strangers_talk(self):
+        """Mastodon's home brings what the followed reply to each other: fedtail's Home
+        takes a reply only when it's mine, to me, in my thread, a followed one's or an
+        answer to oneself; the rest waits in Unsorted (11.11)."""
+        core, w = self.make_new()
+        cat = fakes.acct("C", "cat@far.example")
+        w.following = {"B", "C"}
+        w.add(status("030", cat, minute=1), home=True)
+        w.add(status("031", BOB, reply_to="030", reply_acc="C", minute=2), home=True)
+        w.add(status("032", ME, minute=3), home=True)
+        w.add(status("033", cat, reply_to="032", reply_acc="ME", minute=4), home=True)
+        w.add(status("034", BOB, minute=5), home=True)
+        w.add(status("035", BOB, reply_to="034", reply_acc="B", minute=6), home=True)
+        w.add(status("036", ME, reply_to="034", reply_acc="B", minute=7), home=True)
+        # someone else in a thread I wrote in (not followed): mine, so Home's
+        w.add(status("037", cat, reply_to="035", reply_acc="B", minute=8), home=True)
+        core.connect().result()
+        core._following, core._following_at = {"B", "C"}, 1e18
+        core.poll_once()
+        self.assertEqual(self.ids(core, "home"), ["030", "032", "033", "034", "035", "036",
+                                                 "037"])
+        self.assertEqual(self.ids(core, "unsorted"), ["031"])
+        # a thread followed: what comes in it after is Home's again
+        root = w.add(status("040", cat, minute=10), home=True)
+        core.poll_once()
+        core.subscribe(root).result()
+        w.add(status("041", BOB, reply_to="040", reply_acc="C", minute=11), home=True)
+        core.poll_once()
+        core._lane_cache.clear()
+        self.assertIn("041", self.ids(core, "home"))
+
     def test_threads_with_news(self):
         core, w = self.make_new()
         root = w.add(status("010", BOB, minute=1), home=True)
