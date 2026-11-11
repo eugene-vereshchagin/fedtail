@@ -44,6 +44,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Sets of lanes “as in other clients” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | “To me”: replies and mentions in one lane | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Home's quick filters: tags, boosts, threads with news | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Home without other people's conversations | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Important people | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Lanes from someone's wall, a search and RSS | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
@@ -264,4 +265,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **67** features of the 200 compared.
+Only in fedtail — **68** features of the 201 compared.

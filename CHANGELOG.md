@@ -7,6 +7,17 @@
 
 ## What's next
 
+## 0.22.9 — 2026-11-11
+
+**In short: Home without other people's conversations, and binaries that do what they
+say.** Home keeps the replies that are yours, to you or in threads you are in — no more
+bits of talk between the people you follow. The Linux and Windows binaries carry the
+terminal interface and restart for real, the Windows one runs on old processors, the
+cache moves to `~/.cache`, and a thread of private messages no longer frames every card.
+
+<!-- For the site's builder (an agent): a release of the 0.22 branch, together
+     with fedtail-sync 0.22.9 (the same server under the new number; protocol 2). -->
+
 * The Linux and Windows binaries carry the terminal interface (`--ui tui` said "No module
   named 'rich'"); `--ui gtk` there says which interfaces the binary has and where the GTK
   window comes from (the .deb, the source) instead of a traceback.

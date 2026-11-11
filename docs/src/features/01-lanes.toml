@@ -620,6 +620,22 @@ details.ru = "Рядом с «Всё / Только посты»: «Теги» �
 details.en = "Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread."
 
 [[feature]]
+id = "home-without-others-talk"
+status = "has"
+android = "has"
+since = "0.22.9"
+name.ru = "Лента без чужих разговоров"
+name.en = "Home without other people's conversations"
+config.ru = "правило Ленты в наборе `fedtail` (`[[lanes.custom]] name = \"home\"`); `kind = \"self_thread\"` — продолжение автором своего треда"
+config.en = "Home's rule in the `fedtail` set (`[[lanes.custom]] name = \"home\"`); `kind = \"self_thread\"` — an author going on with their own thread"
+api = "`timelines/home`"
+others.ru = "Mastodon и Tusky — переключатель «Показывать ответы» (все или никакие)"
+others.en = "Mastodon and Tusky — a “Show replies” switch (all of them or none)"
+clients = []
+details.ru = "Mastodon кладёт в домашнюю ленту то, что подписанные отвечают друг другу, — обрывки разговоров, к которым ты не имеешь отношения. В Ленте остаётся ответ свой, тебе (или с упоминанием тебя), в треде, где ты писал, и в треде, на который подписан; продолжения автора под своим постом читаются в треде. Остальное ждёт в «Неразобранном». Наборы `mastodon`, `tusky`, `fedilab` и `phanpy` оставляют Ленту как у сервера, как и те клиенты."
+details.en = "Mastodon puts into the home timeline what the people you follow reply to each other — bits of conversations you have nothing to do with. Home keeps a reply that is yours, to you (or mentioning you), in a thread you wrote in, or in one you follow; an author going on under their own post is read in the thread. The rest waits in Unsorted. The `mastodon`, `tusky`, `fedilab` and `phanpy` sets keep the server's Home, as those clients do."
+
+[[feature]]
 id = "important-people"
 status = "has"
 android = "has"

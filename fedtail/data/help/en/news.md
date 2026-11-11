@@ -5,9 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.22.8:**
+**0.22.9:**
 
-- Private messages stand out in a lane
+- Home without other people's conversations
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

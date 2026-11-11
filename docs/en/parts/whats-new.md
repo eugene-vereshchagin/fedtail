@@ -1,3 +1,3 @@
-**0.22.8:**
+**0.22.9:**
 
-- Private messages stand out in a lane
+- Home without other people's conversations

@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.8 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.9**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -111,6 +111,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`, `"fedilab"`), `--lanes-to-config` | own | — |
 | “To me”: replies and mentions in one lane | has | 0.21.0 | `lanes.enabled` (`"to_me"`) | `notifications?types=mention` | Notifications everywhere, mixed with likes |
 | Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
+| Home without other people's conversations | has | 0.22.9 | Home's rule in the `fedtail` set (`[[lanes.custom]] name = "home"`); `kind = "self_thread"` — an author going on with their own thread | `timelines/home` | Mastodon and Tusky — a “Show replies” switch (all of them or none) |
 | Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | has | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes | — |
 | Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
@@ -201,6 +202,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **“To me”: replies and mentions in one lane.** Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones — in “Direct”, while it's on.
 
 **Home's quick filters: tags, boosts, threads with news.** Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread.
+
+**Home without other people's conversations.** Mastodon puts into the home timeline what the people you follow reply to each other — bits of conversations you have nothing to do with. Home keeps a reply that is yours, to you (or mentioning you), in a thread you wrote in, or in one you follow; an author going on under their own post is read in the thread. The rest waits in Unsorted. The `mastodon`, `tusky`, `fedilab` and `phanpy` sets keep the server's Home, as those clients do.
 
 **Important people.** Posts of those you rang the bell on, as a lane of their own. Shown once there is anything in it: while no bell is on, it isn't in the sidebar either.
 
