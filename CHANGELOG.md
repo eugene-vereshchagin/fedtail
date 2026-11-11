@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.0 — 2026-11-12
 
 **In short: sync through a folder on the phone.** Android 11 and newer let an app into a
