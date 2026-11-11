@@ -92,6 +92,9 @@ class KindVisibilityTest(unittest.TestCase):
         self.assertEqual(r.kind, {"reply"})
         sr = facts(st("c", FRIEND, in_reply_to_id="z", in_reply_to_account_id="2"))
         self.assertEqual(sr.kind, {"reply", "self_reply"})
+        own = facts(st("c", FRIEND, in_reply_to_id="z", in_reply_to_account_id="2"),
+                    self_threads={"c"})  # all the author's up to the top
+        self.assertEqual(own.kind, {"reply", "self_reply", "self_thread"})
         b = facts(st("d", FAN, reblog=st("e", FRIEND)))
         self.assertEqual(b.kind, {"boost", "post"} - {"post"})
         self.assertEqual(b.id, {"d", "e"})

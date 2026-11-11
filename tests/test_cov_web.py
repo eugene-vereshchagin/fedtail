@@ -233,7 +233,9 @@ class WebBase(TmpDir):
         self.core, self.w = make_core(self.tmp)
         self.addCleanup(self.core.shutdown)
         self.w.add(status("001", ME, minute=1, text="mine", vis="public"), home=True)
-        self.w.add(status("002", BOB, "gone", "B", minute=2, text="orphan"), home=True)
+        orphan = status("002", BOB, "gone", "X", minute=2, text="orphan")
+        orphan["mentions"] = [{"id": "ME", "acct": "mira"}]  # to me: Home takes it
+        self.w.add(orphan, home=True)
         self.core.connect().result()
         self.core.poll_once()
         old = self.core.paths.data_dir / "web-uploads"

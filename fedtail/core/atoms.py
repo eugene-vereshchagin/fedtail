@@ -37,7 +37,8 @@ AUTHOR = {"me", "followed", "follower", "mutual", "stranger", "bot", "local", "r
           # taken out of Home by hand ("Not in Home" on a profile), still followed
           "hidden_home"}
 VISIBILITY = {"public", "unlisted", "followers", "direct", "mutuals", "local_only"}
-KIND = {"post", "reply", "self_reply", "boost", "self_boost", "quote", "poll", "edited"}
+KIND = {"post", "reply", "self_reply", "self_thread", "boost", "self_boost", "quote", "poll",
+        "edited"}
 ME = {"reply", "reply_to_post", "reply_to_comment", "mention", "direct", "in_my_thread",
       "boost_of_mine", "quote_of_mine", "my_boost"}
 PARENT = {"mine", "followed", "stranger", "unknown"}
@@ -149,6 +150,9 @@ class World:
     replied: Container = frozenset()     # status ids I replied to (from any client)
     subscribed: Container = frozenset()  # status ids of followed threads' posts
     my_threads: Container = frozenset()  # status ids of posts in threads where I wrote
+    # status ids whose every post up to the top is their author's: a thread of one's own
+    # going on (a reply to oneself under someone else's comment is not)
+    self_threads: Container = frozenset()
     muted_threads: Container = frozenset()
     filtered_warn: Container = frozenset()  # status ids a server "warn" filter matched
     seen_before: Container = frozenset()  # originals stored before this boost reached us
@@ -323,6 +327,8 @@ def post_facts(status, world=None, source=None, needs=None):
         f.kind.add("reply")
         if st.get("in_reply_to_account_id") == author_id:
             f.kind.add("self_reply")
+            if want("kind") and st.get("id") in world.self_threads:
+                f.kind.add("self_thread")
     elif not boost:
         f.kind.add("post")
     quoted = st.get("quote")

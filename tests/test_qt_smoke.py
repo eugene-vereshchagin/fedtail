@@ -69,7 +69,11 @@ class QtSmokeTest(unittest.TestCase):
                                      "meta": {"small": {"width": 400, "height": 300}}}]
         pic["spoiler_text"] = "осторожно"
         w.add(pic, home=True, mention=True)
-        w.add(status("014", BOB, "gone", "B", minute=14, text="чужой разговор"), home=True)
+        # a reply to someone else whose post is gone; it mentions me, so Home takes it
+        # (strangers' talk without me stays out of Home: presets.toml)
+        talk = status("014", BOB, "gone", "X", minute=14, text="чужой разговор")
+        talk["mentions"] = [{"id": "ME", "acct": "mira"}]
+        w.add(talk, home=True)
         self.world = w
 
         cfg, _ = config.validate({"feed": {"first_run_mark_read": False},

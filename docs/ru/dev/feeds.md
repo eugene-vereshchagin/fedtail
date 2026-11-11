@@ -55,7 +55,7 @@ fedtail, чего стоит и где кусается. Нынешние лен
 |---|---|---|
 | `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `new` (аккаунт < 30 дней), `not_follower`, `new_follower` (< 3 дней), `limited` (под модерацией), `bell`, `boosts_off`, `in_list`, `"@nick@host"`, `"domain:x.org"`, `"domain:{a.org,b.org}"` | аккаунт; отношения (`relationships`, с кэшем); `bot` — флажок или `lanes.extra_bots` |
 | `visibility` | `public`, `unlisted`, `followers`, `direct`, `mutuals` (GoToSocial), `local_only` | `visibility` / `local_only` поста |
-| `kind` | `post` (не ответ, не буст), `reply`, `self_reply` (себе: продолжение треда), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
+| `kind` | `post` (не ответ, не буст), `reply`, `self_reply` (себе), `self_thread` (весь путь до верха — того же автора: свой тред дальше), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
 | `me` | `reply` (мне, любой), `reply_to_post` (на мой пост), `reply_to_comment` (на мой ответ), `mention` (упомянули, но не ответ мне), `direct`, `in_my_thread` (тред, где я писал), `boost_of_mine`, `quote_of_mine`, `my_boost` | `in_reply_to_account_id`, упоминания, родитель (`parents_for`), `sub_members` |
 | `parent` | `mine`, `followed`, `stranger`, `unknown` | родительский пост, если известен |
 | `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `alt_missing` (медиа без описания), `followed_tag`, `"tag:x"`, `"link:domain"`, `"word:x"` (= `text`) | вложения, `spoiler_text`, `sensitive`, карточка, ссылки в тексте, теги |
@@ -255,7 +255,7 @@ none = [{ kind = "boost", age = ">2d", age_of = "original" }]   # старьё, 
 
 | заготовка | правило |
 |---|---|
-| `home` | источник `home`, `none = [{ author = "bot" }]`; ответ — только мой, мне, `in_my_thread`, `subscribed` или `self_reply` (подписанные друг другу в чужих тредах — нет, 11.11) |
+| `home` | источник `home`, `none = [{ author = "bot" }]`; ответ — только мой, мне, `in_my_thread`, `subscribed` или `self_thread` (подписанные друг другу в чужих тредах — нет, 11.11) |
 | `bots` | источник `home`, `any = [{ author = "bot" }]` |
 | `my_posts` | `any = [{ author = "me" }]` |
 | `direct` | `any = [{ me = "direct" }]` |

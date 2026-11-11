@@ -380,6 +380,9 @@ en = "A reply (comment)."
 [word.kind.self_reply]
 ru = "Ответ самому себе: продолжение треда."
 en = "A reply to oneself: a thread continued."
+[word.kind.self_thread]
+ru = "Продолжение своего треда: весь путь вверх до поста — того же автора (ответ себе под чужим комментом — нет)."
+en = "One's own thread going on: every post up to the top is the same author's (a reply to oneself under someone else's comment is not)."
 [word.kind.boost]
 ru = "Буст чужого поста."
 en = "A boost of a post."

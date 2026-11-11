@@ -15,7 +15,8 @@
 * Home no longer carries other people's conversations: Mastodon puts there what the people
   you follow reply to each other, bits of threads you have nothing to do with. A reply
   stays in Home when it is yours, to you, in a thread you wrote in or follow, or an author
-  going on with their own post; the rest waits in Unsorted. The `mastodon` and `tusky`
+  going on with a thread of their own (every post up to the top theirs: rules can say
+  `kind = "self_thread"`); the rest waits in Unsorted. The `mastodon` and `tusky`
   sets of lanes keep the server's Home as it is.
 
 ## 0.22.8 — 2026-11-11

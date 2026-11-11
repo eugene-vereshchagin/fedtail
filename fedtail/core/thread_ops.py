@@ -60,6 +60,22 @@ class ThreadsMixin:
                 break
         return top in self._my_roots() or store.sub_root_of(status_id) in self._my_roots()
 
+    def self_thread(self, status_id):
+        """kind = "self_thread": every post from this one up to the top is its author's —
+        a thread of one's own going on (1/5, 2/5…), not an answer to oneself under someone
+        else's comment, which kind = "self_reply" takes too (11.11: such pieces of others'
+        talk reached Home). The store only: a parent not there — not known, so no."""
+        st = self.store.get_status(status_id)
+        who = ((st or {}).get("account") or {}).get("id")
+        for _ in range(self.SUB_CHAIN):
+            if not st or (st.get("account") or {}).get("id") != who:
+                return False
+            pid = st.get("in_reply_to_id")
+            if not pid:
+                return True
+            st = self.store.get_status(pid)
+        return False
+
     def _my_roots(self):
         """The tops of the threads I wrote in, as the store has them (cached until a
         post comes or goes)."""

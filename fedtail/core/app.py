@@ -892,10 +892,15 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             def __contains__(self, sid):
                 return core.in_my_thread(sid)
 
+        class _SelfThreads:  # kind = "self_thread": the author's own thread going on
+            def __contains__(self, sid):
+                return core.self_thread(sid)
+
         lc = self.cfg["lanes"]
         host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
         return atoms.World(me_id=self.me["id"] if self.me else "", my_host=host,
                            subscribed=_Subscribed(), my_threads=_MyThreads(),
+                           self_threads=_SelfThreads(),
                            following=self._following or set(),
                            followed_tags=getattr(self, "_followed_tag_names", None) or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),

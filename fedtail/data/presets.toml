@@ -31,12 +31,14 @@ switches = ["posts_only", "unread_only"]
 start = true  # the lane opened first (ui.start_lane names none here)
 group = "standard"
 source = "home"
-# a reply only when it is mine, to me, or in a thread of mine or one I follow: Mastodon's home
+# a reply only when it is mine, to me, in a thread of mine or one I follow, or the author's
+# own thread going on (self_thread: all theirs up to the top; a self_reply under someone's
+# comment is talk too): Mastodon's home
 # also brings what the followed say to each other in their threads — strangers' talk, out of
 # its thread (11.11); left out, they wait in Unsorted (lanes.unsorted)
 any = [
   { any = [
-    { kind = ["post", "boost", "self_reply"] },
+    { kind = ["post", "boost", "self_thread"] },
     { author = "me" },
     { me = ["reply", "mention", "in_my_thread"] },
     { state = "subscribed" },

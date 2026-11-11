@@ -636,12 +636,16 @@ class NewDefaultsTest(FreeBase):
         w.add(status("036", ME, reply_to="034", reply_acc="B", minute=7), home=True)
         # someone else in a thread I wrote in (not followed): mine, so Home's
         w.add(status("037", cat, reply_to="035", reply_acc="B", minute=8), home=True)
+        # Bob answers Cat under Cat's post, then adds to his own answer: a reply to
+        # himself, but in Cat's thread — talk, not Bob's thread going on (11.11)
+        w.add(status("038", BOB, reply_to="030", reply_acc="C", minute=9), home=True)
+        w.add(status("039", BOB, reply_to="038", reply_acc="B", minute=9), home=True)
         core.connect().result()
         core._following, core._following_at = {"B", "C"}, 1e18
         core.poll_once()
         self.assertEqual(self.ids(core, "home"), ["030", "032", "033", "034", "035", "036",
                                                  "037"])
-        self.assertEqual(self.ids(core, "unsorted"), ["031"])
+        self.assertEqual(self.ids(core, "unsorted"), ["031", "038", "039"])
         # a thread followed: what comes in it after is Home's again
         root = w.add(status("040", cat, minute=10), home=True)
         core.poll_once()

@@ -266,6 +266,7 @@ program knows it.
 | `reply` | A reply (comment). |
 | `self_boost` | An author boosting their own post. |
 | `self_reply` | A reply to oneself: a thread continued. |
+| `self_thread` | One's own thread going on: every post up to the top is the same author's (a reply to oneself under someone else's comment is not). |
 
 ### The words of `me`
 

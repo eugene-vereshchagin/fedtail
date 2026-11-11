@@ -57,7 +57,7 @@ own tables), never by a frontend. The words below are the core's words: a protoc
 |---|---|---|
 | `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `new` (account < 30 days), `not_follower`, `new_follower` (< 3 days), `limited` (moderated), `bell`, `boosts_off`, `in_list`, `"@nick@host"`, `"domain:x.org"`, `"domain:{a.org,b.org}"` | the account; relationships (`relationships`, cached); `bot` — the flag or `lanes.extra_bots` |
 | `visibility` | `public`, `unlisted`, `followers`, `direct`, `mutuals` (GoToSocial), `local_only` | the post's `visibility` / `local_only` |
-| `kind` | `post` (not a reply, not a boost), `reply`, `self_reply` (to oneself: a thread going on), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
+| `kind` | `post` (not a reply, not a boost), `reply`, `self_reply` (to oneself), `self_thread` (every post up to the top the author's: their own thread going on), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
 | `me` | `reply` (to me, any), `reply_to_post` (to my post), `reply_to_comment` (to my reply), `mention` (tagged, not a reply to me), `direct`, `in_my_thread` (a thread where I wrote), `boost_of_mine`, `quote_of_mine`, `my_boost` | `in_reply_to_account_id`, mentions, the parent (`parents_for`), `sub_members` |
 | `parent` | `mine`, `followed`, `stranger`, `unknown` | the parent post, when known |
 | `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `alt_missing` (media without a description), `followed_tag`, `"tag:x"`, `"link:domain"`, `"word:x"` (= `text`) | attachments, `spoiler_text`, `sensitive`, card, links in the text, tags |
@@ -258,7 +258,7 @@ The built-in lanes become presets written in rules; their words stay (and the ol
 
 | preset | rule |
 |---|---|
-| `home` | source `home`, `none = [{ author = "bot" }]`; a reply only if mine, to me, `in_my_thread`, `subscribed` or `self_reply` (the followed talking to each other in others' threads — out, 11.11) |
+| `home` | source `home`, `none = [{ author = "bot" }]`; a reply only if mine, to me, `in_my_thread`, `subscribed` or `self_thread` (the followed talking to each other in others' threads — out, 11.11) |
 | `bots` | source `home`, `any = [{ author = "bot" }]` |
 | `my_posts` | `any = [{ author = "me" }]` |
 | `direct` | `any = [{ me = "direct" }]` |
