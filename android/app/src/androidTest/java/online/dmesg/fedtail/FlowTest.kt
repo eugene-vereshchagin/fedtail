@@ -70,6 +70,25 @@ class FlowTest {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /** A card's sheet opened by `press` (its ⋯, its long press): pressed again while the
+     *  sheet isn't there — a press on a card being drawn anew was lost now and then on CI's
+     *  emulator (the screen held the card, no sheet: 11.11, 30–31.10). The sheet's
+     *  "Profile of @" stands at once; the core's items come after. */
+    private fun openSheet(press: () -> Unit) {
+        val open = { compose.onAllNodesWithText("Profile of @", substring = true)
+            .fetchSemanticsNodes().isNotEmpty() }
+        for (attempt in 1..3) {
+            press()
+            compose.waitForIdle()
+            try {
+                compose.waitUntil(15_000) { open() }
+                return
+            } catch (e: ComposeTimeoutException) {
+                if (attempt == 3) waitFor("the card's sheet", 1) { open() }
+            }
+        }
+    }
+
     /** An item of the lane's ⋮ (09.11: refresh, find, mark all read live there). */
     private fun laneMenu(item: String) {
         compose.onAllNodesWithContentDescription("More: find", substring = true).onFirst()
@@ -236,8 +255,8 @@ class FlowTest {
     fun aCardsMenuIsTheWindowsAndLeadsToTheProfile() {
         launch("thread" to "101")
         waitText("/1")
-        compose.onAllNodesWithContentDescription("More").onFirst().performClick()
-        compose.waitForIdle()  // the sheet slides up (09.11: a sheet, not a drop-down)
+        // the sheet slides up (09.11: a sheet, not a drop-down)
+        openSheet { compose.onAllNodesWithContentDescription("More").onFirst().performClick() }
         waitText("Reply with quote", 60_000)           // common/actions.menu's items
         compose.onAllNodesWithText("Profile of @", substring = true).onFirst()
             .performScrollTo().performClick()
@@ -253,8 +272,9 @@ class FlowTest {
         // the card's long click (its label "More"), not a tap: the menu, not the thread
         val held = card and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(
             SemanticsActions.OnLongClick)
-        compose.onAllNodes(held).onFirst().performSemanticsAction(SemanticsActions.OnLongClick)
-        compose.waitForIdle()
+        openSheet {
+            compose.onAllNodes(held).onFirst().performSemanticsAction(SemanticsActions.OnLongClick)
+        }
         waitText("Reply with quote", 60_000)
         assert(compose.onAllNodesWithText("/1").fetchSemanticsNodes().isEmpty())
     }
