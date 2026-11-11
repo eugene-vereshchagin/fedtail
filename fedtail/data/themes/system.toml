@@ -79,6 +79,9 @@ window_end = "auto"      # the bottom of a gradient from colors.window down (the
 button_end = "auto"      # … from colors.button (glossy buttons)
 header_end = "auto"      # … from colors.header (the bars over the posts and the input line)
 tab_mark = "auto"        # the line over the tab in front (Windows XP: orange); "auto": accent
+direct = "auto"          # a private message among posts (shape.direct): its frame, its
+                         # tint, its plate; "auto": a violet that reads light and dark
+on_direct = "auto"       # the words on that plate ("auto": black or white, what reads)
 
 [shape]
 radius = 12              # card corners
@@ -108,6 +111,10 @@ short_id = "header"      # where #a3f goes: "header" (right of the name) or "foo
                          # the post, left, with the number of replies: #a3f | 4)
 actions_align = "left"   # the buttons under a post: "left" or "right" (point.im)
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
+direct = "frame"         # a private message among posts, as in Fedilab: "frame" (rounded,
+                         # colors.direct, a light glow inwards), "fill" (the card tinted),
+                         # "badge" (a plate "DM" by the name), "none"; ui.direct_highlight
+                         # in config.toml may choose otherwise
 debug = false            # loud marks for testing: unread, the j/k cursor, the post found,
                          # "glimpsed, not yet counted read", keyboard focus, hover (debug.toml)
 faces = "qip"            # the split layout's faces: "qip" — over a lane the author of the

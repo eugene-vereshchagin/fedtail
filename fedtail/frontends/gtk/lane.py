@@ -648,7 +648,8 @@ class LaneView(Gtk.Box):
             card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
                         short_id=sp.extra.get("short_id"),
                         my_replies=sp.extra.get("my_replies", ()),
-                        via=sp.extra.get("via"), open_at=sp.open_at)
+                        via=sp.extra.get("via"), open_at=sp.open_at,
+                        lane_private=sp.extra.get("lane_private", False))
             line = conversation_line(sp)
             if line:
                 card.add_conversation(*line)

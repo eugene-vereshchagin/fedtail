@@ -161,6 +161,7 @@ data class PostItem(
     val threadNews: Pair<String, String>? = null,   // "🔔 3 new in the thread"
     val myReplies: List<Pair<String, String>> = emptyList(),  // "↳ you replied …"
     val visibility: String = "",     // public | unlisted | private | direct
+    val lanePrivate: Boolean = false, // a lane of private messages only: none marked out
     val canBoost: Boolean = true,    // the core's word (common/actions.can_boost)
     val meta: List<Pair<String, String>> = emptyList(),  // the marks with their links (time, edits)
     val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
@@ -264,6 +265,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var markOnScroll by mutableStateOf(true)
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
     var bookmarkButton by mutableStateOf(true)  // ui.bookmark_button: 🔖 beside ↩ ★ ♻
+    // a private message among posts: the core's "frame", "fill", "badge" or "none"
+    // (ui.direct_highlight, the theme's shape.direct)
+    var directMark by mutableStateOf("frame")
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
     var prefetch by mutableStateOf("previews") // feed.prefetch: pictures fetched ahead
@@ -613,6 +617,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
         bookmarkButton = me.optBoolean("bookmark_button", true)
+        directMark = me.optString("direct_mark", "frame")
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
         expandCw = me.optBoolean("expand_cw")
@@ -2489,6 +2494,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             own = o.optBoolean("own"),
             edited = o.optBoolean("edited"),
             visibility = str(o, "visibility"),
+            lanePrivate = o.optBoolean("lane_private", false),
             canBoost = o.optBoolean("can_boost", true),
             nameHtml = str(acc, "name_html"),
             nameColor = str(acc, "color"),

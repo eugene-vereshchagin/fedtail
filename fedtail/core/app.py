@@ -1119,6 +1119,20 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         condition of `visibility = "direct"` or `me = "direct"`, lane_rank 0)."""
         return [x.name for x in self.lanes if self.lane_rank(x.name) == 0]
 
+    def only_private(self, name):
+        """Whether a lane's rule takes private messages and nothing else (every condition
+        of `any` says `visibility = "direct"` or `me = "direct"`): there a private message
+        is not marked out among posts (common/cardtext.direct_mark) — all of them are."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is None or not c.rule.any:
+            return False
+        return all(cond.sets.get("me") == {"direct"}
+                   or cond.sets.get("visibility") == {"direct"} for cond in c.rule.any)
+
+    def only_private_lanes(self):
+        """The lanes of only_private: for the interfaces that ask once (web, phone)."""
+        return [x.name for x in self.lanes if self.only_private(x.name)]
+
     def lane_sound(self, name):
         """The sound a lane's news makes (core/sounds.py), by its rule: how personal it is,
         or the events it takes."""

@@ -554,6 +554,7 @@ _STRINGS = {
         # visibility
         "vis_public": "🌐 Публично", "vis_unlisted": "🔓 Не в общих лентах",
         "vis_private": "🔒 Только подписчикам", "vis_direct": "✉ Лично упомянутым",
+        "direct_badge": "ЛС", "direct_badge_tip": "Личное сообщение: его видят только упомянутые",
         # media
         "media_video": "видео", "media_audio": "аудио", "media_image": "картинка",
         "media_gifv": "гифка", "media_unknown": "файл",
@@ -2487,6 +2488,8 @@ _STRINGS = {
         "poll_voted": "Vote counted",
         "vis_public": "🌐 Public", "vis_unlisted": "🔓 Unlisted",
         "vis_private": "🔒 Followers only", "vis_direct": "✉ Mentioned only",
+        "direct_badge": "DM",
+        "direct_badge_tip": "A private message: only those it mentions see it",
         "media_video": "video", "media_audio": "audio", "media_image": "image",
         "media_gifv": "gif", "media_unknown": "file",
         "boosted_by": "♻ boosted by {name}", "bot": "bot",

@@ -36,6 +36,7 @@ from ...model.text import (
 from ..common import actions
 from ..common.cardtext import (
     context_chars,
+    direct_mark,
     indent_of,
     inner_quote_bit,
     newcomer_bit,
@@ -322,6 +323,11 @@ class PostRow(QWidget):
         self._has_menu = False  # a ⋯ button was made (_more_button)
         self.card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.card.customContextMenuRequested.connect(self._card_menu)
+        # a private message stands out (ui.direct_highlight / the theme's shape.direct)
+        self.direct = direct_mark(ctx.cfg, self.theme.shape, spec.entry,
+                                  spec.extra.get("lane_private", False))
+        if self.direct in ("frame", "fill"):
+            self.card.setProperty("direct", self.direct)
         row.addWidget(self.card)
         self.lay = QVBoxLayout(self.card)
         if self.theme.shape["card_style"] == "rule":
@@ -783,7 +789,18 @@ class PostRow(QWidget):
             m.setFixedSize(8, 8)
         m.setToolTip(_("unread_tip"))
         self.mark = m
-        return m
+        if getattr(self, "direct", "none") != "badge":
+            return m
+        box = QWidget()  # the unread mark, and the private message's plate after it
+        h = QHBoxLayout(box)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        h.addWidget(m, 0, Qt.AlignmentFlag.AlignVCenter)
+        plate = QLabel(_("direct_badge"))
+        plate.setObjectName("directBadge")
+        plate.setToolTip(_("direct_badge_tip"))
+        h.addWidget(plate, 0, Qt.AlignmentFlag.AlignVCenter)
+        return box
 
     def _here(self, acc):
         """This person's own profile is where the card is (spec.extra "profile_of"): their

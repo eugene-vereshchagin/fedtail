@@ -7,6 +7,11 @@
 
 ## What's next
 
+- Private messages stand out among the posts, as in Fedilab (`card.direct_highlight`): a
+  rounded frame glowing faintly inwards by default, or the whole card tinted, or a "DM"
+  plate by the name, or nothing. The theme decides by default (`[shape] direct`,
+  `[colors] direct`): a red plate in terminal, bnw and contrast and in the terminal
+  interface, a grey-blue frame in point. A lane of private messages only marks none.
 - The Linux binary runs on processors without SSE4.2 again (an AMD Phenom II died with
   "illegal hardware instruction"): it is built with Qt 6.9 — Qt's wheels from 6.10 on need
   x86-64-v2 — and CI starts it on an emulated processor of that age.

@@ -90,6 +90,10 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
         out.head.append(("boost", "♻ @" + (entry.by.handle or "?")))
     if p.visibility == "direct":
         out.head.append(("direct", "✉"))
+        from ..common.cardtext import direct_mark
+        private = spec is not None and spec.extra.get("lane_private", False)
+        if direct_mark(core.cfg, None, p, private) == "badge":  # a red plate (frame, fill: row's)
+            out.head.append(("dm_badge", f" {_('direct_badge')} "))
     elif p.visibility == "followers":
         out.head.append(("muted", "🔒"))
     if unread:

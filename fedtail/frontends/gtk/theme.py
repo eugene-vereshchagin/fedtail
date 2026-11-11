@@ -85,6 +85,23 @@ class Theme:
     def date(self, when, fmt=None):
         return palette.date(self.words, when, fmt)
 
+    def _direct_css(self, c, r, rule):
+        """A private message among posts (common/cardtext.direct_mark): "frame" — rounded,
+        in colors.direct, glowing inwards (an inset shadow); "fill" — the card tinted;
+        "badge" — a plate by the name."""
+        from .. import palette
+        d = self.c.get("direct") or self.c["accent"]
+        on = (self.c.get("on_direct") or palette.readable_on(d)).css()
+        card = self.c["view"] if rule else self.c["card"]
+        edge = palette.mix(card, d, 0.75).css()
+        return (f".ft-card.ft-direct-frame {{ border: 2px solid {edge}; "
+                f"border-radius: {max(r, 8)}px; "
+                f"box-shadow: inset 0 0 18px {d.with_alpha(70).css()}; }}\n"
+                f".ft-card.ft-direct-fill {{ background: {palette.mix(card, d, 0.11).css()}; "
+                f"border-color: {palette.mix(card, d, 0.30).css()}; }}\n"
+                f".ft-direct-badge {{ background: {d.css()}; color: {on}; border-radius: 3px; "
+                f"padding: 0 5px; font-weight: bold; }}")
+
     def css(self, font_family="", post_scale=1.0):
         c = {k: v.css() for k, v in self.c.items()}
         r = int(self.shape.get("radius", 12))
@@ -140,6 +157,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-feed > row:hover, .ft-feed > row:focus {{ background: transparent; outline: none; }}
 .ft-card {{ {card} padding: 8px 12px; color: {c['text']}; }}
 .ft-card.ft-unread {{ border-color: {c['card_border_unread']}; }}
+{self._direct_css(c, r, rule)}
 .ft-card.ft-focus {{ background: {c['focus']}; border-color: {c['focus_border']}; }}
 .ft-card.ft-found {{ border: 2px solid {c['accent']}; }}
 .ft-findbar {{ background: {c['header']}; }}

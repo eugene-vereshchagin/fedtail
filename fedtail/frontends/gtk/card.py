@@ -14,6 +14,7 @@ from .. import pango, richtext
 from ..common import actions
 from ..common.cardtext import (
     context_chars,
+    direct_mark,
     indent_of,
     inner_quote_bit,
     newcomer_bit,
@@ -108,7 +109,7 @@ class Card(Gtk.Box):
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
                  depth=0, number=None, my_replies=(), via=None, open_at=None,
-                 profile_of=None):
+                 profile_of=None, lane_private=False):
         # vertical, the face laid over the column's left margin: GTK 4.18 takes a
         # horizontal box's least height as its children's at their least width — the
         # text wrapped word by word — above the natural one at the width it has, and
@@ -125,6 +126,10 @@ class Card(Gtk.Box):
         self.profile_of = profile_of
         self.via = via  # all accounts in one window: which of mine got it
         self.add_css_class("ft-card")
+        # a private message stands out (ui.direct_highlight / the theme's shape.direct)
+        self.direct = direct_mark(ctx.cfg, ctx.theme.shape, entry, lane_private)
+        if self.direct in ("frame", "fill"):
+            self.add_css_class("ft-direct-" + self.direct)
         self.unread = None
         self.depth = depth
         if depth:
@@ -370,6 +375,10 @@ class Card(Gtk.Box):
         self.dot = _label(mark, ("ft-dot",))
         tip(self.dot, _("unread_tip"))
         head.append(self.dot)
+        if self.direct == "badge":
+            plate = _label(_("direct_badge"), ("ft-direct-badge",))
+            tip(plate, _("direct_badge_tip"))
+            head.append(plate)
         self.head = head
         if ctx.theme.shape.get("card_header") == "chat":
             self._chat_head(head, p)

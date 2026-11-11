@@ -2,13 +2,15 @@
   --bg: #f3f3f0; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e2dc;
   --accent: #2f6fb3; --accent-text: #ffffff; --unread: #2e8b57; --ctx: #eef2f7;
   --danger: #b33; --warn: #a06a00; --shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  --direct: #7e4cc9; --on-direct: #ffffff;
   --radius: 10px; --nav: 240px;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #151618; --card: #1f2023; --text: #e6e6e3; --muted: #9a9a95;
           --line: #313237; --accent: #6aa8ea; --accent-text: #0e1620; --unread: #5fcf8d;
-          --ctx: #272a30; --warn: #e0b04a; --shadow: none; }
+          --ctx: #272a30; --warn: #e0b04a; --shadow: none;
+          --direct: #b38cf5; --on-direct: #111111; }
 }
 * { box-sizing: border-box; }
 /* hidden means hidden, whatever display a class gives (the names offered under the editor
@@ -142,6 +144,15 @@ button.bar-ico { display: inline-flex; align-items: center; justify-content: cen
         box-shadow: var(--shadow); margin-left: max(0px, calc(var(--depth, 0) * 16px)); }
 #posts .post { margin-left: auto; }
 .post.cursor { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* a private message (ui.direct_highlight, the theme's shape.direct): a frame glowing
+   inwards, or the card tinted; the plate is .dm-badge */
+.post.dm-frame { border: 2px solid color-mix(in srgb, var(--direct) 75%, var(--card));
+                 border-radius: max(var(--radius), 8px);
+                 box-shadow: inset 0 0 18px color-mix(in srgb, var(--direct) 28%, transparent); }
+.post.dm-fill { background: color-mix(in srgb, var(--direct) 11%, var(--card));
+                border-color: color-mix(in srgb, var(--direct) 30%, var(--card)); }
+.post .dm-badge { background: var(--direct); color: var(--on-direct); border-radius: 3px;
+                  padding: 0 5px; font-weight: 700; font-size: 12px; }
 .post.unread::before { content: ""; position: absolute; left: -1px; top: 10px; bottom: 10px;
                        width: 3px; background: var(--unread); border-radius: 2px; }
 .post .shared { color: var(--muted); font-size: 13px; margin-bottom: 4px; }

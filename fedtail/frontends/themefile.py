@@ -22,6 +22,7 @@ CHOICES = {
     ("shape", "actions_align"): {"left", "right"},
     ("shape", "rule"): {"dashed", "solid"},
     ("shape", "unread_mark"): {"dot", "star"},
+    ("shape", "direct"): {"frame", "fill", "badge", "none"},
     ("shape", "posts_only"): {"segmented", "check"},
     ("icon", "style"): {"bubble", "terminal"},
     ("shape", "faces"): {"qip", "agent", "none"},

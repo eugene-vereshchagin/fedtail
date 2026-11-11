@@ -666,6 +666,12 @@ why.en = "The windows save a setting at once, each in its card (“saved”, “
 keys = ["settings_saved_here", "settings_enter_saves"]
 
 [[wording]]
+in = ["tui"]
+why.ru = "Плашка «ЛС» у личного сообщения в окнах и в вебе объясняет себя подсказкой под мышью; в терминале подсказок нет — плашка стоит рядом со значком ✉ и говорит сама за себя."
+why.en = "The \"DM\" plate on a private message explains itself in a tooltip in the windows and on the web page; the terminal has no tooltips — the plate stands next to ✉ and speaks for itself."
+keys = ["direct_badge_tip"]
+
+[[wording]]
 in = ["tui", "web"]
 why.ru = "Окна строят карточку из виджетов, и сломавшаяся говорит о себе на своём месте («Эта запись не нарисовалась»), не оставляя дыры; терминал и веб рисуют пост строкой текста или HTML — там такой поломки нет, ошибка ленты говорится ошибкой места."
 why.en = "The windows build a card of widgets, and one that breaks says so in its place (“This post couldn't be drawn”), leaving no hole; the terminal and the web page draw a post as a line of text or HTML — no such breakage there, a lane's error is said as the place's."

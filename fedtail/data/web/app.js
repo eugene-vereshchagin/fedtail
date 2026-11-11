@@ -121,6 +121,11 @@ function bitEl(b, cls) {  // a piece of the card's words: plain, or a fedtail: l
 function renderPost(p, inThread) {
   const card = el("article", "post" + (p.unread ? " unread" : "") + (p.own ? " own" : ""));
   card.dataset.id = p.id;
+  // a private message stands out: the core's choice (ui.direct_highlight, the theme's)
+  // (none in a lane of private messages only: p.lane_private, Core.only_private)
+  const dm = p.visibility === "direct" && !p.lane_private
+    ? (state.me.direct_mark || "none") : "none";
+  if (dm === "frame" || dm === "fill") card.classList.add("dm-" + dm);
   if (inThread && p.indent) card.style.setProperty("--depth", String(p.indent));
   const wd = p.words;  // the windows' words around the card (common/cardtext.py)
   if (wd && wd.boosted) {
@@ -163,6 +168,11 @@ function renderPost(p, inThread) {
     const dot = el("span", "dot", "●");
     dot.title = w("unread_tip");
     meta.append(dot);
+  }
+  if (dm === "badge") {  // the plate "DM" (the terminal, black-and-white themes)
+    const plate = el("span", "dm-badge", w("direct_badge"));
+    plate.title = w("direct_badge_tip");
+    meta.append(plate);
   }
   if (p.via) {  // all accounts in one window: which of mine got it
     const v = el("span", "via", p.via.text);

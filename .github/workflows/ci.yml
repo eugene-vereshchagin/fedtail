@@ -235,7 +235,7 @@ jobs:
             echo "::warning::no Wayland platform plugin in the one-file build"
           fi
           echo "Qt plugin files: $(grep -c 'plugins' contents.txt || true)"
-      - name: Runs on an old processor (no SSSE3, SSE4, POPCNT)
+      - name: Runs on an old processor (no SSSE3, SSE4.1/4.2)
         shell: bash
         run: |
           # Opteron_G3 is a Phenom-era CPU; qemu refuses the instructions it lacks

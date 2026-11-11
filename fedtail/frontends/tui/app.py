@@ -36,7 +36,7 @@ from ...model import Share, real
 from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
-from ..common.cardtext import indent_of
+from ..common.cardtext import direct_mark, indent_of
 from ..common.strip import nearest_staying
 from ..richtext import openable
 from . import pictures, termcaps
@@ -51,6 +51,7 @@ log = logging.getLogger(__name__)
 
 STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
+         "dm_badge": "bold white on red",
          "unread": "bold green", "quote": "italic", "myreply": "dim cyan",
          "conv": "cyan", "divider": "bold green", "newcomer": "bold red",
          # an event's row (event_lines): its links stand out as the windows' do
@@ -849,6 +850,9 @@ class FedtailApp(App, PostsMixin):
     #title { height: 1; padding: 0 1; background: $primary-background; }
     #posts > ListItem { padding: 0 1 1 1; }
     #posts > ListItem.lit:hover { background: $boost; }
+    /* a private message (ui.direct_highlight): framed, or tinted */
+    #posts > ListItem.dm-frame { border: round #9b6bdf; padding: 0 1; margin-bottom: 1; }
+    #posts > ListItem.dm-fill { background: #9b6bdf 18%; }
     #cmd { dock: bottom; }
     .post { width: 1fr; }
     """
@@ -1192,15 +1196,19 @@ class FedtailApp(App, PostsMixin):
                 unread.add(e.id)
 
             def post(sp=sp, e=e):
-                shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
+                dm = direct_mark(core.cfg, None, e, sp.extra.get("lane_private", False))
+                wide = width - 4 if dm == "frame" else width  # the frame's own columns
+                shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=wide,
                                   parent=sp.parent, spec=sp)
                 item = PostItem(e, render(shown), key=sp.key, open_at=sp.open_at)
                 item.unread = bool(sp.unread)
                 item.redraw = lambda unread, entry=None, sp=sp, e=e: render(show_post(
-                    core, entry or e, sp.extra.get("short_id"), unread, width=width,
+                    core, entry or e, sp.extra.get("short_id"), unread, width=wide,
                     parent=sp.parent, spec=sp))
                 if core.cfg["ui"].get("additional_highlight", True):
                     item.add_class("lit")  # under the mouse: tinted (the windows' highlight)
+                if dm in ("frame", "fill"):
+                    item.add_class("dm-" + dm)
                 return item
             rows.append((sp.key, e, post))
         title = core.lane_title(name) or _("lane_" + name)

@@ -1,3 +1,7 @@
+**What's next:**
+
+- Private messages stand out in a lane
+
 **0.22.7:**
 
 - A reply comes into a lane with what it answers

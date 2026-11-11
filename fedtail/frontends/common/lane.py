@@ -434,6 +434,10 @@ class LaneModel:
         at = view.open_at(self.name) if hasattr(view, "open_at") else "post"
         for s in specs:
             s.open_at = at
+        only = getattr(view, "only_private", None)
+        if only is not None and only(self.name):  # all private: none marked out (direct_mark)
+            for s in specs:
+                s.extra["lane_private"] = True
         if self.rank in (1, 2):  # replies and mentions: did I answer them elsewhere?
             view.check_my_replies(posts)
         if unknown:

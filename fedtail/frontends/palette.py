@@ -190,6 +190,11 @@ TINTS = {"header": ("view", "accent", 0.16),
          # a field's frame: plainly there in every theme (29.10: the sync's fields, framed
          # as pale as a card, read as switched off)
          "field_border": ("view", "text", 0.45)}
+# "auto": black or white, whichever reads on that colour of the same theme
+READABLE = {"on_direct": "direct"}
+# "auto" by how dark the theme's own posts' background is: (on light, on dark) — the
+# violet of a private message (shape.direct), Fedilab's, fit for the theme, not the desktop
+BY_VIEW = {"direct": (Color(0x7e, 0x4c, 0xc9), Color(0xb3, 0x8c, 0xf5))}
 
 
 def resolve(colors, desktop):
@@ -198,7 +203,8 @@ def resolve(colors, desktop):
     out, follow = {}, []
     for key, val in colors.items():
         val = val.strip()
-        if val == "auto" and (key in FOLLOWS or key in TINTS):
+        if val == "auto" and (key in FOLLOWS or key in TINTS or key in READABLE
+                               or key in BY_VIEW):
             follow.append(key)
         elif val == "auto":
             out[key] = auto.get(key, GREY)
@@ -214,6 +220,12 @@ def resolve(colors, desktop):
     for key in follow:  # following a mixed one (header_end → header): now it's known
         if key in FOLLOWS and key not in out:
             out[key] = out[FOLLOWS[key]]
+    for key in follow:  # light or dark, as the theme's posts are
+        if key in BY_VIEW and "view" in out:
+            out[key] = BY_VIEW[key][out["view"].lightness() < 128]
+    for key in follow:  # the words on a colour: black or white
+        if key in READABLE and READABLE[key] in out:
+            out[key] = readable_on(out[READABLE[key]])
     return out
 
 

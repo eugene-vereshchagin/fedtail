@@ -30,6 +30,8 @@ accent = "#0033cc"
 on_accent = "#ffffff"
 hot = "#b00000"
 on_hot = "#ffffff"
+direct = "#b00000"        # a private message's plate (shape.direct)
+on_direct = "#ffffff"
 quiet = "#ffffff"
 on_quiet = "#000000"
 new_pill = "#0033cc"
@@ -54,6 +56,7 @@ radius = 4
 button_radius = 4
 avatar = 48
 unread_mark = "star"
+direct = "badge"  # a private message: a red plate — no glow in black and white
 
 [pictures]
 # plain shapes in one colour, the lines cut out — not the messengers' glossy buttons

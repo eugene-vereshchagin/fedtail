@@ -121,6 +121,7 @@
     <string name="edited_done">Исправлено</string>
     <string name="ok">ОК</string>
     <string name="profile_of">Профиль @%1$s</string>
+    <string name="direct_badge">ЛС</string>
     <string name="poll_vote">Голосовать</string>
     <string name="edit_post">Исправить пост</string>
     <string name="cw_label">Предупреждение</string>

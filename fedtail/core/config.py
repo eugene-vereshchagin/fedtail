@@ -53,6 +53,9 @@ DEFAULTS = {
         "expand_cw": True,
         "bookmark_button": True,
         "additional_highlight": True,
+        # a private message among posts, as in Fedilab: "theme" (the theme's [shape]
+        # direct), "frame", "fill", "badge" or "none" (common/cardtext.direct_mark)
+        "direct_highlight": "theme",
         # the tools over a post, under the mouse (common/actions.TOOLS): out of its menu
         "hover_tools": ["open", "copy_link", "translate", "quote", "reply_quote",
                         "sub_thread", "mute_thread", "read_upto", "edit", "delete"],
@@ -408,6 +411,7 @@ CHOICES = {
     ("feed", "tag_click"): {"menu", "author", "everywhere"},
     ("ui", "code_click"): {"auto", "thread", "line"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
+    ("ui", "direct_highlight"): {"theme", "frame", "fill", "badge", "none"},
     ("feed", "translate_backend"): {"server", "libretranslate", "device"},
     ("phone", "stream"): {"always", "wifi", "off"},
     ("ui", "layout"): {'single', 'split'},
@@ -611,7 +615,7 @@ FILE_LAYOUT = (
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
-             "hover_tools menu_groups code_click links_in_app")
+             "direct_highlight hover_tools menu_groups code_click links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
              "counters_via_accounts "
              "translate "

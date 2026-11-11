@@ -73,6 +73,9 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -145,6 +148,11 @@ class CardActions(
     val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
     val holdSelects: Boolean = true,                 // phone.hold_text: a long press selects words
+    // a private message among posts (the core's: ui.direct_highlight, the theme's
+    // shape.direct): "frame", "fill", "badge" or "none"; its colour (null: violet)
+    val directMark: String = "none",
+    val directColor: Color? = null,
+    val onDirect: Color? = null,
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
@@ -161,7 +169,9 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     mediaMenu = { p, i -> Core.mediaMenu(p.sid, i).optJSONArray("items") ?: JSONArray() },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
-    bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects)
+    bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects,
+    directMark = directMark, directColor = hexColor(themeColors["direct"]),
+    onDirect = hexColor(themeColors["on-direct"]))
 
 // a server's emoji as the core writes it (web/server.py with_emojis): its picture's address
 private val EMOJI = Regex("""<img\b[^>]*\bclass="emoji"[^>]*\bsrc="([^"]*)"[^>]*>""")
@@ -579,7 +589,16 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     val haptic = LocalHapticFeedback.current
     val hold = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true } }
     val menuWords = stringResource(R.string.more)
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
+    val surface = MaterialTheme.colorScheme.surface
+    val dm = directOf(p, act)
+    val dc = directColor(act)
+    Surface(shape = RoundedCornerShape(12.dp),
+        color = if (dm == "fill") mixed(surface, dc, 0.11f) else surface,
+        border = when (dm) {
+            "frame" -> androidx.compose.foundation.BorderStroke(2.dp, mixed(surface, dc, 0.75f))
+            "fill" -> androidx.compose.foundation.BorderStroke(1.dp, mixed(surface, dc, 0.30f))
+            else -> null
+        },
         tonalElevation = 0.dp, shadowElevation = if (p.unread) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth().combinedClickable(onLongClickLabel = menuWords,
             onLongClick = hold) { act.open(p) }) {
@@ -587,7 +606,8 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         // the face beside the head only, the words the card's whole width under it — as
         // the windows and the web page draw a card (08.11: a column beside the face left
         // a strip of nothing down the post's left side, the text narrow)
-        Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
+        Column(Modifier.then(if (dm == "frame") Modifier.innerGlow(dc) else Modifier)
+            .padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
@@ -688,12 +708,52 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
     }
 }
 
+/** How this card stands out as a private message: the core's choice, for a private one. */
+private fun directOf(p: PostItem, act: CardActions) =
+    if (p.visibility == "direct" && !p.lanePrivate) act.directMark else "none"
+
+/** The theme's colour of private messages; none (the phone's own look) — Fedilab's violet,
+ *  for a light card or a dark one (palette.BY_VIEW, the windows'). */
+@Composable
+private fun directColor(act: CardActions): Color = act.directColor
+    ?: if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) Color(0xFF7E4CC9)
+       else Color(0xFFB38CF5)
+
+private fun mixed(a: Color, b: Color, part: Float) = Color(
+    red = a.red + (b.red - a.red) * part, green = a.green + (b.green - a.green) * part,
+    blue = a.blue + (b.blue - a.blue) * part, alpha = 1f)
+
+/** A light glow in from every edge, under the card's content: the frame's inner side. */
+private fun Modifier.innerGlow(c: Color) = drawBehind {
+    val w = 14.dp.toPx()
+    val glow = c.copy(alpha = 0.22f)
+    val none = c.copy(alpha = 0f)
+    drawRect(Brush.verticalGradient(listOf(glow, none), 0f, w),
+        size = androidx.compose.ui.geometry.Size(size.width, w))
+    drawRect(Brush.verticalGradient(listOf(none, glow), size.height - w, size.height),
+        topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - w),
+        size = androidx.compose.ui.geometry.Size(size.width, w))
+    drawRect(Brush.horizontalGradient(listOf(glow, none), 0f, w),
+        size = androidx.compose.ui.geometry.Size(w, size.height))
+    drawRect(Brush.horizontalGradient(listOf(none, glow), size.width - w, size.width),
+        topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f),
+        size = androidx.compose.ui.geometry.Size(w, size.height))
+}
+
 @Composable
 private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (p.unread) {
             Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary))
+        }
+        if (directOf(p, act) == "badge") {  // the plate "DM": the terminal's, bnw's
+            val dc = directColor(act)
+            Text(stringResource(R.string.direct_badge), fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = act.onDirect ?: if (dc.luminance() > 0.45f) Color(0xFF111111) else Color.White,
+                modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(3.dp))
+                    .background(dc).padding(horizontal = 5.dp))
         }
         // the name comes first: the handle gets what's left, at most a short piece
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {

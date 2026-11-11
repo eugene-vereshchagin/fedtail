@@ -32,6 +32,8 @@ accent = "#00dd00"
 on_accent = "#000000"
 hot = "#e0002a"
 on_hot = "#ffffff"
+direct = "#e0002a"        # a private message's plate (shape.direct)
+on_direct = "#ffffff"
 quiet = "#cfcfcf"
 on_quiet = "#333333"
 new_pill = "#00dd00"
@@ -60,6 +62,7 @@ avatar = 32
 sidebar_avatar = true
 card_header = "compact"
 unread_mark = "star"
+direct = "badge"  # a private message: a red plate — no glow in black and white
 posts_only = "check"
 
 [words]

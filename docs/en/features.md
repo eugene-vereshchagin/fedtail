@@ -347,6 +347,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | The post under the mouse lit | has | 0.22.0 | `card.additional_highlight` (true) | own | point.im |
+| Private messages stand out in a lane | has | next | `card.direct_highlight` ("theme"), `[shape] direct`, `[colors] direct` | own | Fedilab |
 | Tools over the post instead of a long menu | has | 0.22.4 | `card.hover_tools` | own | Mastodon web |
 | A post's menu in submenus | has | 0.22.4 | `card.menu_groups` | own | — |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
@@ -392,6 +393,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Honest counters.** Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server.
 
 **The post under the mouse lit.** As on point.im: the post under the mouse has its buttons brighter. In every theme; Qt, GTK and the web page, the terminal tints the post under the mouse. A phone has no mouse.
+
+**Private messages stand out in a lane.** A private message among the usual posts is seen at once, as in Fedilab: "frame" — a rounded frame with a light glow inwards, "fill" — the whole card lightly tinted, "badge" — a plate "DM" by the name, "none" — like any post. By default ("theme") the theme decides: a frame in most, a red plate in terminal, bnw and contrast, a plate in the terminal interface. The colour is the theme's `[colors] direct` (without it — a violet for a light or a dark background). In a lane of private messages only (its rule takes nothing else, as "Private") they don't stand out. In every interface and on the phone.
 
 **Tools over the post instead of a long menu.** The post under the mouse has the theme's icons at its top right: open in the browser, copy the link, translate (a post in another language), quote (where the author allows), reply quoting it, follow the thread and mute it (lit when on), read up to here (an unread post), and on my own one edit and delete. Each is an item of the ⋯ menu and leaves it: the menu a third shorter. Which and in what order — `hover_tools`; `[]` — none, the whole menu. Qt, GTK and the web page; the terminal and the phone have no mouse — all of it in the menu.
 

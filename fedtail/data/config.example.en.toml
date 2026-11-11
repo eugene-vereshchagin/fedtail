@@ -712,6 +712,14 @@ bookmark_button = true
 # interface (the terminal: the post under the cursor). false — the posts stay as they are.
 additional_highlight = true
 
+# A private message among the posts stands out, as in Fedilab: "frame" — a rounded
+# frame in colors.direct with a light glow inwards; "fill" — the whole card lightly
+# tinted; "badge" — a plate "DM" by the name (the terminal, black-and-white themes);
+# "none" — like any post. "theme" — what the theme says ([shape] direct: mostly a
+# frame, a plate in terminal, bnw and contrast; the terminal interface: a plate). In a
+# lane of private messages only (its rule takes nothing else, as "Private") none stands out.
+direct_highlight = "theme"
+
 # The tools over a post, at its top right while the mouse is on it (the windows): each is
 # an item of its ⋯ menu, and goes out of the menu there. Each only where the post has it:
 # "open" (in the browser), "copy_link", "translate" (a post in another language),

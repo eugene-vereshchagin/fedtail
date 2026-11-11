@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**What's next:**
+
+- Private messages stand out in a lane
+
 **0.22.7:**
 
 - A reply comes into a lane with what it answers

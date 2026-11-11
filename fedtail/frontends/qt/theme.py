@@ -179,6 +179,27 @@ class Theme:
             (self._ticks(k) if s.get("icons") != "desktop" else "") + \
             (DEBUG_CSS if s.get("debug") else "")
 
+    def _direct_css(self, r):
+        """A private message among posts (common/cardtext.direct_mark, the card's "direct"
+        property): "frame" — rounded, in colors.direct, glowing a little inwards from the
+        edge; "fill" — the card tinted; "badge" — a plate by the name."""
+        c = self.c
+        card = c["card"] if self.shape["card_style"] == "card" else c["view"]
+        d = c.get("direct") or c["accent"]
+        on = c.get("on_direct") or c["on_accent"]
+        rr = max(int(r), 8)
+        # the card's box is the gradient's: an ellipse touching its sides, so the glow
+        # comes in from every edge alike (a little more in the corners)
+        glow = (f"qradialgradient(cx: 0.5, cy: 0.5, radius: 0.6, fx: 0.5, fy: 0.5, "
+                f"stop: 0 {_mix(card, d, 0)}, stop: 0.74 {_mix(card, d, 0)}, "
+                f"stop: 0.87 {_mix(card, d, 0.07)}, stop: 1 {_mix(card, d, 0.16)})")
+        return (f'QFrame#card[direct="frame"] {{ background: {glow}; '
+                f"border: 2px solid {_mix(card, d, 0.75)}; border-radius: {rr}px; }}\n"
+                f'QFrame#card[direct="fill"] {{ background: {_mix(card, d, 0.11)}; '
+                f"border-color: {_mix(card, d, 0.30)}; }}\n"
+                f"QLabel#directBadge {{ background: {d.name()}; color: {on.name()}; "
+                f"border-radius: 3px; padding: 0 5px; font-weight: 700; }}")
+
     def _tiles_css(self, k, br):
         """The curtain's tiles: the theme's glossy buttons where it has them (button_end,
         the retro themes), else a card a little lighter on top."""
@@ -353,6 +374,7 @@ QScrollArea#feed, QWidget#feedBody {{ background: {k('view')}; border: 0; }}
 {self._view_gradient_css()}
 QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
+{self._direct_css(r)}
 QFrame#card[focus="true"] {{ {card_focus} }}
 QFrame#card[found="true"] {{ {card_found} }}
 QFrame#card[keyed="true"] {{ {card_found} }}
@@ -434,6 +456,13 @@ QStatusBar {{ background: {self._bg('window')}; color: {k('text')}; }}
 QStatusBar::item {{ border: 0; }}
 QLabel#statusText {{ color: {k('text')}; }}
 """
+
+
+def _mix(a, b, t):
+    """QColor a moved towards b by t, as a CSS colour."""
+    return (f"rgb({round(a.red() * (1 - t) + b.red() * t)},"
+            f"{round(a.green() * (1 - t) + b.green() * t)},"
+            f"{round(a.blue() * (1 - t) + b.blue() * t)})")
 
 
 def _alpha(col, a):

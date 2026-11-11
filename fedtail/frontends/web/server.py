@@ -33,7 +33,7 @@ from ...i18n import _
 from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
 from ..common import actions, timed
-from ..common.cardtext import context_chars, indent_of, shown_text
+from ..common.cardtext import context_chars, direct_mark, indent_of, shown_text
 from ..common.commands import Commands
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
@@ -370,6 +370,8 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     if spec is not None:
         out["words"] = words_json(view, spec, web_date)
         out["item"] = spec.key
+        if spec.extra.get("lane_private"):  # a lane of private messages only: none marked
+            out["lane_private"] = True
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
         out["indent"] = indent_of(view.cfg, depth)  # how far in it is drawn, as the windows
@@ -797,6 +799,9 @@ class Web:
                 "max_width": int(c["ui"].get("max_width") or 0),
                 "full_width": bool(self.core.get_state("full_width")),
                 "highlight": bool(c["ui"].get("additional_highlight", True)),
+                # a private message among posts: "frame", "fill", "badge" or "none"
+                # (ui.direct_highlight, the theme's shape.direct; common/cardtext)
+                "direct_mark": direct_mark(c, self.theme_shape()),
                 # the tools over a post, under the mouse (ui.hover_tools; /api/post_menu)
                 "hover_tools": bool(actions.hover_tools(c)),
                 # #abc clicked: into the command line, or its thread (actions.code_to_line)
@@ -831,10 +836,19 @@ class Web:
                   ("--unread", ("card_border_unread", "accent")), ("--ctx", ("ctx",)),
                   ("--danger", ("hot",)), ("--on-hot", ("on_hot",)),
                   ("--quiet", ("quiet",)), ("--on-quiet", ("on_quiet",)),
-                  ("--button-border", ("button_border",)), ("--button", ("button",)))
+                  ("--button-border", ("button_border",)), ("--button", ("button",)),
+                  ("--direct", ("direct",)), ("--on-direct", ("on_direct",)))
 
     def theme_name(self):
         return self.theme or self.core.cfg["ui"].get("theme") or "system"
+
+    def theme_shape(self):
+        """The theme's [shape] ({} — one that won't load)."""
+        from .. import themefile
+        try:
+            return themefile.load(self.theme_name())[0].get("shape") or {}
+        except (themefile.ThemeError, OSError):
+            return {}
 
     def theme_colors(self, name=None):
         """The theme's colours by the page's names (THEME_VARS without "--"), whether it
@@ -864,6 +878,20 @@ class Web:
                            f"{colors['button_end']})")
             if out.get("button-border"):
                 out["tile-line"] = out["button-border"]
+        if out:  # a private message's violet, "auto": fit for the theme's own posts (palette)
+            from .. import palette
+            bg = None
+            for text in (colors.get("view"), out["bg"]):
+                try:
+                    bg = palette.Color.parse(text)
+                    break
+                except (ValueError, TypeError, AttributeError):
+                    continue
+            if bg is not None and "direct" not in out:
+                out["direct"] = palette.BY_VIEW["direct"][bg.lightness() < 128].name()
+            if "direct" in out and "on-direct" not in out:
+                out["on-direct"] = palette.readable_on(
+                    palette.Color.parse(out["direct"])).name()
         family = (theme.get("font") or {}).get("family") or ""
         family = family if re.fullmatch(r"[\w\s,\"'-]*", family) else ""
         return out, _light(colors), family
@@ -2198,7 +2226,8 @@ class Web:
 
 
 # words the page shows, in the profile's language
-WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", "thread",
+WORDS = ("direct_badge", "direct_badge_tip",
+         "reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", "thread",
          "write", "send", "sent", "tui_back", "web_thread", "follow", "unfollow",
          "acc_follows_you", "web_cw", "web_show", "web_load_error", "web_empty",
          "web_reply_to", "post_from_tip", "post_from_other", "web_cancel", "web_cmd",

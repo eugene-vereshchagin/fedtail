@@ -86,6 +86,26 @@ def newcomers(post, parent):
     return out
 
 
+DIRECT_MARKS = ("frame", "fill", "badge", "none")
+
+
+def direct_mark(cfg, shape=None, entry=None, lane_private=False):
+    """How a private message stands out among the posts, as in Fedilab (ui.direct_highlight,
+    "theme" — the theme's [shape] direct): "frame" — a rounded frame in colors.direct with
+    a light glow inwards, "fill" — the card tinted, "badge" — a plate "DM" by the name,
+    "none". shape: the theme's [shape] (None: an interface without fedtail's themes — the
+    terminal — gets the plate). entry given: "none" unless it is a private one.
+    lane_private: the lane holds private messages only (Core.only_private) — "none"."""
+    if lane_private:
+        return "none"
+    if entry is not None and getattr(real(entry), "visibility", "") != "direct":
+        return "none"
+    want = cfg["ui"].get("direct_highlight", "theme")
+    if want == "theme":
+        want = (shape or {}).get("direct", "frame") if shape is not None else "badge"
+    return want if want in DIRECT_MARKS else "frame"
+
+
 def thread_news_bit(spec):
     """"🔔 3 new in the thread" under a post whose followed thread has new replies."""
     n = spec.extra.get("thread_news") if spec is not None else None

@@ -378,7 +378,8 @@ def open():  # noqa: A001 — what Kotlin calls it
         me = web.me()
         out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
                                       "start_at", "mark_read", "visibility", "sensitive_media",
-                                      "expand_cw", "dwell_ms", "bookmark_button")}
+                                      "expand_cw", "dwell_ms", "bookmark_button",
+                                      "direct_mark")}
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
         out["prefetch"] = core.cfg["feed"].get("prefetch", "previews")  # pictures ahead
         out["overview"] = core.cfg["phone"]["overview"]

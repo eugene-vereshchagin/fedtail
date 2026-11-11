@@ -122,6 +122,7 @@
     <string name="edited_done">Edited</string>
     <string name="ok">OK</string>
     <string name="profile_of">Profile of @%1$s</string>
+    <string name="direct_badge">DM</string>
     <string name="poll_vote">Vote</string>
     <string name="edit_post">Edit post</string>
     <string name="cw_label">Content warning</string>
