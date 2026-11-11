@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.22.7 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.22.8**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -349,7 +349,7 @@
 | Кто лайкнул и бустнул | есть | 0.11.0 | — | `favourited_by`, `reblogged_by` (и с сервера автора) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Честные счётчики | есть | 0.2.0 | `card.honest_counters` (выключен), `card.counters_via_accounts` | API сервера автора без токена | только в fedtail |
 | Пост под мышкой подсвечен | есть | 0.22.0 | `card.additional_highlight` (true) | своё | point.im |
-| Личные сообщения выделены в ленте | есть | дальше | `card.direct_highlight` ("theme"), `[shape] direct`, `[colors] direct` | своё | Fedilab |
+| Личные сообщения выделены в ленте | есть | 0.22.8 | `card.direct_highlight` ("theme"), `[shape] direct`, `[colors] direct` | своё | Fedilab |
 | Инструменты над постом вместо длинного меню | есть | 0.22.4 | `card.hover_tools` | своё | Mastodon web |
 | Меню поста подменю | есть | 0.22.4 | `card.menu_groups` | своё | — |
 | Числа под постами на экране свежие | есть | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), иначе по одному | только в fedtail |

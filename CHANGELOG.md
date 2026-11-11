@@ -5,26 +5,35 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.22.8 — 2026-11-11
 
-- Private messages stand out among the posts, as in Fedilab (`card.direct_highlight`): a
+**In short: private messages stand out, and the lane keeps your place.** A private message
+among the posts is framed, tinted or marked "DM", as in Fedilab — each theme its own way.
+A lane opens where you read to on any device, pictures flipped through are read on the
+phone and in GTK too, the lane editor's buttons keep the page, and the Linux binary runs
+on old processors again.
+
+<!-- For the site's builder (an agent): a release of the 0.22 branch, together
+     with fedtail-sync 0.22.8 (the same server under the new number; protocol 2). -->
+
+* Private messages stand out among the posts, as in Fedilab (`card.direct_highlight`): a
   rounded frame glowing faintly inwards by default, or the whole card tinted, or a "DM"
   plate by the name, or nothing. The theme decides by default (`[shape] direct`,
   `[colors] direct`): a red plate in terminal, bnw and contrast and in the terminal
   interface, a grey-blue frame in point. A lane of private messages only marks none.
-- The Linux binary runs on processors without SSE4.2 again (an AMD Phenom II died with
+* The Linux binary runs on processors without SSE4.2 again (an AMD Phenom II died with
   "illegal hardware instruction"): it is built with Qt 6.9 — Qt's wheels from 6.10 on need
   x86-64-v2 — and CI starts it on an emulated processor of that age.
-- A lane opens where you read to, not where you stood on this device: read on further on
+* A lane opens where you read to, not where you stood on this device: read on further on
   another one (sync brings the read marks) and it opens at the first unread after them.
   The phone found its starting card by the wrong id at times and stood at the lane's end.
-- Posts the screen went over whole while you scrolled by hand are read on the phone and in
+* Posts the screen went over whole while you scrolled by hand are read on the phone and in
   the GTK window too, as in Qt and on the web page: pictures flipped through quickly no
   longer stay unread.
-- A button in the lane editor (↓, show, hide) no longer throws the page to its end (Qt), to
+* A button in the lane editor (↓, show, hide) no longer throws the page to its end (Qt), to
   its top (the web page, the terminal) or elsewhere (GTK): the page stays, the focus on the
   same button.
-- All accounts in one window: "Tags you follow" lists every account's, not the main one's
+* All accounts in one window: "Tags you follow" lists every account's, not the main one's
   only; "Unfollow" takes the tag out of every account that follows it.
 
 ## 0.22.7 — 2026-11-10

@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.22.7 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.22.8**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -347,7 +347,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | The post under the mouse lit | has | 0.22.0 | `card.additional_highlight` (true) | own | point.im |
-| Private messages stand out in a lane | has | next | `card.direct_highlight` ("theme"), `[shape] direct`, `[colors] direct` | own | Fedilab |
+| Private messages stand out in a lane | has | 0.22.8 | `card.direct_highlight` ("theme"), `[shape] direct`, `[colors] direct` | own | Fedilab |
 | Tools over the post instead of a long menu | has | 0.22.4 | `card.hover_tools` | own | Mastodon web |
 | A post's menu in submenus | has | 0.22.4 | `card.menu_groups` | own | — |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
