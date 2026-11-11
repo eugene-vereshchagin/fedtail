@@ -160,7 +160,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: pip install requests PySide6-Essentials pyinstaller cryptography
+      # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): as the Linux
+      # binary, the exe died on old processors. 6.9 is the last for every x86-64.
+      - run: pip install requests "PySide6-Essentials<6.10" pyinstaller cryptography
+      - run: python -c "from PySide6 import QtCore; v = QtCore.qVersion(); print(v); assert tuple(map(int, v.split('.')[:2])) < (6, 10), v"
       - run: python packaging/build.py
       - name: Starts
         shell: bash
