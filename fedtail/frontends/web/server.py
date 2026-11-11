@@ -2182,7 +2182,7 @@ class Web:
                 "tabs": [list(t) for t in pg.tabs], "tab": pg.tab, "rows": rows,
                 "form": [{"name": f.name, "label": f.label, "value": f.value, "kind": f.kind,
                           "choices": [list(c) for c in f.choices], "tip": f.tip,
-                          "scan": f.scan}
+                          "scan": f.scan, "folder": f.folder}
                          for f in pg.form],
                 "submit": _btn_json(pg.submit) if pg.submit else None,
                 "more": _btn_json(pg.more) if pg.more else None, "empty": pg.empty}

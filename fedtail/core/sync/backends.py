@@ -363,8 +363,31 @@ class LocalTree:
         (self.root / path).unlink(missing_ok=True)
 
 
+class _NotHere:
+    """A phone's folder (content://) where there is no phone: said as gone, every call."""
+
+    def __init__(self, root):
+        self.root = root
+
+    def ready(self):
+        raise BackendError("gone", f"sync folder {self.root}: only the phone reads it")
+
+    list = read = write = mkdir = delete = lambda self, *_a: self.ready()
+
+
+# a folder the phone's system picker gave (Android 11+: an app may not read a path it
+# typed, 11.11): a content:// address, read through this — the phone's bridge sets it
+# (fedtail_android/bridge.py, SafTree.kt); elsewhere such an address is said as gone
+CONTENT_TREE = None
+
+
 class FolderBackend(TreeBackend):
     def __init__(self, root):
+        if str(root).startswith("content://"):
+            self.root = str(root)
+            tree = CONTENT_TREE(self.root) if CONTENT_TREE is not None else _NotHere(root)
+            super().__init__(tree, "folder (chosen on the phone)")
+            return
         self.root = Path(os.path.expanduser(str(root)))
         super().__init__(LocalTree(self.root), f"folder {self.root}")
 

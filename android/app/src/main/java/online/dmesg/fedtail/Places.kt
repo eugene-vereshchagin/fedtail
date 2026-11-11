@@ -438,6 +438,22 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
             tip()
         }
         else -> Column {
+            if (f.folder) {  // Android lets us into a shared folder only through its picker
+                val context = LocalContext.current
+                val choose = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+                    if (uri != null) {
+                        // kept past a restart of the phone: the sync reads it every round
+                        context.contentResolver.takePersistableUriPermission(uri,
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        values[f.name] = uri.toString()
+                    }
+                }
+                OutlinedButton(onClick = { choose.launch(null) }) {
+                    Text(stringResource(R.string.choose_folder))
+                }
+            }
             if (f.scan) {  // the other device's QR code fills the field
                 val scan = rememberLauncherForActivityResult(ScanContract()) { got ->
                     got.contents?.let { values[f.name] = it }

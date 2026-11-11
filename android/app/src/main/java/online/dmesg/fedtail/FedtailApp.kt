@@ -16,6 +16,7 @@ class FedtailApp : Application() {
             Python.start(AndroidPlatform(this))
         }
         DeviceTranslator.context = applicationContext
+        SafTree.context = applicationContext  // sync through a folder the picker gave
         Notifier.channel(this)
         Notifier.schedule(this)
     }

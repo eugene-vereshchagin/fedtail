@@ -206,7 +206,8 @@ data class AccountItem(val id: String, val handle: String, val name: String, val
 /** A form's field (common/places.py Field): kind line | text | check | choice | checks | file. */
 data class PageField(val name: String, val label: String, val kind: String, val value: Any?,
                      val choices: List<Pair<String, String>>, val tip: String,
-                     val scan: Boolean = false) // a QR code may fill it: "Scan" beside it
+                     val scan: Boolean = false, // a QR code may fill it: "Scan" beside it
+                     val folder: Boolean = false) // a folder's place: "Choose a folder" beside it
 
 /** A place's row: kind item | post | account | tag | text | heading | html; qr — a QR code's
  *  rows of "1"/"0" (common/qr.rows) to draw, dark on white. */
@@ -2312,7 +2313,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     if (f.isNull("value")) null else f.opt("value"),
                     (0 until ch.length()).map { ch.getJSONArray(it) }
                         .map { it.optString(0) to it.optString(1) }, str(f, "tip"),
-                    f.optBoolean("scan", false))
+                    f.optBoolean("scan", false), f.optBoolean("folder", false))
             },
             submit = parseButton(o.optJSONObject("submit")), more = parseButton(o.optJSONObject("more")),
             empty = str(o, "empty"))

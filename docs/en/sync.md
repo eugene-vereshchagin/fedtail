@@ -81,8 +81,9 @@ three steps marked ✓ (done), ▶ (now) and · (later); below — only what the
 needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
 
 1. **Where the devices meet** — the sync server's address your admin gave you
-   (`https://sync.example.org`), a folder all your devices see (`~/Sync/fedtail`), or a
-   WebDAV folder (`https://cloud.example.org/remote.php/dav/files/me/fedtail` — made if
+   (`https://sync.example.org`), a folder all your devices see (`~/Sync/fedtail`; on the
+   phone press "Choose a folder" — Android lets an app into a shared folder, such as
+   Syncthing's, only when it is picked there), or a WebDAV folder (`https://cloud.example.org/remote.php/dav/files/me/fedtail` — made if
    it isn't there). "Next" writes it into config.toml (`sync.url` / `sync.folder` /
    `sync.webdav`) and turns sync on at once, no restart. With a server — also the **invite
    code** its admin gave you (the first device only; kept in the data folder, not the

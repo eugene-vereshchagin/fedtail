@@ -505,6 +505,20 @@ keys = ["probe_again", "probe_announcements", "probe_answer", "probe_bookmarks",
         "probe_trends_statuses", "probe_trends_tags", "probe_what", "probe_yes"]
 
 [[capability]]
+id = "sync-folder-picker"
+area = "app"
+qt = "na"
+gtk = "na"
+tui = "na"
+web = "na"
+android = "has"
+name.ru = "Папка синхронизации — через системный выбор папки"
+name.en = "The sync folder — through the system's folder picker"
+note.ru = "На компьютере программе доступна любая папка пользователя: путь пишут в поле. Android 11+ пускает приложение в общую папку (Syncthing) только через свой выбор папки — там рядом с полем кнопка «Выбрать папку»."
+note.en = "On a computer a program reaches any folder of its user: the path is typed into the field. Android 11+ lets an app into a shared folder (Syncthing) only through its own picker — there a “Choose a folder” button stands beside the field."
+keys = []
+
+[[capability]]
 id = "federation-tools"
 area = "app"
 android = "has"

@@ -90,6 +90,15 @@ class FolderBackendTest(unittest.TestCase):
             blobs, cursor, more = f.pull(None, "aaaaaaaa")
             self.assertEqual((blobs, cursor, more), ([b"one"], {"bbbbbbbb": 1}, False))
 
+    def test_a_phones_folder_off_the_phone(self):
+        """content://…: only the phone's picker gives such a folder (backends.CONTENT_TREE,
+        the bridge) — elsewhere it is said as gone, not tried as a path."""
+        f = backends.FolderBackend("content://x/tree/primary%3ASync")
+        with self.assertRaises(backends.BackendError) as e:
+            f.push(b"x", "aaaaaaaa")
+        self.assertEqual(e.exception.kind, "gone")
+        self.assertIn("only the phone", str(e.exception))
+
 
 @need_crypto
 class CryptoTest(unittest.TestCase):

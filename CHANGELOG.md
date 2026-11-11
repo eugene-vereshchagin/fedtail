@@ -7,6 +7,11 @@
 
 ## What's next
 
+* Sync through a folder works on the phone: Android 11 and newer let an app into a shared
+  folder (Syncthing's) only through the system's folder picker, so a typed path had no
+  permission. A "Choose a folder" button beside the field asks for it, and the permission
+  stays after a restart.
+
 ## 0.22.9 — 2026-11-11
 
 **In short: Home without other people's conversations, and binaries that do what they

@@ -124,15 +124,59 @@ def _device_translate(text, source, target):
         raise ValueError(f"Offline Translator: {why}") from None
 
 
+class _SafTree:
+    """core/sync/backends.CONTENT_TREE on the phone: a folder the system's picker gave
+    (sync.folder = content://…), read and written by SafTree.kt — LocalTree's calls."""
+
+    def __init__(self, root):
+        from java import jclass
+        self.root = root
+        self.saf = jclass("online.dmesg.fedtail.SafTree")
+
+    def _do(self, what, *args):
+        from fedtail.core.sync.backends import BackendError
+        try:
+            return getattr(self.saf, what)(self.root, *args)
+        except Exception as e:  # noqa: BLE001 — a Java exception: its message says it
+            get = getattr(e, "getMessage", None)
+            raise BackendError("gone", f"sync folder: {(get() if callable(get) else e)}") \
+                from None
+
+    def ready(self):
+        why = str(self._do("ready") or "")
+        if why:
+            from fedtail.core.sync.backends import BackendError
+            raise BackendError("gone", f"sync folder: {why}")
+
+    def list(self, sub):
+        got = self._do("list", sub)
+        return None if got is None else [(n, bool(d)) for n, d in json.loads(str(got))]
+
+    def read(self, path):
+        got = self._do("read", path)
+        return None if got is None else bytes(got)
+
+    def write(self, path, blob):
+        self._do("write", path, bytes(blob))
+
+    def mkdir(self, sub):
+        self._do("mkdir", sub)
+
+    def delete(self, path):
+        self._do("delete", path)
+
+
 def _device_on():
-    """The phone's own translator offered to the core — only where Java is (the app),
-    not in the tests on a desktop."""
+    """The phone's own translator and its picker's folders (sync) offered to the core —
+    only where Java is (the app), not in the tests on a desktop."""
     try:
         import java  # noqa: F401 — Chaquopy's bridge to Kotlin
     except ImportError:
         return
     from fedtail.core import translate
+    from fedtail.core.sync import backends
     translate.DEVICE = _device_translate
+    backends.CONTENT_TREE = _SafTree  # sync.folder chosen by the system's picker
 
 
 def _make(demo):

@@ -79,6 +79,8 @@ class Field:
     # the windows draw each beside its words
     scan: bool = False  # a QR code may fill it: an interface with a camera (the phone)
     # offers "Scan" beside it
+    folder: bool = False  # a folder's place: an interface that may only reach a folder
+    # its system's picker gave (the phone) offers "Choose a folder" beside it
 
 
 @dataclass

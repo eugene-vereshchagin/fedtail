@@ -106,7 +106,7 @@ class SyncPlaces:
                                tip=_("sync_f_url_tip")),
                          Field("invite", _("sync_f_invite"), "", tip=_("sync_f_invite_tip")),
                          Field("folder", _("sync_f_folder"), str(s.get("folder") or ""),
-                               tip=_("sync_f_folder_tip")),
+                               tip=_("sync_f_folder_tip"), folder=True),
                          Field("webdav", _("sync_f_webdav"), str(s.get("webdav") or ""),
                                tip=_("sync_f_webdav_tip")))
             page.submit = Btn(_("sync_next"), ("sync", "where", ""), True)

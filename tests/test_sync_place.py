@@ -27,6 +27,8 @@ class SyncPlaceTest(Devices):
         page = p.page("sync")
         self.assertEqual(page.tab, "where")  # step 1 first
         self.assertEqual(marks(page), ["▶", "·"])  # login: a WebDAV folder's step only
+        # the folder's field: the phone offers its picker beside it (SafTree.kt, 11.11)
+        self.assertEqual([f.name for f in page.form if f.folder], ["folder"])
         self.assertTrue(p.act("sync", "where", "", {}).error)  # nothing named
         out = p.act("sync", "where", "", {"url": "", "folder": str(self.tmp / "meet")})
         self.assertEqual(out.open, {"page": "sync"})

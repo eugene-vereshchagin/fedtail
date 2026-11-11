@@ -816,8 +816,12 @@ class BridgeDeviceTranslatorTest(_Base):
 
         from fedtail import i18n
         from fedtail.core import translate
+        from fedtail.core.sync import backends
         old = translate.DEVICE
         self.addCleanup(setattr, translate, "DEVICE", old)
+        # _device_on offers the phone's folders too: put back, or a later test's
+        # content:// folder would reach for Java
+        self.addCleanup(setattr, backends, "CONTENT_TREE", backends.CONTENT_TREE)
         self.bridge._device_on()  # no Java here: nothing offered
         self.assertIs(translate.DEVICE, old)
         answers = {}
@@ -843,6 +847,77 @@ class BridgeDeviceTranslatorTest(_Base):
             with self.assertRaises(ValueError) as e:
                 translate.DEVICE(text, "", "en")
             self.assertIn(words, str(e.exception))
+
+
+class BridgeSafTreeTest(_Base):
+    """Sync through a folder the phone's picker gave (sync.folder = content://…): the
+    bridge offers backends.CONTENT_TREE, SafTree.kt does the reading and writing (11.11:
+    on Android 13 a typed path had no permission)."""
+
+    def test_a_journal_through_the_phones_folder(self):
+        import sys
+        import types
+
+        from fedtail.core import translate
+        from fedtail.core.sync import backends
+        self.addCleanup(setattr, backends, "CONTENT_TREE", backends.CONTENT_TREE)
+        self.addCleanup(setattr, translate, "DEVICE", translate.DEVICE)  # offered too
+        files, dirs, state = {}, {""}, {"ready": ""}
+
+        class Kt:  # SafTree.kt's calls, over a dict
+            @staticmethod
+            def ready(root):
+                return state["ready"]
+
+            @staticmethod
+            def list(root, sub):
+                if sub not in dirs:
+                    return None
+                kids = {p[len(sub) + 1 if sub else 0:].split("/")[0]
+                        for p in files.keys() | dirs if p != sub and
+                        (p.startswith(sub + "/") if sub else True)}
+                return json.dumps([[k, (sub + "/" + k if sub else k) in dirs]
+                                   for k in sorted(kids)])
+
+            @staticmethod
+            def read(root, path):
+                return files.get(path)
+
+            @staticmethod
+            def write(root, path, blob):
+                assert isinstance(blob, bytes)
+                files[path] = blob
+
+            @staticmethod
+            def mkdir(root, sub):
+                dirs.add(sub)
+
+            @staticmethod
+            def delete(root, path):
+                if path == "boom":
+                    raise Exception("java.io.IOException: denied")
+                files.pop(path, None)
+        fake = types.ModuleType("java")
+        fake.jclass = lambda name: Kt
+        sys.modules["java"] = fake
+        self.addCleanup(sys.modules.pop, "java", None)
+        self.bridge._device_on()
+        root = "content://com.android.externalstorage.documents/tree/primary%3ASync"
+        here = backends.FolderBackend(root)
+        there = backends.FolderBackend(root)
+        self.assertEqual(here.push(b"one", "aaaaaaaa"), 1)
+        self.assertEqual(here.push(b"two", "aaaaaaaa"), 2)
+        blobs, cursor, _more = there.pull(None, "bbbbbbbb")
+        self.assertEqual((blobs, cursor), ([b"one", b"two"], {"aaaaaaaa": 2}))
+        state["ready"] = "no permission: choose the folder again"
+        with self.assertRaises(backends.BackendError) as e:
+            here.push(b"x", "aaaaaaaa")
+        self.assertEqual(e.exception.kind, "gone")
+        self.assertIn("choose the folder again", str(e.exception))
+        state["ready"] = ""
+        with self.assertRaises(backends.BackendError) as e:
+            here.tree.delete("boom")
+        self.assertIn("denied", str(e.exception))
 
 
 class BridgeThemeTest(_Base):
