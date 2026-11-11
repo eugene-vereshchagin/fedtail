@@ -14,10 +14,11 @@
   binary — Qt's wheels from 6.10 on need SSE4.2.
 * Home no longer carries other people's conversations: Mastodon puts there what the people
   you follow reply to each other, bits of threads you have nothing to do with. A reply
-  stays in Home when it is yours, to you, in a thread you wrote in or follow, or an author
-  going on with a thread of their own (every post up to the top theirs: rules can say
-  `kind = "self_thread"`); the rest waits in Unsorted. The `mastodon` and `tusky`
-  sets of lanes keep the server's Home as it is.
+  stays in Home when it is yours, to you, or in a thread you wrote in or follow; an author
+  going on with their own thread stays in the thread too (a rule's new `kind =
+  "self_thread"` — every post up to the top theirs — brings it back). The rest waits in
+  Unsorted. The `mastodon`, `tusky`, `fedilab` and `phanpy` sets keep the server's Home, as
+  those clients do.
 
 ## 0.22.8 — 2026-11-11
 

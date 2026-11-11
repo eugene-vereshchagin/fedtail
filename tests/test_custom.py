@@ -622,8 +622,9 @@ class NewDefaultsTest(FreeBase):
 
     def test_home_leaves_out_strangers_talk(self):
         """Mastodon's home brings what the followed reply to each other: fedtail's Home
-        takes a reply only when it's mine, to me, in my thread, a followed one's or an
-        answer to oneself; the rest waits in Unsorted (11.11)."""
+        takes a reply only when it's mine, to me, in my thread or a followed one's — an
+        author going on under their own post neither (the author's wish); the rest waits
+        in Unsorted (11.11). Another set (fedilab) keeps the server's Home, as its client."""
         core, w = self.make_new()
         cat = fakes.acct("C", "cat@far.example")
         w.following = {"B", "C"}
@@ -640,12 +641,16 @@ class NewDefaultsTest(FreeBase):
         # himself, but in Cat's thread — talk, not Bob's thread going on (11.11)
         w.add(status("038", BOB, reply_to="030", reply_acc="C", minute=9), home=True)
         w.add(status("039", BOB, reply_to="038", reply_acc="B", minute=9), home=True)
+        # Cat's own thread going on (1/2, 2/2): the thread, not Home
+        w.add(status("050", cat, minute=9), home=True)
+        w.add(status("051", cat, reply_to="050", reply_acc="C", minute=9), home=True)
+        core.cfg["feed"]["page_size"] = 40  # all of them in the first page
         core.connect().result()
         core._following, core._following_at = {"B", "C"}, 1e18
         core.poll_once()
         self.assertEqual(self.ids(core, "home"), ["030", "032", "033", "034", "035", "036",
-                                                 "037"])
-        self.assertEqual(self.ids(core, "unsorted"), ["031", "038", "039"])
+                                                 "037", "050"])
+        self.assertEqual(self.ids(core, "unsorted"), ["031", "038", "039", "051"])
         # a thread followed: what comes in it after is Home's again
         root = w.add(status("040", cat, minute=10), home=True)
         core.poll_once()
@@ -654,6 +659,22 @@ class NewDefaultsTest(FreeBase):
         core.poll_once()
         core._lane_cache.clear()
         self.assertIn("041", self.ids(core, "home"))
+
+    def test_other_sets_keep_the_servers_home(self):
+        """mastodon, tusky, fedilab, phanpy: Home as the server gives it — the followed
+        talking to each other and to themselves too, as in those clients (11.11)."""
+        cat = fakes.acct("C", "cat@far.example")
+        for preset in ("mastodon", "tusky", "fedilab", "phanpy"):
+            core, w = self.make_new(preset=preset)
+            w.following = {"B", "C"}
+            w.add(status("030", cat, minute=1), home=True)
+            w.add(status("031", BOB, reply_to="030", reply_acc="C", minute=2), home=True)
+            w.add(status("032", cat, reply_to="030", reply_acc="C", minute=3), home=True)
+            core.connect().result()
+            core._following, core._following_at = {"B", "C"}, 1e18
+            core.poll_once()
+            self.assertEqual(self.ids(core, "home"), ["030", "031", "032"], preset)
+            core.shutdown()
 
     def test_threads_with_news(self):
         core, w = self.make_new()
