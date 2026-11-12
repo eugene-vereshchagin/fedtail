@@ -178,10 +178,19 @@ class FlowTest {
         fun thread() = compose.onAllNodesWithText("/1", substring = true)
             .fetchSemanticsNodes().isNotEmpty()
         fun select() {
-            // the words of post 101 (tools/showcase.py): a post's own text, selectable
-            compose.onAllNodesWithText("протри контакты", substring = true).onFirst()
-                .performTouchInput { longClick(center) }
-            waitFor("a selection", 15_000) { TextSelection.active }
+            // the words of post 101 (tools/showcase.py): a post's own text, selectable;
+            // pressed again when the press was lost (CI's emulator, now and then: 12.11)
+            for (attempt in 1..3) {
+                compose.onAllNodesWithText("протри контакты", substring = true).onFirst()
+                    .performTouchInput { longClick(center) }
+                compose.waitForIdle()
+                try {
+                    compose.waitUntil(8_000) { TextSelection.active }
+                    break
+                } catch (e: ComposeTimeoutException) {
+                    if (attempt == 3) waitFor("a selection", 1) { TextSelection.active }
+                }
+            }
             compose.waitForIdle()  // the cards drawn anew: their Back on (a hand is slower)
         }
         select()

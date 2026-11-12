@@ -151,9 +151,12 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             core.poll_once()
             for sid, framed in (("002", ["002"]), ("011", [])):
-                app.push_screen(ThreadScreen(sid))
-                await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen) and
-                                len(app.screen.query_one("#posts", ListView).children) == 2)
+                screen = ThreadScreen(sid)
+                app.push_screen(screen)
+                # this very screen, its two posts in (a slow runner: 12.11)
+                await self.wait(pilot, lambda s=screen: app.screen is s and
+                                len(s.query_one("#posts", ListView).children) == 2,
+                                timeout=30)
                 items = app.screen.query_one("#posts", ListView).children
                 self.assertEqual([i.key for i in items if i.has_class("dm-frame")], framed)
                 app.pop_screen()
