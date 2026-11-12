@@ -375,12 +375,13 @@ class MainWindow(Gtk.ApplicationWindow):
         self.player = None  # a video over the window (player.py)
         self.help_panel = None
         outer.append(self.overlay)
-        if self.cfg["ui"]["command_line"]:
-            from .cmdline import CommandLine
-            self.cmdline = CommandLine(self)
-            (outer if self.split_mode else self.right).append(self.cmdline)
-            if self.split_mode and self.cfg["ui"].get("dock_commands", True):
-                self.cmdline.set_visible(False)  # the input line takes the commands
+        # always made, as Qt's: ui.command_line = false only hides it — Ctrl+L brings it
+        from .cmdline import CommandLine
+        self.cmdline = CommandLine(self)
+        (outer if self.split_mode else self.right).append(self.cmdline)
+        if not self.cfg["ui"]["command_line"] or \
+                (self.split_mode and self.cfg["ui"].get("dock_commands", True)):
+            self.cmdline.set_visible(False)  # off, or the input line takes the commands
         outer.append(bar)
         self.set_child(outer)
 
@@ -570,6 +571,11 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.agent_face is not None:
             self.agent_face.set_who(who)
 
+    def open_cmdline(self):
+        """Ctrl+L: the command line shown (hidden by ui.command_line = false) and typed in."""
+        self.cmdline.set_visible(True)
+        self.cmdline.entry.grab_focus()
+
     def _shortcuts(self):
         """The same keys as the Qt window where it has the thing: Ctrl+L the command line,
         Ctrl+N write, Ctrl+F find, F5 refresh, Ctrl+W a thread's tab, Ctrl+Q quit. (Never
@@ -580,7 +586,7 @@ class MainWindow(Gtk.ApplicationWindow):
         def add(trigger, fn):
             ctl.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trigger),
                                               Gtk.CallbackAction.new(lambda *_a: (fn(), True)[1])))
-        add("<Control>l", lambda: self.cmdline is not None and self.cmdline.entry.grab_focus())
+        add("<Control>l", self.open_cmdline)
         add("<Control>n", self.compose)
         add("<Control>f", self.find_bar.open)
         add("<Control>k", self.search.grab_focus)  # the sidebar's search, as in Qt

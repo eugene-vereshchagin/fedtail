@@ -1241,6 +1241,19 @@ class GtkSmokeTest(_GtkBase):
         self.assertIsInstance(first, Gtk.Label)
         self.assertEqual(first.get_label(), i18n._("char_count", n=5))
 
+    def test_the_command_line_hidden_comes_on_ctrl_l(self):
+        """ui.command_line = false (the default, 12.11): the line is there, hidden; Ctrl+L
+        shows it — as Qt (GTK had none at all, so Ctrl+L did nothing)."""
+        from fedtail.frontends.gtk.window import MainWindow
+        self.core.cfg["ui"]["command_line"] = False
+        self.addCleanup(self.core.cfg["ui"].__setitem__, "command_line", True)
+        win = MainWindow(None, self.core, self.view, self.bridge, self.theme)
+        self.addCleanup(win.destroy)
+        self.assertIsNotNone(win.cmdline)
+        self.assertFalse(win.cmdline.get_visible())
+        win.open_cmdline()  # Ctrl+L
+        self.assertTrue(win.cmdline.get_visible())
+
     def test_command_line(self):
         bar = self.win.cmdline
         self.assertIsNotNone(bar)
