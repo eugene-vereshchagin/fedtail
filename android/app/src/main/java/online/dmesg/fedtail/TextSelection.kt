@@ -14,7 +14,9 @@ import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
 
 /** A post's words selected (phone.hold_text = "select"). Compose keeps a selection to
- *  itself, so the "Copy" bar over it tells: shown — something is selected, hidden — not.
+ *  itself, so two things tell: the "Copy" bar over it (shown — selected, hidden — not)
+ *  and the words' focus, which a selection takes (the bar may not show: a window
+ *  without focus).
  *  While it is, the first tap anywhere and Back only take the selection away: a tap
  *  beside it opened the post, Back went back in the lane, and nothing let go of it
  *  (12.11). Clearing: every post's SelectionContainer is keyed by [epoch]. */

@@ -110,6 +110,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -314,7 +315,13 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
                 TextSelection.clear()
             }
             CompositionLocalProvider(LocalTextToolbar provides bar) {
-                key(TextSelection.epoch) { SelectionContainer { text() } }
+                // and its focus: a selection takes it (the bar may not show — a window
+                // without focus, as CI's fresh emulator: 12.11), letting go gives it back
+                key(TextSelection.epoch) {
+                    SelectionContainer(Modifier.onFocusChanged { f ->
+                        if (f.hasFocus) TextSelection.shown(bar) else TextSelection.gone(bar)
+                    }) { text() }
+                }
             }
         } else text()
         DropdownMenu(expanded = menu.isNotEmpty(), onDismissRequest = { menu = emptyList() }) {
