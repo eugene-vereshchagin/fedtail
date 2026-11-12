@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.1 — 2026-11-12
 
 **In short: long posts fold, files attached are read, and the phone lets go of a
