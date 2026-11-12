@@ -306,6 +306,11 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
             // the "Copy" bar tells TextSelection a selection is up; clearing it re-keys
             val base = LocalTextToolbar.current
             val bar = remember(base) { TrackingToolbar(base) }
+            // Back lets go of the words first: here, in the card — composed after every
+            // screen's own Back (a thread's took it from one at the screen's root, 12.11)
+            androidx.activity.compose.BackHandler(enabled = TextSelection.active) {
+                TextSelection.clear()
+            }
             CompositionLocalProvider(LocalTextToolbar provides bar) {
                 key(TextSelection.epoch) { SelectionContainer { text() } }
             }

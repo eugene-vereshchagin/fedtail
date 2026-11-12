@@ -154,9 +154,6 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
             BackHandler(enabled = model.place != null || (cols == 1 && model.current != null)) {
                 model.back()
             }
-            // a post's words selected: Back lets go of them first (added after the one
-            // above, so it is asked first)
-            BackHandler(enabled = TextSelection.active) { TextSelection.clear() }
             val p = model.place
             when {
                 // over everything, whatever the width
