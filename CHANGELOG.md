@@ -7,6 +7,17 @@
 
 ## What's next
 
+* A lane no longer stops with KeyError when a card it lets go was let go already by the scroll
+  that hiding it moved (the Qt window).
+
+* A big thread in the Qt window (more than 40 posts) builds only the cards near the screen, as a
+  lane does: one of hundreds of posts with pictures held them all while its tab was open
+  (some 300 MB). "Open every warning" and the focus reach the cards not built yet.
+
+* Scrolling up a lane of pictures (after a jump to its end) no longer brings the same posts by
+  two and three times: the reading place holds by the first card that begins on the screen,
+  so a card above it growing as its picture comes pushes nothing down (Qt and GTK windows).
+
 ## 0.23.1 — 2026-11-12
 
 **In short: long posts fold, files attached are read, and the phone lets go of a

@@ -2364,6 +2364,20 @@ class GtkBigLaneTest(unittest.TestCase):
         self.assertGreater(lv.adj.get_value(), 0)
         self.assertLess(self.worst, self.STEP_MAX)
 
+    def test_the_place_holds_by_a_card_beginning_on_screen(self):
+        """12.11, as Qt's: the card the reading place holds by begins on the screen —
+        not the one above it showing only its end, whose height still changes."""
+        lv = self.lane()
+        self.loop(lambda: not lv._pending(), 5)
+        top = lv._top()
+        k = next(k for k in lv.order if lv.strip.ys[k] > top + 20)
+        lv.adj.set_value(lv.adj.get_value() + (lv.strip.ys[k] - top) - 15)  # k's end shows
+        self.loop(lambda: not lv._pending(), 5)
+        key, off = lv._reading_anchor()
+        self.assertGreaterEqual(off, 0)
+        self.assertNotEqual(key, lv._first_visible())  # not the one cut by the top
+
+
 def _walk(widget):
     """widget and everything inside it — a post's menu's submenus (Author ▸, Thread ▸,
     More ▸) too: their lines as buttons of their own words."""

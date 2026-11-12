@@ -149,6 +149,26 @@ class Strip:
                 return key, self.ys[key] - top
         return None
 
+    def reading_anchor(self, top, view_h):
+        """(key, its top less the screen's top) of the card the reading place holds by:
+        the first one that begins on the screen — not the one above it showing only its
+        end. That one's height still changes (built late, its picture come): held by its
+        top it grew downwards and pushed all the screen showed down with it, the posts
+        just read came by again, twice and three times scrolling up after a jump to the
+        end (12.11, a lane of pictures). A card taller than the screen, none beginning on
+        it: the one on top, as before."""
+        bottom = top + view_h
+        first = None
+        for key in self.keys[self.first_place(top):]:
+            if key in self.hidden or key not in self.ys:
+                continue
+            y = self.ys[key]
+            if first is None:
+                first = (key, y - top)
+            if y >= top:
+                return (key, y - top) if y < bottom else first
+        return first
+
     def kept_anchor(self, anchor, staying):
         """The card holding the place (anchor) is going — a follow request answered, an
         event's row dismissed: the nearest one that stays, below it first, holding the

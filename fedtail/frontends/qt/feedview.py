@@ -16,7 +16,9 @@ each with its pictures (some 18 MB a lane), and a lane took 0.6 s to open.
 
 The cards themselves are card.py's: the same widgets, the same look, links, selection,
 menus and accessibility; only how many of them exist changed. `windowed = False` (a
-thread, a profile: short, and read whole) builds them all.
+short thread, a profile: read whole) builds them all; a thread of more than
+feed.THREAD_WINDOWED posts is windowed as a lane (12.11: one of hundreds of posts with
+pictures held them all, some 300 MB, while its tab was open).
 """
 
 import logging
@@ -211,7 +213,7 @@ class FeedView(QScrollArea):
         for key, row in self.rows.items():
             row.setGeometry(x, ys[key], w, self._height(key, guess))
         if anchor is not None and anchor[0] in ys:
-            self.verticalScrollBar().setValue(max(0, ys[anchor[0]] - anchor[1]))
+            self._move_by_itself(max(0, ys[anchor[0]] - anchor[1]), "places", anchor)
         self._chrome = (self._head.sizeHint().height() if self.header.count() else 0,
                         self._foot.sizeHint().height() if self.footer.count() else 0)
         self._apply_target()
@@ -399,7 +401,12 @@ class FeedView(QScrollArea):
         return row
 
     def _let_go(self, key):
-        row = self.rows.pop(key)
+        # let go already: a card hidden here can move the scroll, and the _realize that
+        # runs from it lets the same cards go first — then this one found none (12.11:
+        # KeyError from _scrolled, a lane opening at its first unread)
+        row = self.rows.pop(key, None)
+        if row is None:
+            return
         if key in self.order:
             self.order.remove(key)
         kept = {a: getattr(row, a) for a in self.KEPT if hasattr(row, a)}
@@ -418,7 +425,9 @@ class FeedView(QScrollArea):
         places, built or not: the one there now is what the reader sees."""
         if not self.model:
             return None
-        return self.strip.anchor(self.verticalScrollBar().value())
+        # the first card beginning on the screen (common/strip.reading_anchor)
+        return self.strip.reading_anchor(self.verticalScrollBar().value(),
+                                         self.viewport().height())
 
     def _reading_anchor(self):
         """The card that holds the reading place: the anchor being held, while one is,
@@ -458,8 +467,23 @@ class FeedView(QScrollArea):
             else:
                 value = top - 6
         if sb.value() != max(0, value):
-            sb.setValue(max(0, value))
+            self._move_by_itself(max(0, value), "target", t)
         self._target_timer.start()  # still settling: keep the target a bit longer
+
+    def _move_by_itself(self, value, why, what):
+        """The screen put at value by the lane itself (the places moved, a target held).
+        A move of more than a third of the screen while the reader is scrolling is what
+        they see as a jump — said in the log, with what held the place (12.11: posts came
+        by two and three times scrolling a lane of pictures up; no test showed why)."""
+        sb = self.verticalScrollBar()
+        old = sb.value()
+        sb.setValue(value)
+        moved = sb.value() - old
+        if abs(moved) > self.viewport().height() / 3 and \
+                time.monotonic() - self._touched_at < 1.0:
+            log.info("lane: the screen moved %+d px by itself while scrolled (%s, %s; "
+                     "%d → %d of %d, %d cards built, %d waiting)", moved, why, what, old,
+                     sb.value(), sb.maximum(), len(self.rows), len(self._pending))
 
     def wheelEvent(self, e):
         self._touched()
@@ -673,6 +697,24 @@ class FeedView(QScrollArea):
                 (self._target is None or self._target[0] == "anchor"):
             self._set_target(("anchor", anchor[0], anchor[1]))
         self._seen_timer.start()
+
+    def update_spec(self, key, spec):
+        """One card's spec changed (a thread's focus moved): its place in the model, and
+        its card if it is built — one not built yet comes so."""
+        i = self._index.get(key)
+        if i is None:
+            return
+        self.model[i] = spec
+        row = self.rows.get(key)
+        if row is not None and row.spec is not spec:
+            row.update_spec(spec)
+
+    def keep_for_all(self, **kept):
+        """What every card holds (a thread's "open every warning"): set on the built
+        ones by the caller, kept here for the ones built later (KEPT)."""
+        for spec in self.model:
+            if spec.key not in self.rows:
+                self._kept[spec.key] = {**self._kept.get(spec.key, {}), **kept}
 
     def keys(self):
         """Every key shown or to be shown (built or not)."""

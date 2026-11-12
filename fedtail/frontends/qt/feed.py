@@ -712,6 +712,9 @@ class _Segmented(QWidget):
         for k, b in self.buttons.items():
             b.setChecked(k == key)
 
+THREAD_WINDOWED = 40  # a thread of more posts builds only the cards near the screen
+
+
 class ThreadWidget(QWidget):
     def __init__(self, win, sid, at="post"):
         super().__init__()
@@ -805,6 +808,7 @@ class ThreadWidget(QWidget):
             set_cw = getattr(card, "set_cw", None) or getattr(row, "set_cw", None)
             if set_cw is not None:
                 set_cw(self.cw_open)
+        self.view.keep_for_all(cw_open=self.cw_open)  # the cards not built yet: so too
 
     def update_sub_button(self):
         if self.root is None:
@@ -831,10 +835,11 @@ class ThreadWidget(QWidget):
 
     def focus_on(self, sid):
         self.focus_id = sid
-        for row in self.view.rows.values():
-            focus = row.status_id == sid
-            if row.spec.focus != focus:
-                row.update_spec(CardSpec(**{**row.spec.__dict__, "focus": focus}))
+        for key in self.view.keys():  # built or not (a big thread is windowed)
+            spec = self.view._spec(key)
+            focus = key == sid  # a thread's keys are its posts' ids (make_spec)
+            if spec is not None and spec.focus != focus:
+                self.view.update_spec(key, CardSpec(**{**spec.__dict__, "focus": focus}))
         self.view.scroll_to(sid, "top")
 
     def _loaded(self, items):
@@ -854,6 +859,8 @@ class ThreadWidget(QWidget):
                            unread=n.post.id in unread,
                            extra={"short_id": short.get(n.post.id),
                                   "lane_private": private}) for n in items]
+        # a big thread: only the cards near the screen, as a lane (FeedView.windowed)
+        self.view.windowed = len(specs) > THREAD_WINDOWED
         self.view.set_specs(specs, keep_position=self.loaded)
         root = posts[0] if posts else None
         self.root, self.posts = root, posts

@@ -505,7 +505,9 @@ class LaneView(Gtk.Box):
         if t is not None and t[0] != "end" and time.monotonic() < t[2] and \
                 t[0] in self.strip.ys:
             return t[0], t[1]
-        return self.strip.anchor(max(0, self._top()))
+        # the first card beginning on the screen (common/strip.reading_anchor)
+        return self.strip.reading_anchor(max(0, self._top()),
+                                         self.adj.get_page_size() or 600)
 
     def _hold_at(self, anchor, seconds=HOLD_S):
         """The card of anchor (key, offset from the screen's top) kept there while the

@@ -304,6 +304,32 @@ class LastWholeTest(unittest.TestCase):
         self.assertEqual(st.last_whole(st.ys["d"] + 10, 200), "d")  # taller than it
         self.assertIsNone(Strip().last_whole(0, 100))
 
+    def test_the_reading_place_holds_by_a_card_beginning_on_screen(self):
+        """12.11: scrolling up after a jump to the end, the card above the screen (its end
+        showing) grew when built — held by its top it pushed the screen's posts down,
+        and they came by again. The first card beginning on the screen holds it now: the
+        one above grows upwards, what the screen shows stays."""
+        from fedtail.frontends.common.strip import Strip
+        st = Strip(gap=0, margin=0)
+        st.set_keys(["a", "b", "c", "d"])
+        for k in "abcd":
+            st.measured(k, 300, 100)
+        st.lay_out(300)
+        top = st.ys["b"] + 60  # b's end on top, c and d below
+        self.assertEqual(st.anchor(top)[0], "b")  # the card on top, as ever
+        anchor = st.reading_anchor(top, 150)
+        self.assertEqual(anchor, ("c", 40))
+        st.measured("b", 300, 500)  # b built at last, its picture in: taller
+        st.lay_out(300)
+        self.assertEqual(st.ys["c"] - st.top_for(anchor), 40)  # c where it stood
+        tall = Strip(gap=0, margin=0)
+        tall.set_keys(["a", "b"])
+        tall.measured("a", 300, 1000)
+        tall.measured("b", 300, 100)
+        tall.lay_out(300)
+        self.assertEqual(tall.reading_anchor(200, 300), ("a", -200))  # none begins on it
+        self.assertIsNone(Strip().reading_anchor(0, 100))
+
     def test_a_going_card_hands_the_place_on(self):
         """The card on top goes (a follow request answered): the next one holds the
         place where it stands, else the one above; none stays — None (02.11)."""

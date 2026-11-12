@@ -1828,6 +1828,46 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertNotEqual(self.win.tabs.widget(i), page)
 
+    def test_a_big_thread_builds_only_near_the_screen(self):
+        """12.11: a thread of hundreds of posts held all its cards and their pictures
+        while the tab was open (~300 MB). More than THREAD_WINDOWED posts: windowed as a
+        lane; the focus moved and "open every warning" reach the cards not built yet."""
+        from fedtail.frontends.qt.feed import THREAD_WINDOWED, ThreadWidget
+        root = self.world.add(status("9000", BOB, minute=1, text="корень"), home=True)
+        prev = root["id"]
+        for i in range(1, THREAD_WINDOWED + 30):
+            st = status(f"9{i:03d}", NEWS, prev, "B", minute=1 + i % 50,
+                        text="ответ " * 40 + str(i))
+            if i % 7 == 0:
+                st["spoiler_text"] = "осторожно"
+            self.world.add(st)
+            prev = st["id"]
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.open_thread("9000")
+        tabs = lambda: [self.win.tabs.widget(i) for i in range(self.win.tabs.count())]  # noqa: E731
+        self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                    for w in tabs()), timeout=15)
+        tab = next(w for w in tabs() if isinstance(w, ThreadWidget))
+        self.win.tabs.setCurrentWidget(tab)
+        view = tab.view
+        self.pump(0.5)
+        self.assertTrue(view.windowed)
+        self.assertGreater(len(view.model), THREAD_WINDOWED)
+        self.assertLess(len(view.rows), len(view.model))  # not all of them built
+        far = view.model[-1].key
+        self.assertNotIn(far, view.rows)
+        tab._all_cw()  # every warning open — the ones not built too
+        tab.focus_on(far)
+        self.pump(0.3)
+        self.assertIn(far, view.rows)
+        self.assertTrue(view.rows[far].spec.focus)
+        self.assertFalse(view._spec("9000").focus)
+        hidden = next(s.key for s in view.model if s.post.warning and s.key not in view.rows)
+        view.scroll_to(hidden, "top")
+        self.pump(0.3)
+        self.assertTrue(getattr(view.rows[hidden], "cw_open", True))
+
     def test_thread_says_how_fetching_goes(self):
         from fedtail.frontends.qt.feed import ThreadWidget
         self.win.start()
@@ -2946,6 +2986,22 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.5)  # their heights measured, the places moved: the top one held
         self.assertLessEqual(abs(view._top(view.rows[top_key]) - sb.value() - y), 2)
 
+        # 12.11: the card above the screen (its end showing) grows — built late, its
+        # picture come: what the screen shows stays where it was, the growth goes up
+        # (held by that card's top, the screen's posts went down and came by again)
+        sb.setValue(min(sb.maximum(), sb.value() + vh // 3))
+        view._touched()
+        self.pump(0.5)
+        key, off = view._anchor()
+        self.assertGreaterEqual(off, 0)  # one beginning on the screen holds the place
+        above = view.order[view.order.index(key) - 1]
+        before = view._top(view.rows[key]) - sb.value()
+        w, h = view._h[above]
+        view.rows[above].setMinimumHeight(h + 300)  # taller now
+        view._remeasure(view.rows[above])
+        self.pump(0.3)
+        self.assertLessEqual(abs(view._top(view.rows[key]) - sb.value() - before), 2)
+
         # far away: its card is built there
         oldest = view.model[0].key
         view.scroll_to(oldest, "top")
@@ -2955,6 +3011,66 @@ class QtSmokeTest(unittest.TestCase):
         lane.mark_all_read()
         self.pump(0.2)
         self.assertEqual(self.core.unread_ids(self.core.lane_entries("bots")), set())
+
+    def test_a_card_let_go_twice_is_no_error(self):
+        """12.11: hiding a card moved the scroll, the _realize from it let the same cards
+        go first, and the outer one's _let_go found none — KeyError, the lane stuck."""
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
+        self.pump(0.5)
+        key = next(iter(view.rows))
+        view._let_go(key)
+        view._let_go(key)  # gone already: nothing to do
+        self.assertNotIn(key, view.rows)
+
+    def test_scrolling_up_from_the_end_moves_by_the_step(self):
+        """12.11 (two videos at 100 fps): a lane jumped to its end and scrolled up — the
+        posts on screen jumped a card's height now and then, the same ones came by twice
+        and three times. A wheel step never moves what the screen shows by more than a
+        third of it besides the step (a card's height off: a few pixels, now and then)."""
+        import random
+        rnd = random.Random(7)
+        self.core.cfg["feed"]["order"] = "oldest_first"
+        for i in range(300):
+            st = status(f"7{i:03d}", NEWS, minute=i % 60,
+                        text="строка " * rnd.choice((5, 40, 120, 300)) + str(i))
+            if i % 3:  # a lane of pictures, of their own shapes (the video's)
+                w, h = rnd.choice(((400, 600), (600, 400), (500, 500), (300, 700)))
+                st["media_attachments"] = [{
+                    "id": f"m{i}", "type": "image", "url": f"https://example.test/{i}.png",
+                    "preview_url": f"https://example.test/{i}_s.png",
+                    "meta": {"small": {"width": w, "height": h},
+                             "original": {"width": w, "height": h}}}]
+            self.world.add(st, home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.core.mark_read([st["id"] for _, st in self.core.lane_entries("bots")])
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(1.0)
+        sb = view.verticalScrollBar()
+        view.scroll_to_end(True)
+        self.pump(0.5)
+        view._touched()
+        vh = view.viewport().height()
+        worst = []
+        for _step in range(400):
+            if sb.value() <= 0:
+                break
+            before = {k: view._top(r) - sb.value() for k, r in view.rows.items()
+                      if 0 <= view._top(r) - sb.value() < vh}
+            view._touched()
+            sb.setValue(sb.value() - 75)
+            self.pump(0.01)
+            after = {k: view._top(r) - sb.value() for k, r in view.rows.items()}
+            moved = [after[k] - y for k, y in before.items() if k in after]
+            if moved and abs(moved[0] - 75) > vh / 3:  # a jump the eye sees
+                worst.append((_step, moved[0]))
+        self.assertEqual(worst, [])
 
     def test_tabs_opened_and_closed_leave_no_widgets(self):
         """A day of opening threads and profiles and closing them: the widgets go with
