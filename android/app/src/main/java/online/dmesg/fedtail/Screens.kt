@@ -147,13 +147,16 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
         Screen.Login -> Scaffold(snackbarHost = { SnackbarHost(snack) }) { pad ->
             Login(model, openBrowser, Modifier.padding(pad))
         }
-        Screen.Main -> BoxWithConstraints(Modifier.fillMaxSize()) {
+        Screen.Main -> BoxWithConstraints(Modifier.fillMaxSize().letGoOfSelection()) {
             val cols = columnsFor(model.layoutPref, maxWidth)
             SideEffect { model.columns = cols }
             LaunchedEffect(cols) { if (cols > 1) model.openStartLane() }
             BackHandler(enabled = model.place != null || (cols == 1 && model.current != null)) {
                 model.back()
             }
+            // a post's words selected: Back lets go of them first (added after the one
+            // above, so it is asked first)
+            BackHandler(enabled = TextSelection.active) { TextSelection.clear() }
             val p = model.place
             when {
                 // over everything, whatever the width

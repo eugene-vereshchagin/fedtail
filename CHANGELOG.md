@@ -7,6 +7,9 @@
 
 ## What's next
 
+* The phone lets go of selected words: with a post's text selected, a tap anywhere and Back
+  only take the selection away (a tap beside it opened the post, Back went back in the lane).
+
 * A post's character count, on the left of the row under it before "Reply"
   (`card.char_count`, off by default) — in every interface.
 

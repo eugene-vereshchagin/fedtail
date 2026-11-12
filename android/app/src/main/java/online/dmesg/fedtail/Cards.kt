@@ -108,6 +108,8 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.flow.takeWhile
@@ -298,7 +300,14 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
             })
     }
     Box {
-        if (selects) SelectionContainer { text() } else text()
+        if (selects) {
+            // the "Copy" bar tells TextSelection a selection is up; clearing it re-keys
+            val base = LocalTextToolbar.current
+            val bar = remember(base) { TrackingToolbar(base) }
+            CompositionLocalProvider(LocalTextToolbar provides bar) {
+                key(TextSelection.epoch) { SelectionContainer { text() } }
+            }
+        } else text()
         DropdownMenu(expanded = menu.isNotEmpty(), onDismissRequest = { menu = emptyList() }) {
             menu.forEach { (said, url) ->
                 DropdownMenuItem(text = { Text(said) }, onClick = { menu = emptyList(); runLink(url) })

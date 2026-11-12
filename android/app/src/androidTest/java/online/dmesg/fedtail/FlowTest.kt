@@ -11,10 +11,12 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -30,6 +32,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -163,6 +166,36 @@ class FlowTest {
         waitDescription("open now", substring = true)                 // back in the lane…
         back()
         overview()                                      // …and back on the overview
+    }
+
+    @Test
+    fun aSelectionLetsGoOnATapAndOnBack() {
+        // 12.11: a post's words selected — a tap beside them opened the post, Back went
+        // back in the lane, and nothing let go of them
+        launch("thread" to "101")
+        waitText("/1")
+        fun select() {
+            val words = compose.onAllNodes(hasText("", substring = true))
+                .fetchSemanticsNodes().indexOfFirst {
+                    (it.config.getOrNull(SemanticsProperties.Text)?.joinToString("")?.length ?: 0) > 30
+                }
+            compose.onAllNodes(hasText("", substring = true))[words]
+                .performTouchInput { longClick(center) }
+            waitFor("a selection", 15_000) { TextSelection.active }
+        }
+        select()
+        compose.onAllNodes(isRoot()).onFirst().performTouchInput { click(centerLeft) }
+        waitFor("the selection gone", 5_000) { !TextSelection.active }
+        waitText("/1")                                  // still the thread: nothing opened
+        select()
+        back()
+        compose.waitForIdle()
+        assertFalse(TextSelection.active)
+        waitText("/1")                                  // Back let go, the thread stays
+        back()                                          // the next Back goes back as ever
+        waitFor("the thread left", 15_000) {
+            compose.onAllNodesWithText("/1", substring = true).fetchSemanticsNodes().isEmpty()
+        }
     }
 
     @Test
