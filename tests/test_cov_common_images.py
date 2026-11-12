@@ -173,6 +173,25 @@ class ImagesTest(unittest.TestCase):
         self.assertEqual((got, failed), ([], [lost]))
         self.assertFalse(self.c.timers)  # gone: never asked again later
 
+    def test_a_server_that_lost_many_is_asked_after_their_authors(self):
+        """12.11: 80 gone pictures a minute asked of my server, and it said 429. Three
+        gone in a row: for a while the authors' copies are asked first, mine only if
+        theirs fail."""
+        for i in range(3):
+            self.net[f"https://my.example/g{i}.png"] = Answer(status=404)
+            self.net[f"https://their.example/g{i}.png"] = Answer(b"PNG")
+            self.get(f"https://my.example/g{i}.png", elsewhere=f"https://their.example/g{i}.png")
+        self.net["https://my.example/n.png"] = Answer(b"PNGmine")
+        self.net["https://their.example/n.png"] = Answer(b"PNGtheirs")
+        self.c.opened.clear()
+        got, _f = self.get("https://my.example/n.png", elsewhere="https://their.example/n.png")
+        self.assertEqual(len(got), 1)
+        self.assertEqual([u for u, _t in self.c.opened], ["https://their.example/n.png"])
+        self.net["https://their.example/m.png"] = Answer(status=404)  # theirs gone: mine
+        self.net["https://my.example/m.png"] = Answer(b"PNGm")
+        got, _f = self.get("https://my.example/m.png", elsewhere="https://their.example/m.png")
+        self.assertEqual(len(got), 1)
+
     def test_downloaded_once_then_from_memory_and_disk(self):
         self.net["https://a/1.png"] = Answer(b"PNG1")
         got, failed = self.get("https://a/1.png")

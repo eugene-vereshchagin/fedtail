@@ -407,6 +407,14 @@ class FeedView(QScrollArea):
         row = self.rows.pop(key, None)
         if row is None:
             return
+        # the focus in it (its text clicked): to the lane first — hidden with it, Qt
+        # handed it to the next card's button and the scroll area scrolled there, the
+        # screen a card or two ahead at every card let go (12.11: no move of the lane's
+        # own in the log, the posts by twice and three times)
+        from PySide6.QtWidgets import QApplication
+        fw = QApplication.focusWidget()
+        if fw is not None and (fw is row or row.isAncestorOf(fw)):
+            self.setFocus(Qt.FocusReason.OtherFocusReason)
         if key in self.order:
             self.order.remove(key)
         kept = {a: getattr(row, a) for a in self.KEPT if hasattr(row, a)}

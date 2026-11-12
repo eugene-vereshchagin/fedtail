@@ -7,6 +7,12 @@
 
 ## What's next
 
+* Scrolling a lane after a post's text was clicked no longer jumps a card or two ahead at every
+  card let go: the focus in it went to the next card's button, and the scroll area scrolled
+  there (the Qt window) — the jumps of the lanes of pictures.
+* A server that has lost three pictures in a row is asked after their authors' servers for ten
+  minutes: a lane of day-old posts no longer asks it for 80 gone pictures a minute (429).
+
 * A picture gone from your server (404, 410: its cache of other servers' pictures emptied) is
   asked once of its author's server, and never again of yours later — a lane of day-old posts
   stayed broken and earned the server's 429s. In every interface.

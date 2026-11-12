@@ -168,6 +168,10 @@ class Cache:
         # asked once when my server says it is gone (404, 410: its cache of other
         # servers' pictures emptied — a lane of day-old posts all broken, 12.11)
         self.elsewhere = {}
+        # host -> (how many of its pictures in a row were gone and found elsewhere, till
+        # when the author's copy is asked first): a lane of day-old posts asked my server
+        # for 80 gone pictures a minute, and it said 429 (12.11)
+        self.gone_streak = {}
         self._busy_hosts = {}  # host -> time.monotonic() its 429 asked to wait till
         self.asked = {}   # key -> when it was handed to the workers (monotonic)
         self.patient = set()  # keys on their second try: longer read timeout
@@ -604,6 +608,10 @@ class Cache:
         elsewhere: the same picture on its author's server (Media.remote_url) — asked
         once if this url is gone (404, 410), before failed()."""
         if elsewhere and elsewhere != url:
+            host = urlsplit(url).hostname or ""
+            streak = self.gone_streak.get(host)
+            if streak and streak[1] > time.monotonic():
+                url, elsewhere = elsewhere, url  # mine has lost them lately: theirs first
             if len(self.elsewhere) > 4000:
                 self.elsewhere.pop(next(iter(self.elsewhere)))
             self.elsewhere[url] = elsewhere
@@ -680,6 +688,15 @@ class Cache:
         # pictures already on screen keep their own copies; this only stops the
         # cache from holding every picture ever seen
 
+    GONE_IN_A_ROW = 3        # pictures gone from a server in a row: …
+    ELSEWHERE_FIRST_S = 600  # …their authors' copies first for this long
+
+    def _ready_from(self, url):
+        """A picture came from url: a server giving them again breaks its gone streak."""
+        host = urlsplit(url).hostname or ""
+        if host in self.gone_streak and self.gone_streak[host][1] <= time.monotonic():
+            self.gone_streak.pop(host, None)
+
     def _failed(self, key):
         self.asked.pop(key, None)
         alt = self.elsewhere.pop(key[0], "") if \
@@ -687,6 +704,14 @@ class Cache:
         if alt and key in self.waiting:  # my server lost it: its author's server's copy
             log.info("image %s: gone here, asked of its author's server", _where(key[0]))
             self.broken[key[0]] = time.monotonic()
+            host = urlsplit(key[0]).hostname or ""
+            n = self.gone_streak.get(host, (0, 0))[0] + 1
+            self.gone_streak[host] = (n, time.monotonic() + self.ELSEWHERE_FIRST_S
+                                      if n >= self.GONE_IN_A_ROW else 0)
+            if n == self.GONE_IN_A_ROW:
+                log.info("images: %s has lost %d pictures in a row — their authors' "
+                         "copies asked first for %d min", host, n,
+                         self.ELSEWHERE_FIRST_S // 60)
             for cb, failed in self.waiting.pop(key, []):
                 self.get(alt, cb, key[1], failed=failed, big=key in self.big)
             return
@@ -743,6 +768,7 @@ class Cache:
         self.broken.pop(key[0], None)
         self.why.pop(key[0], None)
         self.tries.pop(key[0], None)
+        self._ready_from(key[0])
         again = self.gave_up.pop(key[0], [])  # cards that gave up on it: here it is now
         for max_side, cb, _failed in again:
             if max_side == key[1]:

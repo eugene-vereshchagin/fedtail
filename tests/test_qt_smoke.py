@@ -3012,6 +3012,41 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.2)
         self.assertEqual(self.core.unread_ids(self.core.lane_entries("bots")), set())
 
+    def test_a_focused_card_let_go_doesnt_move_the_screen(self):
+        """12.11: a post's text clicked (the focus in it), then the lane scrolled: that
+        card let go, Qt handed the focus to the next card and the scroll area scrolled
+        to it — the screen jumped a card or two ahead, again and again (no move of the
+        lane's own in the log). The focus goes to the lane first."""
+        from PySide6.QtWidgets import QApplication, QLabel
+        for i in range(80):
+            self.world.add(status(f"6{i:03d}", NEWS, minute=i % 60,
+                                  text="текст поста " * 60 + str(i)), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(0.5)
+        self.win.activateWindow()
+        sb = view.verticalScrollBar()
+        sb.setValue(sb.maximum() // 2)
+        self.pump(0.3)
+        key = next(k for k, r in view.rows.items()
+                   if 0 <= view._top(r) - sb.value() < view.viewport().height())
+        label = next(w for w in view.rows[key].findChildren(QLabel) if w.text())
+        label.setFocus()
+        self.pump(0.1)
+        focused = QApplication.focusWidget()
+        for _ in range(40):  # up, step by step, till that card is let go far below
+            view._touched()
+            was = sb.value()
+            sb.setValue(was - 120)
+            self.pump(0.01)
+            self.assertLess(abs((was - sb.value()) - 120), view.viewport().height() / 3,
+                            f"focus {type(QApplication.focusWidget()).__name__}, "
+                            f"was on {type(focused).__name__}")
+        self.assertNotIn(key, view.rows)  # it went
+
     def test_a_card_let_go_twice_is_no_error(self):
         """12.11: hiding a card moved the scroll, the _realize from it let the same cards
         go first, and the outer one's _let_go found none — KeyError, the lane stuck."""
