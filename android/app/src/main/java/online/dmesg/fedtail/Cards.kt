@@ -108,6 +108,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -306,6 +307,7 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit,
             // the "Copy" bar tells TextSelection a selection is up; clearing it re-keys
             val base = LocalTextToolbar.current
             val bar = remember(base) { TrackingToolbar(base) }
+            DisposableEffect(bar) { onDispose { TextSelection.gone(bar) } }
             // Back lets go of the words first: here, in the card — composed after every
             // screen's own Back (a thread's took it from one at the screen's root, 12.11)
             androidx.activity.compose.BackHandler(enabled = TextSelection.active) {

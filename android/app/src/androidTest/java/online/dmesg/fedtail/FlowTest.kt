@@ -66,6 +66,7 @@ class FlowTest {
     @After
     fun close() {
         scenario?.close()
+        if (TextSelection.active) TextSelection.clear()  // never into the next test
     }
 
     /** Python starts slowly on an emulator: the first screen gets a minute and a half. */

@@ -39,6 +39,15 @@ object TextSelection {
     internal fun hidden() {
         active = false
     }
+
+    /** The words' card gone (scrolled away, the screen closed, the app left): its
+     *  selection with it — never a stale one eating the next tap. */
+    internal fun gone(by: TextToolbar) {
+        if (bar === by) {
+            bar = null
+            active = false
+        }
+    }
 }
 
 /** The platform's "Copy" bar, telling [TextSelection] when it shows and hides; only
