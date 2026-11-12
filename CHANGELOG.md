@@ -7,6 +7,10 @@
 
 ## What's next
 
+* The web page heeds `window.command_line` too: off (the default), Point's line is hidden and
+  `:` brings it (the windows' `Ctrl+L` is the browser's address bar).
+* textual-image 0.14.3 inside (the terminal's pictures).
+
 * Files attached that are no picture, video or sound (servers that take any file) show as
   "📄 name"; a text one (txt, md, log, csv…) is read in fedtail, up to 1 MB — in every interface.
 

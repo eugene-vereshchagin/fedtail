@@ -186,7 +186,7 @@ function renderPost(p, inThread) {
     a.title = w("short_id_tip");
     // ui.code_click: the thread (the hand reaches for it, 08.11), or the command line
     a.onclick = () => {
-      if (state.me.code_click === "line") { const c = $("#cmd"); c.value = "#" + p.alias + " "; c.focus(); }
+      if (state.me.code_click === "line") { const c = cmdInput(); c.value = "#" + p.alias + " "; c.focus(); }
       else openThread(p.sid, "post");
     };
     meta.append(a);
@@ -713,7 +713,7 @@ async function linkAct(url, p, confirmed, chosen) {
     return;
   }
   if (r.copy) copyText(r.copy);
-  if (r.alias) { const c = $("#cmd"); c.value = "#" + r.alias + " "; c.focus(); }
+  if (r.alias) { const c = cmdInput(); c.value = "#" + r.alias + " "; c.focus(); }
   if (r.open) openThing(r.open);
   if (r.compose) composeFrom(r.compose, p);
   if (r.read) paintRead(r.read);
@@ -906,6 +906,11 @@ async function textFile(p, i, m) {  // a text file attached: its words over the 
   try { r = await api("/api/text_file?id=" + encodeURIComponent(p.sid) + "&i=" + i); }
   catch (err) { r = { error: err.message }; }
   $("#info-text").textContent = r.error || r.text;
+}
+
+function cmdInput() {  // the command line, shown (window.command_line off hides it)
+  $("#cmdline").hidden = false;
+  return $("#cmd");
 }
 
 function info(text, links, kind) {
@@ -3188,7 +3193,11 @@ document.addEventListener("keydown", (e) => {
   if (!$("#menuwin").hidden && e.key === "Escape") { e.preventDefault(); closeMenu(); return; }
   if (!$("#menuwin").hidden) { menuKeys(e); return; }
   if (e.target.closest("textarea, input, select")) {
-    if (e.key === "Escape" && e.target.id === "cmd") { e.target.value = ""; $("#posts").focus(); }
+    if (e.key === "Escape" && e.target.id === "cmd") {
+      e.target.value = "";
+      if (state.me && !state.me.command_line) $("#cmdline").hidden = true;  // back away
+      $("#posts").focus();
+    }
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest("#compose")) send(e);
     return;
   }
@@ -3207,7 +3216,7 @@ document.addEventListener("keydown", (e) => {
     Enter: () => p && openThread(p.sid, p.open_at), n: () => compose(null),
     p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
     q: () => p && quoteReply(p), "/": () => openPlace("search"),
-    ":": () => $("#cmd").focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
+    ":": () => cmdInput().focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
   };
   if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
 });
@@ -3441,6 +3450,7 @@ function spellLang() {
 async function start() {
   const me = await api("/api/me");
   state.me = me;
+  $("#cmdline").hidden = !me.command_line;  // window.command_line: off — ":" brings it
   document.body.classList.toggle("lit", !!me.highlight);  // ui.additional_highlight
   state.words = me.words;
   if (me.login) return loginOnly(me);

@@ -816,6 +816,9 @@ class Web:
                 "hover_tools": bool(actions.hover_tools(c)),
                 # #abc clicked: into the command line, or its thread (actions.code_to_line)
                 "code_click": "line" if actions.code_to_line(c) else "thread",
+                # Point's command line always at the bottom, or brought by ":" (the
+                # windows' Ctrl+L: the browser keeps that for its address bar)
+                "command_line": bool(c["ui"].get("command_line", False)),
                 "visibility": self.core.default_visibility(),
                 # when a picture that didn't come is asked again: the windows' times
                 "picture_later": list(_picture_later()),

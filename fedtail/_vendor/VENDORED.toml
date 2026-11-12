@@ -3,9 +3,9 @@
 # out. A copy in the system or from pip wins over ours (_vendor/__init__.py).
 
 ["textual-image"]
-version = "0.14.2"
+version = "0.14.3"
 package = "textual_image"
 license = "LGPL-3.0-or-later"
-sha256 = "f698d883959637515ab6c7086ffbc17fffc204a90010562b4f3bd1fba963ade4"
+sha256 = "3cd6cc5ed1c493cbb3c221e0d576c5a0779f85a683ffe1b8ed29a1b93797f009"
 why = "the terminal's real pictures (sixel, kitty); not in Debian"
 dropped = ["demo", "__main__.py", "*.jpg"]

@@ -144,6 +144,7 @@ class WebTest(TmpDir):
         """The editor as the windows': a picture with its description, a poll, later;
         a lane's choices (common/lane.py): posts only, the media funnel."""
         me = json.loads(self.req("/api/me")[2])
+        self.assertIs(me["command_line"], False)  # Point's line hidden: ":" brings it
         self.assertEqual(me["editor"]["limit"], self.core.caps.max_characters)
         self.assertEqual(me["editor"]["languages"][0][0], "")
         code, got = self.upload(b"\x89PNG fake", "кот.png")

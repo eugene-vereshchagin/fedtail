@@ -1,5 +1,6 @@
 """Functionality to interact with the terminal."""
 
+import io
 import logging
 import os
 import re
@@ -111,7 +112,7 @@ def probe_terminal() -> TerminalCapabilities:
             sixel, tgp, queried_width, queried_height = _parse_probe_response(response.sequence)
             if need_cell_size_query and queried_width and queried_height:
                 width, height = queried_width, queried_height
-        except (TerminalError, TimeoutError) as e:
+        except (TerminalError, TimeoutError, OSError, io.UnsupportedOperation) as e:
             logger.warning("Failed to probe terminal capabilities", exc_info=e)
 
     if height == 0 or width == 0:
@@ -172,6 +173,19 @@ def _parse_probe_response(sequence: str) -> tuple[bool, bool, int, int]:
     return sixel, tgp, width, height
 
 
+def _read_or_raise(fd: int, timeout: float | None) -> str:
+    """Read one character of a terminal reply, raising on EOF.
+
+    An empty read means stdin is at EOF (redirected from /dev/null or NUL, an exhausted pipe). No reply can
+    arrive, and the timeout doesn't help because the read returns at once. Without this check the capture
+    loops would spin at full CPU forever.
+    """
+    data = read(fd, 1, timeout)
+    if not data:
+        raise TerminalError("stdin reached EOF while waiting for the terminal's response")
+    return data
+
+
 def _has_primary_da(sequence: str) -> bool:
     return _PRIMARY_DA_RE.search(sequence) is not None
 
@@ -202,7 +216,7 @@ def capture_until_primary_da(timeout: float | None = None) -> Iterator[SimpleNam
         yield response
 
         while not _has_primary_da(response.sequence):
-            response.sequence += read(stdin, 1, timeout)
+            response.sequence += _read_or_raise(stdin, timeout)
 
 
 @contextmanager
@@ -239,7 +253,7 @@ def capture_terminal_response(
         yield response
 
         while not response.sequence.endswith(end_marker):
-            response.sequence += read(stdin, 1, timeout)
+            response.sequence += _read_or_raise(stdin, timeout)
 
             if not response.sequence.startswith(start_marker[: len(response.sequence)]):
                 raise TerminalError("Unexpected response from terminal")
