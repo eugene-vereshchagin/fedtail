@@ -49,6 +49,17 @@ note.ru = "Ссылка в тексте поста на .mp4, .webm, .mp3, .opus
 note.en = "A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server that didn't take a big attachment leaves it so) plays in the same player as attachments: over the window in Qt and GTK, mpv in the terminal, the phone's player on the phone (`media.links_in_player`). The web page needs none: the browser plays such a file itself."
 
 [[capability]]
+id = "char-count-tip"
+area = "reading"
+tui = "na"
+android = "has"
+name.ru = "Подсказка к числу символов"
+name.en = "The character count's tooltip"
+note.ru = "Число символов поста (`card.char_count`) показывают все; подсказку «Символов в тексте поста» под мышкой — окна и веб. В терминале и на телефоне мыши нет: число стоит само по себе."
+note.en = "Every interface shows a post's character count (`card.char_count`); the tooltip \"Characters in the post's text\" under the mouse — the windows and the web page. The terminal and the phone have no mouse: the number stands alone."
+keys = ["char_count_tip"]
+
+[[capability]]
 id = "custom-emoji"
 area = "reading"
 tui = "na"

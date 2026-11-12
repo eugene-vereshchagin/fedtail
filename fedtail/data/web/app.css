@@ -228,6 +228,7 @@ img.emoji { height: 1.3em; width: auto; vertical-align: -0.25em; margin: 0 1px; 
 .post .acts button:hover, .post .acts a:hover { background: var(--ctx); color: var(--text);
                                                 text-decoration: none; }
 .post .acts button.on { color: var(--accent); }
+.post .acts .chars { color: var(--muted); font-size: 13px; align-self: center; margin-right: 6px; }
 .older { display: block; margin: 0 auto 10px; background: var(--card); color: var(--accent);
          border: 1px solid var(--line); border-radius: 8px; padding: 6px 18px; }
 .empty { color: var(--muted); text-align: center; padding: 40px; }

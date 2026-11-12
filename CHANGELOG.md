@@ -7,6 +7,9 @@
 
 ## What's next
 
+* A post's character count, on the left of the row under it before "Reply"
+  (`card.char_count`, off by default) — in every interface.
+
 * A post's menu copies its text ("Copy the text"): plain words, the warning first — in every
   interface.
 

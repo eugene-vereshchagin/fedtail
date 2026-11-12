@@ -115,6 +115,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
 | Labels on the card | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |   |
 | Sending emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
+| A post's character count | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Pictures and video
 
@@ -266,4 +267,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **69** features of the 202 compared.
+Only in fedtail — **70** features of the 203 compared.

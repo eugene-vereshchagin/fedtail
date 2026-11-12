@@ -1225,6 +1225,22 @@ class GtkSmokeTest(_GtkBase):
         lane._filter_buttons["all"].set_active(True)
         self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
 
+    def test_the_char_count(self):
+        """card.char_count (12.11): "N симв." first in the row under the post, before
+        Reply; off by default."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        st = status("095", BOB, minute=2, text="пять!")
+        card = Card(self.win.ctx, "c", adapter.post(st))
+        first = card.actions.get_first_child()
+        self.assertNotIsInstance(first, Gtk.Label)  # off: the Reply button first
+        self.win.cfg["ui"]["char_count"] = True
+        self.addCleanup(self.win.cfg["ui"].__setitem__, "char_count", False)
+        card = Card(self.win.ctx, "c", adapter.post(st))
+        first = card.actions.get_first_child()
+        self.assertIsInstance(first, Gtk.Label)
+        self.assertEqual(first.get_label(), i18n._("char_count", n=5))
+
     def test_command_line(self):
         bar = self.win.cmdline
         self.assertIsNotNone(bar)

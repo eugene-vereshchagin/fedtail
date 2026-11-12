@@ -1029,6 +1029,14 @@ class PostRow(QWidget):
         h.setSpacing(2)
         if self.theme.shape.get("short_id") == "footer":  # point.im: #a3f | 4, left
             self._short_id(h, replies=p.counts.replies, where="footer")
+        chars = actions.char_count(self.spec.entry, self.ctx.cfg)
+        if chars:  # card.char_count: on the left, before Reply
+            lab = QLabel(chars)
+            lab.setObjectName("meta")  # the time's look: muted
+            lab.setAccessibleName(chars)
+            lab.setToolTip(_("char_count_tip"))
+            h.addWidget(lab)
+            h.addSpacing(6)
         if self.theme.shape.get("actions_align") == "right":
             h.addStretch(1)
         buttons = actions.buttons(self.spec.entry, self._actions_ctx(),

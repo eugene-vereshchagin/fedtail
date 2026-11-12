@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**What's next:**
+
+- A post's character count
+
 **0.23.0:**
 
 - Sync through a folder on the phone — by picking the folder

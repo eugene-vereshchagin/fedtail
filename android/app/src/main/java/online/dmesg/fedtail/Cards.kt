@@ -1186,6 +1186,9 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, hold: (() -> 
 private fun Actions(p: PostItem, act: CardActions, menu: Boolean, setMenu: (Boolean) -> Unit) {
     val grey = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.padding(start = 0.dp), verticalAlignment = Alignment.CenterVertically) {
+        // card.char_count: the core's words, on the left before Reply
+        if (p.chars.isNotEmpty()) Text(p.chars, fontSize = 13.sp, color = grey,
+            modifier = Modifier.padding(start = 8.dp, end = 4.dp))
         TextButton(onClick = { act.reply(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
             ThemedIcon("reply", Glyphs.Reply, stringResource(R.string.reply), Modifier.size(18.dp), tint = grey)
             if (p.replies > 0) Text(" ${p.replies}", fontSize = 13.sp, color = grey)

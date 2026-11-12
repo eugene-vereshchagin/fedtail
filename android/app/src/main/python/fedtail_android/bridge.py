@@ -1362,7 +1362,8 @@ ONLY_ON_PHONE = {
     "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app",
            "theme", "announcements",
            # the card's and the shade's: heeded here too, so offered (only Config had them)
-           "bookmark_button", "act_as", "account_colors", "links_in_player", "icon_count",
+           "bookmark_button", "char_count", "act_as", "account_colors", "links_in_player",
+           "icon_count",
            "icon_count_except"},
     # the shade heeds these; how the desktop shows a note (backend) is the desktop's
     "notify": {"enabled", "lanes", "except", "privacy", "when_focused", "filtered"},

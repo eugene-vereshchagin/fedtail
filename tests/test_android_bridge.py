@@ -589,7 +589,7 @@ class BridgeTest(_Base):
         self.assertEqual(opts[("window", "command_line")]["value"], False)  # the phone's
         self.assertEqual(opts[("phone", "overview")]["kind"], "choice")
         # what the phone heeds is offered, not left to Config (02.11)
-        for place in (("card", "bookmark_button"), ("accounts", "act_as"),
+        for place in (("card", "bookmark_button"), ("card", "char_count"), ("accounts", "act_as"),
                       ("window", "icon_count"), ("media", "links_in_player")):
             self.assertIn(place, opts)
         self.assertNotIn(("media", "image_viewer"), opts)  # the windows' viewer only

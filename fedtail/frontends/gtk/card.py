@@ -952,6 +952,13 @@ class Card(Gtk.Box):
         own = icons.wanted(self.ctx.theme)  # the messengers' look (split, "additional")
         if own and style == "text":
             style = "both"  # the split layout has pictures by the words, as messengers did
+        chars = actions.char_count(self.entry, self.ctx.cfg)
+        if chars:  # card.char_count: on the left, before Reply
+            lab = Gtk.Label(label=chars)
+            lab.add_css_class("ft-muted")
+            lab.set_margin_end(6)
+            tip(lab, _("char_count_tip"))
+            self.actions.append(lab)
         for bt in actions.buttons(self.entry, self._actx(), unread=bool(self.unread),
                                   open_at=self.open_at):
             short = bt.count.replace(" · ", "")

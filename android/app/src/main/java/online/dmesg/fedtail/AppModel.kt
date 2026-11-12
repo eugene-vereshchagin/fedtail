@@ -163,6 +163,7 @@ data class PostItem(
     val visibility: String = "",     // public | unlisted | private | direct
     val lanePrivate: Boolean = false, // a lane of private messages only: none marked out
     val canBoost: Boolean = true,    // the core's word (common/actions.can_boost)
+    val chars: String = "",          // card.char_count: "312 chars" on the left; "" — off
     val meta: List<Pair<String, String>> = emptyList(),  // the marks with their links (time, edits)
     val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
     val quoteLine: Pair<String, String>? = null,  // the quote as one line; null — none shown
@@ -2497,6 +2498,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             visibility = str(o, "visibility"),
             lanePrivate = o.optBoolean("lane_private", false),
             canBoost = o.optBoolean("can_boost", true),
+            chars = str(o, "chars"),
             nameHtml = str(acc, "name_html"),
             nameColor = str(acc, "color"),
             labels = o.optJSONObject("words")?.optJSONArray("meta")?.let { m ->

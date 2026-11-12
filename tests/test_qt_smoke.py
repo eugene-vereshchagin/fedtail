@@ -196,6 +196,17 @@ class QtSmokeTest(unittest.TestCase):
         buttons = lane.view.rows["011"].findChildren(QToolButton)
         self.assertGreaterEqual(len(buttons), 4)  # reply, fav, thread, open (+ boost if public)
         self.assertTrue(any(b.text().startswith("Ответить") for b in buttons))
+        from PySide6.QtWidgets import QLabel
+        card = lane.view.rows["011"]
+        self.assertFalse([la for la in card.findChildren(QLabel)
+                          if la.toolTip() == i18n._("char_count_tip")])  # off by default
+        self.core.cfg["ui"]["char_count"] = True  # card.char_count: before Reply
+        self.addCleanup(self.core.cfg["ui"].__setitem__, "char_count", False)
+        row = card._actions(card.spec.entry)
+        first = row.layout().itemAt(0).widget()
+        self.assertEqual(first.toolTip(), i18n._("char_count_tip"))
+        self.assertRegex(first.text(), r"^\d+ ")
+        row.deleteLater()
 
         # reply context strip gets filled in once parents arrive
         self.pump(until=lambda: self.core.parent_of(self.core.store.get_status("014")) == "missing")

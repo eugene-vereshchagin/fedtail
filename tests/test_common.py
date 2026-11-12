@@ -218,6 +218,17 @@ class CommonTest(TmpDir):
         self.assertEqual(actions.post_text(warned), "spoilers\n\na\nb")
         self.assertEqual(actions.post_text(replace(p, warning="", text="")), "")
 
+    def test_the_char_count(self):
+        """card.char_count (12.11): off by default; on — "N chars" of the text, the
+        warning not counted; nothing for a post without words."""
+        from dataclasses import replace
+        p = replace(self.view.by_id("001"), warning="cw", text="<p>héllo<br>world</p>")
+        cfg = {"ui": {}}
+        self.assertEqual(actions.char_count(p, cfg), "")
+        cfg["ui"]["char_count"] = True
+        self.assertEqual(actions.char_count(p, cfg), i18n._("char_count", n=11))
+        self.assertEqual(actions.char_count(replace(p, text=""), cfg), "")
+
     def test_the_command_line_hidden_by_default(self):
         """ui.command_line (12.11): Point's line is off unless asked — Ctrl+L brings it; so
         a click on #abc opens the thread."""

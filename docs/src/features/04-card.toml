@@ -440,3 +440,19 @@ others = "Phanpy, Elk, Fedilab"
 clients = ["Phanpy", "Elk", "Fedilab"]
 details.ru = "⋯ → «Реакция…»: частые эмодзи и те, что уже стоят, кнопками (нажатое ещё раз снимается), любое другое или своё эмодзи сервера — строкой (`:blobcat:`). Пункт есть там, где сервер реакции умеет (Akkoma, Pleroma — их API; Misskey, Sharkey, Iceshrimp, Fedibird — API Fedibird), и у поста, на котором реакции уже есть; GoToSocial и Mastodon их не поддерживают."
 details.en = "⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them."
+
+[[feature]]
+id = "char-count"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Число символов в посте"
+name.en = "A post's character count"
+config = "`card.char_count`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "нет: число символов клиенты показывают только в редакторе"
+others.en = "none: clients show the count only while writing"
+clients = []
+details.ru = "Слева в ряду под постом, перед «Ответить» — сколько символов в его тексте (`312 симв.`; предупреждение не в счёт). Во всех интерфейсах, в терминале — первым в строке под постом. По умолчанию выключено."
+details.en = "On the left of the row under a post, before \"Reply\" — how many characters its text has (`312 chars`; the warning not counted). In every interface; in the terminal, first on the line under the post. Off by default."

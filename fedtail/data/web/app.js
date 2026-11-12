@@ -510,6 +510,11 @@ function renderActions(p, inThread) {
     return b;
   };
   const n = (x) => (x ? " " + x : "");
+  if (p.chars) {  // card.char_count: the core's words, on the left before Reply
+    const c = el("span", "chars", p.chars);
+    c.title = w("char_count_tip");
+    row.append(c);
+  }
   btn("↩" + n(p.counts.replies), w("reply"), false, () => compose(p));
   btn((p.mine.liked ? "★" : "☆") + n(p.counts.likes), p.mine.liked ? w("faved") : w("fav"),
       p.mine.liked, () => act("like", p));

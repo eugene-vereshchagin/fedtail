@@ -71,6 +71,10 @@ class TuiModelCornersTest(TmpDir):
         self.assertIn(("direct", "✉"), shown.head)
         self.assertEqual(shown.body, ["hi"])  # the blank lines at the end dropped
         self.assertIn("📊", shown.foot)
+        self.view.cfg["ui"]["char_count"] = True  # card.char_count: first in the foot
+        self.addCleanup(self.view.cfg["ui"].__setitem__, "char_count", False)
+        counted = model.show_post(self.view, to_post(boost))
+        self.assertTrue(counted.foot.startswith(i18n._("char_count", n=2)), counted.foot)
         locked = model.show_post(self.view, to_post(status("003", BOB, vis="private")))
         self.assertIn(("muted", "🔒"), locked.head)
         nobody = dict(status("004", NEWS), account=dict(NEWS, acct="", username=""))

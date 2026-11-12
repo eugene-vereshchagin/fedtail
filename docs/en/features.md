@@ -362,6 +362,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
 | Labels on the card | has | 0.14.0 | `card.old_days`; “bot” — always | own | Sengi |
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
+| A post's character count | has | next | `card.char_count` | own | none: clients show the count only while writing |
 
 <details><summary>In detail</summary>
 
@@ -417,6 +418,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Labels on the card.** Next to the date: “old, N days” — a post older than `card.old_days` (30) days; such posts come from someone's outbox or an old thread; “[bot]” — on bots. There is no “from another server” label yet.
 
 **Sending emoji reactions.** ⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
+
+**A post's character count.** On the left of the row under a post, before "Reply" — how many characters its text has (`312 chars`; the warning not counted). In every interface; in the terminal, first on the line under the post. Off by default.
 
 </details>
 
@@ -917,6 +920,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| The character count's tooltip | ✓ | ✓ | · | ✓ | ✓ | Every interface shows a post's character count (`card.char_count`); the tooltip "Characters in the post's text" under the mouse — the windows and the web page. The terminal and the phone have no mouse: the number stands alone. |
 | Servers' emoji as pictures | ✓ | ✓ | · | ✓ | ✓ | The Qt and GTK windows and the web page draw :blobcat: as its picture — in posts, names, the boost's line, a quote and Activity. The terminal — text: a picture doesn't go into a line of text. |
 | Tools over the post under the mouse | ✓ | ✓ | · | ✓ | · | ui.hover_tools: in the Qt and GTK windows and on the web page the post under the mouse has at its top right — open in the browser, copy the link, translate, quote, follow the thread, mute it, read up to here, and on my own one edit and delete; its ⋯ menu has them no more there. The terminal has no mouse — all of it in the post's menu. Android: a phone has no mouse: all of it in the card's ⋯ menu |
 | A post's menu in submenus | ✓ | ✓ | ◐ | ✓ | — | ui.menu_groups: in the Qt and GTK windows and on the web page the ⋯ menu has the frequent items on top and the submenus "Author @…", "Thread", "More". The terminal's post menu is one list (the words are in the common code; it draws no submenus yet). Android: the phone's card menu is flat for now |

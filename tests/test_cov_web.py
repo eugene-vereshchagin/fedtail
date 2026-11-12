@@ -360,6 +360,10 @@ class WebApiTest(WebBase):
         got = web.post_json(v, share, parent="missing")
         self.assertEqual(got["shared_by"]["id"], v.me.id)
         self.assertEqual(got["context"], {"missing": True})
+        self.assertEqual(got["chars"], "")  # card.char_count off
+        v.cfg["ui"]["char_count"] = True
+        self.addCleanup(v.cfg["ui"].__setitem__, "char_count", False)
+        self.assertTrue(web.post_json(v, p)["chars"])
 
     def test_lanes_find_and_choices(self):
         wb = self.web

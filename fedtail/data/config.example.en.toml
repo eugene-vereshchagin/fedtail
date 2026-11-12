@@ -709,6 +709,10 @@ actions = "both"
 # The "Bookmark" button in the row under a post (otherwise — only in the ⋯ menu and with the m key).
 bookmark_button = true
 
+# How many characters the post's text has — on the left of the row under it, before "Reply"
+# (the warning not counted).
+char_count = false
+
 # The post under the mouse lit (as on point.im): its buttons brighter. In every theme and
 # interface (the terminal: the post under the cursor). false — the posts stay as they are.
 additional_highlight = true

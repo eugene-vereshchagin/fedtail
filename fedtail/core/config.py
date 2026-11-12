@@ -52,6 +52,7 @@ DEFAULTS = {
         "whats_this": False,
         "expand_cw": True,
         "bookmark_button": True,
+        "char_count": False,
         "additional_highlight": True,
         # a private message among posts, as in Fedilab: "theme" (the theme's [shape]
         # direct), "frame", "fill", "badge" or "none" (common/cardtext.direct_mark)
@@ -614,7 +615,7 @@ FILE_LAYOUT = (
                            "mute_tags_shown link_chars thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags long_form sensitive_media around_post "
                            "why_home")
-     + _keys("ui", "arts_mode expand_cw actions bookmark_button additional_highlight "
+     + _keys("ui", "arts_mode expand_cw actions bookmark_button char_count additional_highlight "
              "direct_highlight hover_tools menu_groups code_click links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
              "counters_via_accounts "

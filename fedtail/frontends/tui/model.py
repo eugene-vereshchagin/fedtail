@@ -9,6 +9,7 @@ from ...core import config
 from ...i18n import _
 from ...model import Share, real
 from ...model.text import html_to_text, snippet
+from ..common import actions
 from ..common.commands import Commands  # noqa: F401 — the TUI's, now shared
 
 
@@ -117,7 +118,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
             out.body.pop()
-    foot = []
+    chars = actions.char_count(entry, core.cfg)
+    foot = [chars] if chars else []  # card.char_count: first, on the left
     if p.media:
         foot.append(_("cli_media", n=len(p.media)))
         # what is in it, and how to see it: a video didn't look like one (29.10)

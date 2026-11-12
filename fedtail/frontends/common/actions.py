@@ -89,6 +89,16 @@ def can_boost(p):
     return p.visibility in ("public", "unlisted")
 
 
+def char_count(entry, cfg):
+    """card.char_count: how many characters the post's text has, as the row under it
+    says it on the left ("312 chars"); "" — off, or no text."""
+    if not (cfg.get("ui") or {}).get("char_count", False):
+        return ""
+    from ...model.text import html_to_text
+    n = len(html_to_text(real(entry).text))
+    return _("char_count", n=n) if n else ""
+
+
 def buttons(entry, ctx, unread=False, open_at="post"):
     """The buttons under a post, in order. open_at: where its thread opens (the card's
     CardSpec.open_at)."""
