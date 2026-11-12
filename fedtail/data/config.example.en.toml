@@ -672,6 +672,10 @@ old_days = 30
 # Hashtags inside the text aren't touched. false — as the server sent it.
 collapse_tags = true
 
+# A post longer than this many characters is folded in a lane: its beginning (about half as
+# much), and "Show all · N chars" opens the rest; an open thread shows it whole. 0 — never.
+fold_chars = 1000
+
 # "📄 Read it whole" in the ⋯ menu of a post from another server: the post as the author's server keeps it.
 # An article (Article, Page) — whole, not a title with a link; an event (Event) — with its time and
 # place. Without your token. false — no such item.

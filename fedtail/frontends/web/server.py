@@ -33,7 +33,7 @@ from ...i18n import _
 from ...model import Account, Share, only_private, real
 from ...model.text import reply_mentions, snippet
 from ..common import actions, timed
-from ..common.cardtext import context_chars, direct_mark, indent_of, shown_text
+from ..common.cardtext import context_chars, direct_mark, fold, indent_of, shown_text
 from ..common.commands import Commands
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
@@ -339,6 +339,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         from dataclasses import replace as _with
         html = view.in_app(_with(p, text=html))
     me = view.me
+    folded = fold(html, view.cfg, number is not None or depth is not None)
     out = {
         "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
         "account": account_json(p.author), "created": _iso(p.created),
@@ -347,6 +348,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         "chars": actions.char_count(entry, view.cfg),  # card.char_count: "" — off
         "warning": p.warning, "sensitive": p.sensitive,
         "html": with_emojis(web_clean(html, richtext_link_chars(view.cfg)), p.emojis),
+        # feed.fold_chars: a long post's beginning, "html" the whole on "Show all"
+        "fold": {"html": with_emojis(web_clean(folded[0], richtext_link_chars(view.cfg)),
+                                     p.emojis), "label": folded[1]} if folded else None,
         "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
         "counts": {"replies": p.counts.replies, "shares": p.counts.shares,
                    "likes": p.counts.likes},

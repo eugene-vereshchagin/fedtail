@@ -363,6 +363,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Labels on the card | has | 0.14.0 | `card.old_days`; “bot” — always | own | Sengi |
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | A post's character count | has | next | `card.char_count` | own | none: clients show the count only while writing |
+| A long post folded | has | next | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
 
 <details><summary>In detail</summary>
 
@@ -420,6 +421,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Sending emoji reactions.** ⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
 
 **A post's character count.** On the left of the row under a post, before "Reply" — how many characters its text has (`312 chars`; the warning not counted). In every interface; in the terminal, first on the line under the post. Off by default.
+
+**A long post folded.** A post longer than `fold_chars` characters (1000) shows its beginning in a lane — whole paragraphs or lines, about half — and "Show all · N chars", which opens the rest in place. An open thread always shows it whole. In the terminal the beginning ends in "▾ Show all… — Enter": Enter opens the thread. `0` — never folded.
 
 </details>
 

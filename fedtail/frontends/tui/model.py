@@ -10,6 +10,7 @@ from ...i18n import _
 from ...model import Share, real
 from ...model.text import html_to_text, snippet
 from ..common import actions
+from ..common.cardtext import fold
 from ..common.commands import Commands  # noqa: F401 — the TUI's, now shared
 
 
@@ -114,10 +115,14 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     folded = words is not None and words.folded
     if (not p.warning and not folded) or ((config.expand_cw(core.cfg) or open_cw)
                                           and not folded):
-        for para in html_to_text(p.text).split("\n"):
+        # feed.fold_chars: a long post's beginning in a lane; Enter opens the whole thread
+        long = fold(p.text, core.cfg, in_thread=number is not None)
+        for para in html_to_text(long[0] if long else p.text).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
             out.body.pop()
+        if long:
+            out.below.append(("muted", "▾ " + long[1] + " — Enter"))
     chars = actions.char_count(entry, core.cfg)
     foot = [chars] if chars else []  # card.char_count: first, on the left
     if p.media:

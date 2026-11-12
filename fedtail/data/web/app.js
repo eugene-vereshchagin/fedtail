@@ -219,9 +219,17 @@ function renderPost(p, inThread) {
   if (wd && wd.newcomer) card.append(bitEl(wd.newcomer, "newcomer"));
   const content = el("div", "content");
   const body = el("div", "body");
-  body.innerHTML = p.html;  // cleaned on the server: allowed tags, safe links, https pictures
+  // cleaned on the server: allowed tags, safe links, https pictures; a long post (feed.
+  // fold_chars) its beginning, the whole on "Show all"
+  body.innerHTML = p.fold ? p.fold.html : p.html;
   if (p.lang) body.lang = p.lang;
   content.append(body);
+  if (p.fold) {
+    const more = el("button", "fold-more", p.fold.label);
+    more.type = "button";
+    more.onclick = (e) => { e.stopPropagation(); body.innerHTML = p.html; more.remove(); };
+    content.append(more);
+  }
   if (p.poll) content.append(renderPoll(p));
   if (p.media.length) content.append(renderMedia(p));
   if (p.card && !p.media.length) content.append(renderCard(p.card));

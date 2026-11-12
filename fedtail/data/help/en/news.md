@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **What's next:**
 
 - A post's character count
+- A long post folded
 
 **0.23.0:**
 

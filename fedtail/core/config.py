@@ -155,6 +155,7 @@ DEFAULTS = {
         "show_moved": True,
         "old_days": 30,
         "collapse_tags": True,
+        "fold_chars": 1000,
         "server_info": True,
         "long_form": True,
         "text_markup": True,
@@ -613,8 +614,8 @@ FILE_LAYOUT = (
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
     ("card", _keys("feed", "show_reply_context parents_first thread_indent_max reply_context_chars "
                            "mute_tags_shown link_chars thread_news repeat_boosts quotes link_cards "
-                           "old_days collapse_tags long_form sensitive_media around_post "
-                           "why_home")
+                           "old_days collapse_tags fold_chars long_form sensitive_media "
+                           "around_post why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button char_count additional_highlight "
              "direct_highlight hover_tools menu_groups code_click links_in_app")
      + _keys("feed", "show_moved honest_counters counts_minutes tag_click "

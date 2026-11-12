@@ -1130,6 +1130,25 @@ class QtSmokeTest(unittest.TestCase):
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
+    def test_a_long_post_folds(self):
+        """feed.fold_chars (12.11): a long post in a lane — its beginning and "Show all";
+        the press puts the whole text in; in a thread it's whole from the start."""
+        from PySide6.QtWidgets import QLabel, QPushButton
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>"
+        st = status("096", BOB, minute=1, text=long_text)
+        row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
+        more = [b for b in row.findChildren(QPushButton) if b.text().startswith("Показать")]
+        self.assertEqual(len(more), 1)
+        texts = lambda: " ".join(w.text() for w in row.findChildren(QLabel, "postText"))
+        self.assertNotIn("дальше", texts())
+        more[0].click()
+        self.pump(until=lambda: "дальше" in texts())
+        thread = PostRow(CardSpec(key="096", entry=E(st), in_thread=True), self.win.ctx)
+        self.assertFalse([b for b in thread.findChildren(QPushButton)
+                          if b.text().startswith("Показать")])
+
     def test_link_card(self):
         """A post with a link gets the page's card; feed.link_cards turns it down or off."""
         from PySide6.QtWidgets import QFrame, QLabel

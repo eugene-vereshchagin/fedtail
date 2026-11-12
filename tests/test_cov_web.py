@@ -361,6 +361,14 @@ class WebApiTest(WebBase):
         self.assertEqual(got["shared_by"]["id"], v.me.id)
         self.assertEqual(got["context"], {"missing": True})
         self.assertEqual(got["chars"], "")  # card.char_count off
+        self.assertIsNone(got["fold"])  # short: whole
+        from dataclasses import replace
+        long = replace(p, text="<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>")
+        folded = web.post_json(v, long)["fold"]  # feed.fold_chars: in a lane
+        self.assertIn("слово", folded["html"])
+        self.assertNotIn("дальше", folded["html"])
+        self.assertIn("1", folded["label"])
+        self.assertIsNone(web.post_json(v, long, number=0)["fold"])  # a thread: whole
         v.cfg["ui"]["char_count"] = True
         self.addCleanup(v.cfg["ui"].__setitem__, "char_count", False)
         self.assertTrue(web.post_json(v, p)["chars"])

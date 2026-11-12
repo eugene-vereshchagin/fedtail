@@ -933,8 +933,16 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     if (!open) return
     if (p.text.isNotBlank()) {
         val color = MaterialTheme.colorScheme.primary
-        val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) }
+        // feed.fold_chars: a long post's beginning (the core's cut), the whole on a press
+        var whole by rememberSaveable(p.key) { mutableStateOf(false) }
+        val html = if (p.foldHtml.isNotEmpty() && !whole) p.foldHtml else p.html
+        val words = remember(html, p.text, color) { postText(html, p.text, color) }
         PostWords(words, act.link, act.runLink, act.tagMenu, act.holdSelects) { act.open(p) }
+        if (p.foldHtml.isNotEmpty() && !whole) {
+            TextButton(onClick = { whole = true }, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                Text(p.foldLabel, fontSize = 14.sp, color = color)
+            }
+        }
     }
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive,

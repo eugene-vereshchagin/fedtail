@@ -137,6 +137,19 @@ def shown_text(p, cfg):
     return without_quote_fallback(p.text) if p.quote is not None and mode != "off" else p.text
 
 
+def fold(html, cfg, in_thread=False):
+    """feed.fold_chars: a long post in a lane shows its beginning and a button for the
+    rest (an open thread always the whole). None — shown whole; else (the beginning's
+    HTML, the button's words "Show all · 2345 chars")."""
+    if in_thread:
+        return None
+    from ...model.text import fold_long
+    got = fold_long(html, int((cfg.get("feed") or {}).get("fold_chars", 1000) or 0))
+    if got is None:
+        return None
+    return got[0], _("fold_more", n=got[1])
+
+
 def inner_quote_bit(quoted, mode="card"):
     """The quoted post's own quote, as Mastodon's page shows it: one line under the quote —
     "❝ quotes Bob's post", a link to its thread — never a card in a card (Mastodon gives

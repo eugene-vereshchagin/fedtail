@@ -95,6 +95,27 @@ class NoteLineTest(unittest.TestCase):
         self.assertEqual(note_text(n), n)
 
 
+class FoldLongTest(unittest.TestCase):
+    """feed.fold_chars (12.11): a long post's beginning, by paragraphs, lines, words."""
+
+    def test_the_cuts(self):
+        from fedtail.model.text import fold_long
+        self.assertIsNone(fold_long("<p>short</p>", 1000))
+        self.assertIsNone(fold_long("<p>" + "a" * 2000 + "</p>", 0))  # 0: never
+        paras = "<p>" + "a " * 100 + "</p><p>" + "b " * 100 + "</p><p>" + "c " * 400 + "</p>"
+        shown, total = fold_long(paras, 1000)
+        self.assertEqual(shown.count("<p>"), 2)  # whole paragraphs, about half of 1000
+        self.assertGreater(total, 1000)
+        lines = "<p>" + "line here<br>" * 200 + "</p>"
+        shown, _n = fold_long(lines, 1000)
+        self.assertTrue(shown.startswith("<p>") and shown.endswith("</p>"))
+        from fedtail.model.text import html_to_text
+        self.assertLessEqual(len(html_to_text(shown)), 500)
+        words = "<p>" + "word " * 400 + "</p>"
+        shown, _n = fold_long(words, 1000)
+        self.assertTrue(shown.endswith("word…</p>"))  # cut at a word, not inside one
+
+
 class LongFormTest(unittest.TestCase):
     def test_article_and_event(self):
         from fedtail.core.model import long_form_of

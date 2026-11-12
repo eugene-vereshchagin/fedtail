@@ -569,7 +569,8 @@ _STRINGS = {
         "reply": "Ответить", "thread": "Тред", "delete": "Удалить",
         "faved": "В избранном", "boosted": "Продвинуто", "more": "Ещё",
         "copy_link": "Скопировать ссылку", "copy_text": "Скопировать текст",
-        "char_count": "{n} симв.", "char_count_tip": "Символов в тексте поста",
+        "char_count": "{n} симв.", "fold_more": "Показать полностью · {n} симв.",
+        "fold_less": "Свернуть", "char_count_tip": "Символов в тексте поста",
         "copy_id": "Скопировать {id}",
         "copy_handle": "Скопировать ник", "copy_handle_of": "Скопировать ник {acct}",
         "copy_handle_tip": "@ник@сервер — по нему человека найдёт и упомянет любой клиент и "
@@ -2505,7 +2506,8 @@ _STRINGS = {
         "reply": "Reply", "thread": "Thread", "delete": "Delete",
         "faved": "Favourited", "boosted": "Boosted", "more": "More",
         "copy_link": "Copy link", "copy_text": "Copy the text",
-        "char_count": "{n} chars", "char_count_tip": "Characters in the post's text",
+        "char_count": "{n} chars", "fold_more": "Show all · {n} chars",
+        "fold_less": "Fold", "char_count_tip": "Characters in the post's text",
         "copy_id": "Copy {id}",
         "copy_handle": "Copy handle", "copy_handle_of": "Copy handle {acct}",
         "copy_handle_tip": "@name@server — any client on any server finds and mentions them "

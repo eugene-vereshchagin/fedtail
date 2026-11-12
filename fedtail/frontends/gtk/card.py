@@ -15,6 +15,7 @@ from ..common import actions
 from ..common.cardtext import (
     context_chars,
     direct_mark,
+    fold,
     indent_of,
     inner_quote_bit,
     newcomer_bit,
@@ -470,7 +471,15 @@ class Card(Gtk.Box):
         self.text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         # without the "RE:" line, the quote drawn below (common/cardtext.shown_text)
         from dataclasses import replace as _replace
-        self.text_box.append(self._body(_replace(p, text=shown_text(p, self.ctx.cfg))))
+        whole = _replace(p, text=shown_text(p, self.ctx.cfg))
+        folded = fold(whole.text, self.ctx.cfg, bool(ctx.in_thread))
+        self.text_box.append(self._body(_replace(whole, text=folded[0]) if folded else whole))
+        if folded:  # feed.fold_chars: the beginning, and the rest on a press
+            more = Gtk.Button(label=folded[1])
+            more.add_css_class("flat")
+            more.set_halign(Gtk.Align.START)
+            more.connect("clicked", lambda _b, w=whole: self.unfold(w))
+            self.text_box.append(more)
         inner.append(self.text_box)
         if p.media:
             inner.append(self._media(p))
@@ -583,6 +592,12 @@ class Card(Gtk.Box):
         row.append(pic)
         row.append(lab)
         self.column.insert_child_after(row, self.mine_box)
+
+    def unfold(self, whole):
+        """"Show all" (feed.fold_chars): the whole text in the folded one's place."""
+        while (child := self.text_box.get_first_child()) is not None:
+            self.text_box.remove(child)
+        self.text_box.append(self._body(whole))
 
     def _body(self, p):
         cfg = self.ctx.cfg

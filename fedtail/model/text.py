@@ -159,6 +159,46 @@ def collapse_tag_stuffing(content, keep=3, full=False):
     return _PARA.sub(one, content or "")
 
 
+_BLOCK_PART = re.compile(r"(<(p|blockquote|pre|ul|ol|h[1-6])\b[^>]*>.*?</\2>)", re.S | re.I)
+
+
+def fold_long(content, limit):
+    """A long post's beginning (feed.fold_chars): None when its text has at most limit
+    characters (or limit is 0); else (the HTML of its first paragraphs — about half of
+    limit's characters, whole paragraphs or lines where they fit, the first cut at a word
+    otherwise — and how many characters the whole text has)."""
+    total = len(html_to_text(content))
+    if limit <= 0 or total <= limit:
+        return None
+    keep = max(1, limit // 2)
+    pieces = [x for x in _BLOCK_PART.split(content or "") if x and x.strip()
+              and not re.fullmatch(r"p|blockquote|pre|ul|ol|h[1-6]", x, re.I)]
+    out, got = [], 0
+    for part in pieces:
+        n = len(html_to_text(part))
+        if got + n > keep:
+            break
+        out.append(part)
+        got += n
+    if not out:  # the first paragraph alone is longer: its lines, or its words
+        first = pieces[0] if pieces else ""
+        lines = _H2T_BR.split(first)
+        for line in lines:
+            n = len(html_to_text(line)) + 1  # and its line break
+            if got + n > keep:
+                break
+            out.append(line)
+            got += n
+        if out:
+            shown = "<br>".join(out)
+            if not shown.lstrip().lower().startswith("<p"):
+                shown = "<p>" + shown
+            return shown + ("" if shown.rstrip().lower().endswith("</p>") else "</p>"), total
+        words = html_to_text(first)[:keep].rsplit(" ", 1)[0].rstrip(" ,.;:—-")
+        return f"<p>{html.escape(words)}…</p>", total
+    return "".join(out), total
+
+
 def is_bot(account, extra_bots=()):
     """A bot: says so itself, or is one of feed's lanes.extra_bots."""
     return account.bot or norm_handle(account.handle) in {norm_handle(b) for b in extra_bots}

@@ -1225,6 +1225,20 @@ class GtkSmokeTest(_GtkBase):
         lane._filter_buttons["all"].set_active(True)
         self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
 
+    def test_a_long_post_folds(self):
+        """feed.fold_chars (12.11): its beginning and "Show all", as Qt's."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>"
+        card = Card(self.win.ctx, "f", adapter.post(status("096", BOB, minute=2, text=long_text)))
+        kids = list(_walk(card.text_box))
+        more = [w for w in kids if isinstance(w, Gtk.Button)]
+        self.assertEqual(len(more), 1)
+        self.assertNotIn("дальше", card.body_block.layout.get_text())
+        more[0].emit("clicked")
+        self.assertIn("дальше", card.body_block.layout.get_text())
+        self.assertFalse([w for w in _walk(card.text_box) if isinstance(w, Gtk.Button)])
+
     def test_the_char_count(self):
         """card.char_count (12.11): "N симв." first in the row under the post, before
         Reply; off by default."""

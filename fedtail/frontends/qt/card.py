@@ -37,6 +37,7 @@ from ..common import actions
 from ..common.cardtext import (
     context_chars,
     direct_mark,
+    fold,
     indent_of,
     inner_quote_bit,
     newcomer_bit,
@@ -297,6 +298,7 @@ class PostRow(QWidget):
         self.spec = spec
         self.theme = ctx.theme
         self.cw_open = config.expand_cw(ctx.cfg)
+        self.unfolded = False  # feed.fold_chars: "Show all" pressed
         self.translation = None
         self.show_translation = False
         row = QHBoxLayout(self)
@@ -497,6 +499,19 @@ class PostRow(QWidget):
             self.ctx.images.get(url, lambda _pm: render(), 128, owner=lab)
         return lab
 
+    def _unfold(self, text, button, html, emojis):
+        """"Show all" (feed.fold_chars): the whole text in the folded one's place."""
+        self.unfolded = True
+        mk = self.ctx.cfg["feed"].get("text_markup", True)
+        whole = self._emoji_label(clean(html, self.theme.css("link"), mk,
+                                        link_chars(self.ctx.cfg)), emojis, "postText",
+                                  selectable=True)
+        box = text.parentWidget().layout()
+        box.replaceWidget(text, whole)
+        text.deleteLater()
+        button.deleteLater()
+        self._route_text_menus()
+
     def _build(self):
         self._build_body()
         self._route_text_menus()  # every time: a rebuilt card has new labels
@@ -581,9 +596,19 @@ class PostRow(QWidget):
                 # @mentions, #tags, fediverse links stay inside
                 html = self.ctx.view.in_app(replace(p, text=html))
             mk = self.ctx.cfg["feed"].get("text_markup", True)
-            shown = clean(html, self.theme.css("link"), mk, link_chars(self.ctx.cfg))
+            folded = None if self.unfolded else \
+                fold(html, self.ctx.cfg, bool(self.spec.in_thread))
+            shown = clean(folded[0] if folded else html, self.theme.css("link"), mk,
+                          link_chars(self.ctx.cfg))
             text = self._emoji_label(shown, p.emojis, "postText", selectable=True)
             cv.addWidget(text)
+            if folded:  # feed.fold_chars: the beginning, and the rest on a press
+                more = QPushButton(folded[1])
+                more.setObjectName("tool")
+                more.setCursor(Qt.CursorShape.PointingHandCursor)
+                more.clicked.connect(lambda _c=False, t=text, b=more, full=html, e=p.emojis:
+                                     self._unfold(t, b, full, e))
+                cv.addWidget(more, 0, Qt.AlignmentFlag.AlignLeft)
         media = self._media(p)
         if media:
             cv.addWidget(media)

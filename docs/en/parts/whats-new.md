@@ -1,6 +1,7 @@
 **What's next:**
 
 - A post's character count
+- A long post folded
 
 **0.23.0:**
 
