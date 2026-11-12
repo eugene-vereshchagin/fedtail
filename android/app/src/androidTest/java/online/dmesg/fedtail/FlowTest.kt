@@ -174,21 +174,24 @@ class FlowTest {
         // back in the lane, and nothing let go of them
         launch("thread" to "101")
         waitText("/1")
+        fun thread() = compose.onAllNodesWithText("/1", substring = true)
+            .fetchSemanticsNodes().isNotEmpty()
         fun select() {
             // the words of post 101 (tools/showcase.py): a post's own text, selectable
             compose.onAllNodesWithText("протри контакты", substring = true).onFirst()
                 .performTouchInput { longClick(center) }
             waitFor("a selection", 15_000) { TextSelection.active }
+            compose.waitForIdle()  // the cards drawn anew: their Back on (a hand is slower)
         }
         select()
         compose.onAllNodes(isRoot()).onFirst().performTouchInput { click(centerLeft) }
         waitFor("the selection gone", 5_000) { !TextSelection.active }
-        waitText("/1")                                  // still the thread: nothing opened
+        waitFor("the thread still there after the tap", 15_000) { thread() }
         select()
         back()
         compose.waitForIdle()
         assertFalse(TextSelection.active)
-        waitText("/1")                                  // Back let go, the thread stays
+        waitFor("the thread still there after Back", 15_000) { thread() }
         back()                                          // the next Back goes back as ever
         waitFor("the thread left", 15_000) {
             compose.onAllNodesWithText("/1", substring = true).fetchSemanticsNodes().isEmpty()
