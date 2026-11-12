@@ -108,7 +108,8 @@ class ImageViewer(Gtk.Box):
         if m.preview and m.preview != self.url():
             images.get(m.preview, lambda tex, w=want: self._small(w, tex))
         images.get(self.url(), lambda tex, w=want: self._loaded(w, tex), FULL_SIDE,
-                   failed=lambda w=want: self._failed(w), retry=retry, big=True)
+                   failed=lambda w=want: self._failed(w), retry=retry, big=True,
+                   elsewhere=m.remote_url)
         self._caption()
 
     def _small(self, index, tex):

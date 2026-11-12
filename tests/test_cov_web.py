@@ -388,6 +388,10 @@ class WebApiTest(WebBase):
         self.assertEqual(web.media_json(txt)["file"], {"name": "📄 notes.txt", "text": True})
         self.assertFalse(web.media_json(zip_)["file"]["text"])
         self.assertNotIn("file", web.media_json(replace(txt, kind="image")))
+        pic = Media(ref=Ref("m", "", "P"), kind="image", url="https://my.test/p.png",
+                    remote_url="https://their.test/p.png")
+        self.assertIn("their.test", web.media_json(pic)["elsewhere"])  # gone here: theirs
+        self.assertNotIn("elsewhere", web.media_json(replace(pic, remote_url="")))
         fut = Future()
         fut.set_result("строка")
         both = replace(p, media=(txt, zip_))

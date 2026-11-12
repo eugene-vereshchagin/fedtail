@@ -134,7 +134,8 @@ class ImageOverlay(QWidget):
             # the feed's small picture first (usually cached already), the original after
             self.ctx.images.get(m.preview, lambda pm, w=want: self._small(w, pm))
         self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE,
-                            failed=lambda w=want: self._failed(w), retry=retry)
+                            failed=lambda w=want: self._failed(w), retry=retry,
+                            elsewhere=m.remote_url)
 
     def _small(self, index, pm):
         if index == self.i and self.pm is None:

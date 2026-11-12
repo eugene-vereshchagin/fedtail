@@ -163,7 +163,11 @@ class Cache:
         self.mem_budget = int(core.cfg["ui"].get("image_cache_mb", MEM_MB)) * 1024 * 1024
         self.waiting = {}
         self.broken = {}  # url -> when it last failed (monotonic)
-        self.why = {}     # url -> ("network" | "format", detail) of its last failure
+        self.why = {}     # url -> ("network" | "format" | "gone", detail) of its last failure
+        # url -> the same picture elsewhere: the author's own server's copy (remote_url),
+        # asked once when my server says it is gone (404, 410: its cache of other
+        # servers' pictures emptied — a lane of day-old posts all broken, 12.11)
+        self.elsewhere = {}
         self._busy_hosts = {}  # host -> time.monotonic() its 429 asked to wait till
         self.asked = {}   # key -> when it was handed to the workers (monotonic)
         self.patient = set()  # keys on their second try: longer read timeout
@@ -377,7 +381,8 @@ class Cache:
                 again = isinstance(e, requests.Timeout) and not (patient or big)
                 (log.info if code in (404, 410) or again else log.warning)(
                     "image %s: %s after %.1f s", _where(url), what, time.monotonic() - t)
-            self.why[url] = ("network", what)
+            # gone is gone: asked again later it only earned my server's 429s (12.11)
+            self.why[url] = ("gone" if code in (404, 410) else "network", what)
             raise
         self._t.got = (len(data), time.monotonic() - t)
         self._t.why = ""
@@ -585,7 +590,7 @@ class Cache:
         self.get(url, callback, max_side=face_side(size), owner=owner)
 
     def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False, original=None,
-            big=False, owner=None):
+            big=False, owner=None, elsewhere=""):
         """callback(picture on screen) now or later; for a broken or unreachable image
         failed() is called instead (if given). retry: ask again even if it just failed.
         original: the full picture this one is a preview of — if the preview gives up and
@@ -595,7 +600,13 @@ class Cache:
         owner: the widget the picture is for. The cache then keeps its callbacks only
         weakly (the owner keeps them): a card thrown away isn't held alive by a picture
         still on its way or one that failed and is waited for — in GTK every card of every
-        closed tab stayed so (25.10)."""
+        closed tab stayed so (25.10).
+        elsewhere: the same picture on its author's server (Media.remote_url) — asked
+        once if this url is gone (404, 410), before failed()."""
+        if elsewhere and elsewhere != url:
+            if len(self.elsewhere) > 4000:
+                self.elsewhere.pop(next(iter(self.elsewhere)))
+            self.elsewhere[url] = elsewhere
         if owner is not None:
             callback = _weakly(owner, callback)
             failed = _weakly(owner, failed) if failed else None
@@ -671,6 +682,14 @@ class Cache:
 
     def _failed(self, key):
         self.asked.pop(key, None)
+        alt = self.elsewhere.pop(key[0], "") if \
+            self.why.get(key[0], ("",))[0] == "gone" else ""
+        if alt and key in self.waiting:  # my server lost it: its author's server's copy
+            log.info("image %s: gone here, asked of its author's server", _where(key[0]))
+            self.broken[key[0]] = time.monotonic()
+            for cb, failed in self.waiting.pop(key, []):
+                self.get(alt, cb, key[1], failed=failed, big=key in self.big)
+            return
         if (self.why.get(key[0], ("",))[0] == "network" and key not in self.patient
                 and key in self.waiting and key not in self.big):
             # once more, later and with more patience; the pictures keep waiting

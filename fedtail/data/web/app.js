@@ -327,7 +327,9 @@ function renderOne(m, all, p, i) {
       img.onclick = () => view(m, all);
       // a preview the server couldn't make: the original; neither — say so, try later
       img.onerror = () => {
-        if (m.url && img.getAttribute("src") !== m.url) img.src = m.url;
+        const src = img.getAttribute("src");
+        if (m.url && src !== m.url && src !== m.elsewhere) img.src = m.url;
+        else if (m.elsewhere && src !== m.elsewhere) img.src = m.elsewhere;  // its author's
         else fail(put);
       };
       img.src = m.preview || m.url;

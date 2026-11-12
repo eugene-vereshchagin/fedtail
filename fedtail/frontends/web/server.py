@@ -220,6 +220,9 @@ def media_json(m):
     out = {"kind": m.kind, "preview": _pic(m.preview),
            "url": _pic(url) if m.kind == "image" else _https(url),
            "alt": m.alt, "w": m.width, "h": m.height}
+    if m.kind == "image" and m.remote_url and m.remote_url != url:
+        # gone from my server (404): the same picture on its author's (Images.elsewhere)
+        out["elsewhere"] = _pic(m.remote_url)
     if m.kind == "unknown":  # a file: its name, and whether it is read here (/api/text_file)
         from ...model.text import is_text_attachment
         from ..common.links import file_link

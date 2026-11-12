@@ -581,7 +581,7 @@ class DebugAndSaveTest(Base):
         app = self.app_of(core)
         errors = []
         app.show_error = lambda e: errors.append(str(e))
-        app.core.media_bytes = lambda url: done(b"\x89PNG data")
+        app.core.media_bytes = lambda url, elsewhere="": done(b"\x89PNG data")
         async with app.run_test(size=(120, 40)) as pilot:
             await self.started(pilot, app)
             media = app.core.by_id("001").media
@@ -590,7 +590,7 @@ class DebugAndSaveTest(Base):
             await pilot.press("s")
             await self.wait(pilot, lambda: (save / "cat.png").exists(), what="saved")
             await self.wait(pilot, lambda: any(str(save) in n for n in self.notes))
-            app.core.media_bytes = lambda url: done(error=OSError("offline"))
+            app.core.media_bytes = lambda url, elsewhere="": done(error=OSError("offline"))
             app.save_media(media[0])
             await self.wait(pilot, lambda: errors and "offline" in errors[-1])
             scr = app.screen

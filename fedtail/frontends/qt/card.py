@@ -1392,7 +1392,8 @@ class PostRow(QWidget):
                 if src:
                     self._load_media(lab, src, full if src != full else None, tw, th, radius,
                                      kind=m.kind, upgrade=upgrade, focus=focus,
-                                     side=_decode_side(lab, tw, th, w, h, self.ctx.cfg))
+                                     side=_decode_side(lab, tw, th, w, h, self.ctx.cfg),
+                                     elsewhere=m.remote_url)
                 elif m.kind != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m.kind) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
@@ -1550,7 +1551,7 @@ class PostRow(QWidget):
         menu.exec(lab.mapToGlobal(pos))
 
     def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None,
-                    focus=None, big=False, side=None):
+                    focus=None, big=False, side=None, elsewhere=""):
         """The picture into its box; if it won't come, the fallback; if nothing comes,
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
@@ -1571,15 +1572,17 @@ class PostRow(QWidget):
         def failed():
             if fallback and fallback != src:
                 self._load_media(lab, fallback, None, tw, th, radius, kind, focus=focus,
-                                 big=True, side=side)
+                                 big=True, side=side, elsewhere=elsewhere)
             else:
                 lab.setText(_("image_failed") if kind == "image" else
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
+        # gone from my server (404): its author's server's copy, once (Images.elsewhere)
         self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big,
-                            owner=lab, **({"max_side": side} if side else {}))
+                            owner=lab, elsewhere=elsewhere if src != elsewhere else "",
+                            **({"max_side": side} if side else {}))
 
 
 def _set(lab, pm):

@@ -831,7 +831,7 @@ class PicturesTest(Base):
                    "https://example.test/001.png": png((0, 0, 200)),
                    "https://example.test/003_s.png": None}
 
-        def media_bytes(_self, url):
+        def media_bytes(_self, url, elsewhere=""):
             got = answers.get(url, b"")
             return done(error=OSError("refused")) if got is None else done(got)
         with mock.patch.object(type(view), "media_bytes", media_bytes):
@@ -1072,7 +1072,7 @@ class EdgesTest(Base):
               home=True)
         app = self.app_of(core)
         with mock.patch.object(type(app.core), "media_bytes",
-                               lambda _s, url: done(b"not a picture")):
+                               lambda _s, url, elsewhere="": done(b"not a picture")):
             async with app.run_test(size=(120, 40)) as pilot:
                 await self.started(pilot, app)
                 await pilot.pause(0.3)

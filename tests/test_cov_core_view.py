@@ -200,6 +200,27 @@ class ViewTest(TmpDir):
             self.assertEqual(v.media_bytes(url).result(timeout=T), b"d")
         v._media.shutdown()
 
+    def test_a_picture_gone_comes_from_its_authors_server(self):
+        """12.11: my server says 404 (its cache emptied) — the terminal's pictures come
+        from the author's server's copy; a 500 is not "gone": no other server asked."""
+        import requests
+        v = self.v
+        asked = []
+
+        def fetch(url):
+            asked.append(url)
+            if "my.test" in url:
+                resp = mock.Mock(status_code=404)
+                raise requests.HTTPError(response=resp)
+            return b"theirs"
+        with mock.patch.object(type(v), "_fetch_media", lambda _s, u: fetch(u)):
+            got = v.media_bytes("https://my.test/a.png", elsewhere="https://their.test/a.png")
+            self.assertEqual(got.result(timeout=T), b"theirs")
+            self.assertEqual(asked, ["https://my.test/a.png", "https://their.test/a.png"])
+            with self.assertRaises(requests.HTTPError):
+                v.media_bytes("https://my.test/b.png").result(timeout=T)  # no copy: said
+        v._media.shutdown()
+
     def test_a_text_file_read(self):
         """A text file attached (12.11): read without the token, cut at TEXT_MAX with
         "…", what isn't UTF-8 replaced."""

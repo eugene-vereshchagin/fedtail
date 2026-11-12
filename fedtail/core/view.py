@@ -712,7 +712,7 @@ class View:
         return [self.acc(a) for a in getattr(self._core, "follow_requests", None) or ()]
 
     # ---- pictures --------------------------------------------------------------------
-    def media_bytes(self, url):
+    def media_bytes(self, url, elsewhere=""):
         """Future: a picture's bytes, from the shared disk cache (the Qt window's too) or
         downloaded — without the token, public addresses only (core.remote), at most
         MEDIA_MAX. A frontend that draws pictures itself (the terminal) uses this."""
@@ -720,7 +720,19 @@ class View:
             if self._media is None:
                 self._media = ThreadPoolExecutor(max_workers=3,
                                                  thread_name_prefix="fedtail-media")
-        return self._media.submit(self._fetch_media, url)
+        return self._media.submit(self._fetch_or_elsewhere, url, elsewhere)
+
+    def _fetch_or_elsewhere(self, url, elsewhere):
+        """url; gone from my server (404, 410: its cache of other servers' pictures
+        emptied) — the same picture on its author's server (remote_url), once."""
+        import requests
+        try:
+            return self._fetch_media(url)
+        except requests.HTTPError as e:
+            code = getattr(e.response, "status_code", None)
+            if code in (404, 410) and elsewhere and elsewhere != url:
+                return self._fetch_media(elsewhere)
+            raise
 
     TEXT_MAX = 1024 * 1024  # a text attachment read here: at most this, then "…"
 

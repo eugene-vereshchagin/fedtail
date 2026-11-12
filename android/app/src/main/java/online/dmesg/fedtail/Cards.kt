@@ -1202,8 +1202,11 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, hold: (() -> 
         // there — the picture would show), so there it isn't drawn at all: a plain tile
         // under the "sensitive" plaque until tapped
         if (shown || android.os.Build.VERSION.SDK_INT >= 31) {
+            // gone from my server (404): the same picture on its author's, once
+            var source by remember(m) { mutableStateOf(m.preview.ifBlank { m.url }) }
             AsyncImage(model = ImageRequest.Builder(LocalContext.current)
-                .data(m.preview.ifBlank { m.url }).crossfade(true).build(),
+                .data(source).crossfade(true).build(),
+                onError = { if (m.elsewhere.isNotBlank() && source != m.elsewhere) source = m.elsewhere },
                 contentDescription = said, contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.blur(28.dp)))
         } else {

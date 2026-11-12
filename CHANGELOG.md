@@ -7,6 +7,10 @@
 
 ## What's next
 
+* A picture gone from your server (404, 410: its cache of other servers' pictures emptied) is
+  asked once of its author's server, and never again of yours later — a lane of day-old posts
+  stayed broken and earned the server's 429s. In every interface.
+
 * A long lane's length no longer twitches by hundreds of pixels at every card built: the guess
   for the cards not built yet is taken anew only when the measured ones have doubled (Qt and
   GTK windows) — half as many moves the screen has to make good scrolling a lane of pictures.

@@ -156,6 +156,23 @@ class ImagesTest(unittest.TestCase):
         for _side, cb, _f in self.c.gave_up.get(url, ()):
             cb(("late",))  # the picture comes after all: nobody to hand it to, no error
 
+    def test_gone_from_my_server_the_authors_copy(self):
+        """12.11: my server's cache of other servers' pictures emptied — 404 on a lane of
+        day-old posts, asked again and again until it said 429. Gone is no network
+        trouble (not asked again later); the author's server's copy is asked once."""
+        mine, theirs = "https://my.example/f/a.png", "https://their.example/a.png"
+        self.net[mine] = Answer(status=404)
+        self.net[theirs] = Answer(b"PNGtheirs")
+        got, failed = self.get(mine, elsewhere=theirs)
+        self.assertEqual(len(got), 1)  # from their server
+        self.assertEqual(failed, [])
+        self.assertEqual(self.c.why[mine][0], "gone")
+        lost = "https://my.example/f/b.png"
+        self.net[lost] = Answer(status=410)
+        got, failed = self.get(lost)  # no copy elsewhere: failed, and left alone
+        self.assertEqual((got, failed), ([], [lost]))
+        self.assertFalse(self.c.timers)  # gone: never asked again later
+
     def test_downloaded_once_then_from_memory_and_disk(self):
         self.net["https://a/1.png"] = Answer(b"PNG1")
         got, failed = self.get("https://a/1.png")

@@ -104,6 +104,7 @@ data class MediaItem(
     val file: String = "",          // a file (no picture, video, sound): "📄 notes.txt"
     val fileText: Boolean = false,  // …a text one, read here (Place.TextFile)
     val index: Int = 0,             // its place among the post's attachments (the core's)
+    val elsewhere: String = "",     // the same picture on its author's server: my server lost it
 )
 
 /** A button of a place (common/places.py Btn): act = [place, key, data]. */
@@ -2480,7 +2481,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val m = media.getJSONObject(it)
                 MediaItem(str(m, "kind"), str(m, "preview"), str(m, "url"), str(m, "alt"),
                     m.optInt("w"), m.optInt("h"), str(m.optJSONObject("file"), "name"),
-                    m.optJSONObject("file")?.optBoolean("text") ?: false, it)
+                    m.optJSONObject("file")?.optBoolean("text") ?: false, it,
+                    str(m, "elsewhere"))
             }.filter { it.preview.isNotBlank() || it.url.isNotBlank() },
             card = card?.let { LinkCard(str(it, "url"), str(it, "title"), str(it, "provider"),
                 str(it, "image"), str(it, "description")) },

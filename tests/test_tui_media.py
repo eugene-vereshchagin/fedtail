@@ -356,7 +356,8 @@ class AppMediaTest(Base):
                 seen.append((argv[:3], f.read()))
         answers = {"https://example.test/001.png": done(png())}
         with mock.patch.object(type(view), "media_bytes",
-                               lambda _s, url: answers.get(url, done(error=OSError("x")))):
+                               lambda _s, url, elsewhere="":
+                               answers.get(url, done(error=OSError("x")))):
             async with app.run_test(size=(100, 30)) as pilot:
                 await self.started(pilot, app)
                 await self.to(pilot, app, "001")
@@ -415,7 +416,8 @@ class AppMediaTest(Base):
         self.posts(w)
         app = self.app_of(core)
         view = app.core
-        with mock.patch.object(type(view), "media_bytes", lambda _s, url: done(png())):
+        with mock.patch.object(type(view), "media_bytes",
+                               lambda _s, url, elsewhere="": done(png())):
             async with app.run_test(size=(100, 30)) as pilot:
                 await self.started(pilot, app)
                 posts = app.query_one("#posts")

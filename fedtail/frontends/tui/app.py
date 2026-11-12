@@ -271,7 +271,7 @@ class PictureScreen(Screen):
             drawn = pictures.text(data, cols, rows)
             app.in_ui(self._put, at, drawn if drawn is not None else
                       _("tui_picture_failed", err="?"))
-        app.core.media_bytes(url).add_done_callback(done)
+        app.core.media_bytes(url, elsewhere=m.remote_url).add_done_callback(done)
 
     def _put(self, at, what):
         if at == self.at and self.is_attached:
@@ -1318,7 +1318,7 @@ class FedtailApp(App, PostsMixin):
                     self.in_ui(self._picture_in, self._put_graphic, item, drawn, rows)
                 else:
                     self.in_ui(self._picture_in, self._put_picture, item, drawn)
-            self.core.media_bytes(url).add_done_callback(done)
+            self.core.media_bytes(url, elsewhere=m.remote_url).add_done_callback(done)
         log.debug("tui pictures: %d of %d rows have one (%s)", asked, len(items),
                   "real" if real_ones else "drawn in text")
 
@@ -1366,7 +1366,8 @@ class FedtailApp(App, PostsMixin):
                 self._viewer_said = True
                 self.notify(_("tui_viewer_missing"), timeout=12)
             return False
-        futs = [self.core.media_bytes(m.url or m.preview) for m in media[:8]]
+        futs = [self.core.media_bytes(m.url or m.preview, elsewhere=m.remote_url)
+                for m in media[:8]]
         size = self.size
 
         def go(results):
@@ -2215,7 +2216,7 @@ class FedtailApp(App, PostsMixin):
                 self.in_ui(self.show_error, _("save_failed", err=e))
                 return
             self.in_ui(self.notify, _("saved_to", path=str(path)))
-        self.core.media_bytes(url).add_done_callback(done)
+        self.core.media_bytes(url, elsewhere=m.remote_url).add_done_callback(done)
 
     def action_search(self):
         self.open_thing({"page": "search"})
