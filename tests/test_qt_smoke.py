@@ -1164,7 +1164,7 @@ class QtSmokeTest(unittest.TestCase):
         from PySide6.QtWidgets import QLabel, QPushButton
 
         from fedtail.frontends.qt.card import CardSpec, PostRow
-        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>"
+        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 400 + "</p>"
         st = status("096", BOB, minute=1, text=long_text)
         row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
         more = [b for b in row.findChildren(QPushButton) if b.text().startswith("Показать")]

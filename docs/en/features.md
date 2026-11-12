@@ -422,7 +422,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **A post's character count.** On the left of the row under a post, before "Reply" — how many characters its text has (`312 chars`; the warning not counted). In every interface; in the terminal, first on the line under the post. Off by default.
 
-**A long post folded.** A post longer than `fold_chars` characters (1000) shows its beginning in a lane — whole paragraphs or lines, about half — and "Show all · N chars", which opens the rest in place. An open thread always shows it whole. In the terminal the beginning ends in "▾ Show all… — Enter": Enter opens the thread. `0` — never folded.
+**A long post folded.** A post longer than `fold_chars` characters (2000; a text of fifteen hundred reads whole in a lane) shows its beginning in a lane — whole paragraphs or lines, about half — and "Show all · N chars", which opens the rest in place. An open thread always shows it whole. In the terminal the beginning ends in "▾ Show all… — Enter": Enter opens the thread. `0` — never folded.
 
 </details>
 

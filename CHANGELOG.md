@@ -11,7 +11,7 @@
   "📄 name"; a text one (txt, md, log, csv…) is read in fedtail, up to 1 MB — in every interface.
 
 * A long post folds in a lane: its beginning and "Show all · N chars" (`card.fold_chars`,
-  1000 by default; 0 — never); an open thread shows it whole. In every interface.
+  2000 by default; 0 — never); an open thread shows it whole. In every interface.
 
 * The phone lets go of selected words: with a post's text selected, a tap anywhere and Back
   only take the selection away (a tap beside it opened the post, Back went back in the lane).

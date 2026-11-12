@@ -1252,7 +1252,7 @@ class GtkSmokeTest(_GtkBase):
         """feed.fold_chars (12.11): its beginning and "Show all", as Qt's."""
         from fedtail.frontends.gtk.card import Card
         from fedtail.protocols.mastodon import adapter
-        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>"
+        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 400 + "</p>"
         card = Card(self.win.ctx, "f", adapter.post(status("096", BOB, minute=2, text=long_text)))
         kids = list(_walk(card.text_box))
         more = [w for w in kids if isinstance(w, Gtk.Button)]

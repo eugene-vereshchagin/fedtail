@@ -218,6 +218,17 @@ class CommonTest(TmpDir):
         self.assertEqual(actions.post_text(warned), "spoilers\n\na\nb")
         self.assertEqual(actions.post_text(replace(p, warning="", text="")), "")
 
+    def test_a_long_read_stays_whole(self):
+        """feed.fold_chars (12.11): 2000 by default — eight paragraphs, 1660 characters,
+        read fine in a lane (the author's word): whole; longer — folded."""
+        from fedtail.core import config
+        from fedtail.frontends.common.cardtext import fold
+        cfg, _w = config.validate({})
+        para = "<p>" + "слово " * 34 + "</p>"  # 204 characters
+        self.assertIsNone(fold(para * 8, cfg))
+        self.assertIsNotNone(fold(para * 11, cfg))
+        self.assertIsNone(fold(para * 11, cfg, in_thread=True))
+
     def test_the_char_count(self):
         """card.char_count (12.11): off by default; on — "N chars" of the text, the
         warning not counted; nothing for a post without words."""

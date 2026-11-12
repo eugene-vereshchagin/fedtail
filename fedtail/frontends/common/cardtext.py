@@ -144,7 +144,7 @@ def fold(html, cfg, in_thread=False):
     if in_thread:
         return None
     from ...model.text import fold_long
-    got = fold_long(html, int((cfg.get("feed") or {}).get("fold_chars", 1000) or 0))
+    got = fold_long(html, int((cfg.get("feed") or {}).get("fold_chars", 2000) or 0))
     if got is None:
         return None
     return got[0], _("fold_more", n=got[1])

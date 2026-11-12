@@ -363,7 +363,7 @@ class WebApiTest(WebBase):
         self.assertEqual(got["chars"], "")  # card.char_count off
         self.assertIsNone(got["fold"])  # short: whole
         from dataclasses import replace
-        long = replace(p, text="<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>")
+        long = replace(p, text="<p>" + "слово " * 60 + "</p><p>" + "дальше " * 400 + "</p>")
         folded = web.post_json(v, long)["fold"]  # feed.fold_chars: in a lane
         self.assertIn("слово", folded["html"])
         self.assertNotIn("дальше", folded["html"])

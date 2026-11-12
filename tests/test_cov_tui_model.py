@@ -71,7 +71,7 @@ class TuiModelCornersTest(TmpDir):
         self.assertIn(("direct", "✉"), shown.head)
         self.assertEqual(shown.body, ["hi"])  # the blank lines at the end dropped
         self.assertIn("📊", shown.foot)
-        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 200 + "</p>"
+        long_text = "<p>" + "слово " * 60 + "</p><p>" + "дальше " * 400 + "</p>"
         long = model.show_post(self.view, to_post(status("007", BOB, text=long_text)))
         self.assertNotIn("дальше", " ".join(long.body))  # feed.fold_chars
         self.assertTrue(long.below[0][1].startswith("▾"))

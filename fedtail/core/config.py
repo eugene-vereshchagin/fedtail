@@ -155,7 +155,7 @@ DEFAULTS = {
         "show_moved": True,
         "old_days": 30,
         "collapse_tags": True,
-        "fold_chars": 1000,
+        "fold_chars": 2000,
         "server_info": True,
         "long_form": True,
         "text_markup": True,
