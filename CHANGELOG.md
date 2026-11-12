@@ -7,6 +7,9 @@
 
 ## What's next
 
+* A post's menu copies its text ("Copy the text"): plain words, the warning first — in every
+  interface.
+
 * Sync carries the lanes themselves (`sync.lane_rules`) and your names and colours for people
   (`sync.people`) by default; `false` keeps them on this device.
 

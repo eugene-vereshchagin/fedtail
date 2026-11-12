@@ -568,7 +568,8 @@ _STRINGS = {
         "cw_all_tip": "Тексты под предупреждениями (CW) во всём треде — открыть или закрыть разом",
         "reply": "Ответить", "thread": "Тред", "delete": "Удалить",
         "faved": "В избранном", "boosted": "Продвинуто", "more": "Ещё",
-        "copy_link": "Скопировать ссылку", "copy_id": "Скопировать {id}",
+        "copy_link": "Скопировать ссылку", "copy_text": "Скопировать текст",
+        "copy_id": "Скопировать {id}",
         "copy_handle": "Скопировать ник", "copy_handle_of": "Скопировать ник {acct}",
         "copy_handle_tip": "@ник@сервер — по нему человека найдёт и упомянет любой клиент и "
                            "любой сервер, как по адресу почты",
@@ -2502,7 +2503,7 @@ _STRINGS = {
         "cw_all_tip": "The texts behind content warnings in the whole thread: open or close",
         "reply": "Reply", "thread": "Thread", "delete": "Delete",
         "faved": "Favourited", "boosted": "Boosted", "more": "More",
-        "copy_link": "Copy link", "copy_id": "Copy {id}",
+        "copy_link": "Copy link", "copy_text": "Copy the text", "copy_id": "Copy {id}",
         "copy_handle": "Copy handle", "copy_handle_of": "Copy handle {acct}",
         "copy_handle_tip": "@name@server — any client on any server finds and mentions them "
                            "by it, like an email address",

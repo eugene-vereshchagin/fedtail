@@ -204,6 +204,20 @@ class CommonTest(TmpDir):
                                     else "short_id_tip"))
         ui["code_click"], ui["command_line"] = "auto", True
 
+    def test_copy_the_text(self):
+        """12.11: the post's menu copies its words as plain text, the warning first; a
+        post of pictures only has no such item."""
+        from dataclasses import replace
+        p = self.view.by_id("001")
+        items = {it.label: it for it in actions.menu(p, self.ctx(), unread=True)}
+        got = items[i18n._("copy_text")]
+        self.assertEqual(got.kind, "copy")
+        self.assertNotIn("<", got.text)
+        self.assertTrue(got.text)
+        warned = replace(p, warning="spoilers", text="<p>a<br>b</p>")
+        self.assertEqual(actions.post_text(warned), "spoilers\n\na\nb")
+        self.assertEqual(actions.post_text(replace(p, warning="", text="")), "")
+
     def test_the_command_line_hidden_by_default(self):
         """ui.command_line (12.11): Point's line is off unless asked — Ctrl+L brings it; so
         a click on #abc opens the thread."""

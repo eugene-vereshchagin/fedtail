@@ -246,12 +246,22 @@ def _tidy(out):
     return tidy
 
 
+def post_text(p):
+    """A post's words as plain text for the clipboard: the warning, a blank line, the
+    text; "" when it has none (pictures only)."""
+    from ...model.text import html_to_text
+    return "\n\n".join(t for t in (p.warning.strip(), html_to_text(p.text)) if t)
+
+
 def _menu(entry, ctx, short_id=None, unread=False):
     p = real(entry)
     sid = entry.id
     url = p.url or p.uri
     out = [Item("open", _("open_browser"), url=url, tool="open"),
            Item("copy", _("copy_link"), text=url, tool="copy_link")]
+    words = post_text(p)
+    if words:  # what it says, as plain text (its warning first): to paste anywhere
+        out.append(Item("copy", _("copy_text"), text=words))
     # (#abc to copy: not here — a click on the code opens the thread or puts it into
     # the command line, ui.code_click; 08.11)
     author = p.author
