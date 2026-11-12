@@ -39,6 +39,7 @@ class Strip:
         self.width = 0        # the cards' width now
         self.total = 0        # the body's height
         self.head = (0, 0)    # (top, height) of what stands above the cards
+        self._guessed = None  # (width, how many it was the mean of, the guess)
 
     # ---- the keys -------------------------------------------------------------------
     def set_keys(self, keys):
@@ -50,9 +51,20 @@ class Strip:
 
     # ---- heights --------------------------------------------------------------------
     def guess(self):
-        """A card not measured yet: the mean of those measured at this width."""
+        """A card not measured yet: the mean of those measured at this width — taken
+        anew only when their number has doubled (1, 2, 4… 64, 128) or halved, or the
+        width changed. Anew at every card built, the guess of the hundreds not built
+        moved by a pixel or three each time, the lane's length by ±600–3300 px with it,
+        and every such move had to be made good on the screen; scrolling up a lane of
+        pictures, the screen jumped by that much now and then (12.11, the log of its
+        moves). Now a card built moves only its own place."""
         hs = [h for w, h in self.h.values() if w == self.width]
-        return int(sum(hs) / len(hs)) if hs else self.first_guess
+        if not hs:
+            return self.first_guess
+        g = self._guessed
+        if g is None or g[0] != self.width or len(hs) >= 2 * g[1] or 2 * len(hs) < g[1]:
+            self._guessed = (self.width, len(hs), int(sum(hs) / len(hs)))
+        return self._guessed[2]
 
     def height(self, key, guess=None):
         got = self.h.get(key)

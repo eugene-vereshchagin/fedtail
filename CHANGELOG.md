@@ -7,6 +7,10 @@
 
 ## What's next
 
+* A long lane's length no longer twitches by hundreds of pixels at every card built: the guess
+  for the cards not built yet is taken anew only when the measured ones have doubled (Qt and
+  GTK windows) — half as many moves the screen has to make good scrolling a lane of pictures.
+
 * A lane no longer stops with KeyError when a card it lets go was let go already by the scroll
   that hiding it moved (the Qt window).
 

@@ -477,13 +477,31 @@ class FeedView(QScrollArea):
         by two and three times scrolling a lane of pictures up; no test showed why)."""
         sb = self.verticalScrollBar()
         old = sb.value()
+        key = what[1] if why == "target" and len(what) > 1 else what[0]
+        row = self.rows.get(key)
+        seen = self._drawn_at(row)  # where the reader sees that card now
         sb.setValue(value)
         moved = sb.value() - old
         if abs(moved) > self.viewport().height() / 3 and \
                 time.monotonic() - self._touched_at < 1.0:
+            import traceback
+            after = self._drawn_at(row)
+            calls = " <- ".join(f"{f.name}:{f.lineno}" for f in
+                                reversed(traceback.extract_stack()[-9:-1]))
             log.info("lane: the screen moved %+d px by itself while scrolled (%s, %s; "
-                     "%d → %d of %d, %d cards built, %d waiting)", moved, why, what, old,
-                     sb.value(), sb.maximum(), len(self.rows), len(self._pending))
+                     "%d → %d of %d, %d cards built, %d waiting; the card drawn at %s → %s "
+                     "on screen, guess %d, layouts %d) %s", moved, why, what, old,
+                     sb.value(), sb.maximum(), len(self.rows), len(self._pending), seen,
+                     after, self._guess(), getattr(self, "_layouts", 0), calls)
+
+    def _drawn_at(self, row):
+        """Where a built card stands on the screen as drawn (its widget), or None."""
+        if row is None:
+            return None
+        try:
+            return row.mapTo(self.viewport(), row.rect().topLeft()).y()
+        except RuntimeError:
+            return None
 
     def wheelEvent(self, e):
         self._touched()

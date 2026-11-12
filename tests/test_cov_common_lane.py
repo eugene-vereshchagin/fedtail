@@ -330,6 +330,26 @@ class LastWholeTest(unittest.TestCase):
         self.assertEqual(tall.reading_anchor(200, 300), ("a", -200))  # none begins on it
         self.assertIsNone(Strip().reading_anchor(0, 100))
 
+    def test_the_guess_stays_while_cards_are_built(self):
+        """12.11: the guess for the cards not built is taken anew only when the measured
+        have doubled — at every card built it moved the lane's length by hundreds of
+        pixels, and the screen had to be made good each time."""
+        from fedtail.frontends.common.strip import Strip
+        st = Strip(gap=0, margin=0, first_guess=100)
+        st.set_keys([f"k{i}" for i in range(100)])
+        st.lay_out(300)
+        self.assertEqual(st.guess(), 100)  # nothing measured
+        for i, h in enumerate((400, 500, 600, 700)):
+            st.measured(f"k{i}", 300, h)
+        first = st.guess()  # the mean of the first ones
+        st.measured("k4", 300, 900)  # one more: not doubled — the same guess
+        self.assertEqual(st.guess(), first)
+        for i in range(5, 8):
+            st.measured(f"k{i}", 300, 900)
+        self.assertNotEqual(st.guess(), first)  # doubled: the mean anew
+        st.lay_out(200)  # another width: anew too
+        self.assertEqual(st.guess(), 100)
+
     def test_a_going_card_hands_the_place_on(self):
         """The card on top goes (a follow request answered): the next one holds the
         place where it stands, else the one above; none stays — None (02.11)."""

@@ -3045,6 +3045,20 @@ class QtSmokeTest(unittest.TestCase):
                     "meta": {"small": {"width": w, "height": h},
                              "original": {"width": w, "height": h}}}]
             self.world.add(st, home=True)
+        # pictures come a moment after they're asked for, as from the disk or the net
+        from PySide6.QtCore import QTimer
+        from PySide6.QtGui import QColor, QPixmap
+
+        def get(url, cb, *a, **k):
+            def come():
+                pm = QPixmap(600, 400)
+                pm.fill(QColor("gray"))
+                try:
+                    cb(pm)
+                except RuntimeError:
+                    pass
+            QTimer.singleShot(rnd.choice((5, 30, 120)), come)
+        self.win.images.get = get
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
@@ -3053,23 +3067,41 @@ class QtSmokeTest(unittest.TestCase):
         view = self.win.lane_widgets["bots"].view
         self.pump(1.0)
         sb = view.verticalScrollBar()
-        view.scroll_to_end(True)
-        self.pump(0.5)
-        view._touched()
+        from PySide6.QtCore import QPoint, QPointF
+        from PySide6.QtGui import QWheelEvent
         vh = view.viewport().height()
         worst = []
-        for _step in range(400):
-            if sb.value() <= 0:
-                break
-            before = {k: view._top(r) - sb.value() for k, r in view.rows.items()
-                      if 0 <= view._top(r) - sb.value() < vh}
-            view._touched()
-            sb.setValue(sb.value() - 75)
-            self.pump(0.01)
-            after = {k: view._top(r) - sb.value() for k, r in view.rows.items()}
-            moved = [after[k] - y for k, y in before.items() if k in after]
-            if moved and abs(moved[0] - 75) > vh / 3:  # a jump the eye sees
-                worst.append((_step, moved[0]))
+
+        def wheel_up():  # the mouse's wheel, one notch, as Qt delivers it
+            pos = QPointF(view.viewport().width() / 2, vh / 2)
+            ev = QWheelEvent(pos, view.viewport().mapToGlobal(pos), QPoint(0, 0),
+                             QPoint(0, 120), Qt.MouseButton.NoButton,
+                             Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase,
+                             False)
+            QApplication.sendEvent(view.viewport(), ev)
+
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QApplication
+        for start in ("end", "middle"):  # jumped to the end; the scroll bar dragged far
+            if start == "end":
+                view.scroll_to_end(True)
+            else:
+                sb.setValue(sb.maximum() // 2)
+            self.pump(0.5)
+            for _step in range(200):
+                if sb.value() <= 0:
+                    break
+                shown = lambda: {k: r.mapTo(view.viewport(), QPoint(0, 0)).y()  # noqa: E731
+                                 for k, r in view.rows.items() if r.isVisible()}
+                before = {k: y for k, y in shown().items() if 0 <= y < vh}
+                was = sb.value()
+                wheel_up()
+                self.pump(0.01)
+                step = was - sb.value()
+                after = shown()  # where the cards are drawn, not where they should be
+                moved = [after[k] - y for k, y in before.items() if k in after]
+                if moved and abs(moved[0] - 75) > vh / 3:  # a jump the eye sees
+                    worst.append((start, _step, moved[0], step))
         self.assertEqual(worst, [])
 
     def test_tabs_opened_and_closed_leave_no_widgets(self):
