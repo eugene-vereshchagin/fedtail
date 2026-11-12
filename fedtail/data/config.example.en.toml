@@ -1499,13 +1499,13 @@ tiles = true
 
 # The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled),
 # your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into
-# its config.toml. Off by default: it changes the file. They go out when they change here
+# its config.toml. They go out when they change here
 # (by hand or in the lane editor); a device that has just started sends nothing of its own.
-lane_rules = false
+lane_rules = true
 
 # Your own names and colours for people (people.aliases, people.nick_colors) and those
 # taken out of Home (people.home_hide).
-people = false
+people = true
 
 # The reading place shared with other clients (Mastodon markers): read Home or
 # mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon,

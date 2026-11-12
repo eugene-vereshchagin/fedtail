@@ -328,8 +328,8 @@ DEFAULTS = {
         "drafts": True,
         "activity": True,
         "tiles": True,
-        "lane_rules": False,
-        "people": False,
+        "lane_rules": True,
+        "people": True,
         "interval_seconds": 60,
         "device_name": "",   # how this device is named to the others; "" — the machine's
     },

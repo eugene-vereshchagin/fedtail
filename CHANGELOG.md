@@ -7,6 +7,9 @@
 
 ## What's next
 
+* Sync carries the lanes themselves (`sync.lane_rules`) and your names and colours for people
+  (`sync.people`) by default; `false` keeps them on this device.
+
 * Point's command line is hidden by default: `Ctrl+L` brings it, `window.command_line = true`
   keeps it at the bottom of the window as before.
 

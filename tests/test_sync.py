@@ -763,9 +763,10 @@ class LaneRulesSyncTest(Devices):
         self.assertIn("pics", self.phone.lane_by_name)
         self.assertEqual(self.phone.sync_now(), (0, 0))  # nothing goes back
 
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        """12.11: the lanes travel unless the file says sync.lane_rules = false."""
         cfg, _ = config.validate({})
-        self.assertFalse(cfg["sync"]["lane_rules"])
+        self.assertTrue(cfg["sync"]["lane_rules"])
 
     def test_sent_by_hand_with_what_makes_the_counts(self):
         """08.11: lanes set before sync never went (a start isn't a change); "Send my
@@ -823,6 +824,7 @@ class LaneRulesSyncTest(Devices):
 
     def test_turned_on_from_the_sync_page(self):
         import tomllib
+        self.desk.paths.config_file.write_text("[sync]\nlane_rules = false\n", "utf-8")
         self.desk.cfg["sync"]["lane_rules"] = False
         self.desk.sync_setup()
         self.assertFalse(self.desk.push_lane_rules())  # off here: nothing goes

@@ -435,8 +435,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `sync.drafts` | `true` | Drafts: begun on one device, finished on another; sent or emptied — gone everywhere. Text, content warning, poll, who sees it; pictures are files of each computer and stay where they were added. |
 | `sync.activity` | `true` | Notifications you dismissed from Activity: gone on every device. |
 | `sync.tiles` | `true` | Which lanes the phone pins as tiles. |
-| `sync.lane_rules` | `false` | The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled), your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into its config.toml. Off by default: it changes the file. They go out when they change here (by hand or in the lane editor); a device that has just started sends nothing of its own. |
-| `sync.people` | `false` | Your own names and colours for people (people.aliases, people.nick_colors) and those taken out of Home (people.home_hide). |
+| `sync.lane_rules` | `true` | The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled), your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into its config.toml. They go out when they change here (by hand or in the lane editor); a device that has just started sends nothing of its own. |
+| `sync.people` | `true` | Your own names and colours for people (people.aliases, people.nick_colors) and those taken out of Home (people.home_hide). |
 | `sync.sync_markers` | `true` | The reading place shared with other clients (Mastodon markers): read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma. false — read marks live here only. |
 | `sync.mentions_by_marker` | `false` | The notifications' place another client (Tusky, the server's web) moved marks mentions and replies read here too. false — only Home's place is taken from others: a glance at the notifications there isn't reading the answers, and they stayed unread nowhere (31.10). fedtail's own place still goes to the server either way. |
 

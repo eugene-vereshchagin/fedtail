@@ -94,12 +94,15 @@ class PeopleSyncTest(Devices):
         self.assertEqual(phone.people_aliases(), {"B": "Bobby"})
         self.assertEqual(phone.hidden_home(), {"B"})
 
-    def test_off_by_default(self):
-        self.desk.set_alias("B", "Bobby").result()
-        self.desk.hide_from_home("B").result()
-        self.assertEqual(self.desk.store.sync_pending_count(), 0)
+    def test_off_when_asked(self):
+        """sync.people = false: the names stay here. On by default (12.11), as lane_rules."""
+        desk = self.device("desk3", self.world, people=False)
+        desk.set_alias("B", "Bobby").result()
+        desk.hide_from_home("B").result()
+        self.assertEqual(desk.store.sync_pending_count(), 0)
         cfg, _w = config.validate({})
-        self.assertFalse(cfg["sync"]["people"])
+        self.assertTrue(cfg["sync"]["people"])
+        self.assertTrue(cfg["sync"]["lane_rules"])
 
 
 if __name__ == "__main__":
