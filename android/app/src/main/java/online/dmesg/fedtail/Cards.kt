@@ -126,6 +126,7 @@ val LocalCardHold = androidx.compose.runtime.compositionLocalOf<(() -> Unit)?> {
 class CardActions(
     val open: (PostItem) -> Unit, val reply: (PostItem) -> Unit, val like: (PostItem) -> Unit,
     val media: (List<MediaItem>, Int) -> Unit,
+    val textFile: (PostItem, MediaItem) -> Unit = { _, _ -> },  // a text file: read here
     val link: (String) -> Unit,     // a link in a post: a thread here if my server knows it
     val alias: (String) -> Unit,
     val share: (PostItem) -> Unit, val bookmark: (PostItem) -> Unit,
@@ -160,6 +161,7 @@ class CardActions(
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
     open = { openThread(it.sid, it.openAt) }, reply = { compose(it) }, like = { act(it, "like") },
     media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
+    textFile = { p, m -> openTextFile(p, m) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
     expandCw = expandCw || cwOpen, profile = { openProfile(it) }, menu = { postMenu(it) },
@@ -944,10 +946,19 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
             }
         }
     }
-    if (p.media.isNotEmpty()) {
-        MediaGrid(p.media, blurred = hideSensitive && p.sensitive,
-            menu = act.mediaMenu?.let { f -> val m: suspend (Int) -> JSONArray = { i -> f(p, i) }; m },
-            browser = act.browser) { i -> act.media(p.media, i) }
+    // files (no picture, video, sound) as lines under the pictures: "📄 notes.txt" — a text
+    // one read here, any other in the browser; the grid gets the pictures only
+    val (files, visual) = p.media.partition { it.file.isNotEmpty() }
+    if (visual.isNotEmpty()) {
+        MediaGrid(visual, blurred = hideSensitive && p.sensitive,
+            menu = act.mediaMenu?.let { f -> val m: suspend (Int) -> JSONArray = { i -> f(p, visual[i].index) }; m },
+            browser = act.browser) { i -> act.media(visual, i) }
+    }
+    files.forEach { m ->
+        Text(m.file, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth().clickable {
+                if (m.fileText) act.textFile(p, m) else act.browser(m.url)
+            }.padding(vertical = 6.dp))
     }
     if (p.pollOpen && p.pollOptions.isNotEmpty()) {
         Vote(p, act)

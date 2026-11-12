@@ -373,6 +373,36 @@ class WebApiTest(WebBase):
         self.addCleanup(v.cfg["ui"].__setitem__, "char_count", False)
         self.assertTrue(web.post_json(v, p)["chars"])
 
+    def test_a_text_file_attached(self):
+        """12.11: a file's name in the media JSON; /api/text_file reads a text one by the
+        post and its place — never an address the page names."""
+        from concurrent.futures import Future
+        from dataclasses import replace
+        from unittest import mock
+
+        from fedtail.model import Media, Ref
+        v = self.web.core
+        p = v.by_id("002")
+        txt = Media(ref=Ref("m", "", "F1"), kind="unknown", url="https://files.test/notes.txt")
+        zip_ = Media(ref=Ref("m", "", "F2"), kind="unknown", url="https://files.test/a.zip")
+        self.assertEqual(web.media_json(txt)["file"], {"name": "📄 notes.txt", "text": True})
+        self.assertFalse(web.media_json(zip_)["file"]["text"])
+        self.assertNotIn("file", web.media_json(replace(txt, kind="image")))
+        fut = Future()
+        fut.set_result("строка")
+        both = replace(p, media=(txt, zip_))
+        with mock.patch.object(self.web, "_post_by_id", return_value=both), \
+                mock.patch.object(type(v), "attachment_text", return_value=fut):
+            self.assertEqual(self.web.text_file("002", "0"),
+                             {"name": "notes.txt", "text": "строка"})
+            with self.assertRaises(KeyError):
+                self.web.text_file("002", "1")  # not text: the browser's
+        bad = Future()
+        bad.set_exception(OSError("gone"))
+        with mock.patch.object(self.web, "_post_by_id", return_value=replace(p, media=(txt,))), \
+                mock.patch.object(type(v), "attachment_text", return_value=bad):
+            self.assertIn("gone", self.web.text_file("002", "0")["error"])
+
     def test_lanes_find_and_choices(self):
         wb = self.web
         got = wb.lane("activity")  # a lane as any: no place in its stead

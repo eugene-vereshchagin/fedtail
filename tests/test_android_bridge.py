@@ -1054,6 +1054,14 @@ class BridgeDraftTest(_Base):
     """The phone's editor keeps drafts in the core, as the windows do (synced across
     devices): a reply's draft comes back, an emptied one goes, a sent one is dropped."""
 
+    def test_a_text_file_read(self):
+        """12.11: the phone reads a post's text file through the web's (Web.text_file);
+        a place that is no text file — the error, said."""
+        self.demo()
+        import json
+        got = json.loads(self.bridge.text_file("101", 7))
+        self.assertIn("KeyError", got["error"])
+
     def test_drafts_and_preview(self):
         self.demo()
         start = self.call("draft_start", "103", "", "", False)

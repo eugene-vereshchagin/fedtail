@@ -709,6 +709,11 @@ def editor():
     return _answer(go)
 
 
+def text_file(sid, i):
+    """A text file attached to a post, read to show (Web.text_file): {"name", "text"}."""
+    return _answer(lambda: _s["web"].text_file(sid, int(i)))
+
+
 def draft_start(reply_to="", quote="", edit="", invite=False):
     """The editor's start: the draft kept for it, or the reply's mentions (Web)."""
     return _answer(lambda: _s["web"].draft_start(reply_to or "", quote or "", edit or "",

@@ -54,6 +54,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
     thumb_box,
 )
 from ..common.lane import true_kind as _true_kind
+from ..common.links import file_link
 from ..richtext import link_chars, plain_tip
 from .gone import drop
 from .text import clean, display_name, emojify, esc, link, strip_emoji
@@ -1400,6 +1401,11 @@ class PostRow(QWidget):
                 row = -(-pos // 3)  # a row of its own, under the pictures
                 grid.addWidget(bar, row, 0, 1, 3)
                 pos = (row + 1) * 3
+            elif m.kind == "unknown":  # a file: "📄 notes.txt" — text read here
+                said, where = file_link(m)
+                grid.addWidget(self._label(f'<a href="{esc(where)}">{esc(said)}</a>'),
+                               pos // 3, pos % 3)
+                pos += 1
             else:
                 kind = _("media_" + (m.kind or "unknown"))
                 grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'),

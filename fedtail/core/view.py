@@ -722,6 +722,37 @@ class View:
                                                  thread_name_prefix="fedtail-media")
         return self._media.submit(self._fetch_media, url)
 
+    TEXT_MAX = 1024 * 1024  # a text attachment read here: at most this, then "…"
+
+    def attachment_text(self, url):
+        """Future: a text file attached to a post (model.text.is_text_attachment), read
+        to show in fedtail — without the token, public addresses only (core.remote), at
+        most TEXT_MAX bytes (more: cut, "…" at the end); UTF-8, what isn't — replaced."""
+        with self._lock:
+            if self._media is None:
+                self._media = ThreadPoolExecutor(max_workers=3,
+                                                 thread_name_prefix="fedtail-media")
+        return self._media.submit(self._fetch_text, url)
+
+    def _fetch_text(self, url):
+        import requests
+
+        from ..version import USER_AGENT
+        from . import remote
+        session = requests.Session()
+        session.headers["User-Agent"] = USER_AGENT
+        with remote.open_url(session, url, timeout=(6, 30), schemes=("https", "http"),
+                             own_hosts=self._core._own_hosts()) as r:
+            r.raise_for_status()
+            data = bytearray()  # (remote.read refuses a long one: this one is cut)
+            for chunk in r.iter_content(1 << 16):
+                data += chunk
+                if len(data) > self.TEXT_MAX:
+                    break
+        cut = len(data) > self.TEXT_MAX
+        text = data[:self.TEXT_MAX].decode("utf-8", errors="replace")
+        return text + ("\n…" if cut else "")
+
     def _fetch_media(self, url):
         import requests
 

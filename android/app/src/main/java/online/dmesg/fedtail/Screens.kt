@@ -161,6 +161,8 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
             when {
                 // over everything, whatever the width
                 p is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
+                p is Place.TextFile -> TextFileScreen(p, model.textFileBody,
+                    close = { model.back() }, openBrowser)
                 p == Place.Settings -> SettingsPlace(model, snack)
                 p == Place.SelfCheck -> SelfCheckPlace(model, snack, share)
                 p == Place.Config -> ConfigPlace(model, snack)

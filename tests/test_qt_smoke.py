@@ -1130,6 +1130,34 @@ class QtSmokeTest(unittest.TestCase):
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
+    def test_a_text_file_attached(self):
+        """12.11: a file attached — "📄 notes.txt" in the card; its link reads it in a
+        window of its own (the words from the core, without the token)."""
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("097", BOB, minute=1)
+        st["media_attachments"] = [{"id": "F1", "type": "unknown", "url": "https://files.test/notes.txt",
+                 "preview_url": None, "description": None, "meta": {}}]
+        row = PostRow(CardSpec(key="097", entry=E(st)), self.win.ctx)
+        labels = [w.text() for w in row.findChildren(QLabel)]
+        self.assertTrue(any("📄 notes.txt" in t and "fedtail:textfile/" in t for t in labels),
+                        labels)
+        fut = Future()
+        fut.set_result("строка файла")
+        with mock.patch.object(type(self.win.ctx.view), "attachment_text", return_value=fut):
+            self.win.on_link("fedtail:textfile/https%3A%2F%2Ffiles.test%2Fnotes.txt")
+            from fedtail.frontends.qt.dialogs import TextFile
+            self.pump(until=lambda: any(isinstance(w, TextFile) and w.isVisible()
+                                        for w in self.app.topLevelWidgets()))
+            dlg = [w for w in self.app.topLevelWidgets() if isinstance(w, TextFile)][-1]
+            self.pump(until=lambda: dlg.text.toPlainText() == "строка файла")
+            self.assertEqual(dlg.windowTitle(), "notes.txt")
+            dlg.close()
+
     def test_a_long_post_folds(self):
         """feed.fold_chars (12.11): a long post in a lane — its beginning and "Show all";
         the press puts the whole text in; in a thread it's whole from the start."""

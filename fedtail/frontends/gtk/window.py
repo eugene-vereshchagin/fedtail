@@ -2299,6 +2299,16 @@ class MainWindow(Gtk.ApplicationWindow):
         if d.media:
             self.status(_("redraft_media", n=d.media))
 
+    def show_text_file(self, url):
+        """A text file attached to a post (common/links "textfile"): read here."""
+        from ...model import Media, Ref
+        from ...model.text import attachment_name
+        from .dialogs import text_file
+        name = attachment_name(Media(ref=Ref("file", "", url), url=url))
+        win, fill, failed = text_file(self, name, url, self.open_url)
+        self.call(self.view.attachment_text(url), ok=fill, fail=lambda e: failed(str(e)))
+        return win
+
     def copy_handle(self, handle):
         handle = "@" + handle.lstrip("@")
         self.get_clipboard().set(handle)

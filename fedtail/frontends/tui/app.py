@@ -423,6 +423,11 @@ class PostsMixin(Ui):
         media = [m for m in real(st).media if m.kind in ("image", "gifv", "video")
                  and (m.preview or m.url)] if st else []
         if not media:
+            files = [m for m in real(st).media if m.kind == "unknown"] if st else []
+            if files:  # a file attached: a text one read here, any other in the browser
+                from ..common.links import file_link
+                self.app.links.open(file_link(files[0])[1])
+                return
             if st:
                 self.app.notify(_("tui_no_pictures"))
             return

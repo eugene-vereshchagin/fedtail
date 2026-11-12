@@ -130,6 +130,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Save a picture, video, gif | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Search the web for a picture | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Pictures and video ahead of time, a disk cache | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Files attached, text ones read inside | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Profiles
 
@@ -268,4 +269,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **70** features of the 204 compared.
+Only in fedtail — **71** features of the 205 compared.

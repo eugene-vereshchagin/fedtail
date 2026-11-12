@@ -36,6 +36,29 @@ def _box(margin=12, spacing=8):
     return box
 
 
+def text_file(parent, name, url, open_url):
+    """A text file attached to a post (common/links.file_link), as Qt's TextFile: its
+    words read-only, "loading" until they come. Returns (window, fill, failed)."""
+    win = _window(parent, name, 720, 560)
+    box = _box()
+    view = Gtk.TextView(editable=False, cursor_visible=False, monospace=True,
+                        wrap_mode=Gtk.WrapMode.WORD_CHAR)
+    view.get_buffer().set_text(_("image_loading"))
+    scroll = vscroll(vexpand=True)
+    scroll.set_child(view)
+    box.append(scroll)
+    browser = Gtk.Button(label=_("open_browser"))
+    browser.connect("clicked", lambda _b: open_url(url))
+    close = Gtk.Button(label=_("close"))
+    close.connect("clicked", lambda _b: win.close())
+    box.append(_buttons(browser, close))
+    win.set_child(box)
+    win.text_view = view
+    win.present()
+    return (win, lambda words: view.get_buffer().set_text(words),
+            lambda why: view.get_buffer().set_text(_("text_file_failed", why=why)))
+
+
 def info(parent, title, text):
     """A window of text to read and close (Qt's QMessageBox.information)."""
     win = _window(parent, title, 560, 420)

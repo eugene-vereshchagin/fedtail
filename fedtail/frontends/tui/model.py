@@ -132,6 +132,10 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
             foot.append("▶ " + _("tui_play_mark"))
         elif any(m.kind == "image" for m in p.media):
             foot.append("🖼 " + _("tui_view_mark"))
+        from ..common.links import file_link
+        files = [file_link(m)[0] for m in p.media if m.kind == "unknown"]
+        if files:  # files attached: their names; v reads a text one (or opens the file)
+            foot.append(", ".join(files) + " — v")
     if p.poll:
         foot.append("📊 " + _("tui_poll") + ": " + poll_line(p.poll))
     for n, mark in ((p.counts.replies, "↩"), (p.counts.shares, "♻"),

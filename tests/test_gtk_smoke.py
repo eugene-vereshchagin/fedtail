@@ -1225,6 +1225,29 @@ class GtkSmokeTest(_GtkBase):
         lane._filter_buttons["all"].set_active(True)
         self.assertTrue(pump(lambda: len(self._events(lane)) == 3, 5))
 
+    def test_a_text_file_attached(self):
+        """12.11: "📄 notes.txt" in the card; read in a window of its own, as Qt's."""
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        st = status("097", BOB, minute=2)
+        st["media_attachments"] = [{"id": "F1", "type": "unknown", "url": "https://files.test/notes.txt",
+                 "preview_url": None, "description": None, "meta": {}}]
+        card = Card(self.win.ctx, "t", adapter.post(st))
+        marks = [w.get_label() for w in _walk(card) if isinstance(w, Gtk.Label)]
+        self.assertTrue(any("📄 notes.txt" in m and "textfile" in m for m in marks), marks)
+        fut = Future()
+        fut.set_result("строка файла")
+        with mock.patch.object(type(self.view), "attachment_text", return_value=fut):
+            win = self.win.show_text_file("https://files.test/notes.txt")
+        buf = win.text_view.get_buffer()
+        self.assertTrue(pump(lambda: buf.get_text(buf.get_start_iter(), buf.get_end_iter(),
+                                                  False) == "строка файла", 3))
+        self.assertEqual(win.get_title(), "notes.txt")
+        win.close()
+
     def test_a_long_post_folds(self):
         """feed.fold_chars (12.11): its beginning and "Show all", as Qt's."""
         from fedtail.frontends.gtk.card import Card

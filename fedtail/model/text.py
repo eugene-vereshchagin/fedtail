@@ -199,6 +199,25 @@ def fold_long(content, limit):
     return "".join(out), total
 
 
+# a file attached that is no picture, video or sound (servers that take any file: Akkoma,
+# Misskey, GoToSocial…) — these are text, read in fedtail itself
+TEXT_FILE_EXT = (".txt", ".md", ".markdown", ".log", ".csv", ".tsv", ".json", ".xml",
+                 ".yaml", ".yml", ".ini", ".conf", ".toml", ".srt", ".vtt", ".rst", ".org",
+                 ".tex", ".diff", ".patch")
+
+
+def attachment_name(m):
+    """A file attachment's name, from its address ("notes.txt"); "" — none there."""
+    from urllib.parse import unquote, urlsplit
+    path = urlsplit(m.url or m.remote_url or "").path
+    return unquote(path.rsplit("/", 1)[-1])
+
+
+def is_text_attachment(m):
+    """An attachment of no known kind (Media.kind "unknown") whose name says text."""
+    return m.kind == "unknown" and attachment_name(m).lower().endswith(TEXT_FILE_EXT)
+
+
 def is_bot(account, extra_bots=()):
     """A bot: says so itself, or is one of feed's lanes.extra_bots."""
     return account.bot or norm_handle(account.handle) in {norm_handle(b) for b in extra_bots}

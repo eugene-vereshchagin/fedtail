@@ -77,6 +77,10 @@ class TuiModelCornersTest(TmpDir):
         self.assertTrue(long.below[0][1].startswith("▾"))
         whole = model.show_post(self.view, to_post(status("007", BOB, text=long_text)), number=1)
         self.assertIn("дальше", " ".join(whole.body))
+        filed = status("008", BOB, text="file")
+        filed["media_attachments"] = [{"id": "F", "type": "unknown",
+                                       "url": "https://files.test/notes.txt", "meta": {}}]
+        self.assertIn("📄 notes.txt — v", model.show_post(self.view, to_post(filed)).foot)
         self.view.cfg["ui"]["char_count"] = True  # card.char_count: first in the foot
         self.addCleanup(self.view.cfg["ui"].__setitem__, "char_count", False)
         counted = model.show_post(self.view, to_post(boost))

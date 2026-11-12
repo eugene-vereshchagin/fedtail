@@ -22,7 +22,7 @@ from ..common.cardtext import (
     only_counts_differ,
     shown_text,
 )
-from ..common.links import thread_url
+from ..common.links import file_link, thread_url
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
@@ -678,6 +678,13 @@ class Card(Gtk.Box):
                     tip(cell, m.alt)
                 grid.attach(cell, pos % 3, pos // 3, 1, 1)
                 pos += 1
+            elif m.kind == "unknown":  # a file: "📄 notes.txt" — text read here
+                said, where = file_link(m)
+                lab = _label(link_markup(where, said), ("ft-muted",), markup=True)
+                lab.connect("activate-link", lambda _l, u: (self.ctx.on_link(u), True)[1])
+                row = -(-pos // 3)
+                grid.attach(lab, 0, row, 3, 1)
+                pos = (row + 1) * 3
             else:
                 word = _("media_" + m.kind) if m.kind in ("image", "video", "audio", "gifv") \
                     else _("media_unknown")

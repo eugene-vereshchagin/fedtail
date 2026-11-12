@@ -9,6 +9,7 @@ What's new in the latest versions, and the plans.
 
 - A post's character count
 - A long post folded
+- Files attached, text ones read inside
 
 **0.23.0:**
 

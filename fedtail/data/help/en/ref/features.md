@@ -441,6 +441,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Search the web for a picture | has | 0.22.4 | `media.image_search` | none: a link opened in the browser | — |
 | Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
 | Memory for pictures | has | 0.2.0 | `media.image_cache_mb`, `media.image_decode` | own | — |
+| Files attached, text ones read inside | has | next | — | `media_attachments` of type `unknown` (Akkoma, Misskey, GoToSocial and others take any file) | Mastodon's web shows a link to the file; none reads it inside |
 
 <details><summary>In detail</summary>
 
@@ -459,6 +460,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Pictures and video ahead of time, a disk cache.** As soon as a poll brings new posts, their pictures are fetched to disk by background workers of their own — open a lane and everything is there. `"previews"` (the default) — previews (of videos too), avatars and link pictures; `"all"` — also originals, the videos themselves and gifs (videos one at a time, up to 300 MB each); `"off"` — only when a post is on screen. The picture cache keeps within `image_disk_mb` (1 GB), videos — in their own folder, `video_disk_mb` (10 GB); over the limit go the ones not opened the longest. A video opened once plays from disk the next time.
 
 **Memory for pictures.** Decoded pictures are held in memory up to `image_cache_mb` MB, the oldest thrown out first (reread from disk at once). `image_decode = "box"` — decode to the size of the frame, minding the screen's density: several times less memory; `"full"` — up to 1200 pixels on the longer side, sharper when the window is stretched.
+
+**Files attached, text ones read inside.** A file that is no picture, video or sound — a line "📄 name.txt" under the post. A text one (txt, md, log, csv, json, xml, yaml, srt and the like) opens in a fedtail window: up to 1 MB, without the token, public addresses only; "Open in the browser" there too. Any other — in the browser. In the terminal — its name under the post, and `v`.
 
 </details>
 

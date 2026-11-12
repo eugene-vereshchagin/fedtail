@@ -193,4 +193,33 @@ class PreviewScreen(ModalScreen):
         yield Footer()
 
 
-__all__ = ["PollScreen", "PreviewScreen"]
+class TextFileScreen(ModalScreen):
+    """A text file attached to a post (common/links.file_link), read here: its name on
+    top, its words below — "loading" until they come; o — the file in the browser."""
+
+    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
+                Binding("o", "browser", _("open_browser"))]
+    CSS = PreviewScreen.CSS.replace("PreviewScreen", "TextFileScreen")
+
+    def __init__(self, name, url):
+        super().__init__()
+        self.name_, self.url = name, url
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static("📄 " + self.name_, id="pv-title")
+            with VerticalScroll():
+                yield Static(_("image_loading"), id="tf-text", markup=False)
+        yield Footer()
+
+    def fill(self, words):
+        self.query_one("#tf-text", Static).update(Text(words))
+
+    def failed(self, why):
+        self.fill(_("text_file_failed", why=why))
+
+    def action_browser(self):
+        self.app.host.open_url(self.url)
+
+
+__all__ = ["PollScreen", "PreviewScreen", "TextFileScreen"]

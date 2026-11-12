@@ -95,6 +95,34 @@ class NoteLineTest(unittest.TestCase):
         self.assertEqual(note_text(n), n)
 
 
+class FileAttachmentTest(unittest.TestCase):
+    """A file attached that is no picture, video or sound (12.11): its name, whether it
+    is text read in fedtail, where a click goes."""
+
+    def test_names_and_links(self):
+        from fedtail.frontends.common.links import file_link, parse
+        from fedtail.model import Media, Ref
+        from fedtail.model.text import attachment_name, is_text_attachment
+        txt = Media(ref=Ref("m", "", "1"), kind="unknown",
+                    url="https://x.example/files/my%20notes.TXT?v=1")
+        self.assertEqual(attachment_name(txt), "my notes.TXT")
+        self.assertTrue(is_text_attachment(txt))
+        said, where = file_link(txt)
+        self.assertEqual(said, "📄 my notes.TXT")
+        link = parse(where)
+        self.assertEqual(link.action, "textfile")
+        from urllib.parse import unquote
+        self.assertEqual(unquote(link.arg), txt.url)
+        zip_ = Media(ref=Ref("m", "", "2"), kind="unknown", url="https://x.example/a.zip")
+        self.assertFalse(is_text_attachment(zip_))
+        self.assertEqual(file_link(zip_), ("📄 a.zip", "https://x.example/a.zip"))
+        pic = Media(ref=Ref("m", "", "3"), kind="image", url="https://x.example/a.txt")
+        self.assertFalse(is_text_attachment(pic))  # a picture is a picture, whatever its name
+        bare = Media(ref=Ref("m", "", "4"), kind="unknown", url="https://x.example/")
+        from fedtail import i18n
+        self.assertEqual(file_link(bare)[0], "📄 " + i18n._("media_unknown"))  # no name
+
+
 class FoldLongTest(unittest.TestCase):
     """feed.fold_chars (12.11): a long post's beginning, by paragraphs, lines, words."""
 

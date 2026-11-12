@@ -175,11 +175,8 @@ class FlowTest {
         launch("thread" to "101")
         waitText("/1")
         fun select() {
-            val words = compose.onAllNodes(hasText("", substring = true))
-                .fetchSemanticsNodes().indexOfFirst {
-                    (it.config.getOrNull(SemanticsProperties.Text)?.joinToString("")?.length ?: 0) > 30
-                }
-            compose.onAllNodes(hasText("", substring = true))[words]
+            // the words of post 101 (tools/showcase.py): a post's own text, selectable
+            compose.onAllNodesWithText("протри контакты", substring = true).onFirst()
                 .performTouchInput { longClick(center) }
             waitFor("a selection", 15_000) { TextSelection.active }
         }

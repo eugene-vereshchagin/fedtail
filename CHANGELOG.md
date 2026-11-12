@@ -7,6 +7,9 @@
 
 ## What's next
 
+* Files attached that are no picture, video or sound (servers that take any file) show as
+  "📄 name"; a text one (txt, md, log, csv…) is read in fedtail, up to 1 MB — in every interface.
+
 * A long post folds in a lane: its beginning and "Show all · N chars" (`card.fold_chars`,
   1000 by default; 0 — never); an open thread shows it whole. In every interface.
 

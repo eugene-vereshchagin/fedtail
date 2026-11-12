@@ -48,6 +48,8 @@ sealed interface Place {
     /** The places, as the windows' ≡ menu lists them. */
     data object Menu : Place
     data class Media(val items: List<MediaItem>, val index: Int) : Place
+    /** A text file attached to a post, read here (TextFileScreen). */
+    data class TextFile(val name: String, val url: String) : Place
     data object Settings : Place
     data object SelfCheck : Place
     data object Config : Place
@@ -99,6 +101,9 @@ data class OverviewSection(val key: String, val title: String, val names: List<S
 data class MediaItem(
     val kind: String, val preview: String, val url: String, val alt: String,
     val w: Int, val h: Int,
+    val file: String = "",          // a file (no picture, video, sound): "📄 notes.txt"
+    val fileText: Boolean = false,  // …a text one, read here (Place.TextFile)
+    val index: Int = 0,             // its place among the post's attachments (the core's)
 )
 
 /** A button of a place (common/places.py Btn): act = [place, key, data]. */
@@ -1320,6 +1325,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         places = places + Place.Media(items, index)
     }
 
+    var textFileBody by mutableStateOf<String?>(null)  // the open text file's words; null — coming
+
+    /** A text file attached to a post (the core reads it: Web.text_file), over the screen. */
+    fun openTextFile(p: PostItem, m: MediaItem) {
+        textFileBody = null
+        places = places + Place.TextFile(m.file.removePrefix("📄 "), m.url)
+        viewModelScope.launch {
+            val r = Core.textFile(p.sid, m.index)
+            textFileBody = Core.failed(r) ?: r.optString("text")
+        }
+    }
+
     fun compose(replyTo: PostItem?) {
         clearEditor()
         replyToId = null
@@ -2462,7 +2479,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             media = (0 until media.length()).map {
                 val m = media.getJSONObject(it)
                 MediaItem(str(m, "kind"), str(m, "preview"), str(m, "url"), str(m, "alt"),
-                    m.optInt("w"), m.optInt("h"))
+                    m.optInt("w"), m.optInt("h"), str(m.optJSONObject("file"), "name"),
+                    m.optJSONObject("file")?.optBoolean("text") ?: false, it)
             }.filter { it.preview.isNotBlank() || it.url.isNotBlank() },
             card = card?.let { LinkCard(str(it, "url"), str(it, "title"), str(it, "provider"),
                 str(it, "image"), str(it, "description")) },

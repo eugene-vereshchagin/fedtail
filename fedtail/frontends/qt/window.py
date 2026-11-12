@@ -286,6 +286,18 @@ class _LinkHost:
     def put_alias(self, alias):
         self.win.cmdline.put_alias(alias)
 
+    def show_text_file(self, url):
+        """A text file attached to a post (common/links "textfile"): read here."""
+        from ...model import Media, Ref
+        from ...model.text import attachment_name
+        from .dialogs import TextFile
+        name = attachment_name(Media(ref=Ref("file", "", url), url=url))
+        dlg = TextFile(self.win, name, url, self.open_url)
+        dlg.show()
+        self.call(self.win.ctx.view.attachment_text(url), ok=dlg.fill,
+                  fail=lambda e: dlg.failed(str(e)))
+        return dlg
+
     def _place(self, name, arg="", tab=""):
         """A place of common/places.py (collections, a profile's details…): its window."""
         self.win.open_place(name, arg, tab)

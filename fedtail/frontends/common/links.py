@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 PREFIX = "fedtail:"
 # actions whose argument is not a post id
 NOT_A_POST = ("account", "tag", "resolve", "alias", "copyhandle", "eventyes", "eventno",
-              "eventhide")
+              "eventhide", "textfile")
 
 
 @dataclass(frozen=True)
@@ -104,6 +104,16 @@ VIDEO_LINK_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
 AUDIO_LINK_EXT = (".mp3", ".ogg", ".oga", ".opus", ".m4a", ".flac", ".wav")
 
 
+def file_link(m):
+    """An attachment that is no picture, video or sound (Media.kind "unknown"), as every
+    interface shows it: ("📄 notes.txt", where a click goes) — a text file is read in
+    fedtail (fedtail:textfile/…), any other opens in the browser."""
+    from ...model.text import attachment_name, is_text_attachment
+    url = m.url or m.remote_url
+    name = attachment_name(m) or _("media_unknown")
+    return "📄 " + name, make("textfile", quote(url, safe="")) if is_text_attachment(m) else url
+
+
 def media_link(url):
     """"video" / "audio" for an http(s) link to such a file (by its path's ending), or
     "" — a server that didn't take an attachment leaves its link in the text
@@ -142,6 +152,13 @@ class Links:
         h = self.host
         if action == "copyhandle":  # someone's @user@server, to call them anywhere
             self._ask(h, "copy_handle", unquote(arg))
+        elif action == "textfile":  # a text file attached: read here (or the browser)
+            url = unquote(arg)
+            show = getattr(h, "show_text_file", None)
+            if show is None:
+                h.open_url(url)
+            else:
+                show(url)
         elif action == "alias":  # a post's #abc: its thread, or into the command line
             from .actions import code_to_line
             post = None if code_to_line(self.view.cfg) else self.view.by_alias(arg)

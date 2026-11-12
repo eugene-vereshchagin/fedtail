@@ -217,9 +217,14 @@ def _api_error(e):
 
 def media_json(m):
     url = m.url or m.remote_url  # a picture through /pic too; a video plays from its own
-    return {"kind": m.kind, "preview": _pic(m.preview),
-            "url": _pic(url) if m.kind == "image" else _https(url),
-            "alt": m.alt, "w": m.width, "h": m.height}
+    out = {"kind": m.kind, "preview": _pic(m.preview),
+           "url": _pic(url) if m.kind == "image" else _https(url),
+           "alt": m.alt, "w": m.width, "h": m.height}
+    if m.kind == "unknown":  # a file: its name, and whether it is read here (/api/text_file)
+        from ...model.text import is_text_attachment
+        from ..common.links import file_link
+        out["file"] = {"name": file_link(m)[0], "text": is_text_attachment(m)}
+    return out
 
 
 def poll_json(poll):
@@ -1683,6 +1688,22 @@ class Web:
         return {"items": [{"label": words, "url": link}
                           for words, link in tag_menu(str(url or ""), self.core)]}
 
+    def text_file(self, sid, i):
+        """A text file attached to a post (model.text.is_text_attachment), read to show
+        here: {"name", "text"} or {"name", "error"}. The address is the post's own — never
+        one the page names (no fetching anything for whoever asks)."""
+        from ...model.text import attachment_name, is_text_attachment
+        media = real(self._post_by_id(sid)).media
+        i = int(i)
+        if not 0 <= i < len(media) or not is_text_attachment(media[i]):
+            raise KeyError(i)
+        m = media[i]
+        try:
+            text = self.core.attachment_text(m.url or m.remote_url).result(timeout=60)
+        except Exception as e:  # noqa: BLE001 — said on the page, as the windows say it
+            return {"name": attachment_name(m), "error": _("text_file_failed", why=e)}
+        return {"name": attachment_name(m), "text": text}
+
     def media_menu(self, sid, i):
         """A right click (a long press on the phone) on a post's picture: its own menu,
         the windows' (common/actions.media_items) — save, open, copy its link, look it
@@ -2431,6 +2452,8 @@ class Handler(BaseHTTPRequestHandler):
                                                                q.get("nested") == "1"),
                   "/api/media_menu": lambda: self.web.media_menu(q.get("id", ""),
                                                                  q.get("i", "0")),
+                  "/api/text_file": lambda: self.web.text_file(q.get("id", ""),
+                                                               q.get("i", "0")),
                   "/api/tag_menu": lambda: self.web.tag_menu(q.get("url", ""),
                                                              q.get("click") == "1"),
                   "/api/places": lambda: self.web.place_menu(),

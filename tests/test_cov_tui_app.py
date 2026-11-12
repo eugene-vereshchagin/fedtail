@@ -396,6 +396,37 @@ class AppKeysTest(Base):
                 app.on_list_view_highlighted(mock.Mock(list_view=app.query_one("#posts"),
                                                        item=post_item))
 
+    async def test_a_text_file_attached_is_read_on_v(self):
+        """12.11: a post with a text file — its name under the post; v reads it on a
+        screen of its own (the core's words)."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import PostItem
+        from fedtail.frontends.tui.more import TextFileScreen
+        core, w = self.make(tui={"pictures": "off"})
+        st = status("001", BOB, minute=1, text="see the file", vis="public")
+        st["media_attachments"] = [{"id": "F1", "type": "unknown",
+                                    "url": "https://files.test/notes.txt", "meta": {}}]
+        w.add(st, home=True)
+        app = self.app_of(core)
+        with mock.patch.object(type(app.core), "attachment_text",
+                               return_value=done("строка файла")):
+            async with app.run_test(size=(120, 40)) as pilot:
+                await self.started(pilot, app)
+                posts = app.query_one("#posts", ListView)
+                await self.wait(pilot, lambda: any(isinstance(x, PostItem)
+                                                   for x in posts.children),
+                                what="the lane's posts")
+                posts.index = next(i for i, x in enumerate(posts.children)
+                                   if isinstance(x, PostItem))
+                await pilot.press("v")
+                await self.wait(pilot, lambda: isinstance(app.screen, TextFileScreen),
+                                what="the file's screen")
+                await pilot.pause()
+                from textual.widgets import Static
+                self.assertIn("строка файла",
+                              str(app.screen.query_one("#tf-text", Static).render()))
+
     async def test_on_scroll_reads_a_whole_conversation(self):
         from textual.widgets import ListView
 

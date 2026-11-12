@@ -1,4 +1,5 @@
-"""Small questions of the window's own: one of a few choices (common/timed.py)."""
+"""Small windows of the window's own: one of a few choices (common/timed.py), a text
+file attached to a post, read here."""
 
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -6,6 +7,8 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
+    QPlainTextEdit,
+    QPushButton,
     QRadioButton,
     QVBoxLayout,
 )
@@ -56,3 +59,32 @@ def choose(parent, title, text, options, then, check=None):
     dlg.setModal(True)
     dlg.show()
     return dlg
+
+
+class TextFile(QDialog):
+    """A text file attached to a post (common/links.file_link): its words, read-only,
+    loading until they come; "Open in browser" for the file itself."""
+
+    def __init__(self, parent, name, url, open_url):
+        super().__init__(parent)
+        from ...i18n import _
+        self.setWindowTitle(name)
+        self.resize(720, 560)
+        lay = QVBoxLayout(self)
+        self.text = QPlainTextEdit(_("image_loading"))
+        self.text.setReadOnly(True)
+        self.text.setObjectName("textFile")
+        lay.addWidget(self.text)
+        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        browser = QPushButton(_("open_browser"))
+        box.addButton(browser, QDialogButtonBox.ButtonRole.ActionRole)
+        browser.clicked.connect(lambda: open_url(url))
+        box.rejected.connect(self.close)
+        lay.addWidget(box)
+
+    def fill(self, words):
+        self.text.setPlainText(words)
+
+    def failed(self, why):
+        from ...i18n import _
+        self.text.setPlainText(_("text_file_failed", why=why))

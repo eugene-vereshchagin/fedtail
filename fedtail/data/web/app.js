@@ -271,7 +271,7 @@ function renderMedia(p) {
   const show = () => {
     box.textContent = "";
     p.media.forEach((m, i) => {
-      const cell = renderOne(m, p.media);
+      const cell = renderOne(m, p.media, p, i);
       // a right click (a long press on a phone): the picture's own menu — save, open,
       // copy, look it up elsewhere (common/actions.media_items)
       cell.oncontextmenu = (e) => { e.preventDefault(); mediaMenu(p, i, cell); };
@@ -290,8 +290,15 @@ function renderMedia(p) {
 // s: a picture that didn't come is asked again by itself — the windows' times (me's)
 const later = () => (state.me && state.me.picture_later) || [];
 
-function renderOne(m, all) {
+function renderOne(m, all, p, i) {
   const cell = el("figure", "cell");
+  if (m.file) {  // a file (no picture, video, sound): its name; a text file is read here
+    const a = link(m.file.name, m.url, "file");
+    if (m.file.text && p) a.onclick = (e) => { e.preventDefault(); textFile(p, i, m); };
+    cell.classList.add("file");
+    cell.append(a);
+    return cell;
+  }
   const caption = m.alt ? el("figcaption", "alt", m.alt) : null;
   if (caption) {  // three lines; a click: the whole description (and back)
     caption.title = m.alt.length > 200 ? m.alt.slice(0, 200) + "…" : "";
@@ -893,7 +900,16 @@ async function tryTheme() {
   } catch (e) { toast(e.message); }
 }
 
-function info(text, links) {
+async function textFile(p, i, m) {  // a text file attached: its words over the page
+  info(w("image_loading"), [[w("web_original") + " ↗", m.url]], "file");
+  let r;
+  try { r = await api("/api/text_file?id=" + encodeURIComponent(p.sid) + "&i=" + i); }
+  catch (err) { r = { error: err.message }; }
+  $("#info-text").textContent = r.error || r.text;
+}
+
+function info(text, links, kind) {
+  $("#info").className = kind || "";
   $("#info-text").textContent = text;
   const box = $("#info-links");
   box.textContent = "";

@@ -67,6 +67,17 @@ class TuiHost:
         """A link to a video or sound file (common/links.py): mpv, as an attachment."""
         self.app.play(m)
 
+    def show_text_file(self, url):
+        """A text file attached to a post (common/links "textfile"): read here."""
+        from ...model import Media, Ref
+        from ...model.text import attachment_name
+        from .more import TextFileScreen
+        screen = TextFileScreen(attachment_name(Media(ref=Ref("file", "", url), url=url)), url)
+        self.app.push_screen(screen)
+        self.app.later(self.view.attachment_text(url), ok=screen.fill,
+                       fail=lambda e: screen.failed(str(e)))
+        return screen
+
     def open_url(self, url):
         if url and openable(url):  # the web only: never a file or a share from a post
             webbrowser.open(url)

@@ -200,6 +200,39 @@ class ViewTest(TmpDir):
             self.assertEqual(v.media_bytes(url).result(timeout=T), b"d")
         v._media.shutdown()
 
+    def test_a_text_file_read(self):
+        """A text file attached (12.11): read without the token, cut at TEXT_MAX with
+        "…", what isn't UTF-8 replaced."""
+        v = self.v
+
+        class R:
+            def __init__(self, body):
+                self.body = body
+
+            def raise_for_status(self):
+                pass
+
+            def iter_content(self, n):
+                for i in range(0, len(self.body), n):
+                    yield self.body[i:i + n]
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+        with mock.patch("fedtail.core.remote.open_url", return_value=R("привет\n".encode())):
+            self.assertEqual(v.attachment_text("https://x.test/a.txt").result(timeout=T),
+                             "привет\n")
+        with mock.patch.object(type(v), "TEXT_MAX", 10), \
+                mock.patch("fedtail.core.remote.open_url", return_value=R(b"a" * 50 + b"\xff")):
+            got = v.attachment_text("https://x.test/b.txt").result(timeout=T)
+        self.assertEqual(got, "a" * 10 + "\n…")
+        with mock.patch("fedtail.core.remote.open_url", return_value=R(b"ok\xff")):
+            self.assertEqual(v.attachment_text("https://x.test/c.txt").result(timeout=T),
+                             "ok\ufffd")
+        v._media.shutdown()
+
     def test_roster_people_with_a_talk(self):
         v = self.v
         dm = status("020", BOB, minute=20, text="@mira привет", vis="direct")
