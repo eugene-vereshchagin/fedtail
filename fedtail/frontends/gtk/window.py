@@ -1786,6 +1786,10 @@ class MainWindow(Gtk.ApplicationWindow):
         for lv in self.lane_views.values():
             lv.update_post(real(got))
         for page in self.threads.values():
+            window = getattr(page, "window", None)
+            if window is not None:  # a big thread: the cards built later get it too
+                window.update_post(real(got))
+                continue
             for card in _cards(page):
                 if real(card.entry).id == real(got).id:
                     card.update(real(got))
@@ -1824,7 +1828,8 @@ class MainWindow(Gtk.ApplicationWindow):
             stand = self.view.thread_focus(root, items, at)
             focus = None
             private = only_private(items)  # all private: none marked out (model)
-            for it in items:
+
+            def make(it):
                 card = Card(ctx, it.post.id, it.post, unread=it.post.id in unread,
                             short_id=short.get(it.post.id), depth=it.depth,
                             number=it.number, lane_private=private)
@@ -1832,8 +1837,18 @@ class MainWindow(Gtk.ApplicationWindow):
                     card.add_css_class("ft-focus")
                     if len(items) > 1:
                         card.mark(_("came_from"))  # as Qt: where the reader came from
-                    focus = card
-                box.append(card)
+                return card
+            from .threadwindow import THREAD_WINDOWED, ThreadWindow
+            if len(items) > THREAD_WINDOWED:  # big: only the cards near the screen
+                page.window = ThreadWindow(page, box, items, make)
+                focus = page.window.bring(stand)
+            else:
+                page.window = None
+                for it in items:
+                    card = make(it)
+                    if it.post.id == stand:
+                        focus = card
+                    box.append(card)
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
@@ -2489,6 +2504,10 @@ def _short(post):
 
 
 def _cards(page):
+    window = getattr(page, "window", None)
+    if window is not None:  # a big thread: the cards built now (threadwindow.py)
+        yield from window.cards()
+        return
     box = page.get_child()
     if isinstance(box, Gtk.Viewport):
         box = box.get_child()

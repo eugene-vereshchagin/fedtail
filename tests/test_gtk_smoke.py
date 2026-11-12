@@ -420,6 +420,56 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(lane.order[:len(before)], before)
         self.assertEqual(lane.rows[lane.order[-1]].post.id, "020")
 
+    def test_a_big_thread_builds_only_near_the_screen(self):
+        """12.11, as Qt's: a thread of more than THREAD_WINDOWED posts builds the cards
+        near the screen only; the focus is built where the tab opens; "open every
+        warning" reaches the cards built later; scrolling builds more, the post on top
+        of the screen staying where it is."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.frontends.gtk.threadwindow import THREAD_WINDOWED, Slot
+        prev = "8000"
+        self.world.add(status(prev, BOB, minute=1, text="корень"), home=True)
+        for i in range(1, THREAD_WINDOWED + 30):
+            st = status(f"8{i:03d}", NEWS, prev, "B", minute=1 + i % 50,
+                        text="ответ " * 40 + str(i))
+            if i % 7 == 0:
+                st["spoiler_text"] = "осторожно"
+            self.world.add(st)
+            prev = st["id"]
+        self.win.open_thread("8000")
+        self.assertTrue(pump(lambda: getattr(self.win.threads.get("8000"), "posts", None), 5))
+        page = self.win.threads["8000"]
+        window = page.window
+        self.assertIsNotNone(window)
+        pump(timeout=0.5)
+        built = window.cards()
+        self.assertTrue(built)
+        self.assertLess(len(built), len(window.slots))  # not all of them
+        self.assertIsNotNone(window.slot_of("8000").card)  # the focus: where it opened
+        page.head.cw_all.emit("clicked")  # every warning open — the cards not built too
+        adj = page.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())  # to the end
+        pump(timeout=0.5)
+        far = window.slots[-1]
+        self.assertIsNotNone(far.card)
+        warned = [s.card for s in window.slots[-15:] if s.card is not None
+                  and getattr(s.card, "cw_inner", None) is not None]
+        self.assertTrue(warned and all(c.cw_open for c in warned))
+        self.assertIsNone(window.slot_of("8000").card)  # far behind: let go
+        # up a bit: the slots above built, the one on top of the screen where it was
+        pump(timeout=0.3)
+        top = adj.get_value()
+        first = next(s for s in window.slots if window._y(s) >= top)
+        offset = window._y(first) - top
+        adj.set_value(adj.get_value() - adj.get_page_size() * 0.5)
+        pump(timeout=0.5)
+        adj.set_value(adj.get_value() + adj.get_page_size() * 0.5)
+        pump(timeout=0.5)
+        self.assertAlmostEqual(window._y(first) - adj.get_value(), offset, delta=3)
+        self.assertTrue(all(isinstance(c, Card) for c in _cards(self.win)))
+        self.assertTrue(all(isinstance(s, Slot) for s in window.slots))
+        self.win.close_thread("8000")
+
     def test_thread_opens_in_a_tab(self):
         lane = self._lane("home")
         reply = next(c for c in lane.rows.values() if c.post.id == "013")

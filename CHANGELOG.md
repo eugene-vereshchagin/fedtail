@@ -24,8 +24,8 @@
 * A lane no longer stops with KeyError when a card it lets go was let go already by the scroll
   that hiding it moved (the Qt window).
 
-* A big thread in the Qt window (more than 40 posts) builds only the cards near the screen, as a
-  lane does: one of hundreds of posts with pictures held them all while its tab was open
+* A big thread (more than 40 posts) builds only the cards near the screen, as a lane does — in
+  the Qt and GTK windows: one of hundreds of posts with pictures held them all while its tab was open
   (some 300 MB). "Open every warning" and the focus reach the cards not built yet.
 
 * Scrolling up a lane of pictures (after a jump to its end) no longer brings the same posts by

@@ -69,6 +69,11 @@ class ThreadHead(Gtk.Box):
         """Every content warning in the thread opened (or closed) at once."""
         self.cw_open = not self.cw_open
         self.cw_all.set_label(_("cw_all_hide") if self.cw_open else _("cw_all_show"))
+        page = self.get_ancestor(Gtk.ScrolledWindow)
+        window = getattr(page, "window", None)
+        if window is not None:  # a big thread: the cards built later open too
+            window.set_cw(self.cw_open)
+            return
         from .card import Card
         box = self.get_ancestor(Gtk.ListBox)
         row = box.get_first_child() if box is not None else None
