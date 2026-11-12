@@ -5,30 +5,32 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.1 — 2026-11-12
+
+**In short: long posts fold, files attached are read, and the phone lets go of a
+selection.** A post longer than 2000 characters shows its beginning in a lane and "Show
+all"; a text file attached (txt, md, log…) opens in fedtail; with words selected on the
+phone a tap or Back only takes the selection away. Point's command line is hidden by
+default now — `Ctrl+L` in the windows, `:` on the web page and in the terminal.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.1 (the same server under the new number; protocol 2). -->
 
 * The web page heeds `window.command_line` too: off (the default), Point's line is hidden and
   `:` brings it (the windows' `Ctrl+L` is the browser's address bar).
 * textual-image 0.14.3 inside (the terminal's pictures).
-
 * Files attached that are no picture, video or sound (servers that take any file) show as
   "📄 name"; a text one (txt, md, log, csv…) is read in fedtail, up to 1 MB — in every interface.
-
 * A long post folds in a lane: its beginning and "Show all · N chars" (`card.fold_chars`,
   2000 by default; 0 — never); an open thread shows it whole. In every interface.
-
 * The phone lets go of selected words: with a post's text selected, a tap anywhere and Back
   only take the selection away (a tap beside it opened the post, Back went back in the lane).
-
 * A post's character count, on the left of the row under it before "Reply"
   (`card.char_count`, off by default) — in every interface.
-
 * A post's menu copies its text ("Copy the text"): plain words, the warning first — in every
   interface.
-
 * Sync carries the lanes themselves (`sync.lane_rules`) and your names and colours for people
   (`sync.people`) by default; `false` keeps them on this device.
-
 * Point's command line is hidden by default: `Ctrl+L` brings it, `window.command_line = true`
   keeps it at the bottom of the window as before.
 

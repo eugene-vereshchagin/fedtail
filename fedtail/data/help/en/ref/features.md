@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.23.0 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.23.1**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -362,8 +362,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
 | Labels on the card | has | 0.14.0 | `card.old_days`; “bot” — always | own | Sengi |
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
-| A post's character count | has | next | `card.char_count` | own | none: clients show the count only while writing |
-| A long post folded | has | next | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
+| A post's character count | has | 0.23.1 | `card.char_count` | own | none: clients show the count only while writing |
+| A long post folded | has | 0.23.1 | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
 
 <details><summary>In detail</summary>
 
@@ -441,7 +441,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Search the web for a picture | has | 0.22.4 | `media.image_search` | none: a link opened in the browser | — |
 | Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
 | Memory for pictures | has | 0.2.0 | `media.image_cache_mb`, `media.image_decode` | own | — |
-| Files attached, text ones read inside | has | next | — | `media_attachments` of type `unknown` (Akkoma, Misskey, GoToSocial and others take any file) | Mastodon's web shows a link to the file; none reads it inside |
+| Files attached, text ones read inside | has | 0.23.1 | — | `media_attachments` of type `unknown` (Akkoma, Misskey, GoToSocial and others take any file) | Mastodon's web shows a link to the file; none reads it inside |
 
 <details><summary>In detail</summary>
 

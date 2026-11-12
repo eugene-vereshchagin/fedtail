@@ -5,15 +5,11 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.23.1:**
 
 - A post's character count
 - A long post folded
 - Files attached, text ones read inside
-
-**0.23.0:**
-
-- Sync through a folder on the phone — by picking the folder
 <!-- /include -->
 
 Everything that changed, fixes included, is in the
