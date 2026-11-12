@@ -48,7 +48,7 @@ DEFAULTS = {
         "sidebar_footer": True,
         "sidebar_groups": True,
         "sidebar_width": 272,
-        "command_line": True,
+        "command_line": False,
         "whats_this": False,
         "expand_cw": True,
         "bookmark_button": True,

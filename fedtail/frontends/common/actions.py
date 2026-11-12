@@ -165,7 +165,7 @@ def code_to_line(cfg):
     or "auto" with point.im's command line on: ui.command_line) — or open its thread?"""
     ui = cfg.get("ui") or {}
     how = ui.get("code_click", "auto")
-    return how == "line" or (how == "auto" and bool(ui.get("command_line", True)))
+    return how == "line" or (how == "auto" and bool(ui.get("command_line", False)))
 
 
 def short_id_tip(cfg):

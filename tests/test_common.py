@@ -204,6 +204,14 @@ class CommonTest(TmpDir):
                                     else "short_id_tip"))
         ui["code_click"], ui["command_line"] = "auto", True
 
+    def test_the_command_line_hidden_by_default(self):
+        """ui.command_line (12.11): Point's line is off unless asked — Ctrl+L brings it; so
+        a click on #abc opens the thread."""
+        from fedtail.core import config
+        self.assertIs(config.DEFAULTS["ui"]["command_line"], False)
+        self.assertEqual(actions.short_id_tip({"ui": {"code_click": "auto"}}),
+                         i18n._("short_id_tip"))
+
     def test_the_menu_in_submenus(self):
         """ui.menu_groups (08.11): Author ▸ (the address, a list, mute, block, report…),
         Thread ▸, More ▸ (why here, who liked…) after the top items; a group of one stays

@@ -7,6 +7,9 @@
 
 ## What's next
 
+* Point's command line is hidden by default: `Ctrl+L` brings it, `window.command_line = true`
+  keeps it at the bottom of the window as before.
+
 ## 0.23.0 — 2026-11-12
 
 **In short: sync through a folder on the phone.** Android 11 and newer let an app into a

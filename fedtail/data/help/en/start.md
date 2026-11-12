@@ -44,7 +44,8 @@ home: `localhost`, a local address, `.local`).
 - **On the left** — the lanes in groups: "Timelines", "Personal", "Lists". The number is how
   much is unread. A click on a group's title folds it.
 - **On the right** — the posts of the open lane, with the switches and Refresh over them.
-- **At the bottom** — a command line, as on Point (`Ctrl+L`).
+- **At the bottom**, on `Ctrl+L` — a command line, as on Point (`window.command_line = true`:
+  always there).
 - **At the top left**, three buttons: ≡ — the menu, ↔ — posts across the full width, ❯ — lanes
   in columns.
 

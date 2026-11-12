@@ -368,8 +368,8 @@ api.en = "own"
 others.ru = "только в fedtail (tut — команды vim-стиля)"
 others.en = "only in fedtail (tut — vim-style commands)"
 clients = []
-details.ru = "Внизу окна (`Ctrl+L`): `#a3f` — открыть, `#a3f текст` — ответить, `S`/`U #a3f` — подписка на тред, `S`/`U @ник` — на человека, `!` — продвинуть, `~` — в закладки, `D` — удалить свой, `@ник` — профиль, `?` — справка. Простой текст без команды — новый пост (`post.plain_posts = false` — только команды, без случайных постов)."
-details.en = "At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts)."
+details.ru = "Внизу окна по `Ctrl+L` (`window.command_line = true` — всегда на виду): `#a3f` — открыть, `#a3f текст` — ответить, `S`/`U #a3f` — подписка на тред, `S`/`U @ник` — на человека, `!` — продвинуть, `~` — в закладки, `D` — удалить свой, `@ник` — профиль, `?` — справка. Простой текст без команды — новый пост (`post.plain_posts = false` — только команды, без случайных постов)."
+details.en = "At the bottom of the window on `Ctrl+L` (`window.command_line = true` — always there): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts)."
 
 [[feature]]
 id = "short-ids"

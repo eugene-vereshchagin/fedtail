@@ -287,8 +287,9 @@ number_keys = "alt"
 # ×, and Ctrl+W / Esc pass it by (the windows).
 pin_tabs = false
 
-# A command line as on Point at the bottom of the window (Ctrl+L shows it even if false).
-command_line = true
+# A command line as on Point at the bottom of the window, always there. Off, Ctrl+L brings it
+# when it's needed.
+command_line = false
 
 # "What's this?" from the start: point the mouse at a button — a longer hint on what it
 # does, which config key changes it and where the help says more. For now it's turned on

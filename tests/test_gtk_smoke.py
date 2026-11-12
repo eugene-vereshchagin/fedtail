@@ -76,7 +76,8 @@ class _GtkBase(unittest.TestCase):
         self.world = w
         cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
                                   "ui": {"start_lane": "home", "arts_mode": False,
-                                         "frontend": "gtk", "adwaita": "off", **self.UI}})
+                                         "frontend": "gtk", "adwaita": "off",
+                                         "command_line": True, **self.UI}})
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
