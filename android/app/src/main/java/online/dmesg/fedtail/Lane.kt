@@ -224,7 +224,10 @@ fun LaneScreen(
                         bottom = model.startBottom)
                     model.aimed = model.opening
                     model.holding = true  // where it stood: said once the place stands
-                    try { holdPlace(state, at, model.startBottom) } finally { model.holding = false }
+                    val breaks = model.holdBreaks
+                    try {
+                        holdPlace(state, at, model.startBottom, stop = { model.holdBreaks != breaks })
+                    } finally { model.holding = false }
                 }
             }
             MarkWhileScrolling(state, model.markOnScroll, model.dwellMs) { model.markRead(it) }
@@ -451,7 +454,7 @@ private fun LaneMore(model: AppModel, name: String, state: LazyListState,
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             val unread = model.posts.count { it.unread }
             if (!model.toNewBottom) DropdownMenuItem(text = { Text(stringResource(R.string.to_new)) },
-                onClick = { open = false; scope.launch {
+                onClick = { open = false; model.holdBreaks++; scope.launch {
                     aim(state, model.posts, model.newestFirst,
                         before = if (model.newestFirst) 0 else 1, divider = model.divider?.first) } })
             DropdownMenuItem(text = { Text(stringResource(R.string.find)) },
@@ -504,6 +507,9 @@ private fun ToNewButton(model: AppModel, state: LazyListState,
                         floating: Boolean = false) {
     val toNew = stringResource(if (unread > 0) R.string.to_new else R.string.to_end)
     val go: () -> Unit = {
+        // the place the lane opened on was held there (holdPlace) and pulled the list back:
+        // "to the new" did nothing till the list was dragged a little (13.11)
+        model.holdBreaks++
         scope.launch {
             aim(state, model.posts, model.newestFirst,
                 before = if (model.newestFirst) 0 else 1, divider = model.divider?.first)

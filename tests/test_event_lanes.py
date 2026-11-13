@@ -108,6 +108,29 @@ class EventLanesTest(unittest.TestCase):
         self.assertEqual(core.follow_requests, [])
         self.assertEqual(core.unread_count("activity"), 0)
 
+    def test_a_waiting_request_doesnt_pull_the_lane_up(self):
+        """13.11: a follow request waits unread, where it came — long ago, up the lane;
+        Activity opened up there, on the old ones, not on the new event below. The other
+        new ones first; the request if nothing else is new."""
+        core, w = self.make()
+        view = View(core)
+        w.requests.append(dict(BOB, created_at="2024-10-09T00:00:00.000Z"))
+        core.poll_once()
+        m = LaneModel(view, "activity")
+        specs = m.build(False).specs
+        req = next(s.key for s in specs if s.extra.get("row") and s.extra["row"].request)
+        self.assertEqual(m.start(specs)[0] if m.start(specs)[0] != "__sep__" else
+                         next(s.key for s in specs[[x.key for x in specs].index("__sep__")
+                                                     + 1:]), req)  # only it: there
+        self.like(core, "n9")
+        core.poll_once()
+        specs = m.build(False).specs
+        like = next(s.key for s in specs if s.extra.get("row") and not s.extra["row"].request)
+        key, where = m.start(specs)
+        if key == "__sep__":
+            key = specs[[x.key for x in specs].index("__sep__") + 1].key
+        self.assertEqual((key, where), (like, "top"))
+
     def test_requests_where_one_wants_them(self):
         """A lane of one's own taking follow requests (here: among the federated posts
         of Home) — the requests come there; Activity keeps them too (no Requests lane)."""

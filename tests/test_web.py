@@ -768,8 +768,12 @@ class WebTest(TmpDir):
         self.req("/api/stood", {"lane": "home", "key": posts[0]})
         self.assertEqual(self.core.get_state("stood.home"), posts[0])
         _c, _h, body = self.req("/api/lane?name=home")
-        self.assertEqual(json.loads(body)["start"], posts[0])
-        self.assertIn(json.loads(body)["start_where"], ("top", "bottom"))
+        got = json.loads(body)
+        if got["start_where"] == "bottom":  # nothing new under it: where it was read
+            self.assertEqual(got["start"], posts[0])
+        else:  # new ones under it: the first of them on top (13.11)
+            self.assertEqual(got["start_where"], "top")
+            self.assertIn(got["start"], [p["id"] for p in got["posts"] if p.get("unread")])
 
     def test_the_highlight_is_said_to_the_page(self):
         """ui.additional_highlight: the page lights the post under the mouse (body.lit)."""

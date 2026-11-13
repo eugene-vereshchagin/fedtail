@@ -572,9 +572,13 @@ class LaneModel:
         """Where reading starts: (key, "top" | "bottom"), or (None, "end") for the
         lane's newest end (feed.start_at). With first_unread, oldest first: the card
         read last (stood), in whatever interface, while it is in the lane — at the
-        bottom of the screen as it was, or on top when new posts came under it (they
-        show then); else the first unread."""
-        unread = [s.key for s in specs if s.unread]
+        bottom of the screen as it was; new posts come under it since: the first of them
+        on top (13.11); else the first unread."""
+        # a follow request waiting is unread till answered and stands when it came, maybe
+        # long ago: the lane opened up there on the old ones, not on the new events below
+        # (Activity, 13.11) — the other new ones first, the requests if nothing else
+        unread = [s.key for s in specs if s.unread and not _waiting_request(s)] or \
+            [s.key for s in specs if s.unread]
         if self.lazy:  # a browse lane: nothing unread there, its own choice
             return self._browse_start(specs)
         if self.cfg["feed"]["start_at"] == "first_unread" and not self.newest_first:
@@ -599,17 +603,26 @@ class LaneModel:
                     if specs[i].unread:
                         break
                     on = i
-                if on > at:
-                    nxt = next((s.key for s in specs[on + 1:] if s.unread), None)
-                    if nxt is not None:
-                        return nxt, "top"
-                news = any(s.unread for s in specs[at + 1:])
-                return got, "top" if news else "bottom"
+                # news under it: the first new post on top of the screen — not the one
+                # read last with the news below it (the phone opened "where I stopped,
+                # not on the new", 13.11); "new below" over it, when it stands there
+                nxt = next((i for i in range(on + 1, len(specs))
+                            if specs[i].unread and specs[i].key != SEPARATOR
+                            and not _waiting_request(specs[i])), None)
+                if nxt is not None:
+                    if specs[nxt - 1].key == SEPARATOR:
+                        return SEPARATOR, "top"
+                    return specs[nxt].key, "top"
+                return got, "bottom"
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:
             if self.newest_first:
                 return unread[-1], "bottom"
             if any(s.key == SEPARATOR for s in specs):
-                return SEPARATOR, "top"
+                line = next(i for i, s in enumerate(specs) if s.key == SEPARATOR)
+                after = next((s.key for s in specs[line + 1:] if s.entry is not None
+                              or s.extra.get("event")), None)
+                if after == unread[0]:  # "new below" stands over the first new: there
+                    return SEPARATOR, "top"
             return unread[0], "top"
         return None, "end"
 
@@ -670,6 +683,12 @@ class LaneModel:
         if self.cfg["read"]["mark_read"] != "on_scroll":
             return []
         return [m for i in ids for m in self.conv_members.get(i, [i])]
+
+
+def _waiting_request(spec):
+    """An event row of a follow request waiting for an answer."""
+    row = (spec.extra or {}).get("row")
+    return bool(getattr(row, "request", False))
 
 
 _TWICE_SAID = set()  # lanes whose doubled cards are in the log already

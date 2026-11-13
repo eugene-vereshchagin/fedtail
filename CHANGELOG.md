@@ -7,6 +7,13 @@
 
 ## What's next
 
+* A lane with new posts under the place read last opens on the first of them, on top of the
+  screen — not on the post read last with the news below it (every interface).
+* The phone's "to the new" works at once: the place the lane opened on was held there for ten
+  seconds and pulled the list back until it was dragged a little.
+* A follow request waiting no longer pulls Activity up to where it came, among the old events:
+  the lane opens on the other new ones; on the request only if nothing else is new.
+
 * Scrolling a lane after a post's text was clicked no longer jumps a card or two ahead at every
   card let go: the focus in it went to the next card's button, and the scroll area scrolled
   there (the Qt window) — the jumps of the lanes of pictures.

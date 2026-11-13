@@ -389,8 +389,8 @@ class TuiLongLaneTest(TmpDir, unittest.IsolatedAsyncioTestCase):
 class TuiCurtainTest(test_cov_tui_host.Base):
     async def test_the_curtain_and_where_a_lane_opens(self):
         """ui.start_lane = "none": the terminal opens on the curtain, as the windows do
-        (it opened the lane of last time); Enter opens that lane — on the card the
-        reader stood at last, wherever that was (LaneModel.stood)."""
+        (it opened the lane of last time); Enter opens that lane — on the first new post
+        under the card the reader stood at last, wherever that was (LaneModel.stood)."""
         from textual.widgets import ListView, Static
 
         from fedtail.frontends.tui.app import CURTAIN, FedtailApp
@@ -417,8 +417,9 @@ class TuiCurtainTest(test_cov_tui_host.Base):
             await pilot.press("enter")
             await self.wait(pilot, lambda: app.lane == "home", what="the lane")
             lv = app.query_one("#posts", ListView)
+            # new posts under the place stood at: the first of them (13.11)
             await self.wait(pilot, lambda: getattr(lv.highlighted_child, "key", None)
-                            == "003", what="the place stood at")
+                            == "004", what="the first new under the place stood at")
             # pictures come in above it: it stays on screen where it stood (they pushed
             # it down and away, the lane showing older posts, 29.10)
             from rich.text import Text

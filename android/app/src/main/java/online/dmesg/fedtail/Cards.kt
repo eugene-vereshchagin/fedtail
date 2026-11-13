@@ -468,7 +468,8 @@ suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolea
  *  at the screen's bottom — while the pictures around it come in: the first card on
  *  screen growing pushed it down, and the lane showed older posts, read ones (the web page
  *  did that, 29.10). Till the reader drags the list, or HOLD_MS. */
-suspend fun holdPlace(state: LazyListState, index: Int, bottom: Boolean) {
+suspend fun holdPlace(state: LazyListState, index: Int, bottom: Boolean,
+                      stop: () -> Boolean = { false }) {
     if (index < 0) return
     var moved = false
     coroutineScope {
@@ -481,7 +482,8 @@ suspend fun holdPlace(state: LazyListState, index: Int, bottom: Boolean) {
                 info.visibleItemsInfo.firstOrNull { it.index == index }?.let {
                     Triple(it.offset, it.size, info.viewportEndOffset)
                 }
-            }.takeWhile { !moved }.collect { pos ->  // a drag by the reader: let go
+            }.takeWhile { !moved && !stop() }.collect { pos ->  // a drag, "to the new": let go
+                if (stop()) return@collect
                 if (pos == null) { state.scrollToItem(index); return@collect }
                 val (offset, size, end) = pos
                 val want = if (bottom) end - 8 - size else 0

@@ -158,7 +158,9 @@ class LaneModelTest(unittest.TestCase):
         m.stood(lane.SEPARATOR)  # the divider is no place
         self.assertEqual(state, {"stood.home": "i2"})
         again = lane.LaneModel(v, "home")  # another interface, a later start
-        self.assertEqual(again.start(specs), ("i2", "top"))  # new ones under it: on top
+        # new ones under it: the first of them on top (13.11: the phone opened on the
+        # one read last, not on the new)
+        self.assertEqual(again.start(specs), ("i3", "top"))
         state["stood.home"] = "3"  # a post's id; nothing new under it: at the bottom,
         self.assertEqual(again.start(specs), ("i3", "bottom"))  # as it was read
         m.stood("i3", at_end=True)  # read to the lane's end: no place, it opens as ever

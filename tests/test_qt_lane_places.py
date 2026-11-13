@@ -246,8 +246,8 @@ class LaneStoodTest(unittest.TestCase):
 
     def test_opens_where_the_reader_stood_and_says_where_it_stands(self):
         """The lane opens on the card the reader read last, in whatever interface
-        (LaneModel.stood) — not at its first unread: on top with new posts under it,
-        else at the bottom as it was read; read on, the last card seen whole goes back
+        (LaneModel.stood) — at the bottom as it was read; new posts under it since: the
+        first of them on top (13.11); read on, the last card seen whole goes back
         to the core (not the one on top: the place crept up with every opening, 29.10)."""
         self._pictures(20, 100)
         self.win.start()
@@ -260,9 +260,10 @@ class LaneStoodTest(unittest.TestCase):
         self.pump(0.5)
         top = view.verticalScrollBar().value()
         lm = self.win.lane_widgets["home"].lm
-        _key, where = lm.start(lm.build(positioned=True).specs)
-        if where == "top":
-            self.assertLessEqual(abs(view._ys["110"] - 6 - top), 2)
+        key, where = lm.start(lm.build(positioned=True).specs)
+        if where == "top":  # the first new one under the place read: on top
+            self.assertNotEqual(key, "110")
+            self.assertLessEqual(abs(view._ys[key] - 6 - top), 2)
         else:
             bottom = top + view.viewport().height()
             self.assertLessEqual(abs(view._ys["110"] + view.strip.height("110") - bottom), 12)
