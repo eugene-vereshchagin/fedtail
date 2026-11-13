@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.2 — 2026-11-13
 
 **In short: lanes that hold still, and pictures that come.** Scrolling a lane of pictures no
