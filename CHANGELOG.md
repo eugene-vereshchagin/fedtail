@@ -7,6 +7,9 @@
 
 ## What's next
 
+* textual-image 0.14.4 inside: a sixel picture without half-transparent pixels isn't
+  encoded anew when the background changes.
+
 ## 0.23.2 — 2026-11-13
 
 **In short: lanes that hold still, and pictures that come.** Scrolling a lane of pictures no
