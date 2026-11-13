@@ -5,11 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.23.1:**
-
-- A post's character count
-- A long post folded
-- Files attached, text ones read inside
+No new features yet.
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

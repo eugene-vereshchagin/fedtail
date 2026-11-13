@@ -5,7 +5,15 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.2 — 2026-11-13
+
+**In short: lanes that hold still, and pictures that come.** Scrolling a lane of pictures no
+longer jumps and shows the same posts twice; a lane opens on its first new post; big
+threads keep only what's near the screen; pictures your server has lost come from their
+authors' servers, without asking yours again and again (429).
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.2 (the same server under the new number; protocol 2). -->
 
 * A lane with new posts under the place read last opens on the first of them, on top of the
   screen — not on the post read last with the news below it (every interface).
@@ -13,28 +21,22 @@
   seconds and pulled the list back until it was dragged a little.
 * A follow request waiting no longer pulls Activity up to where it came, among the old events:
   the lane opens on the other new ones; on the request only if nothing else is new.
-
 * Scrolling a lane after a post's text was clicked no longer jumps a card or two ahead at every
   card let go: the focus in it went to the next card's button, and the scroll area scrolled
   there (the Qt window) — the jumps of the lanes of pictures.
 * A server that has lost three pictures in a row is asked after their authors' servers for ten
   minutes: a lane of day-old posts no longer asks it for 80 gone pictures a minute (429).
-
 * A picture gone from your server (404, 410: its cache of other servers' pictures emptied) is
   asked once of its author's server, and never again of yours later — a lane of day-old posts
   stayed broken and earned the server's 429s. In every interface.
-
 * A long lane's length no longer twitches by hundreds of pixels at every card built: the guess
   for the cards not built yet is taken anew only when the measured ones have doubled (Qt and
   GTK windows) — half as many moves the screen has to make good scrolling a lane of pictures.
-
 * A lane no longer stops with KeyError when a card it lets go was let go already by the scroll
   that hiding it moved (the Qt window).
-
 * A big thread (more than 40 posts) builds only the cards near the screen, as a lane does — in
   the Qt and GTK windows: one of hundreds of posts with pictures held them all while its tab was open
   (some 300 MB). "Open every warning" and the focus reach the cards not built yet.
-
 * Scrolling up a lane of pictures (after a jump to its end) no longer brings the same posts by
   two and three times: the reading place holds by the first card that begins on the screen,
   so a card above it growing as its picture comes pushes nothing down (Qt and GTK windows).
