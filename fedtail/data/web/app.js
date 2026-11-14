@@ -739,6 +739,7 @@ function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invi
   compose(parent);
   state.edit = c.edit || null;
   state.quote = c.quote || null;
+  if (c.edit || c.quote) { state.shelvable = false; $("#draft-shelve").hidden = true; }
   if (c.edit) {  // an edit changes words: pictures and who sees it stay (as the windows say)
     $("#compose-title").textContent = w("edit");
     $("#attach").disabled = $("#vis").disabled = $("#poll-toggle").disabled = true;
@@ -2627,6 +2628,16 @@ function renderForm(fields) {
 
 async function placeAct(act, values, confirmed, answer) {
   let r;
+  // Drafts → Open of a set-aside new post: the core sets aside what "new" holds in its
+  // place — hand it the page's own new-post text first, so that isn't lost
+  if (act[0] === "drafts" && act[1] === "open" && String(act[2] || "").startsWith("new")
+      && store("draft.new")) {
+    try {
+      await api("/api/draft_save", { key: "new", snap: { text: store("draft.new"), cw: "",
+        visibility: state.me.visibility, media: [], language: null, sensitive: false,
+        poll: null } });
+    } catch (e) { /* the core's own then */ }
+  }
   try {
     r = await api("/api/place", { act, values: values || {}, confirmed: !!confirmed,
                                   answer: answer === undefined ? null : answer });
@@ -2715,7 +2726,15 @@ function compose(replyTo) {
   } else {
     t.value = store("draft.new");
     $("#vis").value = state.me.visibility;
+    // "New draft": the core says whether this editor may (a new post's, Drafts on)
+    api("/api/draft_start", {}).then((st) => {
+      if (state.replyTo || state.edit || state.quote) return;
+      state.shelvable = !!st.shelvable;
+      $("#draft-shelve").hidden = !state.shelvable;
+    }).catch(() => {});
   }
+  state.shelvable = false;
+  $("#draft-shelve").hidden = true;
   if (!replyTo) { $("#cw").value = ""; showCw(false); }
   $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
   $("#vis").disabled = false;  // an edit before locked these (composeFrom)
@@ -2727,6 +2746,126 @@ function compose(replyTo) {
   if (!d.open) d.showModal();
   t.focus();
   t.setSelectionRange(t.value.length, t.value.length);
+}
+
+// "New draft": the draft kept (as the page keeps it), set aside by the core, the editor clean
+async function shelveDraft() {
+  const text = $("#text").value;
+  try {
+    await api("/api/draft_save", { key: "new", snap: {
+      text, cw: $("#cw").hidden ? "" : $("#cw").value, visibility: $("#vis").value,
+      language: $("#lang").value || null, sensitive: state.sensitive,
+      poll: state.poll && !state.media.length ? {
+        options: state.poll.options, expires_in: state.poll.expires_in,
+        multiple: state.poll.multiple } : null } });
+    await api("/api/draft_shelve", { key: "new" });
+  } catch (e) { toast(e.message); return; }
+  clearTimeout(state.checkTimer);
+  store("draft.new", "");
+  $("#text").value = "";
+  $("#cw").value = "";
+  showCw(false);
+  state.media = [];
+  state.poll = null;
+  state.sensitive = false;
+  drawAttached();
+  drawPoll();
+  counter();
+  hint(w("draft_shelved"));
+  $("#text").focus();
+}
+
+// the emoji picker: the standard ones by group, my server's by category (the core searches)
+const emojiPick = { tab: "standard", data: null, timer: 0, seq: 0 };
+
+function insertAtCursor(text) {
+  const t = $("#text");
+  const a = t.selectionStart === null ? t.value.length : t.selectionStart;
+  const b = t.selectionEnd === null ? a : t.selectionEnd;
+  t.setRangeText(text, a, b, "end");
+  t.dispatchEvent(new Event("input", { bubbles: true }));  // the count, the draft
+  t.focus();
+}
+
+async function openEmoji() {
+  $("#emoji-search").value = "";
+  emojiPick.tab = "standard";
+  $("#emoji-dlg").showModal();
+  await loadEmoji();
+  $("#emoji-search").focus();
+}
+
+async function loadEmoji() {
+  const seq = ++emojiPick.seq;
+  let r;
+  try { r = await api("/api/emoji?q=" + encodeURIComponent($("#emoji-search").value.trim())); }
+  catch (e) { toast(e.message); return; }
+  if (seq !== emojiPick.seq) return;
+  emojiPick.data = r;
+  drawEmoji();
+}
+
+function drawEmoji() {
+  const r = emojiPick.data || { items: [], standard: [] };
+  const hasStd = (r.standard || []).length > 0 || !!$("#emoji-search").value.trim();
+  const tabs = $("#emoji-tabs");
+  tabs.textContent = "";
+  if (!hasStd) emojiPick.tab = "server";
+  if (hasStd) {
+    for (const [id, label] of [["standard", w("emoji_tab_standard")],
+                               ["server", w("emoji_tab_server")]]) {
+      const b = el("button", "tool" + (emojiPick.tab === id ? " on" : ""), label);
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.onclick = () => { emojiPick.tab = id; drawEmoji(); };
+      tabs.append(b);
+    }
+  }
+  const body = $("#emoji-body");
+  body.textContent = "";
+  const pick = (text) => { $("#emoji-dlg").close(); insertAtCursor(text); };
+  if (emojiPick.tab === "standard") {
+    for (const g of r.standard || []) {
+      if (g.title) body.append(el("h3", "", g.title));
+      const grid = el("div", "grid");
+      for (const e of g.items) {
+        const b = el("button", "em", e.char);
+        b.type = "button";
+        b.title = ":" + e.code + ":";
+        b.onclick = () => pick(e.char);
+        grid.append(b);
+      }
+      body.append(grid);
+    }
+    if (!body.children.length) body.append(el("div", "muted", w("emoji_none")));
+    return;
+  }
+  const q = $("#emoji-search").value.trim().toLowerCase().replace(/^:|:$/g, "");
+  const items = (r.items || []).filter((e) => !q || e.code.toLowerCase().includes(q));
+  if (!(r.items || []).length) { body.append(el("div", "muted", w("emoji_server_none"))); return; }
+  if (!items.length) { body.append(el("div", "muted", w("emoji_none"))); return; }
+  const groups = new Map();
+  for (const e of items) {
+    if (!groups.has(e.category)) groups.set(e.category, []);
+    groups.get(e.category).push(e);
+  }
+  for (const [cat, es] of groups) {
+    if (cat) body.append(el("h3", "", cat));
+    const grid = el("div", "grid");
+    for (const e of es) {
+      const b = el("button", "em");
+      b.type = "button";
+      b.title = ":" + e.code + ":";
+      const img = el("img");
+      img.src = e.url;
+      img.alt = ":" + e.code + ":";
+      img.loading = "lazy";
+      b.append(img);
+      b.onclick = () => pick(":" + e.code + ": ");
+      grid.append(b);
+    }
+    body.append(grid);
+  }
 }
 
 // all accounts in one window: whom it goes from — the account that got the post replied
@@ -3520,6 +3659,20 @@ async function start() {
   $("#cw-toggle").textContent = "⚠";
   $("#cw-toggle").title = w("cw_add_tip");
   $("#cw-toggle").onclick = () => showCw($("#cw").hidden);
+  $("#emoji-pick").textContent = w("emoji_pick");
+  $("#emoji-pick").title = w("emoji_pick_tip");
+  $("#emoji-title").textContent = w("emoji_title");
+  $("#emoji-search").placeholder = w("emoji_search");
+  $("#emoji-close").textContent = w("web_close");
+  $("#emoji-close").onclick = () => $("#emoji-dlg").close();
+  $("#emoji-pick").onclick = openEmoji;
+  $("#emoji-search").addEventListener("input", () => {
+    clearTimeout(emojiPick.timer);
+    emojiPick.timer = setTimeout(loadEmoji, 250);  // the core searches; asked again on a pause
+  });
+  $("#draft-shelve").textContent = w("draft_shelve");
+  $("#draft-shelve").title = w("draft_shelve_tip");
+  $("#draft-shelve").onclick = shelveDraft;
   $("#lang").title = w("lang_tip");
   for (const [code, label] of (me.editor || {}).languages || [["", ""]]) {
     const o = el("option", "", label);

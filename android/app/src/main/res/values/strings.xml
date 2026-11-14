@@ -178,7 +178,12 @@
     <string name="reply_in_thread">Reply to @%1$s…</string>
     <string name="vis_as_parent_short">who sees it: as the post</string>
     <string name="emoji_pick">☺ Emoji</string>
-    <string name="emoji_search">Find by name</string>
-    <string name="emoji_none">No such emoji on your server</string>
+    <string name="emoji_search">Find (smile, heart, cat)</string>
+    <string name="emoji_none">Nothing found</string>
+    <string name="emoji_server_none">Your server has no emoji of its own</string>
+    <string name="emoji_tab_standard">Standard</string>
+    <string name="emoji_tab_server">Server\'s</string>
+    <string name="draft_shelve">New draft</string>
+    <string name="draft_shelved">Set aside in Drafts</string>
     <string name="loading">Loading…</string>
 </resources>

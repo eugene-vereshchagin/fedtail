@@ -389,7 +389,9 @@ class QtSmokeTest(unittest.TestCase):
         dlg.text.setPlainText("ну :cat")
         dlg.text.moveCursor(cur.MoveOperation.End)
         dlg._suggest_tags()
-        self.assertEqual(dlg._tag_model.stringList(), [":catjam:", ":blobcat:"])
+        got = dlg._tag_model.stringList()
+        self.assertEqual(got[:2], [":catjam:", ":blobcat:"])  # the server's first
+        self.assertIn("🐱 :cat:", got)  # then the standard ones (post.emoji_standard)
         dlg._put_tag(":catjam:")
         self.assertEqual(dlg.text.toPlainText(), "ну :catjam: ")
         dlg.text.setPlainText("в 12:30")

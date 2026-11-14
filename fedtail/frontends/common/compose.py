@@ -209,8 +209,39 @@ def suggestions(view, sigil, word):
     if sigil == "@" and post.get("complete_mentions", True):
         return people_items(view.mention_suggestions(word))
     if sigil == ":" and post.get("complete_emoji", True):
-        return [(f":{code}:", f":{code}:") for code, _e in view.emoji_suggestions(word)]
+        mine = [(f":{code}:", f":{code}:") for code, _e in view.emoji_suggestions(word)]
+        return mine + view.emoji_standard_suggestions(word, max(0, 8 - len(mine)))
     return []
+
+
+EMOJI_GROUPS = ("faces", "people", "nature", "food", "travel", "things", "symbols")
+
+
+def emoji_standard(view, words=""):
+    """The picker's "Standard" tab as every interface draws it: [(group title, [{"char",
+    "code", "name"}])] in the groups' order; with `words`, one untitled group of what they
+    find, the best first. [] with post.emoji_standard off."""
+    from ...i18n import _
+    got = view.emoji_standard(words)
+    if words.strip():
+        return [("", got)] if got else []
+    by = {}
+    for e in got:
+        by.setdefault(e["group"], []).append(e)
+    return [(_("emoji_g_" + g), by[g]) for g in EMOJI_GROUPS if by.get(g)]
+
+
+def emoji_server(items, words=""):
+    """The picker's "Server's" tab: the server's emoji (View.emoji_all's) [(category, [emoji
+    dict])], or those whose short name holds `words` (one untitled group)."""
+    w = words.strip().strip(":").casefold()
+    if w:
+        got = [e for e in items if w in e["shortcode"].casefold()]
+        return [("", got)] if got else []
+    by = {}
+    for e in items:
+        by.setdefault(str(e.get("category") or ""), []).append(e)
+    return list(by.items())
 
 
 def people_items(people):

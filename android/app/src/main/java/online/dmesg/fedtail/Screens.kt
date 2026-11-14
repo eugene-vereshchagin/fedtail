@@ -116,6 +116,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -742,33 +743,43 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 model.checkCompose()
             }
             // what goes with the words: a warning, pictures, a poll, the language
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = model.composeCwOn, onClick = { model.composeCwOn = !model.composeCwOn },
-                    label = { Text(stringResource(R.string.cw_add)) })
+            var shelvable by remember { mutableStateOf(false) }
+            LaunchedEffect(model.editId, model.quoteId, place.replyTo) { shelvable = model.shelvable() }
+            val chips = buildList<@Composable (Modifier) -> Unit> {
+                add { m -> FilterChip(selected = model.composeCwOn, modifier = m,
+                    onClick = { model.composeCwOn = !model.composeCwOn },
+                    label = { ChipLabel(stringResource(R.string.cw_add)) }) }
                 if (!editing) {
                     // "send later": the server keeps it until then (scheduled_at)
-                    FilterChip(selected = model.composeWhen.isNotBlank(), onClick = {
-                        if (model.composeWhen.isNotBlank()) model.composeWhen = ""
-                        else pickWhen(context) { model.composeWhen = it }
-                    }, label = {
-                        Text(if (model.composeWhen.isBlank()) stringResource(R.string.send_later)
-                             else "⏰ " + model.composeWhen.replace("T", " "))
-                    })
-                    FilterChip(selected = false, enabled = !model.pollOn &&
-                            model.attachments.size < model.maxMedia(),
+                    add { m -> FilterChip(selected = model.composeWhen.isNotBlank(), modifier = m,
+                        onClick = {
+                            if (model.composeWhen.isNotBlank()) model.composeWhen = ""
+                            else pickWhen(context) { model.composeWhen = it }
+                        }, label = {
+                            ChipLabel(if (model.composeWhen.isBlank()) stringResource(R.string.send_later)
+                                 else "⏰ " + model.composeWhen.replace("T", " "))
+                        }) }
+                    add { m -> FilterChip(selected = false, modifier = m,
+                        enabled = !model.pollOn && model.attachments.size < model.maxMedia(),
                         onClick = { pick.launch(PickVisualMediaRequest(
                             ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                        label = { Text(stringResource(R.string.attach)) })
-                    FilterChip(selected = model.pollOn, enabled = model.attachments.isEmpty(),
+                        label = { ChipLabel(stringResource(R.string.attach)) }) }
+                    add { m -> FilterChip(selected = model.pollOn, modifier = m,
+                        enabled = model.attachments.isEmpty(),
                         onClick = { model.pollOn = !model.pollOn },
-                        label = { Text(stringResource(R.string.poll)) })
-                    LanguagePick(model)
+                        label = { ChipLabel(stringResource(R.string.poll)) }) }
+                    if (model.languages().isNotEmpty()) add { m -> LanguagePick(model, m) }
                 }
                 // my server's own emoji, all of them as pictures: a tap puts ":code: " at
                 // the cursor (typing ":" offers them too, in the chips over the keyboard)
-                FilterChip(selected = false, onClick = { emojiOpen = true },
-                    label = { Text(stringResource(R.string.emoji_pick)) })
+                add { m -> FilterChip(selected = false, onClick = { emojiOpen = true }, modifier = m,
+                    label = { ChipLabel(stringResource(R.string.emoji_pick)) }) }
+                // "New draft": this one set aside in Drafts, the editor clean (the core's say)
+                if (shelvable && model.editId == null) add { m ->
+                    FilterChip(selected = false, onClick = { model.shelveDraft() }, modifier = m,
+                        label = { ChipLabel(stringResource(R.string.draft_shelve)) }) }
             }
+            ChipGrid(chips)
             if (emojiOpen) EmojiSheet(onClose = { emojiOpen = false }) { code ->
                 val at = field.selection.min
                 val pad = if (at > 0 && !field.text[at - 1].isWhitespace()) " " else ""
@@ -846,14 +857,15 @@ private fun pickWhen(context: android.content.Context, done: (String) -> Unit) {
 }
 
 @Composable
-private fun LanguagePick(model: AppModel) {
+private fun LanguagePick(model: AppModel, chipModifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     val langs = model.languages()
     if (langs.isEmpty()) return
     var asking by remember { mutableStateOf(false) }
     Box {
         FilterChip(selected = model.composeLang.isNotBlank(), onClick = { open = true },
-            label = { Text(langs.firstOrNull { it.first == model.composeLang }?.second
+            modifier = chipModifier,
+            label = { ChipLabel(langs.firstOrNull { it.first == model.composeLang }?.second
                 ?: model.composeLang.ifBlank { stringResource(R.string.language) }) })
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             langs.forEach { (code, words) ->
@@ -992,45 +1004,129 @@ private fun ConfigPlace(model: AppModel, snack: SnackbarHostState) {
 
 
 
-/** The editor's picker: every emoji of my server (bridge.emoji_list), a search over
- *  their codes, a tap — the code ("`:blobcat:`") to put at the cursor. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** A chip's words, centred, one line. */
+@Composable
+private fun ChipLabel(text: String) {
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
+}
+
+/** The editor's chips as a grid of equal buttons: 3 to a row, 2 on a narrow screen. */
+@Composable
+private fun ChipGrid(chips: List<@Composable (Modifier) -> Unit>) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cols = if (maxWidth < 340.dp) 2 else 3
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            chips.chunked(cols).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { chip -> chip(Modifier.weight(1f)) }
+                    repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+/** The editor's picker, two tabs: the standard emoji by group (bridge.emoji_list(words):
+ *  the core ranks what a search finds) and my server's own (a filter over their codes).
+ *  A tap gives what goes at the cursor: the char, or ":code:". */
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun EmojiSheet(onClose: () -> Unit, onPick: (String) -> Unit) {
     var items by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
+    var standard by remember { mutableStateOf<List<Pair<String, List<Pair<String, String>>>>?>(null) }
     var error by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
+    var tab by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {
         val got = Core.emojiList()
         val failed = Core.failed(got)
-        if (failed != null) { error = failed; items = emptyList(); return@LaunchedEffect }
+        if (failed != null) { error = failed; items = emptyList(); standard = emptyList(); return@LaunchedEffect }
         val arr = got.optJSONArray("items") ?: org.json.JSONArray()
         items = (0 until arr.length()).map { arr.getJSONObject(it) }
             .map { it.optString("code") to it.optString("url") }
+        standard = parseStandard(got)
+    }
+    // the search is the core's for the standard tab: asked once the fingers pause
+    LaunchedEffect(query) {
+        if (standard == null) return@LaunchedEffect
+        delay(250)
+        val got = Core.emojiList(query.trim())
+        if (Core.failed(got) == null) standard = parseStandard(got)
     }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().heightIn(min = 240.dp, max = 520.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
                 label = { Text(stringResource(R.string.emoji_search)) }, modifier = Modifier.fillMaxWidth())
-            val want = query.trim().trim(':')
-            val shown = items?.filter { want.isEmpty() || it.first.contains(want, ignoreCase = true) }
-            when {
-                shown == null -> CircularProgressIndicator()
-                error.isNotBlank() -> Text(error)
-                shown.isEmpty() -> Text(stringResource(R.string.emoji_none))
-                else -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    androidx.compose.foundation.lazy.grid.GridCells.Adaptive(52.dp)) {
-                    items(shown.size, key = { shown[it].first }) { i ->
-                        val (code, url) = shown[i]
-                        Box(Modifier.size(52.dp).clickable { onPick(":$code:") }
-                            .semantics { contentDescription = ":$code:" },
-                            contentAlignment = Alignment.Center) {
-                            AsyncImage(model = url, contentDescription = null, modifier = Modifier.size(36.dp))
+            // a search with nothing found keeps both tabs: only an empty standard set drops one
+            val noStandard = standard != null && standard!!.isEmpty() && query.isBlank()
+            val shownTabs = if (noStandard) listOf(1) else listOf(0, 1)
+            val current = if (shownTabs.size == 1) 1 else tab
+            if (shownTabs.size > 1) androidx.compose.material3.TabRow(selectedTabIndex = tab) {
+                shownTabs.forEach { t ->
+                    androidx.compose.material3.Tab(selected = tab == t, onClick = { tab = t },
+                        text = { Text(stringResource(if (t == 0) R.string.emoji_tab_standard
+                            else R.string.emoji_tab_server)) })
+                }
+            }
+            if (current == 0) {
+                val groups = standard
+                when {
+                    groups == null -> CircularProgressIndicator()
+                    groups.isEmpty() -> Text(stringResource(R.string.emoji_none))
+                    else -> androidx.compose.foundation.lazy.LazyColumn {
+                        groups.forEach { (title, chars) ->
+                            if (title.isNotBlank()) item {
+                                Text(title, style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                            }
+                            item {
+                                FlowRow {
+                                    chars.forEach { (ch, name) ->
+                                        Box(Modifier.size(48.dp).clickable { onPick(ch) }
+                                            .semantics { contentDescription = name },
+                                            contentAlignment = Alignment.Center) {
+                                            Text(ch, fontSize = 28.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                val want = query.trim().trim(':')
+                val shown = items?.filter { want.isEmpty() || it.first.contains(want, ignoreCase = true) }
+                when {
+                    shown == null -> CircularProgressIndicator()
+                    error.isNotBlank() -> Text(error)
+                    shown.isEmpty() -> Text(stringResource(
+                        if (items.isNullOrEmpty()) R.string.emoji_server_none else R.string.emoji_none))
+                    else -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        androidx.compose.foundation.lazy.grid.GridCells.Adaptive(52.dp)) {
+                        items(shown.size, key = { shown[it].first }) { i ->
+                            val (code, url) = shown[i]
+                            Box(Modifier.size(52.dp).clickable { onPick(":$code:") }
+                                .semantics { contentDescription = ":$code:" },
+                                contentAlignment = Alignment.Center) {
+                                AsyncImage(model = url, contentDescription = null, modifier = Modifier.size(36.dp))
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+/** emoji_list's "standard": [{title, items: [{char, code, name}]}] → (title, [(char, name)]). */
+private fun parseStandard(got: org.json.JSONObject): List<Pair<String, List<Pair<String, String>>>> {
+    val groups = got.optJSONArray("standard") ?: return emptyList()
+    return (0 until groups.length()).map { groups.getJSONObject(it) }.map { g ->
+        val arr = g.optJSONArray("items") ?: org.json.JSONArray()
+        g.optString("title") to (0 until arr.length()).map { arr.getJSONObject(it) }
+            .map { it.optString("char") to it.optString("name") }
+    }.filter { it.second.isNotEmpty() }
 }

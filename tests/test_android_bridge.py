@@ -1080,6 +1080,15 @@ class BridgeDraftTest(_Base):
         self.call("draft_drop", "new")
         self.assertFalse(self.call("draft_start", "", "", "", False)["restored"])
         self.assertIn("error", json.loads(self.bridge.draft_save("../x", "{}")))
+        # "New draft": only a new post's, set aside by the core, a key back
+        self.assertFalse(self.call("draft_shelvable", "reply:103")["shelvable"])
+        self.call("draft_save", "new", json.dumps({"text": "отложу"}))
+        self.assertTrue(self.call("draft_shelvable", "new")["shelvable"])
+        key = self.call("draft_shelve", "new")["key"]
+        self.assertTrue(key.startswith("new:"))
+        self.assertFalse(self.call("draft_start", "", "", "", False)["restored"])
+        self.assertIsNone(self.call("draft_shelve", "new")["key"])  # nothing to keep
+        self.assertEqual(self.call("emoji_list", "smile")["standard"][0]["title"], "")
         pv = self.call("preview", json.dumps({"text": "раз\n\nдва", "cw": "осторожно"}))
         self.assertTrue(pv["parts"] and pv["cw"] == "осторожно")
 

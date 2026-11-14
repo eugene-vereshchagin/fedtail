@@ -177,7 +177,12 @@
     <string name="reply_in_thread">Ответить @%1$s…</string>
     <string name="vis_as_parent_short">видят: как у оригинала</string>
     <string name="emoji_pick">☺ Эмодзи</string>
-    <string name="emoji_search">Найти по имени</string>
-    <string name="emoji_none">Таких эмодзи на твоём сервере нет</string>
+    <string name="emoji_search">Найти (по-английски: smile, heart, cat)</string>
+    <string name="emoji_none">Ничего не нашлось</string>
+    <string name="emoji_server_none">У твоего сервера своих эмодзи нет</string>
+    <string name="emoji_tab_standard">Обычные</string>
+    <string name="emoji_tab_server">Сервера</string>
+    <string name="draft_shelve">Новый черновик</string>
+    <string name="draft_shelved">Отложено в «Черновики»</string>
     <string name="loading">Загрузка…</string>
 </resources>

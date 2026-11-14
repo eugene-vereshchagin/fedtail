@@ -161,7 +161,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Shrinking pictures to the server's limit | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | A file the server won't take — said at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Completing #tags, @nicks, :emoji: | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| All the server's emoji as pictures — to pick in the editor | ◐ |   | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
+| An emoji picker in the editor: the standard ones and the server's | ✓ |   | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 | CamelCase hint for hashtags | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The post's language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A poll in a post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |

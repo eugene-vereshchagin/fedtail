@@ -331,6 +331,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.complete_mentions` | `true` | Typing @ar — suggest people: first those seen most in the lanes, then those the server finds. false — no suggestions. |
 | `post.complete_tags` | `true` | Typing #ge — suggest tags: first those you follow, then the most frequent in the lanes. |
 | `post.complete_emoji` | `true` | Typing :co — suggest the server's emoji (:cookie: and the like), Tab or Enter puts it in. false — no suggestions. |
+| `post.emoji_standard` | `true` | The standard (Unicode) emoji too: the "Standard" tab of the editor's emoji picker beside the server's own, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of GitHub and Slack, and Unicode's English names: :winking). false — the server's only. |
 | `post.report_forward` | `true` | A report to the moderators about a person from another server: the "forward to their server too" tick is on at once (they won't learn who reported). false — off by default. |
 | `post.quote_policy` | `""` | Who may quote your new posts (Mastodon 4.5+): "public" — everyone, "followers" — followers, "nobody" — nobody; "" — as in the account's settings on the server. |
 | `post.quote_action` | `true` | "Quote" in the ⋯ menu of a post its author allowed to quote (Mastodon 4.5+). |
@@ -352,7 +353,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.link_quote` | `false` | A post's link at the end of the text becomes a quote of that post (when its author lets it be quoted), and the link leaves the text. |
 | `post.send_in_background` | `false` | The editor closes as soon as you press Send, and the post (pictures and videos too) goes in the background. If it fails, you're told; the draft stays. |
 | `post.scheduled_to_draft` | `false` | In "Scheduled", each post gets "To the editor": taken off the schedule and opened in the editor, to fix and send again. |
-| `post.drafts_place` | `false` | "Drafts" in the ≡ menu: every kept draft — the new post, replies, quotes — to open or delete. |
+| `post.drafts_place` | `true` | "Drafts" in the ≡ menu: every kept draft — new posts (the editor's "New draft" sets one aside and starts a clean one), replies, quotes — to open or delete. |
 | `post.markdown` | `"auto"` | Whether the server understands Markdown: "auto" (ask the server), "on", "off". GoToSocial / Akkoma do, vanilla Mastodon doesn't. |
 
 ## 10. Notifications and sounds

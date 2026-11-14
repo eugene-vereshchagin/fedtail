@@ -247,7 +247,7 @@ DEFAULTS = {
         "link_quote": False,       # a post's link at the end of the text: a quote of it
         "send_in_background": False,  # the editor closes at once; the post goes after
         "scheduled_to_draft": False,  # "Back to the editor" on a scheduled post
-        "drafts_place": False,     # "Drafts" in the ≡ menu: every kept draft
+        "drafts_place": True,      # "Drafts" in the ≡ menu: every kept draft
         "redraft": True,
         "resize_images": True,
         "check_media_types": True,
@@ -255,6 +255,7 @@ DEFAULTS = {
         "preview": True,
         "format_bar": "left",
         "complete_emoji": True,
+        "emoji_standard": True,    # the picker's "Standard" tab and :smile: as one types
         "focus_point": True,
         "quote_prefix": "> ",
     },
@@ -644,6 +645,7 @@ FILE_LAYOUT = (
                            "autosave_ms cw_field reply_warning camelcase_hint plain_posts language "
                            "languages spellcheck "
                            "spell_languages complete_mentions complete_tags complete_emoji "
+                           "emoji_standard "
                            "report_forward quote_policy quote_action quote_prefix invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
                            "redraft resize_images check_media_types focus_point chain preview "

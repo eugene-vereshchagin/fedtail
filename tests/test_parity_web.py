@@ -224,6 +224,44 @@ class ParityWebTest(TmpDir):
         self.assertIsNotNone(webs._saver)
 
 
+class EditorExtrasTest(ParityWebTest):
+    """The emoji picker and "New draft": the core decides, the page draws."""
+
+    def test_emoji_route_and_strings(self):
+        self.w.emoji = [{"shortcode": "blobcat", "static_url": "https://e/bc.png",
+                         "category": "blobs"}]
+        got = self.get("/api/emoji")
+        self.assertEqual(got["items"][0]["code"], "blobcat")
+        self.assertIn("standard", got)
+        found = self.get("/api/emoji?q=heart")
+        self.assertLessEqual(len(found["standard"]), 1)
+        for key in ("emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
+                    "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
+                    "draft_shelve", "draft_shelve_tip", "draft_shelved"):
+            self.assertIn(f'"{key}"', (ROOT / "fedtail/frontends/web/server.py").read_text())
+
+    def test_shelve_flag_and_route(self):
+        self.core.cfg["post"]["drafts_place"] = True
+        self.assertTrue(self.web_start()["shelvable"])
+        self.assertFalse(self.web_start(reply_to="002")["shelvable"])
+        self.core.cfg["post"]["drafts_place"] = False
+        self.assertFalse(self.web_start()["shelvable"])
+        self.core.cfg["post"]["drafts_place"] = True
+        code, _r = self.post("/api/draft_save", {"key": "new", "snap": {"text": "half"}})
+        self.assertEqual(code, 200)
+        code, r = self.post("/api/draft_shelve", {"key": "new"})
+        self.assertEqual(code, 200)
+        self.assertTrue(r["key"].startswith("new:"))
+        self.assertIsNone(self.core.get_draft("new"))
+        self.assertEqual(self.core.get_draft(r["key"])["text"], "half")
+        # nothing kept, or not a new post's: nothing set aside
+        self.assertIsNone(self.post("/api/draft_shelve", {"key": "new"})[1]["key"])
+        self.assertIsNone(self.post("/api/draft_shelve", {"key": "reply:002"})[1]["key"])
+
+    def web_start(self, **kw):
+        return web.Web(self.core, None).draft_start(**kw)
+
+
 class PageTest(unittest.TestCase):
     def test_app_js_parses(self):
         node = shutil.which("node")
@@ -235,11 +273,12 @@ class PageTest(unittest.TestCase):
 
     def test_page_has_the_controls(self):
         html = (ROOT / "fedtail/data/web/index.html").read_text(encoding="utf-8")
-        for el in ("preview", "discard", "compose-hint", "preview-dlg", "viewer-save"):
+        for el in ("preview", "discard", "compose-hint", "preview-dlg", "viewer-save",
+                   "emoji-pick", "emoji-dlg", "draft-shelve"):
             self.assertIn(f'id="{el}"', html)
         js = (ROOT / "fedtail/data/web/app.js").read_text(encoding="utf-8")
         for call in ("/api/preview", "/api/add_language", "/api/compose_check", "/api/fold",
                      "/api/find_deeper", "/api/find_everywhere", "/api/poll_refresh",
-                     "/api/save", "ask_alt", "alt_ok"):
+                     "/api/save", "ask_alt", "alt_ok", "/api/emoji", "/api/draft_shelve"):
             self.assertIn(call, js)
 

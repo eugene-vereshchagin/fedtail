@@ -572,3 +572,17 @@ body.lit .post:hover .acts button, body.lit .post:hover .acts a { color: var(--a
   padding: 2px 6px; font-size: 1em; }
 .post .own-tools button:hover { color: var(--text); }
 .post .own-tools button.on { background: var(--accent); color: var(--accent-text); border-radius: 4px; }
+
+dialog#emoji-dlg { max-width: 560px; width: 92vw; border: 1px solid var(--line);
+                   border-radius: 14px; background: var(--card); color: var(--text);
+                   padding: 12px 14px; }
+dialog#emoji-dlg::backdrop { background: rgba(0, 0, 0, .4); }
+#emoji-search { width: 100%; box-sizing: border-box; margin: 6px 0; }
+#emoji-tabs { display: flex; gap: 4px; }
+#emoji-body { max-height: 50vh; overflow-y: auto; }
+#emoji-body h3 { font-size: 13px; margin: 8px 0 2px; color: var(--muted, inherit); }
+#emoji-body .grid { display: flex; flex-wrap: wrap; gap: 2px; }
+#emoji-body button.em { background: none; border: 0; border-radius: 6px; padding: 3px;
+                        font-size: 22px; line-height: 1; cursor: pointer; color: inherit; }
+#emoji-body button.em:hover, #emoji-body button.em:focus { background: var(--ctx); }
+#emoji-body button.em img { width: 28px; height: 28px; object-fit: contain; display: block; }

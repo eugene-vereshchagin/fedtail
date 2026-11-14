@@ -2417,6 +2417,19 @@ class MainWindow(QMainWindow):
             return
         if not self.isVisible():  # a panel of the main window: the window comes too
             self.show_raise()
+        if text and not reply_to and not attach:
+            # a set-aside draft opened (Drafts): an editor of a new post already open
+            # shows what the store holds under "new" now, instead of saving its own over it
+            for c in list(getattr(self, "open_composes", [])):
+                try:
+                    if c.isVisible() and c.key == "new" and not c.edit and not c.sent \
+                            and self.core.get_draft("new"):
+                        c.reload(text)
+                        c.raise_()
+                        c.activateWindow()
+                        return
+                except RuntimeError:  # closed and gone
+                    continue
         Compose(self, reply_to, attach, text).show()
 
     def quote_reply(self, st, text, whole=False):

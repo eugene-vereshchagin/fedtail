@@ -528,8 +528,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | A file the server won't take — said at once | has | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
-| Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji` | `accounts/search`, `custom_emojis` | everyone |
-| All the server's emoji as pictures — to pick in the editor | partly | 0.22.7 | `post.complete_emoji` | `custom_emojis` | many have it |
+| Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji`, `post.emoji_standard` | `accounts/search`, `custom_emojis` | everyone |
+| An emoji picker in the editor: the standard ones and the server's | has | next | `post.emoji_standard`, `post.complete_emoji` | `custom_emojis` | many have it |
 | CamelCase hint for hashtags | has | 0.2.0 | `post.camelcase_hint` | own | only in fedtail |
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |
 | A poll in a post | has | 0.8.0 | — | `poll[options]` | everyone |
@@ -570,9 +570,9 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **A file the server won't take — said at once.** The server says which file types it takes (usually pictures, video, sound). PDF, EPUB, FB2 and anything else not on its list fedtail doesn't upload but says at once: “The server doesn't take such files: book.pdf (it takes: pictures, video, sound)” — the text stays in the draft. fedtail knows a file's type itself, the same on every system (.md, .fb2, .epub — on Windows too), so a server that takes documents (Akkoma, Pleroma) gets them with the right type. A server that gives no list decides itself. `post.check_media_types = false` — no check.
 
-**Completing #tags, @nicks, :emoji:.** `#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, Tab or Enter puts it in.
+**Completing #tags, @nicks, :emoji:.** `#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, then the standard ones (`:smile` → 😄, `post.emoji_standard`), Tab or Enter puts it in.
 
-**All the server's emoji as pictures — to pick in the editor.** On the phone — “☺ Emoji” under the text: every emoji of your server as a grid of pictures, with a search by name, a tap puts `:name:` at the cursor; the suggestions as you type `:` have their picture too. The windows, the terminal and the web page so far only complete as you type `:`.
+**An emoji picker in the editor: the standard ones and the server's.** “☺ Emoji” by the text — in every interface: the “Standard” tab — every Unicode emoji by group (faces, people and hands, nature, food, places, things, symbols), the “Server's” tab — your server's own emoji as pictures (in the terminal, by name). The search takes English words: smile finds 😄 and the “smiling” ones too. A standard emoji goes into the text itself, a server's as `:name:`. The standard ones come from the Unicode Python knows, plus the short names of GitHub and Slack (`:smile:`, `:+1:`, `:tada:`). `post.emoji_standard = false` — the server's only.
 
 **CamelCase hint for hashtags.** A hashtag in one case (`#georgianews`) gets a hint: screen readers read `#GeorgiaNews` word by word.
 
@@ -602,7 +602,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Spell checking in the compose panel.** Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker.
 
-**Language check, link → quote, sending in the background, scheduled → editor, Drafts.** `lang_check` — before sending: the text is plainly in another language than the post's (by its script, and with langdetect by its words too) — "Mark it …", "Send as is" or back to the text. `link_quote` — a post's link at the end of the text becomes a quote (when its author allows) and leaves the text. `send_in_background` — the editor closes at once, the post with its pictures goes in the background; if it fails the editor comes back (on the web page and the phone, a notification, the draft kept). `scheduled_to_draft` — a scheduled post's "To the editor": off the schedule, its text in the editor. `drafts_place` — "Drafts" in the ≡ menu: every draft, to open (a reply's in its thread) or delete.
+**Language check, link → quote, sending in the background, scheduled → editor, Drafts.** `lang_check` — before sending: the text is plainly in another language than the post's (by its script, and with langdetect by its words too) — "Mark it …", "Send as is" or back to the text. `link_quote` — a post's link at the end of the text becomes a quote (when its author allows) and leaves the text. `send_in_background` — the editor closes at once, the post with its pictures goes in the background; if it fails the editor comes back (on the web page and the phone, a notification, the draft kept). `scheduled_to_draft` — a scheduled post's "To the editor": off the schedule, its text in the editor. `drafts_place` (on) — "Drafts" in the ≡ menu: every draft, to open (a reply's in its thread) or delete; new posts can be several — the editor's "New draft" sets the one in it aside there and gives a clean one, "Open" brings a set-aside one back into the editor.
 
 </details>
 
@@ -944,7 +944,6 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
-| All the server's emoji in the editor | — | — | · | — | ✓ | A grid of all the server's emoji with a search — on the phone only so far: typing `:name` is awkward there. The windows and the web page complete `:name:` as you type; the terminal can't draw the pictures. |
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
 | Formatting buttons in the editor | ✓ | ✓ | ◐ | ✓ | ✓ | post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab). |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |

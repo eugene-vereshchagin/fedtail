@@ -2299,6 +2299,14 @@ class MainWindow(Gtk.ApplicationWindow):
         from .compose import ComposeWindow
         if self.view.me is None:
             return None
+        old = self.composer
+        if text and old is not None and not old.closed and old.key == "new" \
+                and not (reply_to or invite or edit or quote) \
+                and self.cfg["ui"].get("compose", "inline") == "inline":
+            # Drafts → Open: the draft now stored under "new" shown in the open editor,
+            # whose own text must not be kept over it
+            old.reload()
+            return old
         if self.composer is not None and self.cfg["ui"].get("compose", "inline") == "inline":
             self.composer.close()  # one at a time: its text waits as a draft first
         panel = ComposeWindow(self, reply_to=reply_to, invite=invite, edit=edit, quote=quote,

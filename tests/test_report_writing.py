@@ -22,9 +22,9 @@ GEORGIAN = "გამარჯობა მეგობრებო, დღე�
 class OffByDefaultTest(unittest.TestCase):
     def test_every_key_is_off(self):
         cfg, _w = config.validate({})
-        for key in ("lang_check", "link_quote", "send_in_background", "scheduled_to_draft",
-                    "drafts_place"):
+        for key in ("lang_check", "link_quote", "send_in_background", "scheduled_to_draft"):
             self.assertIs(cfg["post"][key], False, key)
+        self.assertIs(cfg["post"]["drafts_place"], True)  # on since the users looked for it
 
 
 class LangCheckTest(unittest.TestCase):
@@ -91,9 +91,10 @@ class PlacesTest(FreeBase):
         core, w = self.make([])
         core.connect().result()
         places = Places(View(core))
+        self.assertIn("drafts", [n for n, _t in places.menu()])
+        core.cfg["post"]["drafts_place"] = False
         self.assertNotIn("drafts", [n for n, _t in places.menu()])
         core.cfg["post"]["drafts_place"] = True
-        self.assertIn("drafts", [n for n, _t in places.menu()])
         core.save_draft("new", {"text": "a new one"})
         time.sleep(0.01)
         core.save_draft("reply:002", {"text": "an answer"})
@@ -104,6 +105,30 @@ class PlacesTest(FreeBase):
         self.assertTrue(places.act("drafts", "delete", "new").confirm)
         places.act("drafts", "delete", "new", confirmed=True)
         self.assertIsNone(core.get_draft("new"))
+
+    def test_several_new_drafts(self):
+        """"New draft" sets the new post's draft aside; Drafts → Open brings one back and
+        sets aside what the editor held."""
+        core, w = self.make([])
+        core.connect().result()
+        places = Places(View(core))
+        self.assertIsNone(core.shelve_draft("new"))  # nothing to keep
+        core.save_draft("new", {"text": "first", "cw": "", "media": []})
+        first = core.shelve_draft("new")
+        self.assertTrue(first.startswith("new:"))
+        self.assertIsNone(core.get_draft("new"))
+        self.assertIsNone(core.shelve_draft("reply:002"))  # a reply's stays its post's
+        self.assertFalse(core.shelvable("reply:002"))
+        time.sleep(0.01)
+        core.save_draft("new", {"text": "second", "cw": "", "media": []})
+        out = places.act("drafts", "open", first)
+        self.assertEqual(out.compose, {"text": "first"})
+        self.assertEqual(core.get_draft("new")["text"], "first")
+        kept = {k: d["text"] for k, d, _u in core.drafts()}
+        self.assertEqual(sorted(kept.values()), ["first", "second"])
+        self.assertNotIn(first, kept)
+        rows = places.page("drafts").rows
+        self.assertEqual({r.title for r in rows}, {i18n._("draft_new")})  # both new posts
 
 
 class WebWritingTest(TmpDir):

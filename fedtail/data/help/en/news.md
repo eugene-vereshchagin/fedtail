@@ -5,7 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**What's next:**
+
+- An emoji picker in the editor: the standard ones and the server's
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

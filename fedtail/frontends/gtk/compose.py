@@ -182,6 +182,13 @@ class ComposeWindow(Gtk.Box):
         self.poll_btn.connect("toggled", lambda b: self._toggle_poll(b.get_active()))
         self.poll_btn.set_visible(not self.edit)
         bar.append(self.poll_btn)
+        # ☺ the standard emoji and the server's, in a popover (gtk/emoji.py)
+        from .emoji import EmojiPicker
+        self.emoji_btn = Gtk.MenuButton(label="☺ " + _("emoji_pick"))
+        tip(self.emoji_btn, _("emoji_pick_tip"))
+        self.emoji_pop = EmojiPicker(win, self._emoji_picked)
+        self.emoji_btn.set_popover(self.emoji_pop)
+        bar.append(self.emoji_btn)
         self.sensitive_btn = Gtk.ToggleButton(label="🔞 " + _("sensitive_mark"))
         tip(self.sensitive_btn, _("sensitive_mark_tip"))
         self.sensitive_btn.set_visible(False)
@@ -207,6 +214,13 @@ class ComposeWindow(Gtk.Box):
         tip(close, _("close_tip"))
         close.connect("clicked", lambda _b: self.close())
         row.append(close)
+        # "New draft": this text set aside in Drafts, a clean editor in its place
+        self.shelve_btn = Gtk.Button(label=_("draft_shelve"))
+        tip(self.shelve_btn, _("draft_shelve_tip"))
+        self.shelve_btn.connect("clicked", lambda _b: self.shelve())
+        self.shelve_btn.set_visible(bool(self.view.shelvable(self.key))
+                                    and bool(self.cfg["post"].get("drafts_place")))
+        row.append(self.shelve_btn)
         self.discard_btn = Gtk.Button(label=_("discard"))
         self.discard_btn.connect("clicked", lambda _b: self.discard())
         row.append(self.discard_btn)
@@ -416,6 +430,57 @@ class ComposeWindow(Gtk.Box):
         if self.quote:
             return "❝ @" + self.quote.author.handle + ": " + snippet(self.quote, 80)
         return ""
+
+    def _clear(self):
+        """Back to a bare editor: no text, warning, pictures, poll."""
+        self.buffer.set_text("")
+        self._set_cw("")
+        child = self.media_box.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            self.media_box.remove(child)
+            child = nxt
+        self.media.clear()
+        self.covers.clear()
+        self._cover_labels.clear()
+        self._kept = {}
+        self.sensitive_btn.set_active(False)
+        self.poll_btn.set_active(False)
+        for e in self.poll_options:
+            e.set_text("")
+        self.poll_multiple.set_active(False)
+        self.poll_time.set_selected(4)  # a day
+        self._media_or_poll()
+
+    def reload(self):
+        """The editor shows what the store holds now under its key (Drafts → Open moved a
+        set-aside draft there): what was typed is dropped, not saved over it."""
+        if self._autosave:
+            GLib.source_remove(self._autosave)
+            self._autosave = 0
+        self._clear()
+        self._load("")
+        self._cursor_to_end()
+
+    def shelve(self):
+        """"New draft": this text kept now, set aside in Drafts under a name of its own,
+        and the editor made clean (so its autosave keeps nothing empty)."""
+        if self.sent or self.edit or not self.view.shelvable(self.key):
+            return
+        if self._autosave:
+            GLib.source_remove(self._autosave)
+            self._autosave = 0
+        self.save_draft()
+        new = self.view.shelve_draft(self.key)
+        self._clear()
+        self.initial = self._snapshot()
+        self.hint.set_text(_("draft_shelved") if new else "")
+        self.text.grab_focus()
+
+    def _emoji_picked(self, text):
+        """A click in the picker: the character, or ":code: ", at the cursor."""
+        self.buffer.insert_at_cursor(text)
+        self.text.grab_focus()
 
     def _load(self, start_text):
         if self.edit:

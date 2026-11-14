@@ -1878,6 +1878,9 @@ class Web:
         return {"key": key, "text": st.text, "cw": st.cw, "visibility": st.visibility,
                 "language": st.language, "sensitive": st.sensitive, "poll": st.poll,
                 "restored": st.restored, "hint": _(st.hint) if st.hint else "",
+                # "New draft" is the core's to offer: a new post's, with Drafts on
+                "shelvable": bool(core.shelvable(key)
+                                  and core.cfg["post"].get("drafts_place")),
                 "account": first if len(accounts) > 1 else None}
 
     def draft_save(self, key, snap):
@@ -1899,6 +1902,12 @@ class Web:
             self.core.save_draft(key, snap)
         return {"saved": bool(self.core.cfg["post"]["drafts_autosave"]),
                 "hint": _("draft_saved") if self.core.cfg["post"]["drafts_autosave"] else ""}
+
+    def draft_shelve(self, key):
+        """"New draft": what is kept under key is set aside (core.shelve_draft), the editor
+        starts clean. → {"key": the set-aside draft's, or None when nothing was kept}."""
+        key = str(key or "")
+        return {"key": self.core.shelve_draft(key) if self.core.shelvable(key) else None}
 
     def draft_drop(self, key):
         """Sent, or discarded after the question: the draft goes (here and elsewhere)."""
@@ -1938,13 +1947,23 @@ class Web:
             dict({"insert": i, "label": lb}, **({"picture": pics[i]} if pics.get(i) else {}))
             for i, lb in items]}
 
-    def emoji_list(self):
-        """Every emoji of my server, for the editor's picker: {"items": [{code, url,
-        category}]} by category and shortcode (common/compose inserts ":code:")."""
-        got = self.core.emoji_all().result(timeout=30)
+    def emoji_list(self, words=""):
+        """The editor's picker: {"items": every emoji of my server [{code, url, category}]
+        by category and shortcode (common/compose inserts ":code:"), "standard": the
+        standard ones by group — or, with `words`, those they find, the best first}."""
+        from ..common import compose as cc
+        try:
+            got = self.core.emoji_all().result(timeout=30)
+        except Exception as e:  # noqa: BLE001 — the standard ones are still there
+            log.info("emoji: %s", e)
+            got = []
         return {"items": [{"code": e["shortcode"],
                            "url": e.get("static_url") or e.get("url") or "",
-                           "category": str(e.get("category") or "")} for e in got]}
+                           "category": str(e.get("category") or "")} for e in got],
+                # the "Standard" tab: [{"title", "items": [{char, code, name}]}]
+                "standard": [{"title": t, "items": [{"char": e["char"], "code": e["code"],
+                                                     "name": e["name"]} for e in es]}
+                             for t, es in cc.emoji_standard(self.core, words)]}
 
     def compose_check(self, body):
         """What the editor shows beside the text as it is typed (common/compose.count, the
@@ -2297,6 +2316,10 @@ WORDS = ("direct_badge", "direct_badge_tip",
          "viewer_save", "viewer_save_tip", "viewer_keys", "viewer_unreachable", "saving",
          "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
          "close_tip", "to_end_tip", "unread_tip",
+         # the emoji picker and "New draft" in the editor
+         "emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
+         "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
+         "draft_shelve", "draft_shelve_tip", "draft_shelved",
          # columns: lanes side by side (ui.layout = "columns", ❯)
          "columns", "columns_tip", "full_width_tip", "column_left", "column_right", "column_close",
          # ≡ as a window: its groups, as the windows' submenus
@@ -2466,6 +2489,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/themes": lambda: self.web.themes(),
                   "/api/push": lambda: self.web.push_state(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
+                  "/api/emoji": lambda: self.web.emoji_list(q.get("q", "")),
                   "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
                                                                    q.get("q", "")),
                   "/api/find_everywhere": lambda: self.web.find_everywhere(q.get("q", "")),
@@ -2517,6 +2541,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/client_error": lambda: web.client_error(body),
             # what a reply starts with — who sees it, its warning (common/compose.start)
             "/api/draft_start": lambda: web.draft_start(str(body.get("reply_to") or "")),
+            "/api/draft_save": lambda: web.draft_save(body.get("key"), body.get("snap") or {}),
+            "/api/draft_shelve": lambda: web.draft_shelve(body.get("key")),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),
             "/api/refresh": web.refresh,

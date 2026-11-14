@@ -7,6 +7,14 @@
 
 ## What's next
 
+* An emoji picker in every interface ("☺ Emoji" by the text): "Standard" — every Unicode emoji
+  by group, "Server's" — the server's own; a search by English words. Typing `:smile`, `:+1`,
+  `:tada` suggests the standard ones too, after the server's (`post.emoji_standard`).
+* Several new posts can wait: "New draft" in the editor sets the text aside in Drafts and
+  starts a clean one; Drafts → Open brings it back. "Drafts" in the ≡ menu is on by default
+  now (`post.drafts_place`).
+* The phone's editor: its buttons (Warning, Later, Pictures, Poll, Language, Emoji) stand in
+  a grid of equal width.
 * textual-image 0.14.4 inside: a sixel picture without half-transparent pixels isn't
   encoded anew when the background changes.
 

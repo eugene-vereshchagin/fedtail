@@ -90,6 +90,21 @@ class WritingMixin:
             sorted(within, key=lambda e: e["shortcode"].casefold())
         return [(e["shortcode"], e) for e in best[:limit]]
 
+    def emoji_standard(self, words=""):
+        """The picker's "Standard" tab: every Unicode emoji (core/emojis.picker), or those
+        `words` find, the best first; [] with post.emoji_standard off."""
+        from . import emojis
+        if not self.cfg["post"].get("emoji_standard", True):
+            return []
+        return emojis.picker(words)
+
+    def emoji_standard_suggestions(self, prefix, limit=8):
+        """The standard emoji for `:smi` as one types: [(the emoji, ":smile: label")]."""
+        from . import emojis
+        if not self.cfg["post"].get("emoji_standard", True) or len(prefix) < 2:
+            return []
+        return emojis.suggestions(prefix, limit)
+
     def mention_suggestions(self, prefix, limit=8):
         """People whose address or name starts with prefix (no "@"), the most seen
         first: [(acct, display name)]. Never yourself."""
@@ -445,3 +460,39 @@ class WritingMixin:
         self.store.delete_draft(key)
         if self.sync:
             self.sync.record_draft(key)
+
+    @staticmethod
+    def shelvable(key):
+        """Can the editor of this draft set it aside for a clean one ("New draft")? Only a
+        new post's: a reply's, a quote's, a correction's draft belongs to its post."""
+        return key == "new"
+
+    def shelve_draft(self, key="new"):
+        """"New draft": the new post's draft set aside under a name of its own
+        ("new:<time>", in Drafts), so the editor starts clean. → the new key, or None
+        when there was nothing to keep."""
+        data = self.store.get_draft(key) if self.shelvable(key) else None
+        if not data or not (str(data.get("text") or "").strip() or data.get("cw")
+                            or data.get("media") or data.get("poll")):
+            return None
+        new = f"new:{int(time.time() * 1000):x}"
+        self.store.save_draft(new, data)
+        if self.sync:
+            self.sync.record_draft(new)
+        self.delete_draft(key)
+        return new
+
+    def unshelve_draft(self, key):
+        """A set-aside new post's draft (Drafts → Open) back into the editor: it becomes
+        the new post's draft, and what that held is set aside in its place."""
+        if key == "new" or not key.startswith("new:"):
+            return key
+        data = self.store.get_draft(key)
+        if data is None:
+            return None
+        self.shelve_draft("new")
+        self.store.save_draft("new", data)
+        if self.sync:
+            self.sync.record_draft("new")
+        self.delete_draft(key)
+        return "new"

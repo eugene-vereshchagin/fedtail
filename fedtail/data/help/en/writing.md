@@ -8,6 +8,10 @@ Write (`Ctrl+N`) opens a panel right in the main window: the keyboard layout isn
 bigger / smaller, ✕ or Esc — close. The draft is saved as you type: close the panel and nothing
 is lost. `Ctrl+Enter` — send.
 
+Several new posts at once: "New draft" in the panel sets the text in it aside and gives a clean
+one. Everything set aside, and the drafts of replies and quotes, is in ≡ → Drafts; "Open" there
+brings a draft back into the panel (what the panel held is set aside in its place).
+
 ## Visibility
 
 A new post is seen by followers only, by default. A reply is never more public than the post it
@@ -22,6 +26,14 @@ answers. Change it for one post — the list in the panel; for all — `post.def
 - **CW** — "⚠ Content warning": the text hides behind a "show" button. In a reply the original
   post's CW is filled in by itself.
 - **Language** — servers filter and translate by it. "Another language…" adds any ISO 639 code.
+
+## Emoji
+
+"☺ Emoji" by the text opens the picker: "Standard" — every ordinary emoji by group, "Server's" —
+your server's own (as pictures; they go into the text as `:name:`). The search takes English
+words: smile, heart, cat. Typing `:smi` suggests both kinds as you go — the short names known
+from GitHub and Slack work: `:smile:`, `:+1:`, `:tada:`. Only the server's —
+`post.emoji_standard = false`.
 
 ## Pictures
 

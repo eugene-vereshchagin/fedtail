@@ -24,10 +24,14 @@ from textual.widgets import (
     ListItem,
     ListView,
     Markdown,
+    OptionList,
     Select,
     Static,
+    TabbedContent,
+    TabPane,
     TextArea,
 )
+from textual.widgets.option_list import Option
 
 from ...i18n import _
 from ...model import real
@@ -663,6 +667,127 @@ VIS_WORD = {"public": "vis_public", "unlisted": "vis_unlisted", "followers": "vi
             "direct": "vis_direct"}
 
 
+class EmojiScreen(ModalScreen):
+    """The emoji picker: a Standard tab (post.emoji_standard) and the server's, a search
+    line. Dismissed with the text to put into the editor (the emoji, or ":shortcode: "),
+    None with Esc. Down / Up go to the list, Enter chooses, Ctrl+Left / Ctrl+Right change
+    the tab. What each tab lists comes from common/compose.py (the core searches)."""
+
+    BINDINGS = [Binding("escape", "cancel", _("tui_back")),
+                Binding("down", "to_list(1)", show=False, priority=True),
+                Binding("up", "to_list(-1)", show=False, priority=True),
+                Binding("ctrl+right", "tab(1)", show=False, priority=True),
+                Binding("ctrl+left", "tab(-1)", show=False, priority=True)]
+    CSS = """
+    EmojiScreen { align: center middle; }
+    EmojiScreen > Vertical { width: 64; height: 80%; border: thick $primary;
+                             background: $surface; }
+    EmojiScreen #e-title { padding: 0 1; background: $primary-background;
+                           text-style: bold; }
+    EmojiScreen TabbedContent { height: 1fr; }
+    EmojiScreen TabPane { padding: 0; }
+    EmojiScreen OptionList { height: 1fr; }
+    """
+
+    def __init__(self, standard=True):
+        super().__init__()
+        self.standard_on = bool(standard)
+        self.server_items = None   # None: not loaded yet
+        self.values = {"e-server": []}  # per tab: option index -> the text it puts in
+        if self.standard_on:
+            self.values["e-standard"] = []
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static(Text(_("emoji_title")), id="e-title")
+            yield Input(placeholder=_("emoji_search"), id="e-search")
+            with TabbedContent(id="e-tabs"):
+                if self.standard_on:
+                    with TabPane(_("emoji_tab_standard"), id="e-standard"):
+                        yield OptionList(id="e-standard-list")
+                with TabPane(_("emoji_tab_server"), id="e-server"):
+                    yield OptionList(id="e-server-list")
+
+    def on_mount(self):
+        self.query_one("#e-search", Input).focus()
+        for pane in self.values:
+            self.fill(pane)
+        self.app.later(self.app.core.emoji_all(), ok=self._loaded,
+                       fail=lambda _e: self._loaded([]))
+
+    def _loaded(self, items):
+        self.server_items = list(items or [])
+        self.fill("e-server")
+
+    def fill(self, pane):
+        """The list of a tab, drawn anew for the words in the search line."""
+        from ..common import compose as cc
+        words = self.query_one("#e-search", Input).value
+        box = self.query_one("#" + pane + "-list", OptionList)
+        box.clear_options()
+        values = self.values[pane] = []
+        if pane == "e-standard":
+            groups = [(t, [(f"{e['char']} :{e['code']}:", e["char"]) for e in g])
+                      for t, g in cc.emoji_standard(self.app.core, words)]
+        elif self.server_items is None:
+            groups = []
+        else:
+            groups = [(t, [(f":{e['shortcode']}:", f":{e['shortcode']}: ") for e in g])
+                      for t, g in cc.emoji_server(self.server_items, words)]
+        options = []
+        for title, rows in groups:
+            if title:
+                options.append(Option(Text(title, style="bold"), disabled=True))
+                values.append(None)
+            for label, value in rows:
+                options.append(Option(label))
+                values.append(value)
+        if not options and (pane == "e-standard" or self.server_items is not None):
+            none = "emoji_server_none" if pane == "e-server" and not words.strip() \
+                else "emoji_none"
+            options.append(Option(Text(_(none), style="dim"), disabled=True))
+            values.append(None)
+        box.add_options(options)
+        box.highlighted = next((i for i, v in enumerate(values) if v is not None), None)
+
+    def on_input_changed(self, e: Input.Changed):
+        e.stop()
+        for pane in self.values:
+            self.fill(pane)
+
+    def _active(self):
+        return self.query_one("#e-tabs", TabbedContent).active
+
+    def on_input_submitted(self, e: Input.Submitted):
+        e.stop()
+        self._choose(self.query_one("#" + self._active() + "-list", OptionList).highlighted)
+
+    def on_option_list_option_selected(self, e: OptionList.OptionSelected):
+        e.stop()
+        self._choose(e.option_index)
+
+    def _choose(self, index):
+        values = self.values.get(self._active(), [])
+        if index is not None and 0 <= index < len(values) and values[index] is not None:
+            self.dismiss(values[index])
+
+    def action_to_list(self, step):
+        box = self.query_one("#" + self._active() + "-list", OptionList)
+        box.focus()
+        if step > 0:
+            box.action_cursor_down()
+        else:
+            box.action_cursor_up()
+
+    def action_tab(self, step):
+        tabs = self.query_one("#e-tabs", TabbedContent)
+        panes = [p.id for p in tabs.query(TabPane)]
+        tabs.active = panes[(panes.index(tabs.active) + step) % len(panes)]
+
+    def action_cancel(self):
+        self.dismiss(None)
+
+
 class ComposeScreen(Screen):
     """A whole post: the text (several lines), the warning, who sees it, the language.
     What it starts with and how drafts are kept are the windows' (common/compose.py).
@@ -670,6 +795,7 @@ class ComposeScreen(Screen):
 
     BINDINGS = [Binding("ctrl+s", "send", _("tui_send")),
                 Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
+                Binding("ctrl+e", "emoji", _("emoji_pick"), priority=True),
                 # Ctrl+R: Textual keeps Ctrl+P for its command palette, above any screen
                 Binding("ctrl+r", "preview", _("preview")),
                 # priority: Textual's TextArea takes F7 for "select all" otherwise
@@ -688,6 +814,8 @@ class ComposeScreen(Screen):
     ComposeScreen #c-format.column { width: 7; height: auto; }
     ComposeScreen #c-format Button { height: 1; min-width: 5; border: none; margin: 0 1 0 0; }
     ComposeScreen #c-row { height: auto; }
+    ComposeScreen #c-tools { height: 1; }
+    ComposeScreen #c-tools Button { height: 1; min-width: 8; border: none; margin: 0 1 0 0; }
     ComposeScreen #c-row Select { width: 30; }
     ComposeScreen #c-row Input { width: 1fr; }
     """
@@ -770,6 +898,10 @@ class ComposeScreen(Screen):
                          id="c-vis")
             yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
+        with Horizontal(id="c-tools"):
+            yield Button(_("emoji_pick"), id="c-emoji", tooltip=_("emoji_pick_tip"))
+            if core.shelvable(self.key) and core.cfg["post"].get("drafts_place", True):
+                yield Button(_("draft_shelve"), id="c-shelve", tooltip=_("draft_shelve_tip"))
         from ..common import markup
         where = markup.place(core.cfg, getattr(core, "markdown", False))
         # the formatting buttons (post.format_bar), clicked with the mouse (the terminal's
@@ -801,10 +933,46 @@ class ComposeScreen(Screen):
     def on_button_pressed(self, e: Button.Pressed):
         """A formatting button (common/markup.py): Markdown around the selection."""
         bid = e.button.id or ""
-        if not bid.startswith("fmt-"):
+        if bid == "c-emoji":
+            e.stop()
+            self.action_emoji()
+        elif bid == "c-shelve":
+            e.stop()
+            self.shelve()
+        elif bid.startswith("fmt-"):
+            e.stop()
+            self.format_text(bid[4:])
+
+    def action_emoji(self):
+        """Ctrl+E / the button: the emoji picker; what it chooses goes in at the cursor."""
+        def chosen(text):
+            if text:
+                ta = self.query_one("#c-text", TextArea)
+                ta.insert(text)
+                ta.focus()
+        std = self.app.core.cfg["post"].get("emoji_standard", True)
+        self.app.push_screen(EmojiScreen(std), chosen)
+
+    def shelve(self):
+        """"New draft": what is typed is kept (as Esc would), set aside in Drafts by the
+        core, and the editor starts clean."""
+        core = self.app.core
+        core.save_draft(self.key, self._snapshot())
+        if not core.shelve_draft(self.key):
             return
-        e.stop()
-        self.format_text(bid[4:])
+        self.query_one("#c-text", TextArea).load_text("")
+        self.query_one("#c-cw", Input).value = ""
+        self.media, self.covers, self.poll, self.sensitive = [], {}, None, False
+        self.show_extras()
+        self.show_count()
+        self.start.restored = False
+        self.initial = self._snapshot()
+        hint = _("draft_shelved")
+        try:
+            self.query_one("#c-hint", Static).update(hint)
+        except Exception:  # noqa: BLE001 — no hint line yet: put one in
+            self.mount(Static(hint, id="c-hint"), after="#c-title")
+        self.query_one("#c-text", TextArea).focus()
 
     def format_text(self, name):
         from ..common import markup

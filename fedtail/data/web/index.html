@@ -66,6 +66,8 @@
       <input id="sched-at" type="datetime-local"></label></div>
     <div class="dlg-foot">
       <button id="cw-toggle" type="button" class="tool"></button>
+      <button id="emoji-pick" type="button" class="tool"></button>
+      <button id="draft-shelve" type="button" class="tool" hidden></button>
       <button id="attach" type="button" class="tool">📎</button>
       <input id="files" type="file" multiple hidden>
       <button id="poll-toggle" type="button" class="tool">📊</button>
@@ -78,6 +80,18 @@
       <button id="discard" type="button" class="tool"></button>
       <button id="preview" type="button" class="tool"></button>
       <button id="send" type="submit" class="primary"></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="emoji-dlg">
+  <form method="dialog">
+    <header class="dlg-head"><h2 id="emoji-title"></h2></header>
+    <div id="emoji-tabs" role="tablist"></div>
+    <input id="emoji-search" type="search" autocomplete="off">
+    <div id="emoji-body"></div>
+    <div class="dlg-foot">
+      <button id="emoji-close" type="button" class="tool"></button>
     </div>
   </form>
 </dialog>

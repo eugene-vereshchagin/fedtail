@@ -728,15 +728,32 @@ def draft_drop(key):
     return _answer(lambda: _s["web"].draft_drop(key))
 
 
+def draft_shelvable(key):
+    """Does the editor of this draft offer "New draft"? (Core.shelvable, and the
+    Drafts place on, post.drafts_place) → {"shelvable": bool}."""
+    def go():
+        core = _core()
+        return {"shelvable": bool(core.shelvable(key)
+                                  and core.cfg["post"].get("drafts_place"))}
+    return _answer(go)
+
+
+def draft_shelve(key):
+    """"New draft": the draft set aside in Drafts (Core.shelve_draft) → {"key": the
+    new key or None when there was nothing to keep}."""
+    return _answer(lambda: {"key": _core().shelve_draft(key)})
+
+
 def preview(body_json):
     """The post as it will read (Qt's preview): {title, head, cw, parts: [html], back,
     send} — the parts as safe HTML."""
     return _answer(lambda: _s["web"].preview(json.loads(body_json or "{}")))
 
 
-def emoji_list():
-    """The editor's picker: every emoji of my server (Web.emoji_list)."""
-    return _answer(lambda: _s["web"].emoji_list())
+def emoji_list(words=""):
+    """The editor's picker: every emoji of my server and the standard ones by group, or
+    the standard ones `words` find (Web.emoji_list)."""
+    return _answer(lambda: _s["web"].emoji_list(words or ""))
 
 
 def complete(before):

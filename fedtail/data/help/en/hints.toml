@@ -17,6 +17,16 @@ text = "A new post — as a panel right in the window. The draft is saved as you
 config = "ui.compose"
 help = "writing.md#the-compose-panel-and-drafts"
 
+[draft_shelve_tip]
+text = "Sets the text aside in Drafts (≡ → Drafts) and gives a clean editor: several new posts can wait at once."
+config = "post.drafts_place"
+help = "writing.md#the-compose-panel-and-drafts"
+
+[emoji_pick_tip]
+text = "The emoji picker: the standard ones by group and your server's own, with a search by English words."
+config = "post.emoji_standard"
+help = "writing.md#emoji"
+
 [full_width_tip]
 text = "Posts across the whole window or in a narrow column that's easy to read. Remembered until the next start; the config isn't touched."
 config = "ui.max_width"

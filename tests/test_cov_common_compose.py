@@ -36,6 +36,9 @@ class View:
     def emoji_suggestions(self, word):
         return [(word + "_cat", None)]
 
+    def emoji_standard_suggestions(self, _word, _limit=8):
+        return []
+
 
 class ComposeTest(unittest.TestCase):
     def test_draft_keys(self):

@@ -1145,6 +1145,11 @@ complete_tags = true
 # false — no suggestions.
 complete_emoji = true
 
+# The standard (Unicode) emoji too: the "Standard" tab of the editor's emoji picker beside
+# the server's own, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of
+# GitHub and Slack, and Unicode's English names: :winking). false — the server's only.
+emoji_standard = true
+
 # A report to the moderators about a person from another server: the "forward to their server too" tick
 # is on at once (they won't learn who reported). false — off by default.
 report_forward = true
@@ -1242,9 +1247,9 @@ send_in_background = false
 # the editor, to fix and send again.
 scheduled_to_draft = false
 
-# "Drafts" in the ≡ menu: every kept draft — the new post, replies, quotes — to open or
-# delete.
-drafts_place = false
+# "Drafts" in the ≡ menu: every kept draft — new posts (the editor's "New draft" sets one
+# aside and starts a clean one), replies, quotes — to open or delete.
+drafts_place = true
 
 # Whether the server understands Markdown: "auto" (ask the server), "on", "off".
 # GoToSocial / Akkoma do, vanilla Mastodon doesn't.

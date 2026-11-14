@@ -94,7 +94,7 @@ object Core {
     suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
     suspend fun editor() = obj("editor")
     suspend fun complete(before: String) = obj("complete", before)
-    suspend fun emojiList() = obj("emoji_list")
+    suspend fun emojiList(words: String = "") = obj("emoji_list", words)
     suspend fun composeCheck(body: JSONObject) = obj("compose_check", body.toString())
     suspend fun formatText(name: String, text: String, start: Int, end: Int) = obj(
         "format_text", JSONObject().put("name", name).put("text", text).put("start", start)
@@ -102,6 +102,8 @@ object Core {
     suspend fun addLanguage(code: String) = obj("add_language", code)
     suspend fun textFile(sid: String, i: Int) = obj("text_file", sid, i)
     suspend fun draftStart(replyTo: String) = obj("draft_start", replyTo, "", "", false)
+    suspend fun draftShelvable(key: String) = obj("draft_shelvable", key)
+    suspend fun draftShelve(key: String) = obj("draft_shelve", key)
     suspend fun draftSave(key: String, snap: JSONObject) = obj("draft_save", key, snap.toString())
     suspend fun draftDrop(key: String) = obj("draft_drop", key)
     suspend fun preview(body: JSONObject) = obj("preview", body.toString())

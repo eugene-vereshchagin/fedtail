@@ -1351,7 +1351,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (Core.failed(d) != null || editId != null || quoteId != null) return@launch
             // all accounts in one: "From" starts at the account that got the post replied to
             if (composeFrom == null && !d.isNull("account")) composeFrom = str(d, "account")
-            if (place !is Place.Compose || composeText != opened) return@launch // typed meanwhile
+            if (place !is Place.Compose || (composeText != opened && composeText != str(d, "text")))
+                return@launch // typed meanwhile (a draft opened from Drafts is what came)
             composeText = str(d, "text").ifBlank { composeText }
             // who sees a reply: the core's word (post.reply_never_wider), shown chosen —
             // none lit looked like nothing was decided (31.10)
@@ -2039,6 +2040,33 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val got = Core.draftSave(key, snap)
             if (Core.failed(got) == null) composeHint = str(got, "hint")
         }
+    }
+
+    /** "New draft" (a new post only): kept as it is, set aside in Drafts by the core, the
+     *  editor clean. */
+    fun shelveDraft() {
+        if (place !is Place.Compose) return
+        val key = draftKey()
+        val snap = snapshot()
+        discarded = true  // nothing empty is saved over while it is cleared
+        viewModelScope.launch {
+            Core.draftSave(key, snap)
+            val got = Core.draftShelve(key)
+            val failed = Core.failed(got)
+            if (failed != null) { message = failed; discarded = false; return@launch }
+            clearEditor()
+            composeVisibility = defaultVisibility
+            composeHint = if (got.isNull("key")) ""
+                else getApplication<Application>().getString(R.string.draft_shelved)
+        }
+    }
+
+    /** Is "New draft" on offer here: the core's word (a new post, Drafts on). */
+    suspend fun shelvable(): Boolean {
+        val key = draftKey()
+        if (key != "new") return false
+        val got = Core.draftShelvable(key)
+        return Core.failed(got) == null && got.optBoolean("shelvable")
     }
 
     /** "Discard": the text and its draft gone, after the question. */

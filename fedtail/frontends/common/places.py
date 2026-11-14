@@ -1311,7 +1311,8 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         """A new post's draft: the editor (it picks the draft up); a reply's, a quote's,
         a correction's: the thread it belongs to, where it is picked up again."""
         what, _s, sid = key.partition(":")
-        if what == "new":
+        if what == "new":  # a set-aside one comes back as the new post's draft
+            key = self.view.unshelve_draft(key) or key
             data = next((d for k, d, _u in self.view.drafts() if k == key), None) or {}
             return Out(compose={"text": str(data.get("text") or "")})
         return Out(open={"thread": sid}) if sid else Out()

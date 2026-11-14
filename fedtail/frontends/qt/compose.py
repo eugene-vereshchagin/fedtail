@@ -367,6 +367,18 @@ class Compose(QDialog):
         self.poll_btn.toggled.connect(self._toggle_poll)
         self.poll_btn.setVisible(not self.edit)
         row.addWidget(self.poll_btn)
+        self.emoji_btn = QPushButton("☺ " + _("emoji_pick"))
+        self.emoji_btn.setObjectName("tool")
+        self.emoji_btn.setToolTip(_("emoji_pick_tip"))
+        self.emoji_btn.clicked.connect(self.pick_emoji)
+        row.addWidget(self.emoji_btn)
+        # "New draft": the new post's text set aside (Drafts), the editor clean
+        self.shelve_btn = QPushButton(_("draft_shelve"))
+        self.shelve_btn.setObjectName("tool")
+        self.shelve_btn.setToolTip(_("draft_shelve_tip"))
+        self.shelve_btn.clicked.connect(self.shelve)
+        self.shelve_btn.setVisible(self._shelvable())
+        row.addWidget(self.shelve_btn)
         self.sensitive_btn = QPushButton("🔞 " + _("sensitive_mark"))
         self.sensitive_btn.setObjectName("tool")
         self.sensitive_btn.setCheckable(True)
@@ -560,6 +572,64 @@ class Compose(QDialog):
         vis = st.visibility
         self.vis.setCurrentIndex(VISIBILITIES.index(vis) if vis in VISIBILITIES else 2)
         self.initial = self._snapshot()
+
+    def _shelvable(self):
+        return bool(self.core.shelvable(self.key)
+                    and self.core.cfg["post"].get("drafts_place", True))
+
+    def _clear_state(self):
+        """Text, warning, pictures, poll back to nothing (the visibility stays)."""
+        self.text.clear()
+        self.cw.clear()
+        self.media.clear()
+        self.poll_btn.setChecked(False)
+        for e in self.poll_options:
+            e.clear()
+        self.poll_multiple.setChecked(False)
+        self.sensitive_btn.setChecked(False)
+        if not self.core.cfg["post"]["cw_field"]:
+            self.cw_btn.setChecked(False)
+
+    def reload(self, text=""):
+        """Show again what the store holds under this editor's key (a draft moved into
+        "new" by Drafts → Open), without saving what stood here over it."""
+        self._autosave.stop()
+        self.start_text = text
+        self._clear_state()
+        self._load()
+        if self.cw.text():
+            self.cw_btn.setChecked(True)
+        self._autosave.stop()
+        self.text.moveCursor(QTextCursor.MoveOperation.End)
+        self.text.setFocus()
+
+    def shelve(self):
+        """"New draft": keep this one in Drafts and start with a clean editor."""
+        self._autosave.stop()
+        self.save_draft()
+        new = self.core.shelve_draft(self.key)
+        self._clear_state()
+        self.initial = self._snapshot()
+        self._autosave.stop()
+        self.hint.setText(_("draft_shelved") if new else "")
+        self.text.setFocus()
+
+    def pick_emoji(self):
+        """The picker: a click puts the emoji where the cursor is."""
+        old = getattr(self, "emoji_picker", None)
+        try:
+            if old is not None and old.isVisible():
+                old.raise_()
+                return
+        except RuntimeError:
+            pass
+        from .emoji import EmojiPicker
+        self.emoji_picker = EmojiPicker(self, self.win, self._put_emoji)
+        self.emoji_picker.show()
+
+    def _put_emoji(self, s):
+        self.text.insertPlainText(s)
+        self.text.setFocus()
 
     def _load_edit(self):
         for m in self.edit.media:  # their words and focus can change; they stay
