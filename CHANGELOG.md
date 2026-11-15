@@ -13,6 +13,9 @@
 * Several new posts can wait: "New draft" in the editor sets the text aside in Drafts and
   starts a clean one; Drafts → Open brings it back. "Drafts" in the ≡ menu is on by default
   now (`post.drafts_place`).
+* A boost or a like shows at once even when the server answers with its stale copy
+  (GoToSocial: the ♻ stayed grey, the count stood — on the phone it looked like nothing
+  happened): the card takes my mark and the count moves by one. In every interface.
 * The phone's editor: its buttons (Warning, Later, Pictures, Poll, Language, Emoji) stand in
   a grid of equal width.
 * textual-image 0.14.4 inside: a sixel picture without half-transparent pixels isn't

@@ -199,6 +199,22 @@ def _filter_hits(st, filters):
                 break
     return out
 
+
+def _counted(before, got, flag, count, on):
+    """A like's or a boost's answer as it must be: the server's own copy may lag behind
+    (GoToSocial answers a boost with the post as cached — not yet "reblogged", the old
+    count), and the card then looked as if the tap did nothing. My mark is what I just
+    did; the count moves by one from what it was unless the server's has moved already."""
+    if not isinstance(got, dict):
+        return got
+    got = dict(got, **{flag: on})
+    was, now = int(before.get(count) or 0), int(got.get(count) or 0)
+    if on and now <= was:
+        got[count] = was + 1
+    elif not on and now >= was:
+        got[count] = max(0, was - 1)
+    return got
+
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
            CountsMixin,
            OriginMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
@@ -2257,7 +2273,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         s = real(status)
         self._on_server(s)
         def job():
-            got = self._update(self.api.favourite(s["id"], not s.get("favourited")))
+            on = not s.get("favourited")
+            got = self._update(_counted(s, self.api.favourite(s["id"], on), "favourited",
+                                        "favourites_count", on))
             if not s.get("favourited"):  # liked now: threads.auto = "likes"
                 self._follow_for("likes", s)
             return got
@@ -2450,8 +2468,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._on_server(s)
 
         def job():
-            res = self.api.reblog(s["id"], not s.get("reblogged"))
-            got = self._update((res or {}).get("reblog") or self.api.status(s["id"]))
+            on = not s.get("reblogged")
+            res = self.api.reblog(s["id"], on)
+            got = self._update(_counted(s, (res or {}).get("reblog") or self.api.status(s["id"]),
+                                        "reblogged", "reblogs_count", on))
             if not s.get("reblogged"):  # boosted now: threads.auto = "boosts"
                 self._follow_for("boosts", s)
             return got

@@ -139,3 +139,38 @@ class MeTest(CoreCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LaggingAnswerTest(CoreCase):
+    """A server answering a boost or a like with its cached copy (GoToSocial: not yet
+    "reblogged", the old count): the phone's ♻ stayed grey and the count stood, as if the
+    tap did nothing (NOTES, 15.11). The core sets my mark and moves the count by one."""
+
+    def test_boost_and_like_on_a_lagging_server(self):
+        c = self.connect()
+        w = self.w
+        w.statuses["010"] = dict(w.statuses["010"], visibility="public",
+                                 reblogs_count=3, favourites_count=2)
+        c.store.put_statuses([w.statuses["010"]])
+        stale = dict(w.statuses["010"])
+        c.api.reblog = lambda sid, on=True: {"id": "rb", "reblog": dict(stale), "account": ME}
+        c.api.favourite = lambda sid, on=True: dict(stale)
+        got = c.boost(c.store.get_status("010")).result(timeout=T)
+        self.assertTrue(got["reblogged"])
+        self.assertEqual(got["reblogs_count"], 4)
+        self.assertEqual(c.store.get_status("010")["reblogs_count"], 4)
+        stale.update(reblogged=True, reblogs_count=4)  # the server lags the other way now
+        got = c.boost(c.store.get_status("010")).result(timeout=T)
+        self.assertFalse(got["reblogged"])
+        self.assertEqual(got["reblogs_count"], 3)
+        got = c.favourite(c.store.get_status("010")).result(timeout=T)
+        self.assertTrue(got["favourited"])
+        self.assertEqual(got["favourites_count"], 3)
+
+    def test_a_server_that_counted_already(self):
+        c = self.connect()
+        c.store.put_statuses([dict(self.w.statuses["010"], reblogs_count=3)])
+        fresh = dict(self.w.statuses["010"], reblogged=True, reblogs_count=4)
+        c.api.reblog = lambda sid, on=True: {"id": "rb", "reblog": fresh, "account": ME}
+        got = c.boost(c.store.get_status("010")).result(timeout=T)
+        self.assertEqual(got["reblogs_count"], 4)  # not 5
