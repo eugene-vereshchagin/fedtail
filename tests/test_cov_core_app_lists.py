@@ -150,7 +150,7 @@ class FollowForActsTest(CoreCase):
         c.favourite(get("060")).result(timeout=T)  # liked
         c.boost(get("061")).result(timeout=T)
         c.bookmark(get("062"), True).result(timeout=T)
-        c.post("look", "public", quote="063").result(timeout=T)
+        c.post("look", "public", quote="063").settled.result(timeout=T)
         c.vote(dict(self.w.statuses["064"]), [0]).result(timeout=T)
         for sid in ("060", "061", "062", "063", "064"):
             self.assertTrue(c.subscribed(get(sid) or {"id": sid}), sid)

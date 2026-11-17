@@ -1031,11 +1031,11 @@ class CoreTest(TmpDir):
         self.assertEqual(grew, ["110"])
         grew.clear()
         with mock.patch.object(core, "poll_now"):  # no round to bring it
-            mine = core.post("me too", "private", reply_to="112").result()
+            mine = core.post("me too", "private", reply_to="112").settled.result()
         self.assertEqual(grew, ["110"])  # an answer to the round's answer: the thread's too
         grew.clear()
         w.add(status("120", BOB, minute=4), home=True)  # in no thread opened
-        core.post("other", "private", reply_to="120").result()
+        core.post("other", "private", reply_to="120").settled.result()
         self.assertEqual(grew, [])
         self.assertTrue(mine["id"])
 
@@ -2106,10 +2106,10 @@ class CoreTest(TmpDir):
         self.assertEqual(ids("direct"), ["025", "030"])
         self.assertEqual(core.unread_count("direct"), 1)  # Bob's only
         # sent from here: in the dialogue at once, after Bob's (its own time), read
-        sent = core.post("@bob и ещё", "direct").result()
+        sent = core.post("@bob и ещё", "direct").settled.result()
         self.assertEqual(ids("direct"), ["025", "030", sent["id"]])
         self.assertEqual(core.unread_count("direct"), 1)  # mine adds nothing
-        answer = core.post("да, тут", "direct", reply_to="030").result()
+        answer = core.post("да, тут", "direct", reply_to="030").settled.result()
         self.assertEqual(ids("direct")[-1], answer["id"])
         self.assertEqual(core.unread_count("direct"), 0)  # answered: Bob's is read too
         core.poll_once()  # met again by the poll: no double
@@ -2529,7 +2529,7 @@ class CoreTest(TmpDir):
         # windows hear of it, so "you replied" shows under the post without a new poll
         heard = []
         core.events.on("parents", lambda n, p: heard.append(n))
-        core.post("ага", "private", reply_to="042").result()
+        core.post("ага", "private", reply_to="042").settled.result()
         self.assertIn("042", core.store.read_set(["042"]))
         self.assertIn("042", core.my_replies([c2]))
         # heard (a background check of the poll's may say so once more: CI, 29.10)

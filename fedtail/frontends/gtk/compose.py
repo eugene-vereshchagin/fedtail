@@ -18,7 +18,7 @@ from ...model import VISIBILITIES, Scheduled, real
 from ...model.text import snippet
 from ..common import compose as rules
 from ..common.actions import vis_word
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import GLib, GObject, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +140,11 @@ class ComposeWindow(Gtk.Box):
         box.append(self.poll_box)
 
         # what the post is: who sees it, its language, pictures, warning, poll, the count
-        bar = Gtk.Box(spacing=6)
+        # wrapping onto a second line in a narrow window: with ☺ Emoji it grew wider than
+        # a 1000 px window (17.11)
+        bar = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
+                          min_children_per_line=1, max_children_per_line=12,
+                          column_spacing=6, row_spacing=6)
         self.vis = Gtk.DropDown.new_from_strings(
             [vis_word(v) for v in VISIBILITIES])
         tip(self.vis, _("web_visibility"))
@@ -243,6 +247,13 @@ class ComposeWindow(Gtk.Box):
                              min_children_per_line=1, max_children_per_line=2,
                              column_spacing=8, row_spacing=6)
         bottom.add_css_class("ft-compose-bar")
+        i = 0
+        while (child := bar.get_child_at_index(i)) is not None:
+            child.set_can_focus(False)  # the buttons inside take the focus
+            # a hidden button (🔞 without pictures, 📊 in an edit) leaves no gap
+            child.get_child().bind_property("visible", child, "visible",
+                                            GObject.BindingFlags.SYNC_CREATE)
+            i += 1
         bar.set_halign(Gtk.Align.START)
         row.set_halign(Gtk.Align.END)
         row.set_hexpand(True)

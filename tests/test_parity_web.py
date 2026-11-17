@@ -238,7 +238,7 @@ class EditorExtrasTest(ParityWebTest):
         for key in ("emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
                     "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
                     "draft_shelve", "draft_shelve_tip", "draft_shelved"):
-            self.assertIn(f'"{key}"', (ROOT / "fedtail/frontends/web/server.py").read_text())
+            self.assertIn(f'"{key}"', (ROOT / "fedtail/frontends/web/server.py").read_text("utf-8"))
 
     def test_shelve_flag_and_route(self):
         self.core.cfg["post"]["drafts_place"] = True
