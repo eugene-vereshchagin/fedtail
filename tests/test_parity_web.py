@@ -253,6 +253,13 @@ class EditorExtrasTest(ParityWebTest):
         self.assertEqual(code, 200)
         self.assertTrue(r["key"].startswith("new:"))
         self.assertIsNone(self.core.get_draft("new"))
+        # 18.11: "Drafts (1)" in the editor, told by the core (shelving and opening)
+        self.assertEqual(r["drafts_waiting"], 1)
+        self.assertIn(i18n._("drafts_waiting", n=1), r["drafts_label"])
+        self.assertEqual(self.web_start()["drafts_waiting"], 1)
+        self.core.cfg["post"]["drafts_place"] = False
+        self.assertEqual(self.web_start()["drafts_waiting"], 0)
+        self.core.cfg["post"]["drafts_place"] = True
         self.assertEqual(self.core.get_draft(r["key"])["text"], "half")
         # nothing kept, or not a new post's: nothing set aside
         self.assertIsNone(self.post("/api/draft_shelve", {"key": "new"})[1]["key"])

@@ -1084,8 +1084,10 @@ class BridgeDraftTest(_Base):
         self.assertFalse(self.call("draft_shelvable", "reply:103")["shelvable"])
         self.call("draft_save", "new", json.dumps({"text": "отложу"}))
         self.assertTrue(self.call("draft_shelvable", "new")["shelvable"])
+        self.assertEqual(self.call("drafts_waiting", "new")["n"], 0)
         key = self.call("draft_shelve", "new")["key"]
         self.assertTrue(key.startswith("new:"))
+        self.assertEqual(self.call("drafts_waiting", "new")["n"], 1)  # "Drafts (1)"
         self.assertFalse(self.call("draft_start", "", "", "", False)["restored"])
         self.assertIsNone(self.call("draft_shelve", "new")["key"])  # nothing to keep
         self.assertEqual(self.call("emoji_list", "smile")["standard"][0]["title"], "")

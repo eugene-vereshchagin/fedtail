@@ -14,6 +14,12 @@
   top of the screen (none after it — the first new one above), so a branched thread's news
   isn't sought by eye. A button in the windows, on the web page and the phone, the N key in
   the terminal (`threads.next_new`).
+* Emoji in colour in the Qt window, the editor's emoji picker first: most of them were boxes
+  and the faces black and white — the theme's stylesheet left buttons and labels one font,
+  the colour emoji font after it lost; it goes as a substitution of the window's fonts now.
+* "🗂 Drafts (N)" in the editor, beside "New draft": the drafts set aside open right from
+  there — they were in the ≡ menu only, and a draft set aside seemed gone. In every
+  interface and on the phone.
 
 ## 0.23.3 — 2026-11-17
 

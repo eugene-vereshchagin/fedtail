@@ -2058,6 +2058,21 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             composeVisibility = defaultVisibility
             composeHint = if (got.isNull("key")) ""
                 else getApplication<Application>().getString(R.string.draft_shelved)
+            countDrafts()
+        }
+    }
+
+    /** "Drafts (N)" in the editor: the drafts waiting besides this one — the core counts
+     *  them and words the chip; "" — none, no chip. */
+    var draftsLabel by mutableStateOf("")
+
+    fun countDrafts() {
+        if (place !is Place.Compose) return
+        val key = draftKey()
+        viewModelScope.launch {
+            val got = Core.draftsWaiting(key)
+            draftsLabel = if (Core.failed(got) == null && got.optInt("n") > 0)
+                got.optString("label") else ""
         }
     }
 

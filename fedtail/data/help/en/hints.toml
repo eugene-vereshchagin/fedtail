@@ -22,6 +22,11 @@ text = "Sets the text aside in Drafts (≡ → Drafts) and gives a clean editor:
 config = "post.drafts_place"
 help = "writing.md#the-compose-panel-and-drafts"
 
+[drafts_waiting_tip]
+text = "The drafts set aside — their list right from the editor; \"Open\" brings any back into it. The button shows when something is set aside."
+config = "post.drafts_place"
+help = "writing.md#the-compose-panel-and-drafts"
+
 [emoji_pick_tip]
 text = "The emoji picker: the standard ones by group and your server's own, with a search by English words."
 config = "post.emoji_standard"

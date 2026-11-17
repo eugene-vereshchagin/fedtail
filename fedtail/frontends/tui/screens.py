@@ -902,6 +902,12 @@ class ComposeScreen(Screen):
             yield Button(_("emoji_pick"), id="c-emoji", tooltip=_("emoji_pick_tip"))
             if core.shelvable(self.key) and core.cfg["post"].get("drafts_place", True):
                 yield Button(_("draft_shelve"), id="c-shelve", tooltip=_("draft_shelve_tip"))
+            # "Drafts (N)": the ones set aside, right here (they were in the menu only)
+            n = core.drafts_waiting(self.key)
+            b = Button("🗂 " + _("drafts_waiting", n=n), id="c-drafts",
+                       tooltip=_("drafts_waiting_tip"))
+            b.display = n > 0
+            yield b
         from ..common import markup
         where = markup.place(core.cfg, getattr(core, "markdown", False))
         # the formatting buttons (post.format_bar), clicked with the mouse (the terminal's
@@ -939,6 +945,9 @@ class ComposeScreen(Screen):
         elif bid == "c-shelve":
             e.stop()
             self.shelve()
+        elif bid == "c-drafts":
+            e.stop()
+            self.app.push_screen(PlaceScreen("drafts"))
         elif bid.startswith("fmt-"):
             e.stop()
             self.format_text(bid[4:])
@@ -967,6 +976,10 @@ class ComposeScreen(Screen):
         self.show_count()
         self.start.restored = False
         self.initial = self._snapshot()
+        n = core.drafts_waiting(self.key)
+        drafts = self.query_one("#c-drafts", Button)
+        drafts.label = "🗂 " + _("drafts_waiting", n=n)
+        drafts.display = n > 0
         hint = _("draft_shelved")
         try:
             self.query_one("#c-hint", Static).update(hint)

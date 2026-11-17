@@ -1890,6 +1890,7 @@ class Web:
                 # "New draft" is the core's to offer: a new post's, with Drafts on
                 "shelvable": bool(core.shelvable(key)
                                   and core.cfg["post"].get("drafts_place")),
+                **self._drafts_waiting(key),
                 "account": first if len(accounts) > 1 else None}
 
     def draft_save(self, key, snap):
@@ -1916,7 +1917,13 @@ class Web:
         """"New draft": what is kept under key is set aside (core.shelve_draft), the editor
         starts clean. → {"key": the set-aside draft's, or None when nothing was kept}."""
         key = str(key or "")
-        return {"key": self.core.shelve_draft(key) if self.core.shelvable(key) else None}
+        return {"key": self.core.shelve_draft(key) if self.core.shelvable(key) else None,
+                **self._drafts_waiting(key)}
+
+    def _drafts_waiting(self, key):
+        """The editor's "Drafts (N)": how many wait besides this one (the core's count)."""
+        n = self.core.drafts_waiting(key)
+        return {"drafts_waiting": n, "drafts_label": "🗂 " + _("drafts_waiting", n=n)}
 
     def draft_drop(self, key):
         """Sent, or discarded after the question: the draft goes (here and elsewhere)."""
@@ -2328,7 +2335,7 @@ WORDS = ("direct_badge", "direct_badge_tip",
          # the emoji picker and "New draft" in the editor
          "emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
          "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
-         "draft_shelve", "draft_shelve_tip", "draft_shelved",
+         "draft_shelve", "draft_shelve_tip", "draft_shelved", "drafts_waiting_tip",
          # columns: lanes side by side (ui.layout = "columns", ❯)
          "columns", "columns_tip", "full_width_tip", "column_left", "column_right", "column_close",
          # ≡ as a window: its groups, as the windows' submenus

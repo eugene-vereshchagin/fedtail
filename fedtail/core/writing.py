@@ -494,6 +494,17 @@ class WritingMixin:
         new post's: a reply's, a quote's, a correction's draft belongs to its post."""
         return key == "new"
 
+    def drafts_waiting(self, key="new"):
+        """How many kept drafts wait besides the one of this editor (key): the editor's
+        "Drafts (N)" says it and opens them — set aside with "New draft", they were
+        nowhere to be found but the ≡ menu (18.11). 0 with post.drafts_place off."""
+        if not self.cfg["post"].get("drafts_place", True):
+            return 0
+        return sum(1 for k, data, _u in self.store.list_drafts()
+                   if k != key and isinstance(data, dict) and
+                   (str(data.get("text") or "").strip() or data.get("cw")
+                    or data.get("media") or data.get("poll")))
+
     def shelve_draft(self, key="new"):
         """"New draft": the new post's draft set aside under a name of its own
         ("new:<time>", in Drafts), so the editor starts clean. → the new key, or None

@@ -3,6 +3,8 @@ into an editor that is open already."""
 
 import unittest
 
+from fedtail import i18n
+
 from .test_gtk_smoke import HAVE_GTK, _GtkBase, pump
 
 
@@ -60,6 +62,9 @@ class GtkEmojiDraftsTest(_GtkBase):
         kept = [k for k, d, _u in self.view.drafts() if k.startswith("new:")]
         self.assertEqual(len(kept), 1)
         self.assertTrue(dlg.hint.get_label())
+        # 18.11: "Drafts (1)" right here, where they were nowhere to be found
+        self.assertTrue(dlg.drafts_btn.get_visible())
+        self.assertIn(i18n._("drafts_waiting", n=1), dlg.drafts_btn.get_label())
         pump(timeout=0.2)
         self.assertFalse(self.view.get_draft("new"))  # nothing empty saved
 

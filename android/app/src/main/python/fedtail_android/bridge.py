@@ -738,6 +738,16 @@ def draft_shelvable(key):
     return _answer(go)
 
 
+def drafts_waiting(key):
+    """The editor's "Drafts (N)": how many kept drafts wait besides this one
+    (Core.drafts_waiting) → {"n", "label"}."""
+    def go():
+        n = _core().drafts_waiting(key)
+        from fedtail.i18n import _
+        return {"n": n, "label": "🗂 " + _("drafts_waiting", n=n)}
+    return _answer(go)
+
+
 def draft_shelve(key):
     """"New draft": the draft set aside in Drafts (Core.shelve_draft) → {"key": the
     new key or None when there was nothing to keep}."""

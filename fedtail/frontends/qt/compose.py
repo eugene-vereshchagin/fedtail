@@ -379,6 +379,13 @@ class Compose(QDialog):
         self.shelve_btn.clicked.connect(self.shelve)
         self.shelve_btn.setVisible(self._shelvable())
         row.addWidget(self.shelve_btn)
+        # "Drafts (N)": the ones set aside, right here (they were in the ≡ menu only)
+        self.drafts_btn = QPushButton()
+        self.drafts_btn.setObjectName("tool")
+        self.drafts_btn.setToolTip(_("drafts_waiting_tip"))
+        self.drafts_btn.clicked.connect(lambda: self.win.open_place("drafts"))
+        row.addWidget(self.drafts_btn)
+        self._drafts_count()
         self.sensitive_btn = QPushButton("🔞 " + _("sensitive_mark"))
         self.sensitive_btn.setObjectName("tool")
         self.sensitive_btn.setCheckable(True)
@@ -612,7 +619,14 @@ class Compose(QDialog):
         self.initial = self._snapshot()
         self._autosave.stop()
         self.hint.setText(_("draft_shelved") if new else "")
+        self._drafts_count()
         self.text.setFocus()
+
+    def _drafts_count(self):
+        """How many drafts wait besides this one (the core's count): none — no button."""
+        n = self.core.drafts_waiting(self.key)
+        self.drafts_btn.setText("🗂 " + _("drafts_waiting", n=n))
+        self.drafts_btn.setVisible(n > 0)
 
     def pick_emoji(self):
         """The picker: a click puts the emoji where the cursor is."""

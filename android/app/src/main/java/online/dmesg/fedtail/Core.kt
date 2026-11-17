@@ -104,6 +104,7 @@ object Core {
     suspend fun draftStart(replyTo: String) = obj("draft_start", replyTo, "", "", false)
     suspend fun draftShelvable(key: String) = obj("draft_shelvable", key)
     suspend fun draftShelve(key: String) = obj("draft_shelve", key)
+    suspend fun draftsWaiting(key: String) = obj("drafts_waiting", key)
     suspend fun draftSave(key: String, snap: JSONObject) = obj("draft_save", key, snap.toString())
     suspend fun draftDrop(key: String) = obj("draft_drop", key)
     suspend fun preview(body: JSONObject) = obj("preview", body.toString())

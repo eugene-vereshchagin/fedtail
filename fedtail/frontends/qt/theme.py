@@ -593,6 +593,13 @@ def apply(app, cfg, name=None):
     # emoji and flags come from a colour emoji font when the main one lacks them
     f.setFamilies([x for x in families if x not in EMOJI_FONTS] + list(EMOJI_FONTS))
     app.setFont(f)
+    # …and by substitution too: a widget the stylesheet touches keeps one family of its
+    # font's list (Qt), and the emoji picker came out in boxes and black-and-white faces
+    # (18.11); a substitution goes with the family's name wherever it is used
+    for name in {*families, *[app.font(c).family() for c in CLASS_FONTS]}:
+        if name and name not in EMOJI_FONTS:
+            have = {x.lower() for x in QFont.substitutes(name)}  # Qt keeps them lower
+            QFont.insertSubstitutions(name, [x for x in EMOJI_FONTS if x.lower() not in have])
     if fam or size:
         # the desktop's platform theme gives some classes fonts of their own (KDE: labels,
         # buttons, lists, the status bar), and those beat the application's: on KDE the

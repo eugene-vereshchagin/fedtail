@@ -87,6 +87,10 @@ class TuiEmojiDraftsTest(Base):
             drafts = core.drafts()
             self.assertEqual(len(drafts), 1)
             self.assertTrue(drafts[0][0].startswith("new:"))
+            # 18.11: "Drafts (1)" right here, where they were nowhere to be found
+            shown = editor.query_one("#c-drafts", Button)
+            self.assertTrue(shown.display)
+            self.assertIn(i18n._("drafts_waiting", n=1), str(shown.label))
             self.assertEqual(drafts[0][1]["text"], "first thought")
             self.assertIsNone(core.get_draft("new"))
             await pilot.press("escape")  # empty and untouched: nothing kept under "new"

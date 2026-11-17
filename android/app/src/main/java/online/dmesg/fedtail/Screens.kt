@@ -767,7 +767,10 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
             }
             // what goes with the words: a warning, pictures, a poll, the language
             var shelvable by remember { mutableStateOf(false) }
-            LaunchedEffect(model.editId, model.quoteId, place.replyTo) { shelvable = model.shelvable() }
+            LaunchedEffect(model.editId, model.quoteId, place.replyTo) {
+                shelvable = model.shelvable()
+                model.countDrafts()
+            }
             val chips = buildList<@Composable (Modifier) -> Unit> {
                 add { m -> FilterChip(selected = model.composeCwOn, modifier = m,
                     onClick = { model.composeCwOn = !model.composeCwOn },
@@ -801,6 +804,10 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 if (shelvable && model.editId == null) add { m ->
                     FilterChip(selected = false, onClick = { model.shelveDraft() }, modifier = m,
                         label = { ChipLabel(stringResource(R.string.draft_shelve)) }) }
+                // "Drafts (N)": the ones set aside, right here (they were in the menu only)
+                if (model.draftsLabel.isNotBlank()) add { m ->
+                    FilterChip(selected = false, onClick = { model.openPage("drafts") },
+                        modifier = m, label = { ChipLabel(model.draftsLabel) }) }
             }
             ChipGrid(chips)
             if (emojiOpen) EmojiSheet(onClose = { emojiOpen = false }) { code ->

@@ -3892,6 +3892,25 @@ class QtSmokeTest(unittest.TestCase):
             themes._desktop = None
             themes.apply(self.app, config.validate({})[0])
 
+    def test_emoji_come_in_colour_under_the_stylesheet(self):
+        """18.11: the emoji picker's buttons showed boxes and black-and-white faces — the
+        stylesheet leaves a widget one family of its font's list, the emoji fonts after
+        it lost; they go as substitutions of every family the window uses."""
+        from PySide6.QtGui import QFont
+        from PySide6.QtWidgets import QApplication, QPushButton
+
+        from fedtail.frontends.qt import theme as themes
+        themes.apply(self.app, config.validate({"ui": {"theme": "point"}})[0])
+        b = QPushButton("😀")
+        b.setObjectName("tool")
+        b.ensurePolished()  # the stylesheet applied
+        for name in (b.font().family(), QApplication.font("QLabel").family()):
+            subs = [x.lower() for x in QFont.substitutes(name)]
+            self.assertIn("noto color emoji", subs, name)
+        themes.apply(self.app, config.validate({})[0])  # again: no second copy
+        again = [x.lower() for x in QFont.substitutes(name)]
+        self.assertEqual(again.count("noto color emoji"), 1)
+
     def test_paper_brings_its_font_and_ui_font_wins(self):
         from fedtail.frontends.qt import theme as themes
         try:

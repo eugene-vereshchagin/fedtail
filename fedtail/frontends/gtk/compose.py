@@ -225,6 +225,12 @@ class ComposeWindow(Gtk.Box):
         self.shelve_btn.set_visible(bool(self.view.shelvable(self.key))
                                     and bool(self.cfg["post"].get("drafts_place")))
         row.append(self.shelve_btn)
+        # "Drafts (N)": the ones set aside, right here (they were in the ≡ menu only)
+        self.drafts_btn = Gtk.Button()
+        tip(self.drafts_btn, _("drafts_waiting_tip"))
+        self.drafts_btn.connect("clicked", lambda _b: self.win.open_place("drafts"))
+        row.append(self.drafts_btn)
+        self._drafts_count()
         self.discard_btn = Gtk.Button(label=_("discard"))
         self.discard_btn.connect("clicked", lambda _b: self.discard())
         row.append(self.discard_btn)
@@ -486,7 +492,14 @@ class ComposeWindow(Gtk.Box):
         self._clear()
         self.initial = self._snapshot()
         self.hint.set_text(_("draft_shelved") if new else "")
+        self._drafts_count()
         self.text.grab_focus()
+
+    def _drafts_count(self):
+        """How many drafts wait besides this one (the core's count): none — no button."""
+        n = self.view.drafts_waiting(self.key)
+        self.drafts_btn.set_label("🗂 " + _("drafts_waiting", n=n))
+        self.drafts_btn.set_visible(n > 0)
 
     def _emoji_picked(self, text):
         """A click in the picker: the character, or ":code: ", at the cursor."""

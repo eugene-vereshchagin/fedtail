@@ -99,10 +99,18 @@ class QtEmojiDraftsTest(unittest.TestCase):
         from fedtail.frontends.qt.compose import Compose
         dlg = Compose(self.win)
         self.assertFalse(dlg.shelve_btn.isHidden())
+        self.assertTrue(dlg.drafts_btn.isHidden())  # nothing set aside yet
         dlg.text.setPlainText("first thoughts")
         dlg.shelve()
         self.assertEqual(dlg.text.toPlainText(), "")
         self.assertEqual(dlg.hint.text(), i18n._("draft_shelved"))
+        # 18.11: "Drafts (1)" right here, where they were nowhere to be found
+        self.assertFalse(dlg.drafts_btn.isHidden())
+        self.assertIn(i18n._("drafts_waiting", n=1), dlg.drafts_btn.text())
+        from unittest import mock
+        with mock.patch.object(self.win, "open_place") as opened:
+            dlg.drafts_btn.click()
+        opened.assert_called_once_with("drafts")
         self.assertIsNone(self.core.get_draft("new"))
         dlg.save_draft()  # the clean editor leaves nothing behind
         self.assertIsNone(self.core.get_draft("new"))

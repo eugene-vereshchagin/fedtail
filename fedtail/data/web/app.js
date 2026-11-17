@@ -2748,6 +2748,7 @@ function compose(replyTo) {
       // the reader's own pick while it was asked stays theirs
       if (st.visibility && $("#vis").value === first) $("#vis").value = st.visibility;
       if (!$("#cw").value && st.cw) { $("#cw").value = st.cw; showCw(true); }
+      showDrafts(st);
     }).catch(() => {});
   } else {
     t.value = store("draft.new");
@@ -2757,10 +2758,12 @@ function compose(replyTo) {
       if (state.replyTo || state.edit || state.quote) return;
       state.shelvable = !!st.shelvable;
       $("#draft-shelve").hidden = !state.shelvable;
+      showDrafts(st);
     }).catch(() => {});
   }
   state.shelvable = false;
   $("#draft-shelve").hidden = true;
+  $("#drafts-open").hidden = true;
   if (!replyTo) { $("#cw").value = ""; showCw(false); }
   $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
   $("#vis").disabled = false;  // an edit before locked these (composeFrom)
@@ -2774,6 +2777,14 @@ function compose(replyTo) {
   t.setSelectionRange(t.value.length, t.value.length);
 }
 
+// "Drafts (N)": the ones set aside, right in the editor (they were in ≡ only); the core
+// counts them, the page only shows the button it is told of
+function showDrafts(st) {
+  const b = $("#drafts-open");
+  b.textContent = st.drafts_label || "";
+  b.hidden = !(st.drafts_waiting > 0);
+}
+
 // "New draft": the draft kept (as the page keeps it), set aside by the core, the editor clean
 async function shelveDraft() {
   const text = $("#text").value;
@@ -2784,7 +2795,7 @@ async function shelveDraft() {
       poll: state.poll && !state.media.length ? {
         options: state.poll.options, expires_in: state.poll.expires_in,
         multiple: state.poll.multiple } : null } });
-    await api("/api/draft_shelve", { key: "new" });
+    showDrafts(await api("/api/draft_shelve", { key: "new" }));
   } catch (e) { toast(e.message); return; }
   clearTimeout(state.checkTimer);
   store("draft.new", "");
@@ -3699,6 +3710,8 @@ async function start() {
   $("#draft-shelve").textContent = w("draft_shelve");
   $("#draft-shelve").title = w("draft_shelve_tip");
   $("#draft-shelve").onclick = shelveDraft;
+  $("#drafts-open").title = w("drafts_waiting_tip");
+  $("#drafts-open").onclick = () => { closeCompose(); openPlace("drafts"); };
   $("#lang").title = w("lang_tip");
   for (const [code, label] of (me.editor || {}).languages || [["", ""]]) {
     const o = el("option", "", label);

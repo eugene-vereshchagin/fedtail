@@ -183,6 +183,6 @@
     <string name="emoji_tab_standard">Обычные</string>
     <string name="emoji_tab_server">Сервера</string>
     <string name="draft_shelve">Новый черновик</string>
-    <string name="draft_shelved">Отложено в «Черновики»</string>
+    <string name="draft_shelved">Отложено в «Черновики» — они тут же, кнопкой рядом</string>
     <string name="loading">Загрузка…</string>
 </resources>
