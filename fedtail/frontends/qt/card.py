@@ -54,7 +54,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
     thumb_box,
 )
 from ..common.lane import true_kind as _true_kind
-from ..common.links import file_link
+from ..common.links import THREAD_AT, file_link
 from ..richtext import link_chars, plain_tip
 from .gone import drop
 from .text import clean, display_name, emojify, esc, link, strip_emoji
@@ -676,14 +676,21 @@ class PostRow(QWidget):
             lab = self._label("", "ctx")
             lab.ensurePolished()
             pic = pictures.inline("thread", self.theme, max(12, lab.fontMetrics().height() - 2))
-            lab.setText(pic + link("thread", last_id, esc(text), self.theme.css("link")))
+            lab.setText(pic + link(self._thread_at(), last_id, esc(text), self.theme.css("link")))
             v.addWidget(lab)
         news = thread_news_bit(spec)  # a followed thread with new replies
         if news is not None:
-            lab = self._label(link("thread", p.id, esc(news.text), self.theme.css("accent"),
+            lab = self._label(link("threadnew", p.id, esc(news.text), self.theme.css("accent"),
                                    bold=True), "threadNews")
             lab.setToolTip(news.tip)
             v.addWidget(lab)
+
+    def _thread_at(self):
+        """The link kind opening this card's thread where its lane says (the lane's
+        open_at, else threads.open_at — common/links.py THREAD_AT), as the other
+        interfaces' cards do: the Qt card always opened at the post, so "Commented
+        posts" opened a thread at its first post, not its first new comment (NOTES/15)."""
+        return THREAD_AT.get(getattr(self.spec, "open_at", "post"), "thread")
 
     # ---- header -------------------------------------------------------------------
     def _short_id(self, h, replies=None, where="header"):
@@ -883,7 +890,8 @@ class PostRow(QWidget):
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc.handle)}{esc(bot)} · '
-            + link("thread", p.id, self.theme.date(p.created), self.theme.css("muted")),
+            + link(self._thread_at(), p.id, self.theme.date(p.created),
+                   self.theme.css("muted")),
             "meta", wrap=False))
         vis = p.visibility
         from . import icons as pictures
@@ -949,7 +957,7 @@ class PostRow(QWidget):
         when = self.theme.date(p.created, self.theme.words.get("chat_date")) \
             if p.created else ""
         name = self._who(acc, display_name(acc), acc.color or color)
-        stamp = link("thread", p.id, esc(when), color, bold=True)
+        stamp = link(self._thread_at(), p.id, esc(when), color, bold=True)
         line = _fill_html(self.theme.words.get("chat", "{name} ({when})"),
                           name=name, when=stamp)
         # one line, as in the originals: a narrow window cuts the name, never wraps it
@@ -995,7 +1003,8 @@ class PostRow(QWidget):
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         days = _age_days(p, self.ctx.cfg)
         meta = " · ".join(x for x in (esc(host) + esc(bot),
-                                      link("thread", p.id, self.theme.date(p.created),
+                                      link(self._thread_at(), p.id,
+                                           self.theme.date(p.created),
                                            self.theme.css("muted")),
                                       VIS_WORD.get(vis, vis),
                                       _("old_post", n=days) if days else "") if x)

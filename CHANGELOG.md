@@ -7,6 +7,10 @@
 
 ## What's next
 
+* "Commented posts" opens a thread at its first new comment again in the Qt window: its
+  card's "N comments · M new" line and its time went to the thread's first post (the
+  other interfaces followed the lane's `open_at` already); "🔔 N new in the thread" too.
+
 ## 0.23.3 — 2026-11-17
 
 **In short: the editor goes once the post is out, emoji and drafts at hand.** The window

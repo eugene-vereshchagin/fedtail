@@ -1132,6 +1132,30 @@ class QtSmokeTest(unittest.TestCase):
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
+    def test_a_cards_thread_links_follow_its_lane(self):
+        """NOTES/15: "Commented posts" (open_at = "first_unread") — the Qt card's
+        "N new comments" line and its time opened the thread at its first post; the
+        other interfaces' cards went to the first new comment. And "🔔 N new in the
+        thread" always to the first new one."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("098", BOB, minute=1)
+        last = E(status("099", BOB, "098", "B", minute=2))
+        conv = {"members": [E(st), last], "unread": 1, "last": last, "total": 2}
+
+        def links(open_at, **extra):
+            row = PostRow(CardSpec(key="098", entry=E(st), open_at=open_at,
+                                   extra=dict({"conversation": conv}, **extra)),
+                          self.win.ctx)
+            return " ".join(w.text() for w in row.findChildren(QLabel))
+        new = links("first_unread")
+        self.assertIn("fedtail:threadnew/099", new)  # "2 comments · 1 new"
+        self.assertIn("fedtail:threadnew/098", new)  # the time
+        self.assertNotIn("fedtail:thread/09", new)
+        self.assertNotIn("fedtail:threadnew/", links("post"))
+        self.assertIn("fedtail:threadnew/098", links("post", thread_news=2))
+
     def test_a_text_file_attached(self):
         """12.11: a file attached — "📄 notes.txt" in the card; its link reads it in a
         window of its own (the words from the core, without the token)."""
