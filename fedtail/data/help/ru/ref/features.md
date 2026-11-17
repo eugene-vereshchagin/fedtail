@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.23.2 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.23.3**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -531,7 +531,7 @@
 | Ужимать картинки под лимит сервера | есть | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
 | Файл, которого сервер не примет, — сразу | есть | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | нет |
 | Дополнение #тегов, @ников, :эмодзи: | есть | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji`, `post.emoji_standard` | `accounts/search`, `custom_emojis` | у всех |
-| Выбор эмодзи в редакторе: обычные и эмодзи сервера | есть | дальше | `post.emoji_standard`, `post.complete_emoji` | `custom_emojis` | у многих |
+| Выбор эмодзи в редакторе: обычные и эмодзи сервера | есть | 0.23.3 | `post.emoji_standard`, `post.complete_emoji` | `custom_emojis` | у многих |
 | Подсказка CamelCase для хэштегов | есть | 0.2.0 | `post.camelcase_hint` | своё | только в fedtail |
 | Язык поста | есть | 0.3.0 | `post.language`, `post.languages` | `language` | у всех |
 | Опрос в посте | есть | 0.8.0 | — | `poll[options]` | у всех |

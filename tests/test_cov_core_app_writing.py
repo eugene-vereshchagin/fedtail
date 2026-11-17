@@ -49,9 +49,25 @@ class PostTest(CoreCase):
         c = self.connect()
         with mock.patch.object(c, "mark_read", boom()), \
                 self.assertLogs("fedtail.core.app", "ERROR"):
-            st = c.post("вышло", "public").result(timeout=T)
+            fut = c.post("вышло", "public")
+            st = fut.result(timeout=T)
+            fut.settled.result(timeout=T)
         self.assertEqual(self.w.posted[-1][0], "вышло")
         self.assertTrue(st["id"])
+
+    def test_the_window_hears_before_the_bookkeeping(self):
+        # 16.11: the editor stood open 3 s and more over a post already in the lanes —
+        # the read marks and every lane counted anew went before the answer
+        import threading
+        c = self.connect()
+        go = threading.Event()
+        with mock.patch.object(c, "mark_read", lambda ids: go.wait(T)):
+            fut = c.post("сразу", "public", draft_key="new")
+            st = fut.result(timeout=T)
+            self.assertFalse(fut.settled.done())
+            self.assertEqual(c.store.get_status(st["id"])["id"], st["id"])
+            go.set()
+            self.assertEqual(fut.settled.result(timeout=T)["id"], st["id"])
 
     def test_a_lost_answer_that_cant_be_checked(self):
         c = self.connect()

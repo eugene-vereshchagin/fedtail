@@ -5,8 +5,19 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.3 — 2026-11-17
 
+**In short: the editor goes once the post is out, emoji and drafts at hand.** The window
+of a new post no longer stands open seconds after the post is in the lanes; an emoji
+picker in every interface; several new posts can wait as drafts; a boost or a like
+shows at once on GoToSocial.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.3 (the same server under the new number; protocol 2). -->
+
+* The editor closes as soon as the server has taken the post: it waited for the read marks
+  and every lane counted anew (3 s and more, the post already in the lanes and boosted).
+  In every interface.
 * An emoji picker in every interface ("☺ Emoji" by the text): "Standard" — every Unicode emoji
   by group, "Server's" — the server's own; a search by English words. Typing `:smile`, `:+1`,
   `:tada` suggests the standard ones too, after the server's (`post.emoji_standard`).

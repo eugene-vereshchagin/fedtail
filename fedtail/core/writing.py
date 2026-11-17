@@ -246,7 +246,9 @@ class WritingMixin:
         [(path, description, focus or None, cover picture's path)].
         language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
-        even if the window that sent it is gone by then."""
+        even if the window that sent it is gone by then. The future is done once the
+        post is made and stored — its bookkeeping (read marks, lanes, threads) goes on
+        after; `.settled` is the future of all of it."""
         lang = self.cfg["post"]["language"] if language is None else language
         from . import rss
         if rss.is_rss(str(reply_to or "")) or rss.is_rss(str(quote or "")):
@@ -322,11 +324,20 @@ class WritingMixin:
             if rest:
                 log.info("chain: %d posts", len(chain))
             # the post is out; nothing below may turn that into a reported failure
+            made = dict(st, chain=len(chain)) if rest else st
             try:
                 self.sound_moment("sent")
                 if draft_key:
                     self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
+            except Exception:
+                log.exception("storing the post sent failed")
+            # the window hears now: what follows (read marks, the lanes counted anew on
+            # their events) took 3 s and more, the editor standing open all the while
+            # over a post already in the lanes and boosted (16.11)
+            if not out.done():
+                out.set_result(made)
+            try:
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
                 if self._carry_my_direct(chain):  # the dialogue: mine at once
                     self.emit("lanes_updated", {n: [] for n in self.private_lanes()})
@@ -345,8 +356,24 @@ class WritingMixin:
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()
-            return dict(st, chain=len(chain)) if rest else st
-        return self.submit(job)
+            return made
+
+        def run():
+            try:
+                res = job()
+            except BaseException as e:
+                if not out.done():
+                    out.set_exception(e)
+                raise
+            if not out.done():
+                out.set_result(res)
+            return res
+        from concurrent.futures import Future
+        out = Future()  # the post made (or the error) — before its bookkeeping
+        out.settled = self.submit(run)  # …and once that is done too (tests, the CLI)
+        if out.settled.cancelled():  # shut down
+            out.cancel()
+        return out
 
     def _find_sent(self, text, reply_to, since):
         """My post with this text (and this parent) made since then — or None, also when

@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.23.3:**
 
 - An emoji picker in the editor: the standard ones and the server's
 <!-- /include -->
