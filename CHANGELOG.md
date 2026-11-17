@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.3 — 2026-11-17
 
 **In short: the editor goes once the post is out, emoji and drafts at hand.** The window
