@@ -203,6 +203,23 @@ details.ru = "Одна настройка для всех карточек: `\"p
 details.en = "One setting for every card: `\"post\"` — the thread stands at the post, `\"first_unread\"` — at the first unread comment (none — at the post). A lane of rules may decide for itself (\"Commented posts\" — at the first new one); \"🔔 N new in the thread\" always goes to the first new one. Every interface and the phone."
 
 [[feature]]
+id = "thread-next-new"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "«К следующему новому» в треде"
+name.en = "\"To the next new one\" in a thread"
+config.ru = "`threads.next_new`"
+config.en = "`threads.next_new`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Point, Juick (не клиенты федиверса)"
+others.en = "Point, Juick (not fediverse clients)"
+clients = []
+details.ru = "В шапке открытого треда — «↓ К следующему новому (N)»: новый комментарий после того, что сейчас наверху экрана, а после него новых нет — первый новый выше. В ветвистом треде новое не ищется глазами. В окнах, на веб-странице и на телефоне — кнопка, в терминале — клавиша N; какой комментарий следующий, решает ядро."
+details.en = "In an open thread's head — \"↓ To the next new one (N)\": the new comment after the one on top of the screen, none after it — the first new one above. A branched thread's news is not sought by eye. A button in the windows, on the web page and the phone, the N key in the terminal; which comment is next, the core decides."
+
+[[feature]]
 id = "watch-replies"
 status = "has"
 android = "has"

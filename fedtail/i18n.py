@@ -643,6 +643,9 @@ _STRINGS = {
         "find_deeper_tip": "Искать во всём, что сохранено для этой ленты, и подгрузить "
                            "ленту до найденного",
         "find_archive_none": "и в архиве нет; «Ещё старее» внизу ленты подтянет с сервера",
+        "thread_next_new": "К следующему новому ({n})",
+        "thread_next_new_tip": "Непрочитанный комментарий после того, что наверху экрана; "
+                               "после него новых нет — первый новый выше",
         "to_new": "К новому", "show_all": "Всё", "new_n": ["{n} новое", "{n} новых", "{n} новых"],
         "new_below": "дальше новое", "old_below": "дальше прочитанное", "menu": "Меню",
         "lane_codeword": "В конфиге: {name}",
@@ -2595,6 +2598,9 @@ _STRINGS = {
                            "the match",
         "find_archive_none": "not in the archive either; \"Older\" at the lane's end asks "
                              "the server",
+        "thread_next_new": "To the next new one ({n})",
+        "thread_next_new_tip": "The unread comment after the one on top of the screen; "
+                               "none after it — the first new one above",
         "to_new": "To new", "show_all": "All", "new_n": ["{n} new", "{n} new"],
         "new_below": "new below", "old_below": "read below", "menu": "Menu",
         "lane_codeword": "In the config: {name}",

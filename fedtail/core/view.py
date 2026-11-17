@@ -511,6 +511,29 @@ class View:
                 return first
         return sid
 
+    def thread_next_unread(self, items, after=None, new=None):
+        """"To the next new one" in an open thread (NOTES/15: a branched thread's news
+        sought by eye): (the id of the first unread comment after `after` in reading
+        order — none after it, the first before —, how many unread in all), or (None, 0).
+        items: [ThreadItem], as thread() gives them; after: the post the reader stands on
+        (the card on top of the screen) — or several (that one and the one the last press
+        went to: at the thread's end the screen can't bring it on top), the latest counts.
+        new: the ids that were new when the thread opened, for a window that marks the
+        whole thread read as it opens (read.mark_read); None — the unread ones now.
+        Decided here for every interface."""
+        if not self.cfg["feed"].get("next_new", True):  # threads.next_new off: no button
+            return None, 0
+        posts = [i.post for i in items[1:]] if items else []
+        unread = self.unread(posts) if new is None else set(new)
+        order = [p.id for p in posts if p.id in unread]
+        if not order:
+            return None, 0
+        ids = [p.id for p in posts]
+        marks = [after] if isinstance(after, str) or after is None else list(after)
+        at = max((ids.index(a) for a in marks if a in ids), default=-1)
+        later = [i for i in order if ids.index(i) > at]
+        return (later or order)[0], len(order)
+
     def in_app_html(self, html):
         """HTML (a bio, a profile field) with fediverse links pointing into fedtail."""
         return links.in_app(html)

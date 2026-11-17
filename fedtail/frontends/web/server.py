@@ -1402,9 +1402,18 @@ class Web:
             if p["sid"] == sid or p["id"] == sid:
                 p["came_from"] = _("came_from")
         from ..common.lane import thread_read_on_open
+        head = self.thread_head(posts, short)
+        if head is not None:  # "to the next new one" (NOTES/15): the core's choice from
+            # every post, the page only looks it up (it reads the thread as it opens: the
+            # ones new now count)
+            nxt = {p.id: core.thread_next_unread(items, p.id, new=unread)[0] for p in posts}
+            n = core.thread_next_unread(items, None, new=unread)[1]
+            head.update({"next_new": nxt if n else {}, "next_new_label":
+                         "↓ " + _("thread_next_new", n=n),
+                         "next_new_tip": _("thread_next_new_tip")})
         return {"focus": core.thread_focus(sid, items, at if at in ("post", "first_unread")
                                            else "post"),
-                "posts": out, "head": self.thread_head(posts, short),
+                "posts": out, "head": head,
                 # read as it opens, unless by hand: decided once (common/lane.py)
                 "read_on_open": thread_read_on_open(core.cfg, unread)}
 

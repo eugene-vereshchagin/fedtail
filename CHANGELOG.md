@@ -10,6 +10,10 @@
 * "Commented posts" opens a thread at its first new comment again in the Qt window: its
   card's "N comments · M new" line and its time went to the thread's first post (the
   other interfaces followed the lane's `open_at` already); "🔔 N new in the thread" too.
+* "↓ To the next new one (N)" in an open thread's head: the new comment after the one on
+  top of the screen (none after it — the first new one above), so a branched thread's news
+  isn't sought by eye. A button in the windows, on the web page and the phone, the N key in
+  the terminal (`threads.next_new`).
 
 ## 0.23.3 — 2026-11-17
 

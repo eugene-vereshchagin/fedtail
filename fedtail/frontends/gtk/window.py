@@ -1806,6 +1806,7 @@ class MainWindow(Gtk.ApplicationWindow):
                                          lambda: self.close_thread(root))
         page.focus_id = root
         page.posts = []
+        page.items, page.new, page.went, page.box = [], set(), None, box
         self.threads[root] = page
         from .threadhead import ThreadHead
         page.head = ThreadHead(self, root)  # as Qt's: what it is, Subscribe, Refresh
@@ -1824,6 +1825,7 @@ class MainWindow(Gtk.ApplicationWindow):
                     self.tabs.get_nth_page(self.tabs.get_current_page()) is page:
                 self.dock.follow(page)
             unread = self.view.unread(posts)
+            page.items, page.new = items, set(unread)  # new as it opened (read at once)
             short = self.view.short_ids(posts)
             stand = self.view.thread_focus(root, items, at)
             focus = None
@@ -1852,6 +1854,7 @@ class MainWindow(Gtk.ApplicationWindow):
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
+                page.head.news(self.view.thread_next_unread(items, root, new=page.new)[1])
             # read as it opens — unless read.mark_read = "manual" (common/lane.py)
             from ..common.lane import thread_read_on_open
             ids = thread_read_on_open(self.cfg, unread)
@@ -1864,6 +1867,29 @@ class MainWindow(Gtk.ApplicationWindow):
                 box.remove(wait)
             title.set_text(_("load_failed", err=err))
         self.bridge.call(self.view.thread(root), got, failed)
+
+    def thread_next_new(self, root):
+        """The thread head's "to the next new one": the comment the core names (after
+        the card on top of the screen), brought and put on top, marked as the focus."""
+        page = self.threads.get(root)
+        if page is None or not page.items:
+            return
+        sid, _n = self.view.thread_next_unread(page.items, [_thread_on_top(page),
+                                                           page.went], new=page.new)
+        if sid is None:
+            return
+        page.went = sid
+        window = getattr(page, "window", None)
+        target = window.bring(sid) if window is not None else \
+            next((c for c in _cards(page) if real(c.entry).id == sid), None)
+        if target is None:
+            return
+        for card in _cards(page):
+            card.remove_css_class("ft-focus")
+        card = target.card if window is not None else target
+        if card is not None:
+            card.add_css_class("ft-focus")
+        GLib.idle_add(lambda: (_scroll_to(page, page.box, target), GLib.SOURCE_REMOVE)[1])
 
     def reload_thread(self, root):
         """The thread anew from the server, in the same place among the tabs."""
@@ -2525,6 +2551,25 @@ def _cards(page):
         if isinstance(inner, Card):
             yield inner
         child = child.get_next_sibling()
+
+
+def _thread_on_top(page):
+    """The post whose card (or a big thread's slot) begins first on the thread tab's
+    screen — or None."""
+    from .lane import y_in
+    top = page.get_vadjustment().get_value()
+    window = getattr(page, "window", None)
+    if window is not None:
+        for slot, it in zip(window.slots, window.items, strict=True):
+            y = y_in(slot, page.box)
+            if y is not None and y >= top - 1:
+                return it.post.id
+        return None
+    for card in _cards(page):
+        y = y_in(card, page.box)
+        if y is not None and y >= top - 1:
+            return real(card.entry).id
+    return None
 
 
 def _scroll_to(page, box, widget):

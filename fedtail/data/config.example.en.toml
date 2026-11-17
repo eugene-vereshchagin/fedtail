@@ -860,6 +860,11 @@ thread_progress = false
 # the thread" always goes to the first new one. Every interface and the phone.
 open_at = "post"
 
+# "↓ To the next new one (N)" in an open thread's head: the new comment after the one on top
+# of the screen (none after it — the first new one above). In the terminal — the N key.
+# false — no button. Every interface and the phone.
+next_new = true
+
 # A comment's #id, as on Point: "post" — its post's and its number in the thread, #a3f/2
 # (the number given once, the order the comments were first seen in — it never moves;
 # the command line takes it: `#a3f/2 text`); "own" — a #id of its own, as a post's.

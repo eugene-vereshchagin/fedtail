@@ -36,6 +36,13 @@ class ThreadHead(Gtk.Box):
         self.cw_open = False
         self.cw_all.connect("clicked", lambda _b: self._all_cw())
         self.append(self.cw_all)
+        # "to the next new one" (NOTES/15): where — the core decides (thread_next_unread)
+        self.next_new = Gtk.Button(label="↓ " + _("thread_next_new", n=0),
+                                   valign=Gtk.Align.CENTER)
+        tip(self.next_new, _("thread_next_new_tip"))
+        self.next_new.set_visible(False)
+        self.next_new.connect("clicked", lambda _b: self.win.thread_next_new(self.root_id))
+        self.append(self.next_new)
         again = Gtk.Button(label=_("refresh"), valign=Gtk.Align.CENTER)
         again.connect("clicked", lambda _b: self.win.reload_thread(self.root_id))
         self.append(again)
@@ -64,6 +71,11 @@ class ThreadHead(Gtk.Box):
         self._sub_state()
         self._why_it_reaches_me(posts)
         self.cw_all.set_visible(any(p.warning or p.filtered for p in posts))
+
+    def news(self, n):
+        """How many were new as the thread opened: the button says it; none — it goes."""
+        self.next_new.set_label("↓ " + _("thread_next_new", n=n))
+        self.next_new.set_visible(n > 0)
 
     def _all_cw(self):
         """Every content warning in the thread opened (or closed) at once."""

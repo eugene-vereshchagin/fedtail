@@ -163,6 +163,37 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
             await pilot.press("q")
 
+    async def test_thread_to_the_next_new_one(self):
+        """NOTES/15, as the windows': N goes to the next comment new as the thread
+        opened (the screen reads it whole at once), after the cursor."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, ThreadScreen
+        core, w = self.make()
+        w.add(status("700", BOB, minute=1, text="root", vis="public"), home=True)
+        for i, parent in ((1, "700"), (2, "700"), (3, "701"), (4, "700")):
+            w.add(status(f"70{i}", BOB, parent, "B", minute=1 + i, text=f"c{i}"))
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            core.mark_read(["701", "704"])  # 702, 703 new
+            screen = ThreadScreen("700")
+            app.push_screen(screen)
+            await self.wait(pilot, lambda: app.screen is screen and
+                            len(screen.query_one("#posts", ListView).children) == 5,
+                            timeout=30)
+            lv = screen.query_one("#posts", ListView)
+            order = [i.key for i in lv.children]
+            new = [k for k in order if k in ("702", "703")]
+            lv.index = 0
+            await pilot.pause(0.1)
+            await pilot.press("N")
+            await self.wait(pilot, lambda: lv.highlighted_child.key == new[0])
+            await pilot.press("N")
+            await self.wait(pilot, lambda: lv.highlighted_child.key == new[1])
+            app.pop_screen()
+            await pilot.press("q")
+
     async def test_new_posts_while_another_screen_is_on_top(self):
         """A poll lands while a thread is open (or the composer, after sending): the
         lanes live on the main screen, and the update must find them there."""

@@ -2146,6 +2146,32 @@ function threadHead(h, openedFrom) {
     };
     row.append(cw);
   }
+  // "to the next new one": the core named the next new comment after every post; the
+  // page finds the card on top of the panel (or the last one gone to, if further down)
+  const nextMap = h.next_new || {};
+  if (Object.keys(nextMap).length) {
+    const nb = el("button", "tool", h.next_new_label);
+    nb.type = "button";
+    nb.title = h.next_new_tip;
+    let went = null;
+    nb.onclick = () => {
+      const side = $("#side-body");
+      const cards = [...side.querySelectorAll(".post[data-id]")];
+      const top = side.getBoundingClientRect().top;
+      const onTop = cards.find((c) => c.getBoundingClientRect().top >= top - 1);
+      const idx = (id) => cards.findIndex((c) => c.dataset.id === id);
+      let from = onTop ? onTop.dataset.id : null;
+      if (went && (from === null || idx(went) > idx(from))) from = went;
+      const to = from !== null ? nextMap[from] : Object.values(nextMap)[0];
+      const card = to ? cards[idx(to)] : null;
+      if (!card) return;
+      went = to;
+      for (const c of side.querySelectorAll(".post.cursor")) c.classList.remove("cursor");
+      card.classList.add("cursor");
+      card.scrollIntoView({ block: "start" });
+    };
+    row.append(nb);
+  }
   box.append(row);
   return box;
 }

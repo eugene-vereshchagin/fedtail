@@ -163,6 +163,11 @@ help = "reading.md#your-place-and-read-marks"
 text = "Ask the server for what's new now, without waiting for the poll."
 config = "poll.interval_seconds"
 
+[thread_next_new_tip]
+text = "Goes to the thread's next new comment — after the one on top of the screen; none after it — to the first new one above. The button says how many are new. In the terminal — the N key."
+config = "feed.next_new"
+help = "reading.md#threads"
+
 [sub_tip]
 text = "Subscribe to the thread: its new comments come to “Subscriptions”, as on Point."
 config = "subs.auto"

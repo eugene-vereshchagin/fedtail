@@ -65,6 +65,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A thread with new replies shows on its card | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ✓ |   |   | ✓ |   |   |   |   | ✓ |   |   |   | ✓ |   |
 | Where a thread opens: at the post or at the first new comment | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| "To the next new one" in a thread | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Following the replies to all of someone's posts | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Read marks and place
@@ -269,4 +270,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **71** features of the 205 compared.
+Only in fedtail — **72** features of the 206 compared.

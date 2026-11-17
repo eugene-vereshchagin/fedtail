@@ -470,6 +470,27 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(all(isinstance(s, Slot) for s in window.slots))
         self.win.close_thread("8000")
 
+    def test_thread_to_the_next_new_one(self):
+        """NOTES/15, as Qt's: "↓ To the next new one (N)" in the thread's head goes to
+        the comments new as it opened (it marks them read at once), one after another."""
+        self.world.add(status("7000", BOB, minute=1, text="корень"), home=True)
+        for i, parent in ((1, "7000"), (2, "7000"), (3, "7001"), (4, "7000")):
+            self.world.add(status(f"700{i}", NEWS, parent, "B", minute=1 + i,
+                                  text="ответ " * 30 + str(i)))
+        self.core.poll_once()
+        self.core.mark_read(["7001", "7004"])  # 7002, 7003 new
+        self.win.open_thread("7000")
+        self.assertTrue(pump(lambda: getattr(self.win.threads.get("7000"), "items", None), 5))
+        page = self.win.threads["7000"]
+        self.assertTrue(page.head.next_new.get_visible())
+        new = [it.post.id for it in page.items if it.post.id in ("7002", "7003")]
+        page.head.next_new.emit("clicked")
+        self.assertEqual(page.went, new[0])
+        pump(timeout=0.3)
+        page.head.next_new.emit("clicked")
+        self.assertEqual(page.went, new[1])
+        self.win.close_thread("7000")
+
     def test_thread_opens_in_a_tab(self):
         lane = self._lane("home")
         reply = next(c for c in lane.rows.values() if c.post.id == "013")

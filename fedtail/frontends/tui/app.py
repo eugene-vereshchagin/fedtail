@@ -529,6 +529,8 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
                 Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
                 Binding("c", "all_cw", _("cw_all_show"), show=False),
                 Binding("s", "follow_thread", _("sub_tip"), show=False),
+                # "to the next new one" (NOTES/15); n is "write" everywhere
+                Binding("N", "next_new", "↓ " + _("thread_next_new", n="N")),
                 Binding("colon", "command", ":", show=False)]
     # the screen doesn't scroll as a whole, the list does (see ProfileScreen)
     CSS = """
@@ -544,6 +546,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         self.cw_open = False
         self.root = None
         self.nodes = []
+        self.new = set()  # new as it opened: the thread is read on screen at once
 
     def compose(self) -> ComposeResult:
         yield Static(_("thread_loading"), id="title")
@@ -570,6 +573,18 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             next((i for i in reversed(tops) if i < at), tops[0])
         lv.index = nxt
 
+    def action_next_new(self):
+        """N: the comment the core names after the one under the cursor (common to every
+        interface: View.thread_next_unread)."""
+        lv = self.query_one("#posts", ListView)
+        here = getattr(lv.highlighted_child, "key", None)
+        sid, _n = self.app.core.thread_next_unread(self.nodes, here, new=self.new)
+        keys = [getattr(it, "key", None) for it in lv.children]
+        if sid in keys:
+            lv.index = keys.index(sid)
+        else:  # nothing new (or no such key): say what the key does
+            self.app.notify(_("thread_next_new_tip"), timeout=3)
+
     async def fill(self, items_in):
         if not (self.query("#posts") and self.query("#title")):
             return  # the screen went (or isn't drawn yet) while its thread came: no place
@@ -581,6 +596,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         posts = [n.post for n in items_in]
         short = core.short_ids(posts)
         unread = core.unread(posts)
+        self.new |= set(unread)
         if self.stand is None:  # the first time: where it was asked to stand
             self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
@@ -613,6 +629,9 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             if any(p.warning for p in posts):
                 self.info += " · c — " + (_("cw_all_hide") if self.cw_open else
                                           _("cw_all_show"))
+            n_new = core.thread_next_unread(items_in, None, new=self.new)[1]
+            if n_new:
+                self.info += " · N — " + _("thread_next_new", n=n_new)
         self.query_one("#title", Static).update(self.info)
         if root is not None and not core.subscribed(root):
             self.later(core.followed_among([p.author for p in posts]), ok=self.via_home,

@@ -738,6 +738,12 @@ class ThreadWidget(QWidget):
         self.cw_btn = self.header.add(_button(_("cw_all_show"), self._all_cw,
                                               tip=_("cw_all_tip")))
         self.cw_btn.hide()
+        # "to the next new one" (NOTES/15): where — the core decides (thread_next_unread)
+        self.next_btn = self.header.add(_button("↓ " + _("thread_next_new", n=0),
+                                                self.next_new,
+                                                tip=_("thread_next_new_tip")))
+        self.next_btn.hide()
+        self._went = None  # the post the last press went to
         self.header.add(_button("", self.reload, icon="refresh", tip=_("refresh")))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
@@ -774,6 +780,24 @@ class ThreadWidget(QWidget):
         ids = seen_read(self.core.cfg, ids)
         if ids:
             self.core.mark_read(ids)
+            self._next_count()
+
+    def _on_top(self):
+        anchor = self.view._anchor()
+        return anchor[0] if anchor else None
+
+    def _next_count(self):
+        """The button says how many are new still; none — it goes."""
+        _sid, n = self.core.thread_next_unread(self.items, [self._on_top(), self._went])
+        self.next_btn.setText("↓ " + _("thread_next_new", n=n))
+        self.next_btn.setVisible(n > 0)
+
+    def next_new(self):
+        sid, _n = self.core.thread_next_unread(self.items, [self._on_top(), self._went])
+        if sid:
+            self._went = sid
+            self.focus_on(sid)
+        self._next_count()
 
     def reload(self, quiet=False):
         if not quiet:
@@ -876,6 +900,7 @@ class ThreadWidget(QWidget):
         self.info_text = _("thread_info", n=len(items) - 1) + \
             (f" · #{short[root.id]}" if short.get(root.id) else "")
         self.header.info.setText(self.info_text)
+        self._next_count()
         self._why_it_reaches_me(posts)
         self.win.retitle(self)
         if not self.loaded:

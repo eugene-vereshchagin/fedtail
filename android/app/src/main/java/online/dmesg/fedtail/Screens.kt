@@ -386,6 +386,8 @@ private fun ThreadPlace(
     val act = model.cardActions(openBrowser, cwOpen = model.threadCwOpen)
     val root = model.threadPosts.firstOrNull()
     val head = model.threadHead
+    val scope = rememberCoroutineScope()
+    val nextWent = remember(head) { mutableStateOf<String?>(null) }  // the last press's
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
         ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }, actions = {
         // every warning of the thread open at once (and closed again)
@@ -422,7 +424,23 @@ private fun ThreadPlace(
             else PostList(model.threadPosts, state, null, act, model.hideSensitive,
                 thread = true, focus = focus,
                 header = head?.let { h -> @Composable {
-                    ThreadHead(h, model.threadProgress) { model.toggleThreadSub() } } })
+                    ThreadHead(h, model.threadProgress, onNext = {
+                        // "to the next new one" (NOTES/15): the core named the next new
+                        // comment after every post; here only the card on top is found
+                        val map = h.optJSONObject("next_new") ?: return@ThreadHead
+                        val posts = model.threadPosts
+                        val top = (state.firstVisibleItemIndex - 1).coerceAtLeast(0)
+                        val idx = { id: String? -> posts.indexOfFirst { it.id == id } }
+                        var from = posts.getOrNull(top)?.id
+                        val went = nextWent.value
+                        if (went != null && idx(went) > idx(from)) from = went
+                        val to = from?.let { map.optString(it).takeIf { s -> s.isNotBlank() } }
+                            ?: return@ThreadHead
+                        val i = idx(to)
+                        if (i < 0) return@ThreadHead
+                        nextWent.value = to
+                        scope.launch { state.animateScrollToItem(i + 1) }
+                    }) { model.toggleThreadSub() } } })
             // a reply to the thread, by the thumb (09.11): whom it answers and who will see
             // it said; a tap — the editor, the post answered above its text. Any comment is
             // answered from its own ↩.
@@ -452,7 +470,8 @@ private fun ThreadPlace(
 /** The windows' head over a thread: how many answers and its #id, why it reaches me
  *  when not followed, and Follow — a button that says what it is now. */
 @Composable
-private fun ThreadHead(head: org.json.JSONObject, progress: String, onSub: () -> Unit) {
+private fun ThreadHead(head: org.json.JSONObject, progress: String, onNext: () -> Unit,
+                       onSub: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -473,6 +492,10 @@ private fun ThreadHead(head: org.json.JSONObject, progress: String, onSub: () ->
             Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp))
         }
+        if ((head.optJSONObject("next_new")?.length() ?: 0) > 0)
+            TextButton(onClick = onNext, modifier = Modifier.padding(top = 4.dp)) {
+                Text(head.optString("next_new_label"))
+            }
         if (progress.isNotBlank()) Text(progress, fontSize = 12.sp,  // threads.thread_progress
             color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
         HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)

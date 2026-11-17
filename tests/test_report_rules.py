@@ -161,6 +161,16 @@ class ThreadsViewTest(unittest.TestCase):
         items = view.thread("100").result()
         self.assertEqual(view.thread_focus("100", items, "first_unread"), "101")
         self.assertEqual(view.thread_focus("100", items, "post"), "100")
+        # "to the next new one" (NOTES/15): after the post on top, else the first above
+        self.assertEqual(view.thread_next_unread(items, "100"), ("101", 2))
+        self.assertEqual(view.thread_next_unread(items, "101"), ("102", 2))
+        self.assertEqual(view.thread_next_unread(items, "102"), ("101", 2))  # round
+        self.assertEqual(view.thread_next_unread(items, ["100", "101"]), ("102", 2))
+        self.assertEqual(view.thread_next_unread(items, None), ("101", 2))
+        self.assertEqual(view.thread_next_unread([], "100"), (None, 0))
+        core.cfg["feed"]["next_new"] = False  # threads.next_new off: no button anywhere
+        self.assertEqual(view.thread_next_unread(items, "100"), (None, 0))
+        core.cfg["feed"]["next_new"] = True
         home = [s for s in LaneModel(view, "home").build(False).specs if s.entry is not None]
         self.assertTrue(all(s.open_at == "post" for s in home))
         core.cfg["feed"]["open_at"] = "first_unread"  # the setting: every lane without its own
@@ -169,6 +179,9 @@ class ThreadsViewTest(unittest.TestCase):
         del actions
         core.mark_read(["101", "102"])
         view._cache.clear()
+        self.assertEqual(view.thread_next_unread(items, "100"), (None, 0))  # all read
+        # a window that marked them read as the thread opened: the ones new then
+        self.assertEqual(view.thread_next_unread(items, "101", new={"101", "102"}), ("102", 2))
         self.assertEqual(len([s for s in m.build(True).specs if s.entry]), 1)  # kept now
         m.left()
         self.assertEqual([s for s in m.build(False).specs if s.entry], [])  # nothing new

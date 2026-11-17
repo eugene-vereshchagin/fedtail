@@ -690,6 +690,12 @@ class WebTest(TmpDir):
         nodes = json.loads(body)["posts"]
         self.assertEqual([p["number"] for p in nodes], [0, 1])
         self.assertEqual(nodes[1]["depth"], 1)
+        # "to the next new one" (NOTES/15): the core's next new after every post
+        head = json.loads(body)["head"]
+        new = [p["id"] for p in nodes[1:] if p.get("unread")]
+        self.assertEqual(new, ["002"])  # Bob's answer, unread
+        self.assertEqual(head["next_new"][nodes[0]["id"]], "002")
+        self.assertIn("↓", head["next_new_label"])
         code, _h, body = self.req("/api/account?id=B")
         self.assertEqual(code, 200)
         got = json.loads(body)

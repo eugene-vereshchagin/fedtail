@@ -1894,6 +1894,35 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.3)
         self.assertTrue(getattr(view.rows[hidden], "cw_open", True))
 
+    def test_thread_to_the_next_new_one(self):
+        """NOTES/15: "↓ To the next new one (N)" in a thread's head — the unread comment
+        after the card on top; none new — no button."""
+        from fedtail.frontends.qt.feed import ThreadWidget
+        self.world.add(status("8000", BOB, minute=1, text="корень"), home=True)
+        for i, parent in ((1, "8000"), (2, "8000"), (3, "8001"), (4, "8000")):
+            self.world.add(status(f"800{i}", NEWS, parent, "B", minute=1 + i,
+                                  text="ответ " * 30 + str(i)))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.mark_read(["8001", "8004"])  # 8002, 8003 new
+        self.win.open_thread("8000")
+        tabs = lambda: [self.win.tabs.widget(i) for i in range(self.win.tabs.count())]  # noqa: E731
+        self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                    for w in tabs()), timeout=15)
+        tab = next(w for w in tabs() if isinstance(w, ThreadWidget))
+        self.win.tabs.setCurrentWidget(tab)
+        self.pump(0.3)
+        order = [i.post.id for i in tab.items]
+        new = [x for x in order if x in ("8002", "8003")]
+        self.assertFalse(tab.next_btn.isHidden())
+        tab.next_new()
+        self.assertEqual(tab.focus_id, new[0])
+        tab.next_new()
+        self.assertEqual(tab.focus_id, new[1])
+        self.core.mark_read(["8002", "8003"])
+        tab._next_count()
+        self.assertTrue(tab.next_btn.isHidden())
+
     def test_thread_says_how_fetching_goes(self):
         from fedtail.frontends.qt.feed import ThreadWidget
         self.win.start()
