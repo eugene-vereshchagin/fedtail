@@ -614,11 +614,16 @@ class ActivityRequestsTest(Base):
             self.assertEqual(app.lane, "home")
             from fedtail.frontends.tui.app import PostItem
             # Home's cards drawn first (a slow machine: Enter on what Activity left there)
-            await self.wait(pilot, lambda: posts.children and isinstance(
-                posts.children[0], PostItem), what="Home's cards")
-            posts.index = 0
+            # (any of its rows a post: a line "new below" may stand first — and a slow
+            # runner took over 10 s, CI 17.11–18.11)
+            def first_post():
+                return next((i for i, x in enumerate(posts.children)
+                             if isinstance(x, PostItem)), None)
+            await self.wait(pilot, lambda: first_post() is not None, timeout=30,
+                            what="Home's cards")
+            posts.index = first_post()
             await app.on_list_view_selected(mock.Mock(list_view=posts,
-                                                      item=posts.children[0]))
+                                                      item=posts.children[first_post()]))
             await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen))
             await pilot.pause(0.3)  # its highlights handled before the app closes
 
