@@ -688,7 +688,7 @@ class Tui(Driver):
             await self.pilot.pause(0.05)
         if app.lane != lane:
             await app.select_lane(lane)
-        await self.pilot.pause(0.2)
+        await self._drawn(lane)
         posts = app.query_one("#posts", ListView)
         ids = [getattr(getattr(i, "entry", None), "id", None) for i in posts.children]
         if sid not in ids:
@@ -697,12 +697,29 @@ class Tui(Driver):
         posts.index = ids.index(sid)
         await self.pilot.pause(0.1)
 
+    def _ids(self):
+        return [i.entry.id for i in self.app.query_one("#posts").children
+                if hasattr(i, "entry")]
+
+    async def _drawn(self, name):
+        """The lane's rows as they stand once drawn: a fixed pause read an empty list on
+        a slow CI runner (18.11) — wait for rows while the core has posts there, then
+        for the list to hold still."""
+        held = bool(self.app.core.lane_entries(name))
+        await self.until(lambda: self._ids() or not held, timeout=30)
+        last = None
+        for _ in range(60):  # still for two looks in a row (0.15 s apart)
+            await self.pilot.pause(0.15)
+            now = self._ids()
+            if now == last:
+                break
+            last = now
+        return self._ids()
+
     def lane(self, name):
         async def go():
             await self.app.select_lane(name)
-            await self.pilot.pause(0.3)
-            return [i.entry.id for i in self.app.query_one("#posts").children
-                    if hasattr(i, "entry")]
+            return await self._drawn(name)
         return self.run(go())
 
     def _menu(self, sid):

@@ -107,18 +107,23 @@ class QtSmokeTest(unittest.TestCase):
         dlg = self.win.open_place("lanes")
         dlg.resize(640, 300)
         self.pump(until=lambda: dlg.page is not None)
-        self.pump(0.2)
         sc = dlg.findChild(QScrollArea)
         bar = sc.verticalScrollBar()
+        # laid out (a slow runner took longer than a fixed pause, 18.11): taller than the
+        # window, then mid-page, then a ↓ there on the screen
+        self.pump(until=lambda: bar.maximum() > 0, timeout=15)
         bar.setValue(bar.maximum() // 2)
-        self.pump(0.1)
-        before = bar.value()
 
         def on_screen(b):
             y = b.mapTo(sc.viewport(), b.rect().center()).y()
             return 0 < y < sc.viewport().height()
-        b = next(b for b in sc.widget().findChildren(QPushButton)
-                 if b.text() == "↓" and b.isVisible() and on_screen(b))
+
+        def down():
+            return next((b for b in sc.widget().findChildren(QPushButton)
+                         if b.text() == "↓" and b.isVisible() and on_screen(b)), None)
+        self.pump(until=lambda: down() is not None, timeout=15)
+        before = bar.value()
+        b = down()
         dlg.activateWindow()
         b.setFocus()
         page0 = dlg.page
