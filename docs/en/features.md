@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.23.3 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.23.4**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -235,7 +235,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 | Comments: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` and `threads_shown` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
-| "To the next new one" in a thread | has | next | `threads.next_new` | own | Point, Juick (not fediverse clients) |
+| "To the next new one" in a thread | has | 0.23.4 | `threads.next_new` | own | Point, Juick (not fediverse clients) |
 | Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
 
 <details><summary>In detail</summary>

@@ -5,7 +5,15 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.4 — 2026-11-18
+
+**In short: threads at their news, drafts at hand, emoji in colour.** "Commented posts"
+opens a thread at its first new comment in the Qt window again, and "↓ To the next new
+one" walks a branched thread's news; the editor shows the drafts set aside; the Qt
+window's emoji are in colour; a changed default reaches the configs written before.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.4 (the same server under the new number; protocol 2). -->
 
 * "Commented posts" opens a thread at its first new comment again in the Qt window: its
   card's "N comments · M new" line and its time went to the thread's first post (the
