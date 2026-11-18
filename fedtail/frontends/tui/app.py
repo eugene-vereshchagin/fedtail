@@ -1071,6 +1071,11 @@ class FedtailApp(App, PostsMixin):
         self.set_interval(30, self._slow_title)  # slow mode: when the next batch comes
         await self.fill_lanes()
         self.core.start_polling()
+        if self.lane is not None:
+            # a lane chosen while connecting (the sidebar is there from fill_lanes on):
+            # it stays — the curtain drawn after it cleared it, Home stood empty (CI, 18.11)
+            self._main("#posts", ListView).focus()
+            return
         first = sidebar.start_lane(self.core, self._lane_names())
         if first:
             await self.select_lane(first)

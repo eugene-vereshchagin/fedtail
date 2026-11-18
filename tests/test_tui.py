@@ -194,6 +194,36 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             app.pop_screen()
             await pilot.press("q")
 
+    async def test_a_lane_chosen_while_connecting_stays(self):
+        """CI 18.11: a lane chosen once the sidebar is there, before connecting is done —
+        the curtain (ui.start_lane = "none") drawn after it cleared it: Home stood empty."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, PostItem
+        core, w = self.make(ui={"start_lane": "none"})
+        w.add(status("001", BOB, minute=1, text="first", vis="public"), home=True)
+        core.connect().result(timeout=10)
+        core.poll_once()
+        from unittest import mock
+        real = FedtailApp.connected
+
+        async def connected(self, me):  # the lane chosen in the middle of it
+            await self.fill_lanes()
+            await self.select_lane("home")
+            await real(self, me)
+        # no polling: its news would draw the lane again over the curtain and hide it
+        with mock.patch.object(FedtailApp, "connected", connected), \
+                mock.patch.object(core, "start_polling", lambda: None):
+            app = FedtailApp(core)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await self.wait(pilot, lambda: app.lane == "home" and any(
+                    isinstance(x, PostItem)
+                    for x in app.query_one("#posts", ListView).children), timeout=30)
+                await pilot.pause(0.3)
+                self.assertTrue(any(isinstance(x, PostItem)
+                                    for x in app.query_one("#posts", ListView).children))
+                await pilot.press("q")
+
     async def test_new_posts_while_another_screen_is_on_top(self):
         """A poll lands while a thread is open (or the composer, after sending): the
         lanes live on the main screen, and the update must find them there."""

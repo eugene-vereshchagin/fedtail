@@ -36,6 +36,8 @@ window's emoji are in colour; a changed default reaches the configs written befo
 * Whatever a list's timeline brought leaves Home (and the other lanes of `lists.hide_in`),
   not only the posts of the people in the list: someone who moved to another account came
   into both the list and Home while the list still named the old one (`lists.hide_posts`).
+* The terminal: a lane chosen while it was still connecting stays — the curtain drawn after
+  it cleared it, and the lane stood empty until news came.
 
 ## 0.23.3 — 2026-11-17
 

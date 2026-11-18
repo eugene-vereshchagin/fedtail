@@ -289,8 +289,12 @@ class LaneStoodTest(unittest.TestCase):
         after = view.order[view.order.index(got) + 1]
         self.assertGreater(view._ys[after] + view.strip.height(after), vtop + vh + 2)
         sb = view.verticalScrollBar()  # read to the end: no place kept, it opens as ever
-        sb.setValue(sb.maximum())
-        self.pump(0.1)
+        for _ in range(20):  # the end settled: cards built near it grow it (CI, 18.11)
+            sb.setValue(sb.maximum())
+            self.pump(0.1)
+            self.pump(until=lambda: not view._pending)
+            if sb.value() == sb.maximum():
+                break
         view._target = None
         view._emit_seen()
         self.assertEqual(self.core.get_state("stood.home"), "")
