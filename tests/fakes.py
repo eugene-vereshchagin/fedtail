@@ -395,9 +395,11 @@ class FakeApi:
                 for i, x in self.w.lists.items()]
 
     def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):
-        members = self.w.lists[list_id]["members"]
-        return _page([s for s in self.w.home if s["account"]["id"] in members],
-                     limit, max_id, min_id)
+        lst = self.w.lists[list_id]
+        members, brings = lst["members"], lst.get("brings", ())  # brings: whatever the
+        # server puts in besides (a member's new account after a move, NOTES/17)
+        return _page([s for s in self.w.home if s["account"]["id"] in members
+                      or s["id"] in brings], limit, max_id, min_id)
 
     def list_accounts(self, list_id):
         known = {a["id"]: a for a in self.w.accounts()}

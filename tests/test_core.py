@@ -1456,10 +1456,33 @@ class CoreTest(TmpDir):
         core.cfg["lists"]["hide_in"] = ["home", "bots", "federated", "local"]
         core._lists_version += 1
         core.set_in_list("L1", "N", False).result()
+        # out of the list: the posts its timeline brought stay its own (lists.hide_posts)
+        self.assertEqual(core.lane_entries("bots"), [])
+        core.cfg["lists"]["hide_posts"] = False
+        core._lists_version += 1
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
+        core.cfg["lists"]["hide_posts"] = True
         core.delete_list(x["id"]).result()
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
+
+    def test_what_a_lists_timeline_brought_leaves_home(self):
+        """NOTES/17: someone moved to another account; the list still names the old one,
+        the server's list timeline brings the new one's posts — and Home did too."""
+        core, w = self.make()
+        # the old account in the list; the server's list timeline brings the new one's
+        w.lists["L1"] = {"title": "tits", "exclusive": False, "members": {"N"},
+                         "brings": {"020"}}
+        moved = fakes.acct("M", "moved@example.org")
+        core.connect().result()
+        w.add(status("020", moved, minute=20), home=True)
+        w.add(status("021", BOB, minute=21), home=True)
+        core.poll_once()
+        self.assertEqual([x["id"] for _, x in core.lane_entries("list:L1")], ["020"])
+        self.assertEqual([x["id"] for _, x in core.lane_entries("home")], ["021"])
+        core.cfg["lists"]["hide_posts"] = False  # only by who is in the list: as before
+        core._lists_version += 1
+        self.assertEqual([x["id"] for _, x in core.lane_entries("home")], ["020", "021"])
 
     def test_stream_wakes_gathered_refresh_doesnt_wait(self):
         """Stream events right after a poll make one poll after poll.stream_gap_seconds,

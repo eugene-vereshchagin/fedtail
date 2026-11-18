@@ -522,6 +522,11 @@ enabled = true
 #   "off"       — don't take them out of anywhere.
 hide_members = "all"
 
+# …and whatever a list's timeline brought, whoever wrote it: a post of someone who moved
+# to another account (the list still names the old one), a boost of a list member's post.
+# By the lists hide_members names; "off" there — nothing. false — only by who is in a list.
+hide_posts = true
+
 # Which lanes to take them out of (names — as in [lanes]).
 hide_in = ["home", "bots", "federated", "local"]
 

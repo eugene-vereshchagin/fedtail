@@ -1261,7 +1261,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                                  self.cfg["lanes"]["detect_min_words"],
                                  frozenset(t for g in self.tag_groups if g.get("not_in_home")
                                            for t in g["any"] + g["all"]),
-                                 self._world())
+                                 self._world(), self._listed())
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def open_at(self, lane=None):
@@ -1446,6 +1446,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 self.store.read_version if state else 0, self.lane_filter(name),
                 self._horizons.get(name, max(FILTER_WINDOW, limit)),
                 str(self.choice(f"media.{name}")),
+                # lists.hide_posts: a list's timeline bringing a post takes it out of here
+                sum(v for k, v in self.store.items_version.items() if k.startswith("list:"))
+                if name in self.cfg["lists"]["hide_in"] else 0,
                 # a window moves with the clock (and density with the posts' age): anew
                 # each minute
                 int(time.time() // 60) if getattr(lane, "window", 0)

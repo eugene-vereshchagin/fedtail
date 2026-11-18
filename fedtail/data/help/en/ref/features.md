@@ -78,7 +78,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Personal lanes | has | 0.1.0 | `lanes.preset`, `lanes.enabled` | notifications, `visibility=direct` | everyone, but laid out differently |
 | Lists as lanes | has | 0.2.0 | `[lists]`: `enabled`, `refresh_minutes` | `lists`, `timelines/list/:id` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Megalodon |
 | Whose replies a list shows | has | 0.20.0 | — | `lists` `replies_policy` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes |
-| Who is in a list leaves the general lanes | has | 0.3.0 | `lists.hide_members`, `lists.hide_in` | own | only in fedtail |
+| Who is in a list leaves the general lanes | has | 0.3.0 | `lists.hide_members`, `lists.hide_posts`, `lists.hide_in` | own | only in fedtail |
 | Who is in a list; your own order of lists | has | 0.13.0 | — | `lists/:id/accounts` | Mastodon web, Ivory (who is in a list); the order — only in fedtail |
 | Into a list — the author or the booster; only people you follow | has | 0.13.0 | — | `lists/:id/accounts` | only in fedtail |
 | Into a list right after a follow | has | 0.11.0 | `lists.refresh_minutes` | `lists/:id/accounts` | only in fedtail |
@@ -139,7 +139,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Whose replies a list shows.** A list has a choice of which replies go into its lane: replies to anyone you follow, only to the list's members, or none. It's the server's setting, the same in every client.
 
-**Who is in a list leaves the general lanes.** Put a person or a bot in a list — their posts, their boosts and others' boosts of their posts are read in the list's lane and disappear from the general lanes, so they don't clutter them. `hide_members`: `"all"` — so with any list; `"exclusive"` — only with exclusive ones (the server itself takes such people out of Home, fedtail carries that to the other lanes); `"off"` — don't take out. Which lanes — `lists.hide_in` (by default Home, Bots, Federated, Local).
+**Who is in a list leaves the general lanes.** Put a person or a bot in a list — their posts, their boosts and others' boosts of their posts are read in the list's lane and disappear from the general lanes, so they don't clutter them. `hide_members`: `"all"` — so with any list; `"exclusive"` — only with exclusive ones (the server itself takes such people out of Home, fedtail carries that to the other lanes); `"off"` — don't take out. Which lanes — `lists.hide_in` (by default Home, Bots, Federated, Local). `hide_posts` (on) takes out of them whatever a list's timeline brought too, whoever wrote it: a post of someone who moved to another account while the list still names the old one.
 
 **Who is in a list; your own order of lists.** Right click on a list on the left: “Who is in it…” — a tab with its people (and those waiting for a follow to be confirmed), each with “Take out of the list”; “Move up” and “Move down” — your own order of lists. Servers keep no order of lists; fedtail remembers it, new ones go to the end.
 

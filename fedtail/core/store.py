@@ -961,6 +961,16 @@ class Store:
                     f"({','.join('?' * len(part))})", [*sources, *part])}
         return out
 
+    def all_held_in(self, sources):
+        """Every status these streams hold (a list's lane: what its timeline brought)."""
+        sources = sorted(set(sources))
+        if not sources:
+            return set()
+        with self._reading() as db:
+            return {r[0] for r in db.execute(
+                f"SELECT DISTINCT status_id FROM items WHERE source IN "
+                f"({','.join('?' * len(sources))})", sources)}
+
     def drop_held(self, source, others):
         """Take out of `source` what one of `others` holds (Unsorted, once a lane has it)."""
         others = sorted(set(others) - {source})

@@ -108,6 +108,8 @@ fedtail/
     config.py        DEFAULTS, validation (types, choices, minimums)
     config_update.py --update-config: adds missing options; refreshes our
                      explanations above existing ones; drops commented-out options that are gone
+    config_defaults.py a default changed since the file was written: an option still at
+                     the old one takes the new one at a start, once (CHANGED)
     replies.py       ActivityPub reading without my token: a post's replies collection,
                      an actor's outbox (newest public posts), followers/following lists
     health.py        the run's record of answers (Api._req, remote.open_url): failures
@@ -749,6 +751,12 @@ The GTK frontend (`frontends/gtk/`, docs/en/dev/gtk.md has the plan and the stag
 * `config_update.py`: finds options the user's file doesn't mention, inserts them with
   their explanations (`--update-config`); `rebuild()` lays the user's file out anew from
   the example with their values put in (`--rebuild-config`).
+* `config_defaults.py`: the file is written whole at the first start, every option at that
+  day's default, so a default changed later never reached it (Drafts stayed off after
+  0.23.3 turned them on). `config.load` brings it: an option still at an old default takes
+  the new one — that line, through `config_edit.save` — once per profile
+  (`defaults_seen.json` beside the config); one the person sets back stays. **A change of a
+  default in `DEFAULTS` gets its line in `config_defaults.CHANGED` in the same commit.**
 
 ## 17. Strings (i18n)
 

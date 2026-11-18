@@ -256,6 +256,27 @@ class SilenceMixin:
         return frozenset(a for x in self.lists if which == "all" or x.get("exclusive")
                          for a in self.list_members.get(x["id"], ()))
 
+    def _listed(self):
+        """lists.hide_posts: the posts the lists' timelines brought — of the lists
+        hide_members names (every one, the exclusive ones, none) — asked of the store
+        once, when a lane in hide_in first wants to know."""
+        which = self.cfg["lists"]["hide_members"]
+        if which == "off" or not self.cfg["lists"].get("hide_posts", True):
+            return frozenset()
+        sources = [f"list:{x['id']}" for x in self.lists if which == "all" or x.get("exclusive")]
+        if not sources:
+            return frozenset()
+        store = self.store
+
+        class _Listed:
+            got = None
+
+            def __contains__(self, sid):
+                if self.got is None:
+                    self.got = store.all_held_in(sources)
+                return sid in self.got
+        return _Listed()
+
     HIDDEN_POSTS = "fedtail: hidden posts"  # the filter "Hide this post" keeps them in
 
     def _hidden_filter(self, make=False):

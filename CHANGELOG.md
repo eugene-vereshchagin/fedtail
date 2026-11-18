@@ -20,6 +20,14 @@
 * "🗂 Drafts (N)" in the editor, beside "New draft": the drafts set aside open right from
   there — they were in the ≡ menu only, and a draft set aside seemed gone. In every
   interface and on the phone.
+* A default changed since your config was written now reaches it: an option still at its
+  old default takes the new one at the next start, once (the line in config.toml, the old
+  file kept as config.toml.bak). So Drafts come on for the configs written before 0.23.3,
+  and the sync of lanes and people, the tag menu and the hidden command line of
+  0.22.4–0.23.1 too. Set one back and it stays.
+* Whatever a list's timeline brought leaves Home (and the other lanes of `lists.hide_in`),
+  not only the posts of the people in the list: someone who moved to another account came
+  into both the list and Home while the list still named the old one (`lists.hide_posts`).
 
 ## 0.23.3 — 2026-11-17
 

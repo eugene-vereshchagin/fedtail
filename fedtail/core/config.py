@@ -304,6 +304,7 @@ DEFAULTS = {
     "lists": {
         "enabled": True,
         "hide_members": "all",
+        "hide_posts": True,   # …and whatever a list's timeline brought (a moved author)
         "hide_in": ["home", "bots", "federated", "local"],
         "refresh_minutes": 10,
     },
@@ -608,7 +609,7 @@ FILE_LAYOUT = (
                              "detect_min_words detect_among federated_extra tags_extra bubble "
                              "extra_minutes extra_posts rss_items rss_summary_chars "
                              "tags_one_request")),
-    ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
+    ("lists", _keys("lists", "enabled hide_members hide_posts hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new count_filtered page_size catch_up_limit "
                               "late_hours late_minutes render_limit "
                               "older_ahead remember_choices first_run_mark_read "
@@ -1106,6 +1107,10 @@ def load(path):
             user = tomllib.load(f)
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{path}: {e}") from None
+    from . import config_defaults  # a default changed since the file was written
+    if config_defaults.bring(path, user):
+        with open(path, "rb") as f:
+            user = tomllib.load(f)
     cfg, warnings = validate(user)
     apply_proxy(cfg)
     return cfg, warnings

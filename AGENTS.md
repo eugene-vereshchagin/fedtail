@@ -52,7 +52,8 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
 * Every behaviour is a flag: add new options to `config.DEFAULTS` **and** both
   `fedtail/data/config.example.ru.toml` and `config.example.en.toml` (set to the default,
   the explanation above in that file's language) — tests check they match `DEFAULTS` and
-  each other line for line, comments aside.
+  each other line for line, comments aside. A default changed gets its line in
+  `core/config_defaults.CHANGED` too: configs written before keep the old value otherwise.
 * Strings go to both `ru` and `en` in `fedtail/i18n.py` (a test checks).
 * Never log or send the token; requests to other servers go without it; the bug
   report excludes `auth.json`, `login.json` and `state.db` (and sync's `sync.key`,

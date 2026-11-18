@@ -68,6 +68,9 @@ class LaneContext:
     min_words: int = 12  # lanes.detect_min_words
     home_hidden_tags: frozenset = frozenset()  # tag lanes "not in Home": their tags leave it
     world: object = None  # core/atoms.World: what the lanes' rules know around a post
+    # lists.hide_posts: what a list's timeline brought leaves the lanes in hide_in too
+    # (an author who moved to another account, NOTES/17); `in` asks the store once
+    listed: object = frozenset()
 
 
 def _all(st, ctx):
@@ -76,11 +79,13 @@ def _all(st, ctx):
 
 def keeps(lane, st, ctx):
     """Does this post belong in this lane? Someone you put in a list (and their
-    boosts, and anybody's boost of their posts) leaves the lanes in lists.hide_in:
+    boosts, and anybody's boost of their posts) — and with lists.hide_posts whatever a
+    list's timeline brought — leaves the lanes in lists.hide_in:
     the list is where they're read; a tag lane "not in Home" takes its tags out of Home;
     lanes.languages leaves what isn't read out of lanes.languages_in. Then the lane's rule."""
     if lane.name in ctx.hide_in and (st["account"]["id"] in ctx.hidden
-                                     or real(st)["account"]["id"] in ctx.hidden):
+                                     or real(st)["account"]["id"] in ctx.hidden
+                                     or st["id"] in ctx.listed or real(st)["id"] in ctx.listed):
         return False
     # "not in Home": out of every lane that reads the home timeline, whatever its name
     if ctx.home_hidden_tags and (lane.source == "home" or "home" in (lane.feeds or ())) and \
