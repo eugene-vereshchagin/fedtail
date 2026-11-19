@@ -1,0 +1,10 @@
+# the image is built from these alone (packaging/docker/Dockerfile): nothing else of the
+# checkout — notes, builds, profiles — goes into the build context
+*
+!fedtail/
+!pyproject.toml
+!README.md
+!LICENSE
+!packaging/docker/
+fedtail/_build.py
+**/__pycache__

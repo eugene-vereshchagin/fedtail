@@ -26,6 +26,18 @@ echo "deb [signed-by=/usr/share/keyrings/fedtail.gpg] https://eugene-vereshchagi
 sudo apt update && sudo apt install fedtail
 ```
 
+**Other Linux systems and ways** — every [release](https://github.com/eugene-vereshchagin/fedtail/releases/latest) has them too:
+
+| | |
+|---|---|
+| AppImage | `fedtail-…-x86_64.AppImage`: `chmod +x` and run; updates by delta (AppImageUpdate) |
+| Flatpak | `flatpak install --user fedtail-…-x86_64.flatpak`, then `flatpak run online.dmesg.fedtail` |
+| Arch Linux | `sudo pacman -U fedtail-…-1-any.pkg.tar.zst`; the release's `PKGBUILD` builds it from the source |
+| Fedora | `sudo dnf install ./fedtail-…noarch.rpm` |
+| Nix | `nix run github:eugene-vereshchagin/fedtail` |
+| pipx, anywhere | `pipx install "fedtail[qt]"` — from the release's `.whl` until it is on PyPI |
+| Docker (the web interface) | `docker run -d -p 127.0.0.1:8765:8765 -v fedtail:/data ghcr.io/eugene-vereshchagin/fedtail`, the login link in `docker logs` |
+
 [Русскоязычная версия](README.ru.md)
 
 > **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and

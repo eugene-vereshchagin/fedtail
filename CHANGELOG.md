@@ -7,6 +7,17 @@
 
 ## What's next
 
+* New ways to install, each built and tried in CI and attached to every release: an
+  AppImage (updates by delta through its `.zsync`), a Flatpak bundle (the Qt window on
+  KDE's runtime), an Arch Linux package with the AUR's PKGBUILD, an RPM for Fedora, a
+  wheel for `pipx install "fedtail[qt]"` (on PyPI once publishing is set up there), a Nix
+  flake (`nix run github:eugene-vereshchagin/fedtail`) and a Docker image of the web
+  interface on ghcr.io. The source archive comes with them.
+* `fedtail --check` on Arch and Fedora names the packages to install with `pacman` and
+  `dnf`, not pip.
+* `pip install fedtail` brings every file it needs: the lanes' pictures were left out.
+* From an AppImage, a restart (another account, a new layout) and `--install-desktop`
+  name the `.AppImage` file, not its inside, which is gone once fedtail exits.
 * The split layout's input line has the editor's formatting buttons (bold, italic,
   strikethrough, code, a link, a quote, a list — `post.format_bar`) and their keys
   Ctrl+B, Ctrl+I, Ctrl+K, in Qt and GTK: there were none. Ctrl+K there formats the text

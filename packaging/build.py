@@ -1,6 +1,8 @@
 """One file with everything inside — fedtail for people without Python.
 
     python3 packaging/build.py            # → dist/fedtail (Linux) or dist/fedtail.exe
+    python3 packaging/build.py --onedir   # → dist/onedir/fedtail/ (a folder: the AppImage's
+                                          #   insides, packaging/appimage.py)
 
 PyInstaller packs Python, Qt (PySide6) and fedtail into a single executable that
 unpacks itself on start. The version, commit and date of the build are written
@@ -58,12 +60,17 @@ if os.name != "nt":
     a.binaries = [b for b in a.binaries
                   if not os.path.basename(b[0]).startswith({system!r})]
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="fedtail", console={console!r},
-          icon={icon}, upx=False, runtime_tmpdir=None)
+{tail}
 """
+ONEFILE = """exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="fedtail", console={console!r},
+          icon={icon}, upx=False, runtime_tmpdir=None)"""
+# a folder: nothing to unpack at each start (the AppImage is mounted, not unpacked)
+ONEDIR = """exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="fedtail", console=True,
+          upx=False)
+coll = COLLECT(exe, a.binaries, a.datas, upx=False, name="fedtail")"""
 
 
-def main():
+def main(onedir=False):
     sys.path.insert(0, str(ROOT))
     from fedtail import version
     info = version.info()
@@ -80,20 +87,27 @@ def main():
                        check=True)
     spec = ROOT / "build" / "fedtail.spec"
     spec.parent.mkdir(exist_ok=True)
+    tail = ONEDIR if onedir else ONEFILE.format(console=not WINDOWS,
+                                                icon=repr(str(icon)) if icon else None)
     spec.write_text(SPEC.format(main=str(ROOT / "packaging" / "fedtail_main.py"),
                                 root=str(ROOT), data=str(ROOT / "fedtail" / "data"),
                                 vendor=str(ROOT / "fedtail" / "_vendor"),
-                                console=not WINDOWS, icon=repr(str(icon)) if icon else None,
-                                system=SYSTEM_LIBS), "utf-8")
+                                tail=tail, system=SYSTEM_LIBS), "utf-8")
     try:
         subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm",
-                        "--distpath", str(ROOT / "dist"), "--workpath", str(ROOT / "build"),
+                        "--distpath", str(ROOT / "dist" / ("onedir" if onedir else "")),
+                        "--workpath", str(ROOT / "build"),
                         str(spec)], check=True, cwd=ROOT)
     finally:
         build.unlink(missing_ok=True)
-    out = ROOT / "dist" / ("fedtail.exe" if WINDOWS else "fedtail")
-    print("built", out, out.stat().st_size // (1024 * 1024), "MB")
+    if onedir:
+        out = ROOT / "dist" / "onedir" / "fedtail"
+        size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
+    else:
+        out = ROOT / "dist" / ("fedtail.exe" if WINDOWS else "fedtail")
+        size = out.stat().st_size
+    print("built", out, size // (1024 * 1024), "MB")
 
 
 if __name__ == "__main__":
-    main()
+    main(onedir="--onedir" in sys.argv[1:])

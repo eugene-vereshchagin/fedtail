@@ -78,3 +78,10 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | A menu entry with the icon | · | not a phone thing |
 | An apt repository of its own | · | not a phone thing |
 | An installer for Windows (and a signature) | · | not a phone thing |
+| AppImage | · | not a phone thing |
+| Flatpak | · | not a phone thing |
+| An Arch Linux package | · | not a phone thing |
+| An RPM for Fedora | · | not a phone thing |
+| PyPI: `pipx install fedtail` | · | not a phone thing |
+| A Docker image with the web interface | · | not a phone thing |
+| Nix: `nix run github:eugene-vereshchagin/fedtail` | · | not a phone thing |

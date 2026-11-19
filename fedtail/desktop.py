@@ -30,8 +30,9 @@ def entry_text(profile=None, source_dir=None, icon="fedtail"):
     which Plasma caches, so a freshly installed one often shows as a blank page."""
     profile = profile or main_profile()
     args = "" if profile == main_profile() else f" --profile {profile}"
-    if getattr(sys, "frozen", False):  # the one-file build: the file itself
-        exec_line = f'"{sys.executable}"{args}'
+    if getattr(sys, "frozen", False):  # the one-file build, the AppImage: the file itself
+        from .sysenv import own_binary
+        exec_line = f'"{own_binary()}"{args}'
         path_line = ""
     elif source_dir:
         exec_line = f"{sys.executable} -m fedtail{args}"

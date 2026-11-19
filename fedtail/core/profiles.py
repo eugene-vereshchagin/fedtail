@@ -100,8 +100,9 @@ def label(p):
 def command(profile):
     """(argv, cwd) that starts fedtail with this profile — from the same checkout
     or installation this one runs from."""
-    if getattr(sys, "frozen", False):  # the one-file build
-        return [sys.executable, "--profile", profile], None
+    if getattr(sys, "frozen", False):  # the one-file build, the AppImage
+        from ..sysenv import own_binary
+        return [own_binary(), "--profile", profile], None
     root = Path(__file__).resolve().parent.parent.parent
     if (root / "pyproject.toml").exists():
         return [sys.executable, "-m", "fedtail", "--profile", profile], str(root)
@@ -188,7 +189,7 @@ def launch(profile, after=0.0, wait_for=None):
                                 cwd=cwd)
         if getattr(sys, "frozen", False):  # no `-c` there: the build's entry runs it
             env[RELAUNCH_ENV] = code
-            argv = [sys.executable]
+            argv = [sysenv.own_binary()]
         else:
             argv = [sys.executable, "-c", code]
     detached = {"creationflags": 0x00000008 | 0x00000200} if paths.WINDOWS else \

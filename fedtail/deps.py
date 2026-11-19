@@ -7,8 +7,9 @@ chosen interface's own pieces are checked: something missing is said in plain wo
 with that command, instead of a traceback (and the optional ones in one short line).
 
 Only the standard library here: this runs when `requests` itself may be missing.
-packaging/deb.py takes its Depends / Recommends / Suggests from the same table
-(tests/test_deps.py holds the two together).
+packaging/deb.py takes its Depends / Recommends / Suggests from the same table, the Arch
+package (packaging/arch.py) and the RPM (packaging/rpm.py) theirs from its `arch` and `rpm`
+names (tests/test_deps.py holds them together); `fedtail --check` there says pacman / dnf.
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ class Need:
     deb: str = ""       # Debian / Ubuntu package(s), space separated
     pip: str = ""       # pip requirement(s), space separated
     level: str = "need"  # "need" (the group won't run without), "want" (a part won't)
+    arch: str = ""      # Arch Linux package(s), space separated
+    rpm: str = ""       # Fedora package(s), space separated
 
 
 def _module(name):
@@ -127,49 +130,72 @@ def _tool(*names):
 
 NEEDS = (
     # what nothing runs without
-    Need("python ≥ 3.11", "core", "deps_python", _python, "python3"),
+    Need("python ≥ 3.11", "core", "deps_python", _python, "python3",
+         arch="python", rpm="python3"),
     Need("requests", "core", "deps_requests", lambda: _module("requests"),
-         "python3-requests", "requests>=2.28"),
-    Need("sqlite3 + JSON1", "core", "deps_sqlite", _sqlite_json, "libsqlite3-0"),
+         "python3-requests", "requests>=2.28",
+         arch="python-requests", rpm="python3-requests"),
+    Need("sqlite3 + JSON1", "core", "deps_sqlite", _sqlite_json, "libsqlite3-0",
+         arch="sqlite", rpm="sqlite-libs"),
     # the window (Qt)
     Need("PySide6 (QtWidgets)", "qt", "deps_qt", _qt("QtWidgets"),
-         "python3-pyside6.qtwidgets", "PySide6-Essentials>=6.5"),
+         "python3-pyside6.qtwidgets", "PySide6-Essentials>=6.5",
+         arch="pyside6", rpm="python3-pyside6"),
     Need("PySide6 QtSvg", "qt", "deps_qt_svg", _qt("QtSvg"), "python3-pyside6.qtsvg",
-         "PySide6-Essentials>=6.5", "want"),
+         "PySide6-Essentials>=6.5", "want",
+         arch="pyside6 qt6-svg", rpm="python3-pyside6"),
     Need("PySide6 QtMultimedia", "qt", "deps_qt_media", _qt("QtMultimedia"),
          "python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets",
-         "PySide6-Addons>=6.5", "want"),
+         "PySide6-Addons>=6.5", "want",
+         arch="pyside6 qt6-multimedia", rpm="python3-pyside6"),
     Need("PySide6 QtDBus", "qt", "deps_qt_dbus", _qt("QtDBus"), "python3-pyside6.qtdbus",
-         "PySide6-Essentials>=6.5", "want"),
-    Need("Qt WebP", "qt", "deps_qt_webp", _qt_webp, "qt6-image-formats-plugins", "", "want"),
+         "PySide6-Essentials>=6.5", "want",
+         arch="pyside6", rpm="python3-pyside6"),
+    Need("Qt WebP", "qt", "deps_qt_webp", _qt_webp, "qt6-image-formats-plugins", "", "want",
+         arch="qt6-imageformats", rpm="qt6-qtimageformats"),
     # the GTK window
-    Need("PyGObject", "gtk", "deps_gi", lambda: _module("gi"), "python3-gi"),
-    Need("GTK 4", "gtk", "deps_gtk", _gi_lib("Gtk", "4.0"), "gir1.2-gtk-4.0"),
-    Need("libadwaita", "gtk", "deps_adw", _gi_lib("Adw", "1"), "gir1.2-adw-1", "", "want"),
+    Need("PyGObject", "gtk", "deps_gi", lambda: _module("gi"), "python3-gi",
+         arch="python-gobject", rpm="python3-gobject"),
+    Need("GTK 4", "gtk", "deps_gtk", _gi_lib("Gtk", "4.0"), "gir1.2-gtk-4.0",
+         arch="gtk4", rpm="gtk4"),
+    Need("libadwaita", "gtk", "deps_adw", _gi_lib("Adw", "1"), "gir1.2-adw-1", "", "want",
+         arch="libadwaita", rpm="libadwaita"),
     # the terminal
     Need("textual", "tui", "deps_textual", lambda: _module("textual"), "python3-textual",
-         "textual>=0.86"),
+         "textual>=0.86",
+         arch="python-textual", rpm="python3-textual"),
     Need("Pillow", "tui", "deps_pil", lambda: _module("PIL"), "python3-pil", "Pillow>=9.1",
-         "want"),
-    Need("mpv", "tui", "deps_mpv", _tool("mpv"), "mpv", "", "want"),
+         "want",
+         arch="python-pillow", rpm="python3-pillow"),
+    Need("mpv", "tui", "deps_mpv", _tool("mpv"), "mpv", "", "want",
+         arch="mpv", rpm="mpv"),
     # a picture in its real size and colours (sixel, kitty, or colour text), the app
     # suspended — without it only the app's own blocks, a few dozen "pixels" (29.10)
-    Need("chafa", "tui", "deps_chafa", _tool("chafa"), "chafa", "", "want"),
+    Need("chafa", "tui", "deps_chafa", _tool("chafa"), "chafa", "", "want",
+         arch="chafa", rpm="chafa"),
     # whatever the interface
     Need("cryptography", "extra", "deps_crypto", lambda: _module("cryptography"),
-         "python3-cryptography", "cryptography>=3.4", "want"),
+         "python3-cryptography", "cryptography>=3.4", "want",
+         arch="python-cryptography", rpm="python3-cryptography"),
     Need("langdetect", "extra", "deps_langdetect", lambda: _module("langdetect"),
-         "python3-langdetect", "langdetect>=1.0.9", "want"),
+         "python3-langdetect", "langdetect>=1.0.9", "want",
+         arch="python-langdetect", rpm="python3-langdetect"),
     Need("Enchant", "extra", "deps_enchant", _enchant, "libenchant-2-2 hunspell-ru hunspell-en-us",
-         "pyenchant", "want"),
+         "pyenchant", "want",
+         arch="enchant hunspell-ru hunspell-en_us", rpm="enchant2 hunspell-ru hunspell-en-US"),
     Need("PySocks", "extra", "deps_socks", lambda: _module("socks"), "python3-socks",
-         "PySocks", "want"),
+         "PySocks", "want",
+         arch="python-pysocks", rpm="python3-pysocks"),
     Need("Noto Color Emoji", "extra", "deps_emoji", _emoji_font, "fonts-noto-color-emoji", "",
-         "want"),
+         "want",
+         arch="noto-fonts-emoji", rpm="google-noto-color-emoji-fonts"),
     Need("notify-send", "extra", "deps_notify", _tool("notify-send"), "libnotify-bin", "",
-         "want"),
-    Need("xdg-open", "extra", "deps_xdg", _tool("xdg-open"), "xdg-utils", "", "want"),
-    Need("git", "extra", "deps_git", _tool("git"), "git", "", "want"),
+         "want",
+         arch="libnotify", rpm="libnotify"),
+    Need("xdg-open", "extra", "deps_xdg", _tool("xdg-open"), "xdg-utils", "", "want",
+         arch="xdg-utils", rpm="xdg-utils"),
+    Need("git", "extra", "deps_git", _tool("git"), "git", "", "want",
+         arch="git", rpm="git"),
 )
 
 GROUPS = ("core", "qt", "gtk", "tui", "extra")
@@ -182,12 +208,26 @@ def debian_like():
     return os.path.exists("/etc/debian_version") and bool(shutil.which("apt"))
 
 
+def arch_like():
+    """pacman is the way here (Arch, Manjaro, EndeavourOS…)."""
+    return os.path.exists("/etc/arch-release") and bool(shutil.which("pacman"))
+
+
+def fedora_like():
+    """dnf with Fedora's package names."""
+    return os.path.exists("/etc/fedora-release") and bool(shutil.which("dnf"))
+
+
 def install_line(missing):
-    """One command that installs these: apt where there is apt, else pip (for what pip
-    has); "" — nothing to install that way."""
-    if debian_like():
-        pkgs = list(dict.fromkeys(p for n in missing for p in n.deb.split() if p))
-        return "sudo apt install " + " ".join(pkgs) if pkgs else ""
+    """One command that installs these: apt, pacman or dnf where the system has it, else
+    pip (for what pip has); "" — nothing to install that way."""
+    for like, field, cmd in ((debian_like, "deb", "sudo apt install "),
+                             (arch_like, "arch", "sudo pacman -S --needed "),
+                             (fedora_like, "rpm", "sudo dnf install ")):
+        if like():
+            pkgs = list(dict.fromkeys(p for n in missing for p in getattr(n, field).split()
+                                      if p))
+            return cmd + " ".join(pkgs) if pkgs else ""
     reqs = list(dict.fromkeys(_pinned(r) for n in missing for r in n.pip.split() if r))
     # double quotes: PowerShell and cmd take them, a POSIX shell too (cmd doesn't take '…')
     return (sys.executable.rsplit(os.sep, 1)[-1] + " -m pip install --user "
@@ -338,3 +378,28 @@ def deb_fields(package="common"):
         recommends = pkgs(lambda n: n.group == package and n.level == "want")
         suggests = []
     return ", ".join(depends), ", ".join(recommends), ", ".join(suggests)
+
+
+def dist_fields(field):
+    """packaging/arch.py and packaging/rpm.py: one package there, the window in it —
+    ([(package, need)] it can't run without: the core's and the Qt window's must-haves,
+    [...] the recommended: Qt's nice-to-haves, sync and languages, [...] the rest: GTK, the
+    terminal, the other extras). field: "arch" or "rpm" (Need's names for that system).
+    Each package once, in its first place; `need` says what it gives (an i18n key)."""
+    def pick(test):
+        return [(p, n) for n in NEEDS if test(n) for p in getattr(n, field).split()]
+    needs = pick(lambda n: n.level == "need" and n.group in ("core", "qt"))
+    recommends = pick(lambda n: (n.group == "qt" and n.level == "want") or
+                      n.key in DEB_RECOMMENDED)
+    suggests = pick(lambda n: n.group in ("gtk", "tui") or
+                    (n.group == "extra" and n.key not in DEB_RECOMMENDED))
+    seen = set()
+    out = []
+    for part in (needs, recommends, suggests):
+        mine = []
+        for p, n in part:
+            if p not in seen:
+                seen.add(p)
+                mine.append((p, n))
+        out.append(mine)
+    return tuple(out)

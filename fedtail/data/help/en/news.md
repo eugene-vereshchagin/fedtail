@@ -5,7 +5,15 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**What's next:**
+
+- AppImage
+- Flatpak
+- An Arch Linux package
+- An RPM for Fedora
+- PyPI: `pipx install fedtail`
+- A Docker image with the web interface
+- Nix: `nix run github:eugene-vereshchagin/fedtail`
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

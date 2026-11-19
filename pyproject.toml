@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=69"]  # "**" in package-data
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -52,7 +52,8 @@ version = { attr = "fedtail.__version__" }
 include = ["fedtail*"]
 
 [tool.setuptools.package-data]
-fedtail = ["_vendor/VENDORED.toml", "_vendor/*/LICENSE.txt", "_vendor/*/py.typed", "data/*", "data/themes/*", "data/themes/fonts/*", "data/icons/*", "data/icons/fallback/*", "data/themes/*/icons/*", "data/themes/*/sounds/*", "data/sounds/*/*", "data/web/*", "data/help/*/*", "data/help/*/ref/*"]
+# every file under data/ (a folder added later comes along: tests/test_packaging.py)
+fedtail = ["_vendor/VENDORED.toml", "_vendor/*/LICENSE.txt", "_vendor/*/py.typed", "data/**/*"]
 
 [tool.ruff]
 line-length = 100

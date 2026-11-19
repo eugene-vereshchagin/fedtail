@@ -331,6 +331,170 @@ jobs:
             bare)  ! dpkg -l 'python3-pyside6*' 'python3-gi' 'python3-textual' 2>/dev/null | grep -q '^ii' ;;
           esac
 
+  # the Python package for PyPI (`pip install fedtail`): the sdist and the wheel, checked
+  # as PyPI will (twine), installed into a clean venv and started. Published by
+  # `pypi-publish` after a release
+  pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install build twine
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - name: Installs from the wheel, starts
+        run: |
+          python -m venv /tmp/v && /tmp/v/bin/pip install dist/*.whl
+          cd /tmp && /tmp/v/bin/fedtail --version
+          /tmp/v/bin/python -c "import fedtail, importlib.resources as r; assert r.files('fedtail').joinpath('data/icons/lanes/rss.svg').is_file()"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-pypi
+          path: dist/*
+
+  # the Arch Linux package (packaging/arch.py): makepkg from the source archive in a clean
+  # Arch, namcap, installed with pacman and started; the release carries it and the AUR's
+  # PKGBUILD
+  arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel git namcap python python-build python-installer python-setuptools python-wheel python-requests pyside6 hicolor-icon-theme
+      - uses: actions/checkout@v5
+      - name: makepkg, namcap, pacman, starts
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python packaging/source.py build/arch
+          python packaging/arch.py build/arch --local build/arch/fedtail-*.tar.gz
+          useradd -m builder && chown -R builder build/arch
+          su builder -c "cd build/arch && makepkg --nodeps --force"
+          namcap build/arch/PKGBUILD build/arch/fedtail-*.pkg.tar.zst
+          pacman -U --noconfirm build/arch/fedtail-*.pkg.tar.zst
+          cd /tmp && fedtail --version
+          python -c "import fedtail.frontends.qt.window, fedtail.frontends.web.server"
+          fedtail --check | tee check.txt; grep -q "pacman -S" check.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-arch
+          path: build/arch/fedtail-*.pkg.tar.zst
+
+  # the RPM for Fedora (packaging/rpm.py): rpmbuild in a clean Fedora with its pyproject
+  # macros, rpmlint, installed with dnf, its menu entry and AppStream file validated,
+  # started
+  rpm:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - run: dnf -y install git rpm-build rpmlint python3-devel pyproject-rpm-macros dnf-plugins-core appstream desktop-file-utils
+      - uses: actions/checkout@v5
+      - name: rpmbuild, rpmlint, dnf, starts
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 packaging/source.py build/rpm
+          python3 packaging/rpm.py build/rpm --local build/rpm/fedtail-*.tar.gz
+          cd build/rpm
+          D=(--define "_sourcedir $PWD" --define "_srcrpmdir $PWD" --define "_rpmdir $PWD")
+          # the build's own requirements come from pyproject.toml (%generate_buildrequires)
+          for i in 1 2 3; do
+            rpmbuild -br "${D[@]}" fedtail.spec && break
+            dnf -y builddep ./fedtail-*.buildreqs.nosrc.rpm
+          done
+          rpmbuild -ba "${D[@]}" fedtail.spec
+          rpmlint noarch/fedtail-*.rpm || true  # said, not held to (its Fedora rules change)
+          dnf -y install ./noarch/fedtail-*.noarch.rpm
+          appstreamcli validate --no-net /usr/share/metainfo/online.dmesg.fedtail.metainfo.xml
+          desktop-file-validate /usr/share/applications/online.dmesg.fedtail.desktop
+          cd /tmp && fedtail --version
+          python3 -c "import fedtail.frontends.qt.window, fedtail.frontends.web.server"
+          fedtail --check | tee check.txt; grep -q "dnf install" check.txt
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-rpm
+          path: build/rpm/noarch/fedtail-*.noarch.rpm
+
+  # the AppImage (packaging/appimage.py): the PyInstaller folder built on Debian 12 as
+  # the one-file build, appimagetool (pinned, its sha256 checked) makes the image and its
+  # .zsync for delta updates; started from the image
+  appimage:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [test, debian]
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv python3-pip libpython3.11 binutils git ca-certificates curl file libglib2.0-0 libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Build
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'textual>=0.86' pyinstaller cryptography
+          /tmp/venv/bin/python packaging/build.py --onedir
+          curl -sSLo /tmp/appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /tmp/appimagetool" | sha256sum -c
+          chmod +x /tmp/appimagetool
+          /tmp/venv/bin/python packaging/appimage.py /tmp/appimagetool
+          APPIMAGE_EXTRACT_AND_RUN=1 ./dist/fedtail-*-x86_64.AppImage --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-appimage
+          path: dist/fedtail-*-x86_64.AppImage*
+
+  # the Flatpak (packaging/flatpak/): KDE's runtime with PySide6's BaseApp, built into a
+  # bundle (`flatpak install --user fedtail-….flatpak`); Flathub builds from the same
+  # manifest once it is submitted there
+  flatpak:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [test, debian]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: fedtail.flatpak
+          manifest-path: packaging/flatpak/online.dmesg.fedtail.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: true
+
+  # the Nix flake (flake.nix, packaging/nix/package.nix): built from nixpkgs as locked,
+  # started
+  nix:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [test, debian]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - run: nix build -L .#default
+      - run: ./result/bin/fedtail --version
+
+  # the web interface's image (packaging/docker/): built, started, the page answers
+  # (403 without the key); published to ghcr.io by `docker-publish` after a release
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -f packaging/docker/Dockerfile -t fedtail:ci .
+      - name: Starts, the page answers, the link is printed
+        run: |
+          docker run -d --name ft -p 127.0.0.1:8765:8765 fedtail:ci
+          for i in $(seq 30); do docker logs ft 2>&1 | grep -q "http://" && break; sleep 1; done
+          docker logs ft 2>&1 | grep -q "http://127.0.0.1:8765/"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/)" = 403
+          docker rm -f ft
+
   # real screenshots of the window with made-up data, published to the
   # `screenshots` branch so the look can be reviewed without running the app.
   # Only when run by hand on main: the README's pictures live there and change seldom
@@ -438,7 +602,7 @@ jobs:
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, security, test, budgets, web-check, debian, windows-build, linux-build, deb,
-            deb-install, apk]
+            deb-install, apk, pypi, arch, rpm, appimage, flatpak, nix, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -475,8 +639,20 @@ jobs:
           cp built/fedtail-windows/fedtail-setup.exe "fedtail-$VER-windows-setup.exe"
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
           cp built/fedtail-deb/fedtail*_all.deb .
+          cp built/fedtail-appimage/fedtail-*-x86_64.AppImage* .
+          cp built/fedtail.flatpak-x86_64/fedtail.flatpak "fedtail-$VER-x86_64.flatpak"
+          cp built/fedtail-arch/fedtail-*.pkg.tar.zst built/fedtail-rpm/fedtail-*.noarch.rpm .
+          cp built/fedtail-pypi/fedtail-*.whl .
+          # the distributions' source: this commit's archive, the AUR's PKGBUILD and the
+          # spec naming it (packaging/source.py, arch.py, rpm.py)
+          python3 packaging/source.py .
+          python3 packaging/arch.py . --archive "fedtail-$VER.tar.gz"
+          python3 packaging/rpm.py .
           files=("fedtail-$VER-windows.exe" "fedtail-$VER-windows-setup.exe"
-                 "fedtail-$VER-linux-x86_64" fedtail*_all.deb)
+                 "fedtail-$VER-linux-x86_64" fedtail*_all.deb
+                 fedtail-*-x86_64.AppImage fedtail-*-x86_64.AppImage.zsync
+                 "fedtail-$VER-x86_64.flatpak" fedtail-*.pkg.tar.zst fedtail-*.noarch.rpm
+                 fedtail-*.whl "fedtail-$VER.tar.gz" PKGBUILD fedtail.spec)
           # the phone's, when the release key was there to sign it (the apk job)
           apk=$(ls built/fedtail-android/*.apk 2>/dev/null | head -1)
           if [ -n "$apk" ]; then cp "$apk" "fedtail-$VER-android.apk"; files+=("fedtail-$VER-android.apk"); fi
@@ -487,6 +663,51 @@ jobs:
             "${files[@]}"
           echo "released=true" >> "$GITHUB_OUTPUT"
           echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+  # the release on PyPI (`pip install fedtail`): trusted publishing — PyPI knows this
+  # workflow (pypi.org → the project → Publishing: owner, repo, ci.yml, environment
+  # `pypi`); until the repository's variable PYPI_PUBLISH is "true" — a warning, nothing
+  # sent
+  pypi-publish:
+    needs: [release]
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Not set up — not published
+        if: vars.PYPI_PUBLISH != 'true'
+        run: 'echo "::warning::PYPI_PUBLISH is not true — the release was not sent to PyPI"'
+      - uses: actions/download-artifact@v4
+        if: vars.PYPI_PUBLISH == 'true'
+        with:
+          name: fedtail-pypi
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        if: vars.PYPI_PUBLISH == 'true'
+
+  # the web interface's image on ghcr.io/eugene-vereshchagin/fedtail: the release's
+  # version and `latest` (the repository's own token: no secret)
+  docker-publish:
+    needs: [release]
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VER: ${{ needs.release.outputs.version }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/fedtail
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.release.outputs.version }}
+      - run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - run: |
+          docker build -f packaging/docker/Dockerfile -t "$IMAGE:$VER" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$VER"
+          docker push "$IMAGE:latest"
 
   # the website (a repo of its own) takes the docs and the download links from the latest
   # release tag: rebuilt now and checked that it really went live (site.yml; a site that

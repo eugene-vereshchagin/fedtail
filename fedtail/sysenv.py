@@ -20,6 +20,16 @@ OURS = ("QT_PLUGIN_PATH", "QML2_IMPORT_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH",
         "_PYI_APPLICATION_HOME_DIR", "_PYI_ARCHIVE_FILE", "_PYI_PARENT_PROCESS_LEVEL")
 
 
+def own_binary():
+    """The file that starts this build again: the .AppImage itself (its runtime says
+    where, APPIMAGE) — not the program inside it, whose folder is unmounted once we
+    exit; else the one-file build's own file (sys.executable)."""
+    image = os.environ.get("APPIMAGE", "")
+    if FROZEN and image and os.path.isfile(image):
+        return image
+    return sys.executable
+
+
 def child_env():
     """The environment for a program we start (None: just inherit ours)."""
     if not FROZEN:
