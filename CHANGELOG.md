@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.5 — 2026-11-19
 
 **In short: the emoji, found and whole.** The phone's editor shows "☺ Emoji" and "Poll"
