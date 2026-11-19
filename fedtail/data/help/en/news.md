@@ -5,9 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.23.4:**
-
-- "To the next new one" in a thread
+No new features yet.
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

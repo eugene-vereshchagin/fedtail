@@ -5,7 +5,14 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.5 — 2026-11-19
+
+**In short: the emoji, found and whole.** The phone's editor shows "☺ Emoji" and "Poll"
+again, the emoji picker no longer cuts the emoji at their sides in any interface, and it
+leads to the emoji settings.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.5 (the same server under the new number; protocol 2). -->
 
 * "☺ Emoji" and "Poll" are back in the phone's editor: the language chip beside them took
   the whole row and squeezed them to nothing, so the emoji were nowhere to be found.
