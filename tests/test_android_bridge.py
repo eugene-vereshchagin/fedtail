@@ -515,9 +515,12 @@ class BridgeTest(_Base):
         before = self.call("lane", "home")
         core.lane_entries("home")
         self.assertTrue(core._lane_cache)
+        kept = dict(core._lane_cache)
         self.assertEqual(self.call("trim_memory", 5)["lanes"], 0)  # running, moderate
         self.assertGreater(self.call("trim_memory", 20)["lanes"], 0)  # out of sight
-        self.assertFalse(core._lane_cache)
+        # dropped: what is there now the demo's own poll made anew meanwhile (it raced
+        # an emptiness check, CI 19.11), never the entries kept before
+        self.assertFalse([k for k, v in core._lane_cache.items() if kept.get(k) is v])
         self.assertEqual([p["id"] for p in self.call("lane", "home")["posts"]],
                          [p["id"] for p in before["posts"]])
         core.cfg["phone"]["free_memory"] = "low"
