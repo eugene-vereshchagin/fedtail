@@ -42,7 +42,7 @@ class WheelTest(unittest.TestCase):
         conf = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))
         patterns = conf["tool"]["setuptools"]["package-data"]["fedtail"]
         base = ROOT / "fedtail"
-        taken = {str(p.relative_to(ROOT)) for pat in patterns for p in base.glob(pat)
+        taken = {p.relative_to(ROOT).as_posix() for pat in patterns for p in base.glob(pat)
                  if p.is_file()}
         left = [f for f in files if not f.endswith(".py") and f not in taken]
         self.assertEqual(left, [])

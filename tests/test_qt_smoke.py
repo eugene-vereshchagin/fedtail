@@ -3595,8 +3595,19 @@ class QtSmokeTest(unittest.TestCase):
         try:
             dock = win.dock
             win.show()
-            dock.set_visibility("followers")
-            self.assertFalse(dock.vis_btn.icon().isNull())
+            # the picture asked by its name: "private" alone has one here (a theme may
+            # have none at all — Qt from apt, no icon theme)
+            from unittest import mock
+
+            from PySide6.QtGui import QIcon, QPixmap
+
+            from fedtail.frontends.qt import icons
+            pm = QPixmap(16, 16)
+            pm.fill()
+            with mock.patch.object(icons, "icon", lambda name, *_a, **_k:
+                                   QIcon(pm) if name == "private" else QIcon()):
+                dock.set_visibility("followers")
+                self.assertFalse(dock.vis_btn.icon().isNull())
             self.assertTrue(dock.format_bar.isHidden())  # marks would come out bare
             self.core.cfg["account"]["markdown"] = "on"
             dock.dress()
