@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.6 — 2026-11-20
 
 **In short: fedtail on every Linux.** Besides the one file, the .deb and the apt
