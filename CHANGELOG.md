@@ -5,7 +5,19 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.6 — 2026-11-20
+
+**In short: fedtail on every Linux.** Besides the one file, the .deb and the apt
+repository, every release now has an AppImage, a Flatpak, an Arch Linux package with its
+PKGBUILD, an RPM for Fedora, a wheel for pipx, a Nix flake and a Docker image of the web
+interface. The split layout's input line got the editor's formatting buttons.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.6 (the same server under the new number; protocol 2). The new
+     release files: fedtail-X.Y.Z-x86_64.AppImage (+ .zsync), fedtail-X.Y.Z-x86_64.flatpak,
+     fedtail-X.Y.Z-1-any.pkg.tar.zst (Arch), fedtail-X.Y.Z-1.fcNN.noarch.rpm (Fedora),
+     fedtail-X.Y.Z-py3-none-any.whl, fedtail-X.Y.Z.tar.gz with PKGBUILD and fedtail.spec;
+     the image is ghcr.io/eugene-vereshchagin/fedtail. -->
 
 * New ways to install, each built and tried in CI and attached to every release: an
   AppImage (updates by delta through its `.zsync`), a Flatpak bundle (the Qt window on

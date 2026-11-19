@@ -5,7 +5,7 @@
 ## Что нового
 
 <!-- include: parts/whats-new -->
-**Что будет дальше:**
+**0.23.6:**
 
 - AppImage
 - Flatpak

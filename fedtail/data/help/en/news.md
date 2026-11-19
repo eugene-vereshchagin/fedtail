@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.23.6:**
 
 - AppImage
 - Flatpak

@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.23.5 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.23.6**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -907,13 +907,13 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`window.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
 | An apt repository of its own | has | 0.20.0 | CI puts every release's deb packages into it and signs it (`packaging/apt_repo.py`); how to add it — in the README |
 | An installer for Windows (and a signature) | has | 0.20.0 | `fedtail-X.Y.Z-windows-setup.exe` (Inno Setup): for you alone, no administrator, a Start menu entry, an uninstaller; signed once CI has a certificate |
-| AppImage | has | next | `fedtail-X.Y.Z-x86_64.AppImage`: Python, Qt and the terminal interface inside, built on Debian 12; mounted, not unpacked at every start; updates by delta (`.zsync`, AppImageUpdate); a menu entry — AppImageLauncher, Gear Lever or `--install-desktop` (`packaging/appimage.py`) |
-| Flatpak | has | next | `fedtail-X.Y.Z-x86_64.flatpak` in the release (`flatpak install --user …`): the Qt window on KDE's runtime, sync and languages inside; the manifest is `packaging/flatpak/online.dmesg.fedtail.yml`; on Flathub once it is accepted there |
-| An Arch Linux package | has | next | `fedtail-X.Y.Z-1-any.pkg.tar.zst` (`sudo pacman -U …`) and the AUR's PKGBUILD in the release: dependencies from Arch's repositories (PySide6, requests), the rest as optdepends with what each gives; built with `makepkg` and checked by namcap in CI (`packaging/arch.py`); `fedtail --check` there says `pacman -S` |
-| An RPM for Fedora | has | next | `fedtail-X.Y.Z-1.fcNN.noarch.rpm` (`sudo dnf install ./…`) and the spec in the release: Qt from Fedora, WebP, sync and languages as Recommends, GTK and the terminal as Suggests; built in a clean Fedora in CI (`packaging/rpm.py`); `fedtail --check` there says `dnf install` |
-| PyPI: `pipx install fedtail` | has | next | any system with Python ≥ 3.11: `pipx install "fedtail[qt]"` (or `[tui]`, `[sync]`); the wheel in every release, on PyPI once publishing is set up there |
-| A Docker image with the web interface | has | next | `ghcr.io/eugene-vereshchagin/fedtail`: the page on port 8765, the profile in the `/data` volume, the login link in `docker logs`; plain HTTP on the way — behind a TLS proxy or a VPN (`packaging/docker/`) |
-| Nix: `nix run github:eugene-vereshchagin/fedtail` | has | next | a flake at the repository's root (`packaging/nix/package.nix`): the Qt and GTK windows, the terminal, the web, sync and languages; built in CI |
+| AppImage | has | 0.23.6 | `fedtail-X.Y.Z-x86_64.AppImage`: Python, Qt and the terminal interface inside, built on Debian 12; mounted, not unpacked at every start; updates by delta (`.zsync`, AppImageUpdate); a menu entry — AppImageLauncher, Gear Lever or `--install-desktop` (`packaging/appimage.py`) |
+| Flatpak | has | 0.23.6 | `fedtail-X.Y.Z-x86_64.flatpak` in the release (`flatpak install --user …`): the Qt window on KDE's runtime, sync and languages inside; the manifest is `packaging/flatpak/online.dmesg.fedtail.yml`; on Flathub once it is accepted there |
+| An Arch Linux package | has | 0.23.6 | `fedtail-X.Y.Z-1-any.pkg.tar.zst` (`sudo pacman -U …`) and the AUR's PKGBUILD in the release: dependencies from Arch's repositories (PySide6, requests), the rest as optdepends with what each gives; built with `makepkg` and checked by namcap in CI (`packaging/arch.py`); `fedtail --check` there says `pacman -S` |
+| An RPM for Fedora | has | 0.23.6 | `fedtail-X.Y.Z-1.fcNN.noarch.rpm` (`sudo dnf install ./…`) and the spec in the release: Qt from Fedora, WebP, sync and languages as Recommends, GTK and the terminal as Suggests; built in a clean Fedora in CI (`packaging/rpm.py`); `fedtail --check` there says `dnf install` |
+| PyPI: `pipx install fedtail` | has | 0.23.6 | any system with Python ≥ 3.11: `pipx install "fedtail[qt]"` (or `[tui]`, `[sync]`); the wheel in every release, on PyPI once publishing is set up there |
+| A Docker image with the web interface | has | 0.23.6 | `ghcr.io/eugene-vereshchagin/fedtail`: the page on port 8765, the profile in the `/data` volume, the login link in `docker logs`; plain HTTP on the way — behind a TLS proxy or a VPN (`packaging/docker/`) |
+| Nix: `nix run github:eugene-vereshchagin/fedtail` | has | 0.23.6 | a flake at the repository's root (`packaging/nix/package.nix`): the Qt and GTK windows, the terminal, the web, sync and languages; built in CI |
 
 ---
 

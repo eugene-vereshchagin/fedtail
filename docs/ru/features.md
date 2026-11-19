@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.23.5 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.23.6**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -910,13 +910,13 @@
 | Пункт в меню с иконкой | есть | 0.2.0 | сам при запуске окна (`window.desktop_entry`), или `--install-desktop`; имя — `online.dmesg.fedtail.desktop` (с 0.18) |
 | Свой apt-репозиторий | есть | 0.20.0 | CI кладёт в него deb-пакеты каждого релиза и подписывает (`packaging/apt_repo.py`); как подключить — в README |
 | Установщик для Windows (и подпись) | есть | 0.20.0 | `fedtail-X.Y.Z-windows-setup.exe` (Inno Setup): только для себя, без администратора, ярлык в «Пуске», удаление; подпись — когда в CI будет сертификат |
-| AppImage | есть | дальше | `fedtail-X.Y.Z-x86_64.AppImage`: Python, Qt и терминальный интерфейс внутри, собран на Debian 12; монтируется, а не распаковывается при каждом запуске; обновляется по разнице (`.zsync`, AppImageUpdate); пункт меню — AppImageLauncher, Gear Lever или `--install-desktop` (`packaging/appimage.py`) |
-| Flatpak | есть | дальше | `fedtail-X.Y.Z-x86_64.flatpak` в релизе (`flatpak install --user …`): окно Qt на рантайме KDE, синхронизация и языки внутри; манифест — `packaging/flatpak/online.dmesg.fedtail.yml`; на Flathub — когда заявку примут |
-| Пакет для Arch Linux | есть | дальше | `fedtail-X.Y.Z-1-any.pkg.tar.zst` (`sudo pacman -U …`) и PKGBUILD для AUR в релизе: зависимости из репозиториев Arch (PySide6, requests), остальное — optdepends с пояснениями; собирается `makepkg` и проверяется namcap в CI (`packaging/arch.py`); `fedtail --check` там подсказывает `pacman -S` |
-| RPM для Fedora | есть | дальше | `fedtail-X.Y.Z-1.fcNN.noarch.rpm` (`sudo dnf install ./…`) и spec в релизе: Qt из Fedora, WebP, синхронизация и языки — Recommends, GTK и терминал — Suggests; собирается в чистой Fedora в CI (`packaging/rpm.py`); `fedtail --check` там подсказывает `dnf install` |
-| PyPI: `pipx install fedtail` | есть | дальше | любая система с Python ≥ 3.11: `pipx install "fedtail[qt]"` (или `[tui]`, `[sync]`); wheel в каждом релизе, на PyPI — когда там настроят публикацию |
-| Образ Docker с веб-интерфейсом | есть | дальше | `ghcr.io/eugene-vereshchagin/fedtail`: страница на порту 8765, профиль в томе `/data`, ссылка для входа — в `docker logs`; по сети без шифрования — за TLS-прокси или VPN (`packaging/docker/`) |
-| Nix: `nix run github:eugene-vereshchagin/fedtail` | есть | дальше | flake в корне репозитория (`packaging/nix/package.nix`): окна Qt и GTK, терминал, веб, синхронизация и языки; собирается в CI |
+| AppImage | есть | 0.23.6 | `fedtail-X.Y.Z-x86_64.AppImage`: Python, Qt и терминальный интерфейс внутри, собран на Debian 12; монтируется, а не распаковывается при каждом запуске; обновляется по разнице (`.zsync`, AppImageUpdate); пункт меню — AppImageLauncher, Gear Lever или `--install-desktop` (`packaging/appimage.py`) |
+| Flatpak | есть | 0.23.6 | `fedtail-X.Y.Z-x86_64.flatpak` в релизе (`flatpak install --user …`): окно Qt на рантайме KDE, синхронизация и языки внутри; манифест — `packaging/flatpak/online.dmesg.fedtail.yml`; на Flathub — когда заявку примут |
+| Пакет для Arch Linux | есть | 0.23.6 | `fedtail-X.Y.Z-1-any.pkg.tar.zst` (`sudo pacman -U …`) и PKGBUILD для AUR в релизе: зависимости из репозиториев Arch (PySide6, requests), остальное — optdepends с пояснениями; собирается `makepkg` и проверяется namcap в CI (`packaging/arch.py`); `fedtail --check` там подсказывает `pacman -S` |
+| RPM для Fedora | есть | 0.23.6 | `fedtail-X.Y.Z-1.fcNN.noarch.rpm` (`sudo dnf install ./…`) и spec в релизе: Qt из Fedora, WebP, синхронизация и языки — Recommends, GTK и терминал — Suggests; собирается в чистой Fedora в CI (`packaging/rpm.py`); `fedtail --check` там подсказывает `dnf install` |
+| PyPI: `pipx install fedtail` | есть | 0.23.6 | любая система с Python ≥ 3.11: `pipx install "fedtail[qt]"` (или `[tui]`, `[sync]`); wheel в каждом релизе, на PyPI — когда там настроят публикацию |
+| Образ Docker с веб-интерфейсом | есть | 0.23.6 | `ghcr.io/eugene-vereshchagin/fedtail`: страница на порту 8765, профиль в томе `/data`, ссылка для входа — в `docker logs`; по сети без шифрования — за TLS-прокси или VPN (`packaging/docker/`) |
+| Nix: `nix run github:eugene-vereshchagin/fedtail` | есть | 0.23.6 | flake в корне репозитория (`packaging/nix/package.nix`): окна Qt и GTK, терминал, веб, синхронизация и языки; собирается в CI |
 
 ---
 

@@ -1,4 +1,4 @@
-**What's next:**
+**0.23.6:**
 
 - AppImage
 - Flatpak
