@@ -32,6 +32,11 @@ text = "The emoji picker: the standard ones by group and your server's own, with
 config = "post.emoji_standard"
 help = "writing.md#emoji"
 
+[emoji_settings_tip]
+text = "Opens the settings at every emoji option: emoji in the feed at all, the servers' emoji pictures, the Standard tab here and the :code suggestions as you type."
+config = "feed.emoji"
+help = "writing.md#emoji"
+
 [full_width_tip]
 text = "Posts across the whole window or in a narrow column that's easy to read. Remembered until the next start; the config isn't touched."
 config = "ui.max_width"

@@ -7,6 +7,15 @@
 
 ## What's next
 
+* The editor's emoji picker no longer cuts the emoji at their sides. In the Qt window the
+  theme's button padding left 8 px of a 34 px button for an emoji, in GTK a server's
+  picture took its own size and the button clipped it, on the phone a bigger system font
+  outgrew the cell. Square cells sized by the font now, in every interface.
+* "⚙ Emoji settings" in the emoji picker: the settings open at every emoji option (emoji in
+  the feed, the servers' pictures, the Standard tab, suggestions as you type). Nobody found
+  them, on the phone above all. Two of them got clearer names too ("Emoji suggestions as
+  you type", "Standard Unicode emoji beside the server's").
+
 ## 0.23.4 — 2026-11-18
 
 **In short: threads at their news, drafts at hand, emoji in colour.** "Commented posts"

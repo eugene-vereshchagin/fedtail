@@ -237,7 +237,8 @@ class EditorExtrasTest(ParityWebTest):
         self.assertLessEqual(len(found["standard"]), 1)
         for key in ("emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
                     "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
-                    "draft_shelve", "draft_shelve_tip", "draft_shelved"):
+                    "draft_shelve", "draft_shelve_tip", "draft_shelved",
+                    "emoji_settings", "emoji_settings_tip"):
             self.assertIn(f'"{key}"', (ROOT / "fedtail/frontends/web/server.py").read_text("utf-8"))
 
     def test_shelve_flag_and_route(self):
@@ -281,11 +282,17 @@ class PageTest(unittest.TestCase):
     def test_page_has_the_controls(self):
         html = (ROOT / "fedtail/data/web/index.html").read_text(encoding="utf-8")
         for el in ("preview", "discard", "compose-hint", "preview-dlg", "viewer-save",
-                   "emoji-pick", "emoji-dlg", "draft-shelve"):
+                   "emoji-pick", "emoji-dlg", "draft-shelve", "emoji-settings"):
             self.assertIn(f'id="{el}"', html)
         js = (ROOT / "fedtail/data/web/app.js").read_text(encoding="utf-8")
         for call in ("/api/preview", "/api/add_language", "/api/compose_check", "/api/fold",
                      "/api/find_deeper", "/api/find_everywhere", "/api/poll_refresh",
-                     "/api/save", "ask_alt", "alt_ok", "/api/emoji", "/api/draft_shelve"):
+                     "/api/save", "ask_alt", "alt_ok", "/api/emoji", "/api/draft_shelve",
+                     'openPlace("settings", "emoji")'):
             self.assertIn(call, js)
+        # 19.11: a square cell with no padding: the emoji is not cut at its sides
+        css = (ROOT / "fedtail/data/web/app.css").read_text(encoding="utf-8")
+        cell = css.split("#emoji-body button.em {", 1)[1].split("}", 1)[0]
+        self.assertIn("padding: 0", cell)
+        self.assertIn("width: 42px", cell)
 

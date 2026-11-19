@@ -3702,6 +3702,12 @@ async function start() {
   $("#emoji-search").placeholder = w("emoji_search");
   $("#emoji-close").textContent = w("web_close");
   $("#emoji-close").onclick = () => $("#emoji-dlg").close();
+  // the emoji's options, at hand where emoji are picked (none found them, 19.11)
+  $("#emoji-settings").textContent = w("emoji_settings");
+  $("#emoji-settings").title = w("emoji_settings_tip");
+  $("#emoji-settings").onclick = () => {
+    $("#emoji-dlg").close(); closeCompose(); openPlace("settings", "emoji");
+  };
   $("#emoji-pick").onclick = openEmoji;
   $("#emoji-search").addEventListener("input", () => {
     clearTimeout(emojiPick.timer);

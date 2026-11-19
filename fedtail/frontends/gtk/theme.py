@@ -231,6 +231,7 @@ entry:disabled {{ background: {c['quiet']}; color: {c['muted']};
 .ft-tabchip label {{ color: {c['muted']}; }}
 .ft-tabrows > flowboxchild.ft-current .ft-tabchip label {{ color: {c['text']}; }}
 .ft-tabchip-x {{ min-height: 18px; min-width: 18px; padding: 0; }}
+button.ft-emoji {{ padding: 0; min-width: 0; min-height: 0; font-size: 1.5em; }}
 .ft-viewer {{ background: rgba(0, 0, 0, 0.85); }}
 .ft-viewer-text {{ color: #dddddd; }}
 .ft-viewer-keys {{ color: #888888; font-size: smaller; }}

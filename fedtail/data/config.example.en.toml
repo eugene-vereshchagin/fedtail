@@ -1151,13 +1151,13 @@ complete_mentions = true
 # Typing #ge — suggest tags: first those you follow, then the most frequent in the lanes.
 complete_tags = true
 
-# Typing :co — suggest the server's emoji (:cookie: and the like), Tab or Enter puts it in.
-# false — no suggestions.
+# Emoji suggestions as you type: typing :co suggests the server's emoji (:cookie: and the
+# like), Tab or Enter puts it in. false — no suggestions.
 complete_emoji = true
 
-# The standard (Unicode) emoji too: the "Standard" tab of the editor's emoji picker beside
-# the server's own, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of
-# GitHub and Slack, and Unicode's English names: :winking). false — the server's only.
+# Standard Unicode emoji beside the server's: the "Standard" tab of the editor's emoji
+# picker, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of GitHub
+# and Slack, and Unicode's English names: :winking). false — the server's only.
 emoji_standard = true
 
 # A report to the moderators about a person from another server: the "forward to their server too" tick

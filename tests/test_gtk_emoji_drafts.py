@@ -43,6 +43,40 @@ class GtkEmojiDraftsTest(_GtkBase):
         pick.refresh()
         self.assertIsNone(pick.server.get_first_child().get_next_sibling())
 
+    def test_an_emoji_has_room_in_its_cell(self):
+        """19.11: the picker cut the emoji at the sides — a button clips what sticks out
+        and a server's picture took its own 64 px. Square cells, nothing clipped, the
+        picture at its pixel size; the emoji settings from the picker."""
+        from unittest import mock
+
+        from fedtail.frontends.gtk import emoji
+        from fedtail.frontends.gtk.gi_setup import Gtk
+        self.world.emoji.append({"shortcode": "blobcat", "url": "https://e.test/b.png",
+                                 "static_url": "https://e.test/b.png", "category": "cats",
+                                 "visible_in_picker": True})
+        dlg = self.win.compose()
+        pick = dlg.emoji_pop
+        pick._shown()
+        self.assertTrue(pump(lambda: pick.items, 3))
+        for box in (pick.standard, pick.server):
+            flow = box.get_first_child()
+            while not hasattr(flow, "get_child_at_index"):
+                flow = flow.get_next_sibling()
+            self.assertTrue(flow.get_homogeneous())
+            b = flow.get_child_at_index(0).get_child()
+            self.assertEqual(b.get_overflow(), Gtk.Overflow.VISIBLE)
+            self.assertEqual(b.get_size_request(), (emoji.CELL, emoji.CELL))
+        pic = b.get_child()
+        self.assertIsInstance(pic, Gtk.Image)
+        self.assertEqual(pic.get_pixel_size(), emoji.PIC)
+        scroll = pick.server.get_parent()
+        while not isinstance(scroll, Gtk.ScrolledWindow):
+            scroll = scroll.get_parent()
+        self.assertEqual(scroll.get_policy()[0], Gtk.PolicyType.NEVER)  # never sideways
+        with mock.patch.object(self.win, "open_settings") as opened:
+            pick.settings_btn.emit("clicked")
+        opened.assert_called_once_with("emoji")
+
     def test_standard_off_leaves_the_server_tab(self):
         self.core.cfg["post"]["emoji_standard"] = False
         dlg = self.win.compose()

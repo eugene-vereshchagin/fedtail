@@ -171,6 +171,9 @@ _STRINGS = {
         "drafts_waiting_tip": "Отложенные черновики: открыть список, вернуть любой в редактор",
         "emoji_pick": "☺ Эмодзи", "emoji_pick_tip": "Выбрать эмодзи: обычные и эмодзи сервера",
         "emoji_title": "Эмодзи",
+        "emoji_settings": "⚙ Настройки эмодзи",
+        "emoji_settings_tip": "Настройки эмодзи: в ленте, картинки серверов, вкладка «Обычные», "
+                              "подсказки при наборе",
         "emoji_tab_standard": "Обычные", "emoji_tab_server": "Сервера",
         "emoji_search": "Найти (по-английски: smile, heart, cat)",
         "emoji_none": "Ничего не нашлось", "emoji_server_none": "У твоего сервера своих эмодзи нет",
@@ -2134,6 +2137,9 @@ _STRINGS = {
         "emoji_pick": "☺ Emoji", "emoji_pick_tip": "Pick an emoji: the standard ones and your "
                                                   "server's",
         "emoji_title": "Emoji",
+        "emoji_settings": "⚙ Emoji settings",
+        "emoji_settings_tip": "The emoji settings: in the feed, the servers' pictures, the "
+                              "Standard tab, suggestions as you type",
         "emoji_tab_standard": "Standard", "emoji_tab_server": "Server's",
         "emoji_search": "Find (smile, heart, cat)",
         "emoji_none": "Nothing found", "emoji_server_none": "Your server has no emoji of its own",

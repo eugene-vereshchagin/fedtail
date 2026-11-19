@@ -810,7 +810,8 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                         modifier = m, label = { ChipLabel(model.draftsLabel) }) }
             }
             ChipGrid(chips)
-            if (emojiOpen) EmojiSheet(onClose = { emojiOpen = false }) { code ->
+            if (emojiOpen) EmojiSheet(onClose = { emojiOpen = false },
+                onSettings = { emojiOpen = false; model.openSettings("emoji") }) { code ->
                 val at = field.selection.min
                 val pad = if (at > 0 && !field.text[at - 1].isWhitespace()) " " else ""
                 val put = "$pad$code "
@@ -1062,7 +1063,7 @@ private fun ChipGrid(chips: List<@Composable (Modifier) -> Unit>) {
  *  A tap gives what goes at the cursor: the char, or ":code:". */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun EmojiSheet(onClose: () -> Unit, onPick: (String) -> Unit) {
+private fun EmojiSheet(onClose: () -> Unit, onSettings: () -> Unit, onPick: (String) -> Unit) {
     var items by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
     var standard by remember { mutableStateOf<List<Pair<String, List<Pair<String, String>>>>?>(null) }
     var error by remember { mutableStateOf("") }
@@ -1084,11 +1085,14 @@ private fun EmojiSheet(onClose: () -> Unit, onPick: (String) -> Unit) {
         val got = Core.emojiList(query.trim())
         if (Core.failed(got) == null) standard = parseStandard(got)
     }
+    val glyph = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.toSp() }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().heightIn(min = 240.dp, max = 520.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
                 label = { Text(stringResource(R.string.emoji_search)) }, modifier = Modifier.fillMaxWidth())
+            // the emoji's options, at hand where emoji are picked: nobody found them (19.11)
+            TextButton(onClick = onSettings) { Text(stringResource(R.string.emoji_settings)) }
             // a search with nothing found keeps both tabs: only an empty standard set drops one
             val noStandard = standard != null && standard!!.isEmpty() && query.isBlank()
             val shownTabs = if (noStandard) listOf(1) else listOf(0, 1)
@@ -1118,7 +1122,10 @@ private fun EmojiSheet(onClose: () -> Unit, onPick: (String) -> Unit) {
                                         Box(Modifier.size(48.dp).clickable { onPick(ch) }
                                             .semantics { contentDescription = name },
                                             contentAlignment = Alignment.Center) {
-                                            Text(ch, fontSize = 28.sp)
+                                            // in dp, not sp: a bigger system font cut
+                                            // the emoji at the cell's sides (19.11)
+                                            Text(ch, fontSize = glyph, maxLines = 1,
+                                                softWrap = false)
                                         }
                                     }
                                 }

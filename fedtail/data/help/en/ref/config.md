@@ -332,8 +332,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.spell_languages` | `[]` | Which languages to check in: [] — the post's language, the interface's and English (a word is fine if any of the dictionaries knows it). Or your own: ["ru", "en", "uk"]. |
 | `post.complete_mentions` | `true` | Typing @ar — suggest people: first those seen most in the lanes, then those the server finds. false — no suggestions. |
 | `post.complete_tags` | `true` | Typing #ge — suggest tags: first those you follow, then the most frequent in the lanes. |
-| `post.complete_emoji` | `true` | Typing :co — suggest the server's emoji (:cookie: and the like), Tab or Enter puts it in. false — no suggestions. |
-| `post.emoji_standard` | `true` | The standard (Unicode) emoji too: the "Standard" tab of the editor's emoji picker beside the server's own, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of GitHub and Slack, and Unicode's English names: :winking). false — the server's only. |
+| `post.complete_emoji` | `true` | Emoji suggestions as you type: typing :co suggests the server's emoji (:cookie: and the like), Tab or Enter puts it in. false — no suggestions. |
+| `post.emoji_standard` | `true` | Standard Unicode emoji beside the server's: the "Standard" tab of the editor's emoji picker, and :smile, :heart, :+1 suggest 😄 ❤️ 👍 as you type (the short names of GitHub and Slack, and Unicode's English names: :winking). false — the server's only. |
 | `post.report_forward` | `true` | A report to the moderators about a person from another server: the "forward to their server too" tick is on at once (they won't learn who reported). false — off by default. |
 | `post.quote_policy` | `""` | Who may quote your new posts (Mastodon 4.5+): "public" — everyone, "followers" — followers, "nobody" — nobody; "" — as in the account's settings on the server. |
 | `post.quote_action` | `true` | "Quote" in the ⋯ menu of a post its author allowed to quote (Mastodon 4.5+). |

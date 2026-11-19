@@ -95,6 +95,29 @@ class QtEmojiDraftsTest(unittest.TestCase):
         dlg.sent = True
         dlg.reject()
 
+    def test_an_emoji_has_room_on_its_button(self):
+        """19.11: the theme's 12 px padding a side left 8 px of a 34 px button — every
+        emoji cut to a sliver. The cell is square, no padding, sized by its font."""
+        from PySide6.QtGui import QFontMetrics
+
+        from fedtail.frontends.qt.compose import Compose
+        dlg = Compose(self.win)
+        dlg.pick_emoji()
+        pk = dlg.emoji_picker
+        b = [b for b in pk.standard[0].findChildren(QPushButton) if b.toolTip()][0]
+        self.pump(0.05)
+        self.assertIn("padding: 0px", b.styleSheet())
+        room = b.contentsRect().width()
+        self.assertGreaterEqual(room, QFontMetrics(b.font()).height())
+        self.assertGreaterEqual(room, QFontMetrics(b.font()).horizontalAdvance(b.text()))
+        from unittest import mock
+        with mock.patch.object(self.win, "open_settings") as opened:
+            pk.settings_btn.click()
+        opened.assert_called_once_with("emoji")  # the emoji's options, found
+        self.assertFalse(pk.isVisible())
+        dlg.sent = True
+        dlg.reject()
+
     def test_new_draft_sets_aside_and_clears(self):
         from fedtail.frontends.qt.compose import Compose
         dlg = Compose(self.win)

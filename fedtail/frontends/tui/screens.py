@@ -687,6 +687,7 @@ class EmojiScreen(ModalScreen):
     EmojiScreen TabbedContent { height: 1fr; }
     EmojiScreen TabPane { padding: 0; }
     EmojiScreen OptionList { height: 1fr; }
+    EmojiScreen #e-settings { margin: 0 1; }
     """
 
     def __init__(self, standard=True):
@@ -707,6 +708,8 @@ class EmojiScreen(ModalScreen):
                         yield OptionList(id="e-standard-list")
                 with TabPane(_("emoji_tab_server"), id="e-server"):
                     yield OptionList(id="e-server-list")
+            # the emoji's options, at hand where emoji are picked (none found them, 19.11)
+            yield Button(_("emoji_settings"), id="e-settings", tooltip=_("emoji_settings_tip"))
 
     def on_mount(self):
         self.query_one("#e-search", Input).focus()
@@ -786,6 +789,13 @@ class EmojiScreen(ModalScreen):
 
     def action_cancel(self):
         self.dismiss(None)
+
+    def on_button_pressed(self, e: Button.Pressed):
+        if e.button.id == "e-settings":
+            e.stop()
+            app = self.app
+            self.dismiss(None)
+            app.push_screen(PlaceScreen("settings", "emoji"))  # its search at the emoji
 
 
 class ComposeScreen(Screen):

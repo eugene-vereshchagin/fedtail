@@ -11,7 +11,9 @@ from ...i18n import _
 from ..common import compose as rules
 from .gi_setup import Gtk, tip
 
-PIC = 32  # a server emoji's picture, in pixels
+PIC = 32   # a server emoji's picture, in pixels
+CELL = 44  # a cell of the grid: room for the glyph's ink, which is wider than its advance
+COLUMNS = 8
 
 
 class EmojiPicker(Gtk.Popover):
@@ -37,15 +39,28 @@ class EmojiPicker(Gtk.Popover):
         self.standard = self._page(_("emoji_tab_standard")) if self.has_standard else None
         self.server = self._page(_("emoji_tab_server"))
         box.append(self.tabs)
+        # the emoji's options, at hand where emoji are picked (none found them, 19.11)
+        self.settings_btn = Gtk.Button(label=_("emoji_settings"), halign=Gtk.Align.START)
+        self.settings_btn.add_css_class("flat")
+        tip(self.settings_btn, _("emoji_settings_tip"))
+        self.settings_btn.connect("clicked", lambda _b: self.open_settings())
+        box.append(self.settings_btn)
         self.set_child(box)
         self.connect("show", lambda _p: self._shown())
+
+    def open_settings(self):
+        """The settings window, its search at the emoji options."""
+        self.popdown()
+        self.win.open_settings("emoji")
 
     def _page(self, label):
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         for m in ("start", "end", "top", "bottom"):
             getattr(inner, "set_margin_" + m)(4)
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_min_content_width(380)
+        # never sideways: a row wider than the window cut its last emoji in half (19.11)
+        # (then the content's own width is the window's: min_content_width counts no more)
+        scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
+        inner.set_size_request(COLUMNS * (CELL + 2) + 8, -1)
         scroll.set_min_content_height(300)
         scroll.set_child(inner)
         self.tabs.append_page(scroll, Gtk.Label(label=label))
@@ -99,8 +114,8 @@ class EmojiPicker(Gtk.Popover):
                 head = Gtk.Label(label=name, xalign=0)
                 head.add_css_class("ft-muted")
                 box.append(head)
-            flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
-                               min_children_per_line=1, max_children_per_line=12,
+            flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
+                               min_children_per_line=1, max_children_per_line=COLUMNS,
                                column_spacing=2, row_spacing=2)
             for e in items:
                 flow.append(self._button(e, kind))
@@ -117,6 +132,11 @@ class EmojiPicker(Gtk.Popover):
             tip(b, ":" + code + ":")
             b.connect("clicked", lambda _b, t=f":{code}: ": self.on_pick(t))
         b.add_css_class("flat")
+        b.add_css_class("ft-emoji")
+        # a square cell of its own; a button clips what sticks out of it (GTK's default),
+        # and a colour emoji's ink is wider than the width it says it takes (19.11)
+        b.set_size_request(CELL, CELL)
+        b.set_overflow(Gtk.Overflow.VISIBLE)
         b.set_focus_on_click(False)
         return b
 
@@ -126,11 +146,10 @@ class EmojiPicker(Gtk.Popover):
         url = e.get("static_url") or e.get("url")
         if images is None or not url:
             return None
-        pic = Gtk.Picture()
-        pic.set_size_request(PIC, PIC)
-        pic.set_can_shrink(True)
-        pic.set_alternative_text(":" + e["shortcode"] + ":")
+        # Gtk.Image at a pixel size: the picture fits in PIC × PIC, its shape kept. A
+        # Gtk.Picture took the picture's own size (64 px) and the button cut it (19.11)
+        pic = Gtk.Image(pixel_size=PIC)
         b = Gtk.Button()
         b.set_child(pic)
-        images.get(url, pic.set_paintable, max_side=PIC * 2, owner=pic)
+        images.get(url, pic.set_from_paintable, max_side=PIC * 2, owner=pic)
         return b

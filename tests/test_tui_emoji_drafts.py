@@ -58,6 +58,19 @@ class TuiEmojiDraftsTest(Base):
             await self.wait(pilot, lambda: app.screen is editor)
             self.assertEqual(editor.query_one("#c-text", TextArea).text, ":blobcat: ")
 
+    async def test_picker_opens_the_emoji_settings(self):
+        """19.11: the emoji's options were nowhere to be found — the picker has them."""
+        from fedtail.frontends.tui.screens import EmojiScreen, PlaceScreen
+        core, _w = self.make()
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.open_editor(pilot, app)
+            await pilot.press("ctrl+e")
+            await self.wait(pilot, lambda: isinstance(app.screen, EmojiScreen))
+            app.screen.query_one("#e-settings").press()
+            await self.wait(pilot, lambda: isinstance(app.screen, PlaceScreen))
+            self.assertEqual((app.screen.name_, app.screen.arg), ("settings", "emoji"))
+
     async def test_picker_server_empty_and_standard_off(self):
         from fedtail.frontends.tui.screens import EmojiScreen
         core, w = self.make()

@@ -582,7 +582,10 @@ dialog#emoji-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 #emoji-body { max-height: 50vh; overflow-y: auto; }
 #emoji-body h3 { font-size: 13px; margin: 8px 0 2px; color: var(--muted, inherit); }
 #emoji-body .grid { display: flex; flex-wrap: wrap; gap: 2px; }
-#emoji-body button.em { background: none; border: 0; border-radius: 6px; padding: 3px;
-                        font-size: 22px; line-height: 1; cursor: pointer; color: inherit; }
+/* a square cell with room for the glyph's ink (wider than its advance): not cut (19.11) */
+#emoji-body button.em { background: none; border: 0; border-radius: 6px; padding: 0;
+                        width: 42px; height: 42px; display: inline-flex; align-items: center;
+                        justify-content: center; overflow: visible; font-size: 26px;
+                        line-height: 1; cursor: pointer; color: inherit; }
 #emoji-body button.em:hover, #emoji-body button.em:focus { background: var(--ctx); }
 #emoji-body button.em img { width: 28px; height: 28px; object-fit: contain; display: block; }

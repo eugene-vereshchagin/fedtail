@@ -2335,6 +2335,7 @@ WORDS = ("direct_badge", "direct_badge_tip",
          # the emoji picker and "New draft" in the editor
          "emoji_pick", "emoji_pick_tip", "emoji_title", "emoji_tab_standard",
          "emoji_tab_server", "emoji_search", "emoji_none", "emoji_server_none",
+         "emoji_settings", "emoji_settings_tip",
          "draft_shelve", "draft_shelve_tip", "draft_shelved", "drafts_waiting_tip",
          # columns: lanes side by side (ui.layout = "columns", ❯)
          "columns", "columns_tip", "full_width_tip", "column_left", "column_right", "column_close",

@@ -178,6 +178,7 @@
     <string name="reply_in_thread">Reply to @%1$s…</string>
     <string name="vis_as_parent_short">who sees it: as the post</string>
     <string name="emoji_pick">☺ Emoji</string>
+    <string name="emoji_settings">⚙ Emoji settings</string>
     <string name="emoji_search">Find (smile, heart, cat)</string>
     <string name="emoji_none">Nothing found</string>
     <string name="emoji_server_none">Your server has no emoji of its own</string>
