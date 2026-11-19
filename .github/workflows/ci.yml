@@ -642,7 +642,7 @@ jobs:
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
           cp built/fedtail-deb/fedtail*_all.deb .
           cp built/fedtail-appimage/fedtail-*-x86_64.AppImage* .
-          cp built/fedtail.flatpak-x86_64/fedtail.flatpak "fedtail-$VER-x86_64.flatpak"
+          cp built/fedtail-x86_64.flatpak/fedtail.flatpak "fedtail-$VER-x86_64.flatpak"
           cp built/fedtail-arch/fedtail-*.pkg.tar.zst built/fedtail-rpm/fedtail-*.noarch.rpm .
           cp built/fedtail-pypi/fedtail-*.whl .
           # the distributions' source: this commit's archive, the AUR's PKGBUILD and the

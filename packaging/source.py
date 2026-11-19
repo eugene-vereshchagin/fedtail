@@ -23,7 +23,7 @@ def name(version=__version__):
 
 def make(out_dir=ROOT / "dist", version=__version__):
     """The archive; → its path."""
-    out_dir = Path(out_dir)
+    out_dir = Path(out_dir).resolve()  # git -C reads a relative path from the root
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / name(version)
     subprocess.run(["git", "-C", str(ROOT), "archive", "--format=tar.gz",

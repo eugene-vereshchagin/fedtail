@@ -18,6 +18,7 @@ import arch  # noqa: E402
 import desktop_files  # noqa: E402
 import metainfo  # noqa: E402
 import rpm  # noqa: E402
+import source  # noqa: E402
 
 from fedtail import __version__, deps, sysenv  # noqa: E402
 from fedtail.version import APP_ID  # noqa: E402
@@ -131,6 +132,26 @@ class PackagesTest(unittest.TestCase):
         self.assertEqual(launch, f"{APP_ID}.desktop")
         self.assertIn('xml:lang="ru"', text)
         metainfo.text()  # the real CHANGELOG reads
+
+
+class SourceTest(unittest.TestCase):
+    def test_the_archive_lands_where_asked(self):
+        """A relative folder is the caller's, not the repository's (`git -C`): the
+        release job makes it in "." and names it in the PKGBUILD."""
+        if tracked("pyproject.toml") is None:
+            self.skipTest("no git checkout")
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            here = os.getcwd()
+            os.chdir(tmp)
+            try:
+                out = source.make(Path("out"))
+            finally:
+                os.chdir(here)
+            self.assertEqual(out, Path(tmp).resolve() / "out" / source.name())
+            self.assertTrue(out.is_file())
+            self.assertEqual(len(source.sha256(out)), 64)
 
 
 class AppImageTest(unittest.TestCase):
