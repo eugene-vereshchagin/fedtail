@@ -234,6 +234,24 @@ class FlowTest {
     }
 
     @Test
+    fun theEditorsEmojiAndPollAreThereAndLeadToTheSettings() {
+        // 19.11: the language chip took its whole row, "Poll" and "☺ Emoji" beside it
+        // squeezed to nothing — the emoji were nowhere to be found
+        launch("thread" to "101")
+        waitText("/1")
+        compose.onAllNodesWithContentDescription("Reply").onFirst().performClick()
+        waitDescription("Send")
+        for (chip in listOf("☺ Emoji", "Poll")) {
+            val node = compose.onAllNodesWithText(chip).onFirst().fetchSemanticsNode()
+            assert(node.boundsInRoot.width > 40f) { "$chip: ${node.boundsInRoot}" }
+        }
+        compose.onAllNodesWithText("☺ Emoji").onFirst().performClick()
+        waitText("⚙ Emoji settings")
+        compose.onAllNodesWithText("⚙ Emoji settings").onFirst().performClick()
+        waitText("Emoji in the feed at all")   // the settings, at the emoji options
+    }
+
+    @Test
     fun theSwitcherFindsALaneByName() {
         launch("lane" to "home")
         waitDescription("open now", substring = true)  // the open lane's chip: its title

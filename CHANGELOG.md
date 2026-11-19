@@ -7,6 +7,8 @@
 
 ## What's next
 
+* "☺ Emoji" and "Poll" are back in the phone's editor: the language chip beside them took
+  the whole row and squeezed them to nothing, so the emoji were nowhere to be found.
 * The editor's emoji picker no longer cuts the emoji at their sides. In the Qt window the
   theme's button padding left 8 px of a 34 px button for an emoji, in GTK a server's
   picture took its own size and the button clipped it, on the phone a bigger system font

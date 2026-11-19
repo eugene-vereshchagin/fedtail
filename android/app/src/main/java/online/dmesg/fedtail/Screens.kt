@@ -893,9 +893,12 @@ private fun LanguagePick(model: AppModel, chipModifier: Modifier = Modifier) {
     val langs = model.languages()
     if (langs.isEmpty()) return
     var asking by remember { mutableStateOf(false) }
-    Box {
+    // the row's share (weight) goes on the Box, the Row's child: on the chip inside it
+    // counted for nothing, the language took the whole row and squeezed "Poll" and
+    // "☺ Emoji" beside it to nothing — the emoji were nowhere to be found (19.11)
+    Box(chipModifier) {
         FilterChip(selected = model.composeLang.isNotBlank(), onClick = { open = true },
-            modifier = chipModifier,
+            modifier = Modifier.fillMaxWidth(),
             label = { ChipLabel(langs.firstOrNull { it.first == model.composeLang }?.second
                 ?: model.composeLang.ifBlank { stringResource(R.string.language) }) })
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
