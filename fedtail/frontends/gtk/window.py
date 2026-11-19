@@ -1489,6 +1489,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self._waiting_text = f"{self._hello} · {_('first_poll')}" if self._hello \
             else _("first_poll")
         self.status(self._waiting_text, seconds=0)
+        if self.dock is not None:
+            self.dock.dress()  # the server's Markdown is known now: the format buttons
         if self.view.new_options:  # the config doesn't mention new options yet
             GLib.timeout_add_seconds(9, lambda: (self.status(
                 _("new_options", n=len(self.view.new_options)), seconds=30),

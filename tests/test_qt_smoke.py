@@ -3573,6 +3573,53 @@ class QtSmokeTest(unittest.TestCase):
         view.set_specs([dataclasses.replace(s) for s in view.model], keep_position=True)
         self.assertIs(view.rows.get(keys[0]), first)
 
+    def test_split_input_line_buttons(self):
+        """The split layout's input line: its visibility button has its picture from the
+        start (followers-only is "private"'s — it had none until another was picked),
+        and the Compose window's B I S… buttons (post.format_bar) once the server takes
+        Markdown, with their keys: Ctrl+K formats there, not the window's search."""
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+
+        from fedtail.frontends.qt.bridge import Bridge
+        from fedtail.frontends.qt.window import MainWindow
+        self.win.quitting = True
+        self.win.hide()
+        self.core.cfg["ui"]["layout"] = "split"
+        self.addCleanup(self.core.cfg["ui"].__setitem__, "layout", "single")
+        self.core.cfg["account"]["markdown"] = "off"
+        self.addCleanup(self.core.cfg["account"].__setitem__, "markdown", "auto")
+        win = MainWindow(self.core, Bridge(self.core), self.theme)
+        win.images.get = lambda url, cb, *a, **k: None
+        win.tray = None
+        try:
+            dock = win.dock
+            win.show()
+            dock.set_visibility("followers")
+            self.assertFalse(dock.vis_btn.icon().isNull())
+            self.assertTrue(dock.format_bar.isHidden())  # marks would come out bare
+            self.core.cfg["account"]["markdown"] = "on"
+            dock.dress()
+            self.assertFalse(dock.format_bar.isHidden())
+            dock.text.setPlainText("hi")
+            dock.text.selectAll()
+            ctrl = Qt.KeyboardModifier.ControlModifier
+            over = QKeyEvent(QEvent.Type.ShortcutOverride, Qt.Key.Key_K, ctrl)
+            over.ignore()
+            QApplication.sendEvent(dock.text, over)
+            self.assertTrue(over.isAccepted())  # the text's key, not the window's
+            QApplication.sendEvent(dock.text, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_B,
+                                                        ctrl))
+            self.assertEqual(dock.text.toPlainText(), "**hi**")
+            dock.format_bar.buttons["italic"].click()
+            self.assertEqual(dock.text.toPlainText(), "***hi***")
+        finally:
+            win.quitting = True
+            win.roster.close()
+            win.hide()
+            win.deleteLater()
+            win.roster.deleteLater()
+
     def test_split_layout_roster(self):
         """ui.layout = "split": the lanes in a roster window of their own, the main window
         is the messages window — no sidebar; the roster says what's new and opens it."""

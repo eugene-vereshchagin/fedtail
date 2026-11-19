@@ -7,6 +7,13 @@
 
 ## What's next
 
+* The split layout's input line has the editor's formatting buttons (bold, italic,
+  strikethrough, code, a link, a quote, a list — `post.format_bar`) and their keys
+  Ctrl+B, Ctrl+I, Ctrl+K, in Qt and GTK: there were none. Ctrl+K there formats the text
+  instead of jumping to the search.
+* The input line's visibility button shows its picture from the start in Qt: for
+  "followers only", the usual default, it stood empty until another visibility was picked.
+
 ## 0.23.5 — 2026-11-19
 
 **In short: the emoji, found and whole.** The phone's editor shows "☺ Emoji" and "Poll"

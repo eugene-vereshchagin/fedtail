@@ -26,6 +26,7 @@ from ...i18n import _
 from ...model import VISIBILITIES, Scheduled
 from ..common import compose as rules
 from ..common import split
+from ..common.actions import vis_picture
 from ..richtext import plain_tip
 from .card import VIS_KEY
 from .gone import drop
@@ -94,7 +95,15 @@ class InputDock(QWidget):
         # so it sees the keys first: Enter picks from its list, doesn't send)
         from .complete import Completer
         self.completion = Completer(self, self.text, win.ctx.view, win.bridge)
-        row.addWidget(self.text, 1)
+        # B I S code link quote list (post.format_bar), as in the Compose window: shown
+        # once the server is known to take Markdown (dress, after the connection)
+        from .markup import bar as format_bar
+        from .markup import put
+        self.format_bar = format_bar(self.text, win.cfg, True, shortcuts=False)
+        text_box = QVBoxLayout()
+        text_box.setContentsMargins(0, 0, 0, 0)
+        put(text_box, self.text, self.format_bar)
+        row.addLayout(text_box, 1)
         # whom I write to, as in QIP: their face beside the line (mine isn't needed)
         from .card import ClickLabel
         self.face = ClickLabel()
@@ -133,6 +142,15 @@ class InputDock(QWidget):
         self.lang_btn.setText((self.language or _("dock_lang_default")) + " ▾")
         icons.dress(self.send_btn, "send", t, words=_("dock_send"))
         self._show_visibility()
+        if self.format_bar is not None:
+            self.format_bar.setVisible(self._formatting())
+
+    def _formatting(self):
+        """Are the formatting buttons (and their keys) here now: post.format_bar, and a
+        server that takes Markdown (known after the connection, or from the last one)."""
+        from ..common import markup
+        return self.format_bar is not None and markup.shown(self.win.cfg,
+                                                            self.win.core.markdown)
 
     def _attach(self):
         """Pictures or a video for the next post; again: what was chosen goes."""
@@ -257,7 +275,9 @@ class InputDock(QWidget):
     def _show_visibility(self):
         from . import icons
         vis = self.visibility
-        icons.dress(self.vis_btn, vis, self.win.theme, words="▾",
+        # the picture is "private" for followers-only (actions.vis_picture): with the
+        # model's word the default visibility had no picture until another was picked
+        icons.dress(self.vis_btn, vis_picture(vis), self.win.theme, words="▾",
                     glyph=_("vis_btn_" + VIS_KEY.get(vis, vis)) + " ▾")
         self.vis_btn.setToolTip(f"{_('web_visibility')}: "
                                 f"{_('vis_' + VIS_KEY.get(vis, vis))}")
@@ -300,6 +320,15 @@ class InputDock(QWidget):
 
     def eventFilter(self, obj, e):
         from PySide6.QtCore import QEvent
+        if obj is self.text and e.type() in (QEvent.Type.ShortcutOverride,
+                                             QEvent.Type.KeyPress) and self._formatting():
+            from .markup import apply, by_key
+            name = by_key(e)
+            if name:  # Ctrl+B / Ctrl+I / Ctrl+K: the text's, not the window's search
+                e.accept()
+                if e.type() == QEvent.Type.KeyPress:
+                    apply(self.text, name)
+                return True
         if obj is self.text and e.type() == QEvent.Type.KeyPress and \
                 e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and \
                 (e.modifiers() & Qt.KeyboardModifier.ControlModifier or

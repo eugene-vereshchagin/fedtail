@@ -1231,6 +1231,8 @@ class MainWindow(QMainWindow):
                         server=self.core.auth["server"])
         self._waiting_text = f"{self._hello} · {_('first_poll')}"
         self.statusBar().showMessage(self._waiting_text)
+        if self.dock is not None:
+            self.dock.dress()  # the server's Markdown is known now: the format buttons
         self._after_connect()
 
     def _show_me(self, me):

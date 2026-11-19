@@ -2284,6 +2284,29 @@ class GtkSplitTest(_GtkBase):
         self.assertTrue(win.roster.get_visible())
 
 
+    def test_input_line_formatting_buttons(self):
+        """The input line has the Compose window's B I S… buttons (post.format_bar) once
+        the server takes Markdown — and their keys: Ctrl+K formats, not the search."""
+        from fedtail.frontends.gtk.gi_setup import Gdk
+        dock = self.win.dock
+        self.assertIsNotNone(dock.format_bar)
+        self.core.cfg["account"]["markdown"] = "off"
+        dock.dress()
+        self.assertFalse(dock.format_bar.get_visible())  # the marks would come out bare
+        self.core.cfg["account"]["markdown"] = "on"
+        dock.dress()
+        self.assertTrue(dock.format_bar.get_visible())
+        self.assertEqual(dock.format_bar.place, "left")
+        dock._set_text("hi")
+        dock.buffer.select_range(dock.buffer.get_start_iter(), dock.buffer.get_end_iter())
+        ctrl = Gdk.ModifierType.CONTROL_MASK
+        self.assertTrue(dock._key(None, Gdk.KEY_b, 0, ctrl))
+        self.assertEqual(dock._text(), "**hi**")
+        dock.format_bar.buttons["italic"].emit("clicked")
+        self.assertEqual(dock._text(), "***hi***")
+        dock._set_text("")
+
+
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkPicturesTest(_GtkBase):
     """The theme's own set in the split layout: its pictures on the buttons, the
@@ -2297,6 +2320,8 @@ class GtkPicturesTest(_GtkBase):
         self.assertTrue(icons.wanted(win.theme))
         self.assertIsInstance(win.dock.send_btn.get_child(), Gtk.Box)  # picture + "Send"
         self.assertIsInstance(win.dock.cw_btn.get_child(), Gtk.Image)
+        win.dock.set_visibility("followers")  # its picture is "private"'s
+        self.assertIsInstance(win.dock.vis_btn.get_child(), Gtk.Box)  # picture + ▾
         lane = win.lane_tabs["home"]
         card = next(iter(lane.rows.values()))
         pictures = [w for w in _walk(card.actions) if isinstance(w, Gtk.Image)]

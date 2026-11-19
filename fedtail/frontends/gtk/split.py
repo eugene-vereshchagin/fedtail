@@ -518,7 +518,12 @@ class InputDock(Gtk.Box):
         sc.set_min_content_height(FACE + 8)
         sc.set_child(self.text)
         sc.add_css_class("ft-compose-frame")
-        row.append(sc)
+        # B I S code link quote list (post.format_bar), as in the Compose window: shown
+        # once the server is known to take Markdown (dress, after the connection)
+        from .markup import around
+        from .markup import bar as format_bar
+        self.format_bar = format_bar(self.text, win.cfg, True)
+        row.append(around(sc, self.format_bar))
         side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.face = Gtk.Box(halign=Gtk.Align.CENTER, vexpand=True, valign=Gtk.Align.CENTER)
         click = Gtk.GestureClick()
@@ -663,6 +668,20 @@ class InputDock(Gtk.Box):
                     glyph=_("dock_attach_word") + n)
         icons.dress(self.send_btn, "send", t, words=_("dock_send"))
         self._show_visibility()
+        if self.format_bar is not None:
+            self.format_bar.set_visible(self._formatting())
+
+    def _formatting(self):
+        """Are the formatting buttons (and their keys) here now: post.format_bar, and a
+        server that takes Markdown (known after the connection, or from the last one)."""
+        from ..common import markup
+        if self.format_bar is None:
+            return False
+        try:
+            md = bool(self.win.view.markdown)
+        except Exception:  # noqa: BLE001 — not connected yet
+            md = False
+        return markup.shown(self.win.cfg, md)
 
     def _cw_toggled(self, on):
         self.cw.set_visible(on)
@@ -761,6 +780,12 @@ class InputDock(Gtk.Box):
             return True
         if keyval == Gdk.KEY_Tab and self._complete():
             return True
+        if state & Gdk.ModifierType.CONTROL_MASK and self._formatting():
+            from .markup import KEYS, apply
+            name = KEYS.get((Gdk.keyval_name(Gdk.keyval_to_lower(keyval)) or "").lower())
+            if name:  # Ctrl+B / Ctrl+I / Ctrl+K: the text's, not the window's search
+                apply(self.text, name)
+                return True
         return False
 
     # ---- sending -------------------------------------------------------------------------

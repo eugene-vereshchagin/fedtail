@@ -26,10 +26,20 @@ def apply(edit, name):
     edit.setFocus()
 
 
-def bar(edit, cfg, markdown):
+def by_key(e):
+    """The format a key press asks for (Ctrl+B, Ctrl+I, Ctrl+K), or None — for an editor
+    that takes the keys itself: the split layout's input line, where the main window's
+    own Ctrl+K would make a shortcut of the text's ambiguous (Qt then runs neither)."""
+    combo = e.keyCombination()
+    return next((f.name for f in markup.FORMATS
+                 if f.keys and QKeySequence(f.keys)[0] == combo), None)
+
+
+def bar(edit, cfg, markdown, shortcuts=True):
     """The buttons for `edit` (its shortcuts work while it has the focus) — a column for
     a place at the side, a row above or below — or None when post.format_bar says there
-    are none here. The widget's `place` says where it stands (common/markup.place)."""
+    are none here. The widget's `place` says where it stands (common/markup.place).
+    shortcuts: False — the editor takes the keys itself (by_key)."""
     where = markup.place(cfg, markdown)
     if not where:
         return None
@@ -55,7 +65,7 @@ def bar(edit, cfg, markdown):
         b.clicked.connect(lambda _c=False, n=f.name: apply(edit, n))
         row.addWidget(b)
         w.buttons[f.name] = b
-        if f.keys:
+        if f.keys and shortcuts:
             sc = QShortcut(QKeySequence(f.keys), edit)
             sc.setContext(Qt.ShortcutContext.WidgetShortcut)
             sc.activated.connect(lambda n=f.name: apply(edit, n))
