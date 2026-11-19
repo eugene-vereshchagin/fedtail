@@ -17,7 +17,10 @@ import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -241,9 +244,10 @@ class FlowTest {
         waitText("/1")
         compose.onAllNodesWithContentDescription("Reply").onFirst().performClick()
         waitDescription("Send")
+        compose.waitForIdle()
         for (chip in listOf("☺ Emoji", "Poll")) {
-            val node = compose.onAllNodesWithText(chip).onFirst().fetchSemanticsNode()
-            assert(node.boundsInRoot.width > 40f) { "$chip: ${node.boundsInRoot}" }
+            compose.onAllNodesWithText(chip).onFirst().performScrollTo()
+                .assertIsDisplayed().assertWidthIsAtLeast(48.dp)
         }
         compose.onAllNodesWithText("☺ Emoji").onFirst().performClick()
         waitText("⚙ Emoji settings")
