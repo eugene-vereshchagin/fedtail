@@ -457,7 +457,9 @@ jobs:
     needs: [test, debian]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      # not the kde-6.11 image: updating the SDK it holds fails inside the container
+      # ("Invalid cross-device link"); here KDE's SDK is installed fresh
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
       options: --privileged
     steps:
       - uses: actions/checkout@v5
