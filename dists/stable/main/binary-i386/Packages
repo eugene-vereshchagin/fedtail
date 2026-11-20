@@ -406,6 +406,30 @@ Description: fediverse client for people who miss Point.im and Juick (program)
  Install fedtail-qt, fedtail-gtk or fedtail-tui for an interface
  of its own; `fedtail` opens the one that is installed.
 
+Package: fedtail-common
+Architecture: all
+Version: 0.23.7
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 17567
+Depends: python3 (>= 3.11), python3-requests
+Recommends: python3-cryptography, python3-langdetect
+Suggests: libenchant-2-2, hunspell-ru, hunspell-en-us, python3-socks, fonts-noto-color-emoji, libnotify-bin, xdg-utils, git, fedtail-tui
+Breaks: fedtail (<< 0.22.0~)
+Replaces: fedtail (<< 0.22.0~)
+Filename: pool/main/fedtail-common_0.23.7_all.deb
+Size: 6598116
+MD5sum: 45eb0af0bcb8eb25122eaa0bbc4fc7ce
+SHA1: a5e78bb1b9c9d7b4b88b2c0886746c6837ba42a8
+SHA256: a922334434059fbb3d56ae123f354fa7c0280ced972c597278a8b824268119fc
+SHA512: 15ecefd7854cdfc0e13507716d6c9386239add0d0d934bc1654c1830afc41ee99b62d20f0e682adbc4b43acc6a55a372bd076fa0e4ba1c1da99ab60ca6c671dc
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client for people who miss Point.im and Juick (program)
+ The program itself: the core, the web interface and the menu entry.
+ Install fedtail-qt, fedtail-gtk or fedtail-tui for an interface
+ of its own; `fedtail` opens the one that is installed.
+
 Package: fedtail-gtk
 Architecture: all
 Version: 0.22.0
@@ -725,6 +749,25 @@ MD5sum: de056e047a6fc6c5710ed966d348a8fa
 SHA1: ec47f51ed14e97dacecadc2b6120d67a87964364
 SHA256: 8054c2b499baf7986a535043fe2a9f30e3331043ab3ba1b3aa9ba1ca7d60749f
 SHA512: 706ae85a3fa4dea8bb4714ff985777f8f4f0a026f8b86f596c1734cb4391c72de80cea19134fdcf2834c3c33ae27f14c87dbe391d3cb14c28a94885fe8278359
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client fedtail — the GTK 4 window
+ GTK 4 and libadwaita for fedtail's window on GNOME.
+
+Package: fedtail-gtk
+Architecture: all
+Version: 0.23.7
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 101
+Depends: fedtail-common (= 0.23.7), python3-gi, gir1.2-gtk-4.0
+Recommends: gir1.2-adw-1
+Filename: pool/main/fedtail-gtk_0.23.7_all.deb
+Size: 105896
+MD5sum: 10b2142a980319e4ba02e219d54e58a9
+SHA1: d51316cc626b1d44cace63d7cadf68141062d575
+SHA256: 3d3fa693a9ca7bdc316ccd23271e0aa2e833e0dc6d86b12e273d54f971dbe5ff
+SHA512: 90cea27617454012c494078ab284b42d35d20edd89aacc1329b51d78c62e9bc8a049bfabd51de6c7ecffdc1b077e2ddf10e3655e2451fc4b7aba9ca397de81b2
 Homepage: https://github.com/eugene-vereshchagin/fedtail
 Description: fediverse client fedtail — the GTK 4 window
  GTK 4 and libadwaita for fedtail's window on GNOME.
@@ -1052,6 +1095,25 @@ Homepage: https://github.com/eugene-vereshchagin/fedtail
 Description: fediverse client fedtail — the Qt window
  The Qt 6 toolkit for fedtail's window (KDE and the rest).
 
+Package: fedtail-qt
+Architecture: all
+Version: 0.23.7
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 101
+Depends: fedtail-common (= 0.23.7), python3-pyside6.qtwidgets
+Recommends: python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, python3-pyside6.qtmultimediawidgets, python3-pyside6.qtdbus, qt6-image-formats-plugins
+Filename: pool/main/fedtail-qt_0.23.7_all.deb
+Size: 105932
+MD5sum: e74b690360714c8a704e62ab6e7afac2
+SHA1: a6458d1bb843a1f132e23408363885c344552bad
+SHA256: ac9fef9022f325ceb8541330242dafc0775d4688a863a16f880cab3fa7f804d2
+SHA512: 0fb31b43c4b5d719df455d7a2d55dac4d18d10dc57cd422b82549b288c4d5a8071924d074bfa8b31934754cfb695ed32fa77e8885292ffef4d36491b31021362
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client fedtail — the Qt window
+ The Qt 6 toolkit for fedtail's window (KDE and the rest).
+
 Package: fedtail-tui
 Architecture: all
 Version: 0.22.0
@@ -1371,6 +1433,25 @@ MD5sum: 268070eaad1ed19a69dafba442263a62
 SHA1: 532b310773da782ce3b0ef6dbd938014316c0ab6
 SHA256: d0eadd2224f30b5aa9c63c4681b1c1f725be6b129421c5128b93f7313e94fedf
 SHA512: be1262480c2d29be8a0f7222163451056934107db8d928763ac40ef4b9036f1ff6d629a33bf42ee38aa49afafef8bd14a6ef8ecbb9e38ea67e80e1051dd1b6d8
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client fedtail — in a terminal
+ Textual for fedtail in a terminal (fedtail --ui tui), with pictures.
+
+Package: fedtail-tui
+Architecture: all
+Version: 0.23.7
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 101
+Depends: fedtail-common (= 0.23.7), python3-textual
+Recommends: python3-pil, mpv, chafa
+Filename: pool/main/fedtail-tui_0.23.7_all.deb
+Size: 105888
+MD5sum: afc21b2fd1183f0fbd387494b3e758ed
+SHA1: f59f46c47152366c5ca74f7411cf9cce941231bd
+SHA256: 5cb40b0bc77c1eb6f2d54bc89ae0f31cf495b419b3474ad8d0df200be4023462
+SHA512: c4ebdbe217fbcddf2d4a8dc05a72f7c53e3ef3b9218ccf2cbd118264d31ae6c86fb23f86635ea022a441f321c72283d121f3e73c43ea0c1c9f50a871642569f6
 Homepage: https://github.com/eugene-vereshchagin/fedtail
 Description: fediverse client fedtail — in a terminal
  Textual for fedtail in a terminal (fedtail --ui tui), with pictures.
@@ -1846,6 +1927,30 @@ MD5sum: dc9e2b557018ff8af0807a9bd0fc738c
 SHA1: 8c492e0e92e84653666283d845dca90e6b11ec3b
 SHA256: 4a9dbf8136fb68da5cf6b40d5e691b661048b7fc1774b1eb176f053200a0ef50
 SHA512: 8d7dff3f234c75cb5f6a2972932b98f708cb09e5e0c2d68ae432bb7214eec03e8f968cd36f5f8353772ee52b95eb47661578aa873c7343a0889b6bab2c13aa88
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client for people who miss Point.im and Juick
+ A desktop client for GoToSocial, Mastodon, Akkoma and anything else that
+ speaks the Mastodon API: whole threads as trees, every reply shows what it
+ answers, lanes that never jump, everything is a config option.
+ .
+ This package installs the program with a window: Qt, or GTK 4 when
+ fedtail-gtk is chosen instead. fedtail-tui adds the terminal interface.
+
+Package: fedtail
+Architecture: all
+Version: 0.23.7
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 101
+Depends: fedtail-common (= 0.23.7), fedtail-qt (= 0.23.7) | fedtail-gtk (= 0.23.7)
+Suggests: fedtail-tui
+Filename: pool/main/fedtail_0.23.7_all.deb
+Size: 106064
+MD5sum: d52213d3fba5c8eb25344b67aeb4e470
+SHA1: bda7aa772de5a1774a7a2bc55efc5ad123af8415
+SHA256: d038b0dfdc7497dd2efb848dc3cd8796f110bffc3bc3c52dfaf9c93fa1a7e778
+SHA512: 8c1ccffbe2ea7672f5cc54264e3a6360c4b45c3c90d04fff37f12bbb40adb1c6dfc9aa9ef00e9e3cd462a8e57149bcde092f4b0ec7811130bdecfe6d781f324d
 Homepage: https://github.com/eugene-vereshchagin/fedtail
 Description: fediverse client for people who miss Point.im and Juick
  A desktop client for GoToSocial, Mastodon, Akkoma and anything else that
