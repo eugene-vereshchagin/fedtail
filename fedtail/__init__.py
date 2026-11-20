@@ -1,3 +1,3 @@
 """fedtail — desktop fediverse client. See docs/en/dev/design.md."""
 
-__version__ = "0.23.7"
+__version__ = "0.23.8.dev0"

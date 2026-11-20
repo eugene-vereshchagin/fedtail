@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.7 — 2026-11-20
 
 **In short: the editor opens with several accounts again.** A fix release.
