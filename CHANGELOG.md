@@ -5,11 +5,17 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.7 — 2026-11-20
 
-- Fixed: with several accounts in one window, the Qt editor didn't open — New post
+**In short: the editor opens with several accounts again.** A fix release.
+
+<!-- For the site's builder (an agent): a fix release of the 0.23 branch, together with
+     fedtail-sync 0.23.7 (the same server under the new number; protocol 2). The release
+     files are named as in 0.23.6. -->
+
+* Fixed: with several accounts in one window, the Qt editor didn't open — New post
   and Reply did nothing ("'Compose' object has no attribute 'counter'", issue #3).
-- The web interface's log names a server error's HTTP status ("web /api/thread:
+* The web interface's log names a server error's HTTP status ("web /api/thread:
   ApiError 404"), not only its kind: a report says which it was.
 
 ## 0.23.6 — 2026-11-20
