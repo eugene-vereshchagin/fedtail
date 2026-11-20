@@ -2367,6 +2367,9 @@ class FedtailApp(App, PostsMixin):
 
     def action_switch(self):
         if self.screen is not self.screen_stack[0]:  # a thread, a profile: Tab as usual
+            complete = getattr(self.screen, "complete_by_tab", None)
+            if complete is not None and complete():  # the editor: a #tag offered goes in
+                return
             self.screen.focus_next()
             return
         lanes, posts = self.query_one("#lanes", ListView), self.query_one("#posts", ListView)

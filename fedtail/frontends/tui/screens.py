@@ -818,6 +818,7 @@ class ComposeScreen(Screen):
     ComposeScreen #c-context { height: auto; max-height: 8; color: $text-muted; }
     ComposeScreen #c-hint { height: auto; color: $text-muted; }
     ComposeScreen #c-count { height: auto; color: $text-muted; }
+    ComposeScreen #c-suggest { height: auto; color: $text-muted; }
     ComposeScreen #c-text { height: 1fr; }
     ComposeScreen #c-side { height: 1fr; }
     ComposeScreen #c-format.row { height: 1; }
@@ -935,6 +936,7 @@ class ComposeScreen(Screen):
             yield TextArea("", id="c-text")
             if where == "bottom":
                 yield from self._format_buttons(Horizontal, markup)
+        yield Static("", id="c-suggest")
         yield Static("", id="c-count")
         yield Static("", id="c-extras")
         yield Footer()
@@ -1030,6 +1032,8 @@ class ComposeScreen(Screen):
         ta.focus()
         ta.move_cursor(ta.document.end)
         self.initial = self._snapshot()
+        self.app.core.prepare_completion()  # what #tags and @names complete from
+        self.show_suggest()
 
     # ---- the count, a chain, #CamelCase; whom it goes from --------------------------------
     def show_count(self):
@@ -1069,6 +1073,38 @@ class ComposeScreen(Screen):
 
     def on_text_area_changed(self, _e):
         self.show_count()
+        self.show_suggest()
+
+    # ---- completing #tags, @names, :emoji: (as the windows: common/compose.py) ----------
+    def _token(self):
+        """(sigil, word) typed right before the cursor, or (None, None)."""
+        from ..common import compose as cc
+        ta = self.query_one("#c-text", TextArea)
+        row, col = ta.cursor_location
+        return cc.token_at_end(ta.document.get_line(row)[:col])
+
+    def show_suggest(self):
+        """What fits the word before the cursor, as a line under the text — Tab puts the
+        first one in (as GTK's editor)."""
+        from ..common import compose as cc
+        sigil, word = self._token()
+        items = cc.suggestions(self.app.core, sigil, word) if sigil else []
+        self._offer = (word, items) if cc.worth_offering(items, word) else None
+        line = self.query_one("#c-suggest", Static)
+        line.update("Tab: " + "  ".join(label for _i, label in items[:6])
+                    if self._offer else "")
+        line.display = self._offer is not None
+
+    def complete_by_tab(self):
+        """Tab (the app's, app.py action_switch): the first thing offered goes in → True;
+        nothing offered, or the text not where the keys are → False, Tab moves on."""
+        if not getattr(self, "_offer", None) or getattr(self.focused, "id", "") != "c-text":
+            return False
+        word, items = self._offer
+        ta = self.query_one("#c-text", TextArea)
+        row, col = ta.cursor_location
+        ta.replace(items[0][0] + " ", (row, col - len(word) - 1), (row, col))
+        return True
 
     def on_select_changed(self, e):
         """All accounts in one window: a reply from another account than the one that

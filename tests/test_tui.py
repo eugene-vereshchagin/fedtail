@@ -358,8 +358,44 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
 
 
+    async def test_tab_completes_a_tag_in_the_editor(self):
+        """Typed by keys as a person types: "#geo", the line under the text offers
+        #georgia, Tab puts it in. The terminal's editor completed nothing (20.11); with
+        nothing offered Tab still moves on."""
+        from textual.widgets import Static, TextArea
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.screens import ComposeScreen
+        core, w = self.make()
+        st = status("001", BOB, minute=1, text="#georgia", vis="public")
+        st["tags"] = [{"name": "georgia"}]
+        w.add(st, home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            self.assertIsNone(core.store.tag_counts(compute=False))
+            app.query_one("#posts").focus()
+            await pilot.press("w")  # the editor (n is the one-line command line)
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            # opening the editor got ready what tags complete from
+            await self.wait(pilot, lambda: core.store.tag_counts(compute=False))
+            await pilot.press(*"hi #geo")
+            line = app.screen.query_one("#c-suggest", Static)
+            await self.wait(pilot, lambda: line.display)
+            self.assertIn("#georgia", str(line.render()))
+            ta = app.screen.query_one("#c-text", TextArea)
+            await pilot.press("tab")
+            self.assertTrue(ta.text.endswith("hi #georgia "), ta.text)
+            self.assertFalse(line.display)
+            await pilot.press("tab")  # nothing offered: the focus moves on, no tab typed
+            self.assertTrue(ta.text.endswith("hi #georgia "), ta.text)
+            self.assertIsNot(app.focused, ta)
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")

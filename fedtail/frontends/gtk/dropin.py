@@ -55,10 +55,14 @@ def paths_of(value, data_dir):
 
 
 def add_drop(widget, data_dir, take):
-    """Files and pictures dropped on `widget` go to take(paths). The target says yes
-    only to what can be attachments, so a drop of text still lands in the text."""
+    """Files and pictures dropped on `widget` — anywhere in it — go to take(paths). The
+    target says yes only to what can be attachments, so a drop of text still lands in
+    the text. It looks first (the capture phase): a text field inside takes a file as
+    its address otherwise — a picture dropped on the editor's text went in as
+    "file:///…" and was never attached (20.11)."""
     target = Gtk.DropTarget.new(GObject.TYPE_NONE, Gdk.DragAction.COPY)
     target.set_gtypes([Gdk.FileList, Gdk.Texture])
+    target.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
 
     def dropped(_t, value, _x, _y):
         paths = paths_of(value, data_dir())

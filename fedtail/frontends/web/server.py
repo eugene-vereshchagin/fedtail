@@ -1937,12 +1937,7 @@ class Web:
         server is asked too."""
         from ..common import compose as cc
         core = self.core
-        if not getattr(self, "_completion_ready", False):
-            self._completion_ready = True
-            core.prepare_tags()
-            core.prepare_people()
-            if core.cfg["post"].get("complete_emoji", True):
-                core.prepare_emoji()
+        core.prepare_completion()
         sigil, word = cc.token_at_end(str(before or "")[-200:])
         if not sigil:
             return {"word": "", "items": []}

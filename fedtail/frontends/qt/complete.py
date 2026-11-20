@@ -31,10 +31,7 @@ class Completer(QObject):
         self.people_query = ""
         self.people_timer = QTimer(self, singleShot=True, interval=350)
         self.people_timer.timeout.connect(self.ask_server_people)
-        core.prepare_tags()
-        core.prepare_people()
-        if core.cfg["post"].get("complete_emoji", True):
-            core.prepare_emoji()
+        core.prepare_completion()
 
     def token(self):
         """("#", "@" or ":", the word typed right before the cursor) — or (None, None)."""

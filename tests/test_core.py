@@ -1937,7 +1937,10 @@ class CoreTest(TmpDir):
         w.add(b, home=True)
         core.poll_once()
         self.assertIsNone(core.store.tag_counts(compute=False))  # not built before asked
-        core.prepare_tags()
+        # the first suggestion asked warms everything itself: no interface has to know
+        # (GTK's and the terminal's editors never called prepare_*, 20.11)
+        core.tag_suggestions("ge")
+        self.assertTrue(core._completion_warm)
         core.store.tag_counts()  # waits for the background pass, if still running
         self.assertEqual(core.tag_suggestions("ge"), ["georgia", "GeorgiaNews"])
         self.assertEqual(core.tag_suggestions("G"), ["georgia", "GeorgiaNews", "go"])

@@ -551,6 +551,7 @@ class InputDock(Gtk.Box):
         keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         keys.connect("key-pressed", self._key)
         self.text.add_controller(keys)
+        self.win.view.prepare_completion()  # what #tags and @names complete from
         self.dress()
         self._say()
         self._count()

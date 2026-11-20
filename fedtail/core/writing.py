@@ -27,6 +27,19 @@ class MaybeSent(Exception):
 class WritingMixin:
     """A part of Core (core/app.py): see the module's words."""
 
+    def prepare_completion(self):
+        """Everything the editor's completion needs (#tags, @names, :emoji:), warmed in
+        the background — once a run: the counts then keep themselves up to date. Every
+        editor of every interface asks as it opens, and the suggestions ask themselves,
+        so none can forget (GTK's and the terminal's never had any: 20.11)."""
+        if getattr(self, "_completion_warm", False):
+            return
+        self._completion_warm = True
+        self.prepare_tags()
+        self.prepare_people()
+        if self.cfg["post"].get("complete_emoji", True):
+            self.prepare_emoji()
+
     def prepare_tags(self):
         """Warm up what tag_suggestions() needs, in the background: the tags of the
         stored posts and the tags you follow."""
@@ -80,6 +93,7 @@ class WritingMixin:
     def emoji_suggestions(self, prefix, limit=8):
         """The server's emoji whose shortcode has prefix (no ":"): starting with it
         first, then containing it. [(shortcode, emoji dict)]."""
+        self.prepare_completion()
         p = prefix.casefold()
         if not p:
             return []
@@ -108,6 +122,7 @@ class WritingMixin:
     def mention_suggestions(self, prefix, limit=8):
         """People whose address or name starts with prefix (no "@"), the most seen
         first: [(acct, display name)]. Never yourself."""
+        self.prepare_completion()
         p = prefix.casefold()
         if not p:
             return []
@@ -125,6 +140,7 @@ class WritingMixin:
     def tag_suggestions(self, prefix, limit=8):
         """Tags starting with prefix (no "#"): the ones you follow first, then the
         most used in the posts fedtail has seen."""
+        self.prepare_completion()
         p = prefix.casefold()
         if not p:
             return []

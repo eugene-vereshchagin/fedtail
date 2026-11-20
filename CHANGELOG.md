@@ -7,6 +7,14 @@
 
 ## What's next
 
+* Fixed, GTK: a picture dragged onto the editor's text went in as its `file:///…`
+  address instead of being attached; a drop now attaches it wherever it lands.
+* Fixed, GTK: completing #tags, @names and :emoji: — the editor and the split
+  layout's input line never got ready what they complete from, and Tab in the
+  editor put a tab character in instead of the tag offered.
+* The terminal's editor completes #tags, @names and :emoji: too: what fits is
+  offered under the text, Tab puts it in.
+
 ## 0.23.7 — 2026-11-20
 
 **In short: the editor opens with several accounts again.** A fix release.

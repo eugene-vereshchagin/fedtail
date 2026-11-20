@@ -18,7 +18,7 @@ from ...model import VISIBILITIES, Scheduled, real
 from ...model.text import snippet
 from ..common import compose as rules
 from ..common.actions import vis_word
-from .gi_setup import GLib, GObject, Gtk, Pango, tip
+from .gi_setup import Gdk, GLib, GObject, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
@@ -274,6 +274,14 @@ class ComposeWindow(Gtk.Box):
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
+        # Tab completes before the text field takes it (it puts a tab character in, and
+        # the bubbling key never came here: no completion ever, 20.11)
+        tab = Gtk.EventControllerKey()
+        tab.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        tab.connect("key-pressed", lambda _c, keyval, _k, _s:
+                    keyval == Gdk.KEY_Tab and self._complete())
+        self.add_controller(tab)
+        self.view.prepare_completion()  # what #tags and @names complete from
         # pictures and files: dropped on the editor or pasted (Ctrl+V) — attachments;
         # the paste is looked at before the text field takes it as text
         from . import dropin
