@@ -181,6 +181,23 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=fut.done)
         return fut.result()
 
+    def test_editor_with_two_accounts_opens(self):
+        """All accounts in one window: the editor's "From" counted against the server's
+        limit before the counter was made — Send and Reply did nothing (issue #3)."""
+        from unittest import mock
+
+        from fedtail.frontends.qt.compose import Compose
+        view = self.win.ctx.view
+        accounts = ([("", "@me@example.test"), ("w", "@me@other.test")], "w")
+        with mock.patch.object(view, "post_accounts", return_value=accounts, create=True):
+            dlg = Compose(self.win)
+        self.assertEqual(dlg.from_box.currentData(), "w")
+        self.assertIn("@me@other.test", dlg.windowTitle())
+        self.assertTrue(dlg.counter.text().endswith(f"/ {view.post_limit('w', None)}"))
+        dlg.from_box.setCurrentIndex(0)
+        self.assertIn("@me@example.test", dlg.windowTitle())
+        dlg.reject()
+
     def test_whole_flow(self):
         from PySide6.QtWidgets import QPushButton
 

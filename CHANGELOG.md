@@ -7,6 +7,11 @@
 
 ## What's next
 
+- Fixed: with several accounts in one window, the Qt editor didn't open — New post
+  and Reply did nothing ("'Compose' object has no attribute 'counter'", issue #3).
+- The web interface's log names a server error's HTTP status ("web /api/thread:
+  ApiError 404"), not only its kind: a report says which it was.
+
 ## 0.23.6 — 2026-11-20
 
 **In short: fedtail on every Linux.** Besides the one file, the .deb and the apt

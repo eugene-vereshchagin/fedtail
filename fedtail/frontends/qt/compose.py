@@ -333,7 +333,6 @@ class Compose(QDialog):
             self._from_first = first
             self.from_box.currentIndexChanged.connect(self._from_changed)
             row.insertWidget(0, self.from_box)
-            self._from_changed()
         self.lang = QComboBox()
         self.lang.setToolTip(_("lang_tip"))
         self.lang.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -455,6 +454,9 @@ class Compose(QDialog):
         self.cw.textChanged.connect(self._changed)
         self.vis.currentIndexChanged.connect(self._changed)
         self._count()
+        # the title and the tip for the account it starts from; it counts too, so only
+        # once the counter is there (it was called before: no editor with two accounts)
+        self._from_changed()
         pct = self._size_pct()
         if pct and not self.inline:  # a window of its own: the same share of the main one
             self.resize(int(win.width() * pct / 100), int(win.height() * pct / 100))

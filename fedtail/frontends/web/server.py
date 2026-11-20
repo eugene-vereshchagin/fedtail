@@ -2626,7 +2626,10 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001 — the page says what failed
                 # the kind of failure only: a request's error text carries its whole
                 # address (a search's words in the query), and the log goes into bug reports
-                log.warning("web %s: %s", urlsplit(self.path).path, e.__class__.__name__)
+                # (and its HTTP status: which of "not found" and "not for me" — issue #1)
+                code = getattr(e, "status", None)
+                log.warning("web %s: %s%s", urlsplit(self.path).path, e.__class__.__name__,
+                            f" {code}" if isinstance(code, int) else "")
                 body, status = {"error": _api_error(e)}, HTTPStatus.BAD_GATEWAY
         try:
             return self._json(body, status)

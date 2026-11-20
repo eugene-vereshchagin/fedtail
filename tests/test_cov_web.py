@@ -697,6 +697,15 @@ class HandlerTest(TmpDir):
             code, body = self.req("/api/lanes")
         self.assertEqual(code, 502)
         self.assertEqual(json.loads(body), {"error": "OSError"})
+        # a server's error: its HTTP status in the log too, never its words (issue #1)
+        from fedtail.protocols.base import ServerError
+        with mock.patch.object(self.srv.web, "lanes",
+                               side_effect=ServerError(404, "NO_SUCH_NOTE /x?q=secret")), \
+                self.assertLogs("fedtail", "WARNING") as logs:
+            self.req("/api/lanes")
+        line = "\n".join(logs.output)
+        self.assertIn("/api/lanes: ServerError 404", line)
+        self.assertNotIn("secret", line)
         with mock.patch.object(self.srv.web, "lanes", side_effect=BrokenPipeError):
             # the page left: no answer, no error
             with self.assertRaises((urllib.error.URLError, ConnectionError, OSError)):
