@@ -166,7 +166,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `lists.hide_members` | `"all"` | You put a person or a bot in a list — their posts, their boosts and others' boosts of their posts are read in the list's lane and leave the general lanes, so they don't clutter them:<br>"all" — so with any list;<br>"exclusive" — only with lists ticked "exclusive" (the server itself takes such people out of Home);<br>"off" — don't take them out of anywhere. |
 | `lists.hide_posts` | `true` | …and whatever a list's timeline brought, whoever wrote it: a post of someone who moved to another account (the list still names the old one), a boost of a list member's post. By the lists hide_members names; "off" there — nothing. false — only by who is in a list. |
 | `lists.hide_in` | `["home", "bots", "federated", "local"]` | Which lanes to take them out of (names — as in [lanes]). |
-| `lists.refresh_minutes` | `10` | How often to reread the lists themselves and who is in them, minutes. |
+| `lists.refresh_minutes` | `10` | How often to reread the lists themselves and who is in them (and your mutes and blocks), minutes. |
 
 ## 4. Reading
 

@@ -449,8 +449,8 @@ area = "writing"
 android = "has"
 name.ru = "Предупреждение о картинке без описания"
 name.en = "A warning about a picture without a description"
-note.ru = "Перед отправкой спрашивает только окно."
-note.en = "Only the window asks before sending."
+note.ru = "Спрашивают перед отправкой все: окна, терминал (меню «Описать / Отправить так»), веб и телефон (вопрос), по `post.alt_reminder`."
+note.en = "Every one asks before sending: the windows, the terminal (a menu: \"Describe / Send as is\"), the web page and the phone (a question), by `post.alt_reminder`."
 keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway"]
 
 [[capability]]
@@ -470,8 +470,8 @@ area = "writing"
 android = "has"
 name.ru = "Предпросмотр поста"
 name.en = "Previewing a post"
-note.ru = "Как пост будет выглядеть — только в окне."
-note.en = "How a post will look — in the window only."
+note.ru = "Как пост будет выглядеть — в окнах кнопкой, в терминале Ctrl+R, в вебе 👁, на телефоне словом «Предпросмотр»; `post.preview = false` убирает его везде."
+note.en = "How a post will look — a button in the windows, Ctrl+R in the terminal, 👁 on the web page, the word “Preview” on the phone; `post.preview = false` takes it away everywhere."
 keys = ["preview", "preview_back", "preview_md", "preview_media", "preview_plain",
         "preview_tip"]
 
@@ -869,3 +869,138 @@ in = ["gtk", "tui", "web"]
 why.ru = "«Видео открывается в браузере: нет QtMultimedia» — только у окна Qt: плеер в окне — модуль Qt, которого может не быть (pip без PySide6-Addons). GTK играет видео своим Gtk.Video, терминал и веб отдают видео браузеру всегда."
 why.en = "“Video opens in the browser: no QtMultimedia” is the Qt window's alone: its player is a Qt module that may be missing (pip without PySide6-Addons). GTK plays video with its own Gtk.Video; the terminal and the web page always hand video to the browser."
 keys = ["player_missing"]
+
+# ---- settings one interface can't honour (21.11: every setting swept through all five) --
+
+[[capability]]
+id = "window-above"
+area = "window"
+android = "na"
+android_note.ru = "раскладка окон компьютера"
+android_note.en = "a desktop's window layout"
+name.ru = "Окно сообщений поверх других и его вкладки (`window.roster_on_top`, `window.split_tabs`)"
+name.en = "The messages window above others and its tabs (`window.roster_on_top`, `window.split_tabs`)"
+gtk = "no"
+tui = "na"
+web = "na"
+note.ru = "Только Qt: GTK 4 не умеет держать окно поверх других (это решает рабочий стол), а закрытие окна сообщений по его вкладкам — пока Qt."
+note.en = "Qt only: GTK 4 can't keep a window above others (the desktop decides that), and closing the messages window with its tabs is Qt's for now."
+keys = []
+
+[[capability]]
+id = "player-tuning"
+area = "media"
+android = "na"
+android_note.ru = "видео играет системный плеер (ExoPlayer)"
+android_note.en = "video plays in the system's player (ExoPlayer)"
+name.ru = "Настройки плеера: декодирование, гифки в ленте (`media.video_decode`, `media.gifv_max`, `media.gifv_fps`)"
+name.en = "The player's settings: decoding, gifs in a lane (`media.video_decode`, `media.gifv_max`, `media.gifv_fps`)"
+gtk = "no"
+tui = "na"
+web = "na"
+note.ru = "Это настройки плеера Qt (FFmpeg Qt Multimedia). GTK играет через GStreamer, веб — плеером браузера, терминал — mpv: у них свои декодеры, а гифок сразу играют три, как у Qt по умолчанию."
+note.en = "These are Qt's player's (FFmpeg, Qt Multimedia). GTK plays through GStreamer, the web page in the browser's player, the terminal in mpv: they have decoders of their own, and three gifs loop at once, as Qt's default."
+keys = []
+
+[[capability]]
+id = "notify-backend"
+area = "app"
+android = "na"
+android_note.ru = "уведомления телефона — шторка"
+android_note.en = "a phone's notifications are its shade"
+name.ru = "Чем показывать уведомления (`notify.backend`: рабочий стол или трей)"
+name.en = "What shows the notifications (`notify.backend`: the desktop or the tray)"
+gtk = "partly"
+tui = "na"
+web = "na"
+note.ru = "GTK показывает их через рабочий стол (Gio, иначе notify-send): у его значка в трее (StatusNotifierItem) всплывающих сообщений нет."
+note.en = "GTK shows them through the desktop (Gio, else notify-send): its tray icon (StatusNotifierItem) has no balloons."
+keys = []
+
+[[capability]]
+id = "fonts-settings"
+area = "app"
+android = "no"
+android_note.ru = "телефон берёт шрифт темы, а размер — из настроек Android"
+android_note.en = "the phone takes the theme's font, and the size from Android's settings"
+name.ru = "Свои шрифты и их размер (`appearance.fonts`, `font`, `mono_font`, `font_size`)"
+name.en = "Fonts of your own and their size (`appearance.fonts`, `font`, `mono_font`, `font_size`)"
+tui = "na"
+note.ru = "Терминал пишет шрифтом и размером самого терминала."
+note.en = "The terminal writes in the terminal's own font and size."
+keys = []
+
+[[capability]]
+id = "actions-look"
+area = "reading"
+android = "no"
+android_note.ru = "в строке телефона место только картинкам; слова — в меню ⋯"
+android_note.en = "a phone's row has room for pictures only; the words are in the ⋯ sheet"
+name.ru = "Кнопки под постом: картинки, слова или то и другое (`card.actions`), ✓ «прочитано» (`reading.read_button`)"
+name.en = "The buttons under a post: pictures, words or both (`card.actions`), ✓ “read” (`reading.read_button`)"
+tui = "na"
+note.ru = "В терминале под постом кнопок нет: всё — буквами и меню поста (там и «Прочитано»)."
+note.en = "The terminal has no buttons under a post: all is letters and the post's menu (“Mark read” is there)."
+keys = []
+
+[[capability]]
+id = "icon-sets"
+area = "app"
+android = "has"
+name.ru = "Значки кнопок: системные, темы или свои (`appearance.icons`)"
+name.en = "The buttons' pictures: the system's, the theme's or your own (`appearance.icons`)"
+tui = "na"
+web = "no"
+note.ru = "Веб рисует кнопки знаками (↩ ★ ♻ 🔖): значков рабочего стола браузеру не видно. Терминал — текст."
+note.en = "The web page draws its buttons as signs (↩ ★ ♻ 🔖): a browser can't see the desktop's icons. The terminal is text."
+keys = []
+
+[[capability]]
+id = "watchdog"
+area = "app"
+android = "na"
+android_note.ru = "зависания приложения следит сам Android (ANR)"
+android_note.en = "Android itself watches an app for hangs (ANR)"
+name.ru = "Сторож зависаний окна (`debug.watchdog_seconds`, `debug.stall_ms`)"
+name.en = "The window's hang watchdog (`debug.watchdog_seconds`, `debug.stall_ms`)"
+tui = "na"
+web = "na"
+note.ru = "Сторож следит за главным циклом окна Qt и GTK; у терминала и веба нет окна, которое могло бы замереть так же."
+note.en = "The watchdog minds the main loop of the Qt and GTK window; the terminal and the web page have no window that freezes that way."
+keys = []
+
+[[capability]]
+id = "switch-closes"
+area = "window"
+android = "na"
+android_note.ru = "одно приложение — один аккаунт на экране, переключение на месте"
+android_note.en = "one app, one account on screen, switched in place"
+name.ru = "Переключение аккаунта закрывает это окно (`accounts.switch_closes`)"
+name.en = "Switching the account closes this window (`accounts.switch_closes`)"
+tui = "na"
+web = "na"
+note.ru = "Терминал и веб — одно окно: другой аккаунт открывается в нём же, оставить оба нечем."
+note.en = "The terminal and the web page are one window: another account opens in it, there's nothing to keep both in."
+keys = []
+
+[[capability]]
+id = "terminal-text"
+area = "reading"
+android = "has"
+name.ru = "Длина цитаты над ответом и ссылок (`card.reply_context_chars`, `card.link_chars`), ~~зачёркнутое~~ (`appearance.text_markup`)"
+name.en = "How long the line over a reply and the links are (`card.reply_context_chars`, `card.link_chars`), ~~struck~~ (`appearance.text_markup`)"
+tui = "partly"
+note.ru = "Терминал режет строку над ответом по своей ширине, ссылки пишет целиком (их выделяет сам терминал), зачёркнутое оставляет как написано."
+note.en = "The terminal cuts the line over a reply to its own width, writes links whole (the terminal itself picks them out), and leaves struck text as written."
+keys = []
+
+[[capability]]
+id = "terminal-language"
+area = "writing"
+android = "has"
+name.ru = "Язык поста из списка (`post.languages`, «Другой язык…»)"
+name.en = "The post's language from a list (`post.languages`, “Another language…”)"
+tui = "partly"
+note.ru = "В терминале язык — поле: пишется код (`en`, `ka`); пусто — `post.language`."
+note.en = "In the terminal the language is a field: a code is typed (`en`, `ka`); empty — `post.language`."
+keys = []

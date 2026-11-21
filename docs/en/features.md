@@ -228,7 +228,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | A reply comes into a lane with what it answers | has | 0.22.7 | `card.parents_first` | `GET /api/v1/statuses/:id` | no: elsewhere the strip fills in later or isn't there |
 | A whole thread: replies from the author's server | has | 0.3.0 | `threads.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
 | A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `threads.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
-| Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
+| Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `leave_mutes` | own | only in fedtail |
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `card.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
 | A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
@@ -250,7 +250,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A thread grows when Mastodon has gathered the replies.** Mastodon 4.5+ gathers missing replies itself and says when it's done; fedtail waits for that signal and rereads the thread.
 
-**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `threads.interval_minutes` minutes (a thread quiet for an hour — three times less often, for a day — 12 times, for three days — 36) and puts what's new into the “Subscriptions” lane. Threads take at most a quarter of what the server still allows in its rate-limit window: the lanes come first. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `threads.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in; since 0.22 also the threads of posts you boosted (`"boosts"`), liked (`"likes"`), bookmarked (`"bookmarks"`), quoted (`"quotes"`), voted in (`"votes"`) — news in them from then on. A thread quiet for `threads.active_days` days is not checked any more; one round checks at most `threads.max_threads` threads. Replies to you come to “Replies to me” anyway; `subs.replies_to_me = true` — show them in “Subscriptions” too. Unsubscribing mutes the thread's mentions as well (replies there tag everyone in it by themselves); `threads.leave_mutes = false` — leave “Subscriptions” only.
+**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `threads.interval_minutes` minutes (a thread quiet for an hour — three times less often, for a day — 12 times, for three days — 36) and puts what's new into the “Subscriptions” lane. Threads take at most a quarter of what the server still allows in its rate-limit window: the lanes come first. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `threads.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in; since 0.22 also the threads of posts you boosted (`"boosts"`), liked (`"likes"`), bookmarked (`"bookmarks"`), quoted (`"quotes"`), voted in (`"votes"`) — news in them from then on. A thread quiet for `threads.active_days` days is not checked any more; one round checks at most `threads.max_threads` threads. Replies to you come to “Replies to me”. Unsubscribing mutes the thread's mentions as well (replies there tag everyone in it by themselves); `threads.leave_mutes = false` — leave “Subscriptions” only.
 
 **Mute a thread.** Notifications from the thread stop coming and its subscription goes. A server that can do it remembers it for all clients; where it can't (GoToSocial), fedtail mutes the thread itself: its mentions are dropped as they come — even replies to posts of the thread it never saw. The item in a post's ⋯ menu is always there.
 
@@ -931,6 +931,8 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
 | The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
 | The lanes as tiles on the curtain | ✓ | ✓ | ◐ | ✓ | ✓ | `window.tiles`: on the curtain (every lane closed) the lanes as tiles by the sidebar's sections, the lanes' list on the left stepping aside; on the phone it is its overview (`phone.overview`). The terminal is lines of text: its curtain (the common words, `common/sidebar.curtain`) draws no tiles, its sidebar is the list. |
+| The messages window above others and its tabs (`window.roster_on_top`, `window.split_tabs`) | ✓ | — | · | · | · | Qt only: GTK 4 can't keep a window above others (the desktop decides that), and closing the messages window with its tabs is Qt's for now. Android: a desktop's window layout |
+| Switching the account closes this window (`accounts.switch_closes`) | ✓ | ✓ | · | · | · | The terminal and the web page are one window: another account opens in it, there's nothing to keep both in. Android: one app, one account on screen, switched in place |
 
 ### Reading
 
@@ -942,6 +944,8 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | Tools over the post under the mouse | ✓ | ✓ | · | ✓ | · | ui.hover_tools: in the Qt and GTK windows and on the web page the post under the mouse has at its top right — open in the browser, copy the link, translate, quote, follow the thread, mute it, read up to here, and on my own one edit and delete; its ⋯ menu has them no more there. The terminal has no mouse — all of it in the post's menu. Android: a phone has no mouse: all of it in the card's ⋯ menu |
 | A post's menu in submenus | ✓ | ✓ | ◐ | ✓ | — | ui.menu_groups: in the Qt and GTK windows and on the web page the ⋯ menu has the frequent items on top and the submenus "Author @…", "Thread", "More". The terminal's post menu is one list (the words are in the common code; it draws no submenus yet). Android: the phone's card menu is flat for now |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
+| The buttons under a post: pictures, words or both (`card.actions`), ✓ “read” (`reading.read_button`) | ✓ | ✓ | · | ✓ | — | The terminal has no buttons under a post: all is letters and the post's menu (“Mark read” is there). Android: a phone's row has room for pictures only; the words are in the ⋯ sheet |
+| How long the line over a reply and the links are (`card.reply_context_chars`, `card.link_chars`), ~~struck~~ (`appearance.text_markup`) | ✓ | ✓ | ◐ | ✓ | ✓ | The terminal cuts the line over a reply to its own width, writes links whole (the terminal itself picks them out), and leaves struck text as written. |
 
 ### Pictures and video
 
@@ -950,6 +954,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | A link to a video or sound file — into the own player | ✓ | ✓ | ✓ | · | ✓ | A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server that didn't take a big attachment leaves it so) plays in the same player as attachments: over the window in Qt and GTK, mpv in the terminal, the phone's player on the phone (`media.links_in_player`). The web page needs none: the browser plays such a file itself. |
 | The picture viewer: leaf through, 1:1, the original, save | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal shows a picture full screen (chafa, kitty) and saves the original (`s`); the web page has its viewer with Save and 1:1. The window's words about Qt's formats and “the original is loading” aren't theirs. |
 | Video and sound inside the program | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player. |
+| The player's settings: decoding, gifs in a lane (`media.video_decode`, `media.gifv_max`, `media.gifv_fps`) | ✓ | — | · | · | · | These are Qt's player's (FFmpeg, Qt Multimedia). GTK plays through GStreamer, the web page in the browser's player, the terminal in mpv: they have decoders of their own, and three gifs loop at once, as Qt's default. Android: video plays in the system's player (ExoPlayer) |
 
 ### The editor
 
@@ -958,6 +963,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
 | Formatting buttons in the editor | ✓ | ✓ | ◐ | ✓ | ✓ | post.format_bar: bold, italic, strikethrough, code, a link, a quote, a list — Markdown marks around the selection. In the terminal — by the buttons with the mouse only: Ctrl+B/I/K belong to the text field there (Ctrl+I is Tab). |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |
+| The post's language from a list (`post.languages`, “Another language…”) | ✓ | ✓ | ◐ | ✓ | ✓ | In the terminal the language is a field: a code is typed (`en`, `ka`); empty — `post.language`. |
 
 ### The server, settings, help, debugging
 
@@ -970,6 +976,10 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | Desktop notifications and testing them | ✓ | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed. Android: Notifications go into the phone's shade, but there is no test one ("Debugging → Test a notification"): Android itself shows whether they are allowed |
 | Debugging: a full snapshot into an archive, the log, the sound | ✓ | ✓ | ✓ | · | ◐ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. Android: The report — ⋮ → "Send a report" (the log inside); the phone has no sound — nothing to test |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (editor size, tracing). Android: nothing to hover with |
+| What shows the notifications (`notify.backend`: the desktop or the tray) | ✓ | ◐ | · | · | · | GTK shows them through the desktop (Gio, else notify-send): its tray icon (StatusNotifierItem) has no balloons. Android: a phone's notifications are its shade |
+| Fonts of your own and their size (`appearance.fonts`, `font`, `mono_font`, `font_size`) | ✓ | ✓ | · | ✓ | — | The terminal writes in the terminal's own font and size. Android: the phone takes the theme's font, and the size from Android's settings |
+| The buttons' pictures: the system's, the theme's or your own (`appearance.icons`) | ✓ | ✓ | · | — | ✓ | The web page draws its buttons as signs (↩ ★ ♻ 🔖): a browser can't see the desktop's icons. The terminal is text. |
+| The window's hang watchdog (`debug.watchdog_seconds`, `debug.stall_ms`) | ✓ | ✓ | · | · | · | The watchdog minds the main loop of the Qt and GTK window; the terminal and the web page have no window that freezes that way. Android: Android itself watches an app for hangs (ANR) |
 
 ---
 
@@ -1023,6 +1033,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Window, tray, keys | · | a phone has no window, tray or keys |
+| A bug report straight into your private repository | — | the phone hands the report's archive on through Share: git is beyond it |
 | Leak hunting: trends, an object census, memory snapshots | ◐ | the stats, trends and memory breakdown in the phone's logs; snapshots and the census on the desktop |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |

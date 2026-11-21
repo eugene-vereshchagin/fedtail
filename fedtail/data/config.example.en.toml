@@ -530,7 +530,8 @@ hide_posts = true
 # Which lanes to take them out of (names — as in [lanes]).
 hide_in = ["home", "bots", "federated", "local"]
 
-# How often to reread the lists themselves and who is in them, minutes.
+# How often to reread the lists themselves and who is in them (and your mutes and blocks),
+# minutes.
 refresh_minutes = 10
 
 

@@ -217,7 +217,9 @@ details.en = "In the debugging mode (`mode = \"auto\"` — on in development ver
 [[feature]]
 id = "report-repo"
 status = "has"
-android = "has"
+android = "no"
+android_note.ru = "телефон отдаёт архив отчёта через «Поделиться»: git ему не по силам"
+android_note.en = "the phone hands the report's archive on through Share: git is beyond it"
 since = "0.19.0"
 name.ru = "Отчёт сразу в свой закрытый репозиторий"
 name.en = "A bug report straight into your private repository"
