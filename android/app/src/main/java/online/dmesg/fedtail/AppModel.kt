@@ -1113,8 +1113,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val grew = st.optInt("threads")
                 if (v != version) {
                     version = v
-                    // the windows' notes into the shade (notify.when_focused: even now)
-                    Notifier.take(getApplication(), Core.notes(Notifier.lastSeq))
+                    // the windows' notes into the shade, but the open lane's (unless
+                    // notify.when_focused); the core's errors said here, as the windows do
+                    val notes = Core.notes(Notifier.lastSeq, if (Notifier.visible) current ?: "" else "")
+                    notes.optJSONArray("errors")?.let { e ->
+                        if (e.length() > 0) message = e.optString(e.length() - 1)
+                    }
+                    Notifier.take(getApplication(), notes)
                     lanes = parseLanes(Core.lanes())
                     loadHub()
                     current?.let { loadLane(it, keep = true) }

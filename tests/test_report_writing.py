@@ -174,6 +174,55 @@ class WebWritingTest(TmpDir):
             time.sleep(0.02)
         self.assertIsNone(webs.core.get_draft("new"))
 
+    def test_my_name_for_them_from_the_page(self):
+        """The profile's "My name for them" and "Name colour" (feed.aliases,
+        feed.nick_colors) on the page and the phone: not let through before (21.11)."""
+        webs = self.srv.web
+        webs.core.cfg["feed"].update(aliases=True, nick_colors=True)
+        bob = BOB["id"]
+        keys = [a["key"] for a in webs.account(bob)["actions"]]
+        self.assertIn("alias", keys)
+        self.assertIn("nick_color", keys)
+        self.assertIn("ask", webs.profile_act(bob, "alias"))  # a line to type first
+        webs.profile_act(bob, "alias", answer="Bobby")
+        self.assertEqual(webs.core.people_aliases().get(bob), "Bobby")
+        webs.profile_act(bob, "nick_color", answer="#ff0000")
+
+    def test_pinned_under_media_by_one_rule(self):
+        """A profile's "Media": the pinned posts with pictures on top — the windows put
+        every pinned post there, the page none (21.11)."""
+        webs = self.srv.web
+        bob = BOB["id"]
+        plain = self.w.add(status("060", BOB, minute=2, vis="public", text="words"))
+        pic = self.w.add(status("061", BOB, minute=3, vis="public", text="a picture"))
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "https://x.test/a.png",
+                                     "preview_url": "https://x.test/a.png"}]
+        plain["pinned"] = pic["pinned"] = True
+        pinned = lambda show: [p["id"] for p in webs.account(bob, show)["posts"]  # noqa: E731
+                               if p.get("pinned")]
+        self.assertEqual(sorted(pinned("posts")), ["060", "061"])
+        self.assertEqual(pinned("media"), ["061"])
+
+    def test_a_failure_in_the_background_keeps_the_text(self):
+        """The editor is gone at once: with post.drafts_autosave off, the draft meant to
+        hold the text was never written, and a failure lost it (21.11)."""
+        webs = self.srv.web
+        webs.core.cfg["post"].update(send_in_background=True, drafts_autosave=False)
+        from unittest import mock
+
+        from fedtail.protocols.mastodon.api import ApiError
+
+        from .fakes import FakeApi
+        with mock.patch.object(FakeApi, "post_status", side_effect=ApiError(422, "no")):
+            self.assertTrue(webs.post({"text": "not lost"})["background"])
+            for _i in range(200):  # failed: said on the page
+                if any(n.get("title") == i18n._("send_failed") for _s, n in webs.note_log):
+                    break
+                time.sleep(0.02)
+            else:
+                self.fail("no failure said")
+        self.assertEqual((webs.core.get_draft("new") or {}).get("text"), "not lost")
+
 
 if __name__ == "__main__":
     unittest.main()

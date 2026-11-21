@@ -1776,6 +1776,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.status(later, seconds=30)
         elif name == "refreshed":  # how a Refresh went: never a press without an answer
             self.status(results.refresh_text(payload), seconds=6)
+        elif name == "filtered_waiting":  # notify.filtered = "remind": the core asked
+            self.status(_("filtered_waiting", n=payload), seconds=30)
         elif name == "rate_limited":  # once, with when; not an error per lane
             self.status(results.rate_text(payload), seconds=20)
         elif name == "auth_failed":

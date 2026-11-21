@@ -53,6 +53,20 @@ class WebTest(TmpDir):
         got = json.loads(self.req("/api/wait?v=-5&s=0&n=0")[2])
         self.assertTrue(got["notes"])
         self.assertIn("ping", got["notes"][0]["body"])
+        # the tab in front, that lane open: quiet about it, not about the others — the
+        # windows' rule (notifytext.quiet); the page was quiet about every lane (21.11)
+        lane = got["notes"][0]["lane"]
+        looking = json.loads(self.req(f"/api/wait?v=-5&s=0&n=0&looking={lane}")[2])
+        self.assertEqual(looking["notes"], [])
+        self.assertTrue(json.loads(self.req("/api/wait?v=-5&s=0&n=0&looking=home")[2])
+                        ["notes"])
+        self.core.cfg["notify"]["when_focused"] = True
+        self.assertTrue(json.loads(self.req(f"/api/wait?v=-5&s=0&n=0&looking={lane}")[2])
+                        ["notes"])
+        self.core.cfg["notify"]["when_focused"] = False
+        webs.error_said("a part not sent")  # the core's errors: always said
+        self.assertIn("a part not sent", [n["body"] for n in json.loads(self.req(
+            f"/api/wait?v=-5&s=0&n=0&looking={lane}")[2])["notes"]])
         names = [x["name"] for x in json.loads(self.req("/api/places")[2])]
         for n in ("search", "lists", "silence", "help"):
             self.assertIn(n, names)

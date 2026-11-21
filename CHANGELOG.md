@@ -88,6 +88,25 @@
   inside the window kept the frame clock running all the while it was open.
 * Fixed: a picture in the cache could be read half-written by another part of the
   program and thrown away as broken.
+* Fixed: with `post.send_in_background` and `post.drafts_autosave = false`, a post
+  that failed to go out from the terminal, the web page or the phone lost its text;
+  it waits as a draft now.
+* Fixed: `poll.announcements_minutes = 0` ("only at the start") never asked for the
+  server's announcements at all.
+* `lists.enabled = false` takes "Add to list" out of every interface's menus,
+  `post.schedule = false` the "Scheduled" place and `notify.filtered = "off"` the
+  filtered notifications' — only the Qt window did so. The reminder that someone's
+  notifications are held back (`notify.filtered = "remind"`) comes from the core now,
+  said by every interface at start (Qt alone said it).
+* Notifications while you look (`notify.when_focused`): the web page and the phone
+  keep quiet about the lane open on screen only, as the windows do — they kept quiet
+  about every lane. The phone showed the core's errors as empty notifications in the
+  shade; it says them on its screen now.
+* The web page and the phone have a profile's "Not in Home", "Follow replies to all
+  their posts", "My name for them" and "Name colour" buttons (`feed.home_hide`,
+  `feed.watch_replies`, `feed.aliases`, `feed.nick_colors`).
+* A profile's "Media": the pinned posts with pictures on top, in every interface —
+  the windows showed every pinned post there, the web page and the phone none.
 
 ## 0.23.7 — 2026-11-20
 

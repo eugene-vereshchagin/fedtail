@@ -95,11 +95,12 @@ class ProfilePosts:
             forget(gone)
         self.cards = []
         top = {real(e).id for e in self.pinned}
-        everything = self.pinned + [e for e in self.items if real(e).id not in top]
+        pinned = timed.pinned_shown(self.pinned, self.show, self.acc.id)
+        everything = pinned + [e for e in self.items if real(e).id not in top]
         short = self.view.short_ids(everything)
         at = self._first_index()
         for i, e in enumerate(everything):
-            pin = i < len(self.pinned)
+            pin = i < len(pinned)
             card = Card(self.win.ctx, ("pin:" if pin else "") + e.id, e,
                         short_id=short.get(real(e).id), profile_of=self.acc.id)
             if pin:

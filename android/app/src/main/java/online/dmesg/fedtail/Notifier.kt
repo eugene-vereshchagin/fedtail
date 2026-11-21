@@ -35,7 +35,7 @@ object Notifier {
 
     /** The newest note shown, as the core numbers them (this process's). -1: none asked yet. */
     @Volatile var lastSeq = -1
-    /** The app is on screen: notes only with notify.when_focused. */
+    /** The app is on screen: the open lane's notes stay quiet (the core decides). */
     @Volatile var visible = false
 
     fun channel(context: Context) {
@@ -53,7 +53,6 @@ object Notifier {
         if (got.has("error")) return
         lastSeq = got.optInt("n", lastSeq)
         if (!got.optBoolean("enabled", true)) return
-        if (visible && !got.optBoolean("when_focused")) return
         show(context, got.optJSONArray("notes") ?: JSONArray(), got.optInt("count"))
     }
 

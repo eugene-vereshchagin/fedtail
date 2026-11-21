@@ -119,7 +119,7 @@ object Core {
     suspend fun themeAdd(path: String, replace: Boolean) = obj("theme_add", path, replace)
     suspend fun pushOn(endpoint: String, key: String, auth: String) = obj("push_on", endpoint, key, auth)
     suspend fun pushOff() = obj("push_off")
-    suspend fun notes(since: Int) = obj("notes", since)
+    suspend fun notes(since: Int, looking: String = "") = obj("notes", since, looking)
     suspend fun ready(context: Context, lang: String) =
         obj("ready", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang)
     suspend fun backgroundRound(since: Int) = obj("background_round", since)

@@ -579,8 +579,10 @@ class WritingMixin:
     def get_draft(self, key):
         return self.store.get_draft(key)
 
-    def save_draft(self, key, data):
-        if self.cfg["post"]["drafts_autosave"]:
+    def save_draft(self, key, data, keep=False):
+        """Keep a draft — with post.drafts_autosave, or always when `keep` (the editor
+        gone while it sends in the background: a failure must not lose the text)."""
+        if keep or self.cfg["post"]["drafts_autosave"]:
             self.store.save_draft(key, data)
             if self.sync:
                 self.sync.record_draft(key)

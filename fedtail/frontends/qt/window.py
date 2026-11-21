@@ -1261,8 +1261,6 @@ class MainWindow(QMainWindow):
         self._open_start_lane()
         self.core.start_polling()
         self.announce_bar.start()
-        if self.cfg["notify"]["filtered"] == "remind":
-            QTimer.singleShot(12_000, self._remind_filtered)
 
     def _open_start_lane(self):
         """ui.start_lane: "none" — every lane closed behind the curtain (nothing gets
@@ -1880,6 +1878,8 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(self._hello, 5000)
         elif name == "refreshed":  # how a Refresh went: never a press without an answer
             self.statusBar().showMessage(results.refresh_text(payload), 6000)
+        elif name == "filtered_waiting":  # notify.filtered = "remind": the core asked
+            self.statusBar().showMessage(_("filtered_waiting", n=payload), 30_000)
         elif name == "rate_limited":
             # the server asks to wait: once, with when, not an error per lane
             self.statusBar().showMessage(results.rate_text(payload), 20_000)
@@ -2480,13 +2480,6 @@ class MainWindow(QMainWindow):
     def show_filtered(self):
         """The notifications the server held back (common/places.py "filtered")."""
         return self.open_place("filtered")
-
-    def _remind_filtered(self):
-        """notify.filtered = "remind": say once at start if someone is held back."""
-        def got(res):
-            if res and res["pending"]:
-                self.statusBar().showMessage(_("filtered_waiting", n=res["pending"]), 30_000)
-        self.bridge.call(self.core.filtered(), ok=got, fail=lambda _e: None)
 
     def show_scheduled(self):
         """Posts waiting on the server to go out at their time; any can be cancelled."""

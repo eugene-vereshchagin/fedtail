@@ -211,8 +211,11 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         sup = self.view.supports
         out = []
         for n in MENU:
-            if n == "filtered" and not sup("filtered"):
-                continue
+            if n == "filtered" and (not sup("filtered") or (self.view.cfg.get("notify") or {})
+                                    .get("filtered", "remind") == "off"):
+                continue  # notify.filtered = "off": not in the menu either
+            if n == "scheduled" and not (self.view.cfg.get("post") or {}).get("schedule", True):
+                continue  # post.schedule = false: no posting later, nothing waiting
             if n == "trends" and not sup("trends"):
                 continue
             if n == "collections" and not sup("collections"):

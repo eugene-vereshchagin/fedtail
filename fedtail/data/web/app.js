@@ -3528,11 +3528,10 @@ async function askNotify() {
 }
 
 function showNote(note) {
-  if (note.kind === "error") { toast(note.body); return; }  // the core's error: said here
+  if (note.kind) { toast(note.body); return; }  // the core's error or word: said here
   state.shown.push(note.title);
   if (!canNotify() || Notification.permission !== "granted") return;
-  const looking = document.hasFocus() && !document.hidden;
-  if (looking && (!state.me.notify.when_focused || note.lane === state.lane)) return;
+  // which to keep quiet the server decided (notifytext.quiet: the lane looked at)
   const n = new Notification(note.title, { body: note.body, tag: "fedtail-" + note.lane });
   n.onclick = () => {
     window.focus();
@@ -3546,7 +3545,10 @@ async function follow() {
   for (;;) {
     try {
       const r = await api("/api/wait?v=" + state.version + "&s=" + state.soundSeq +
-                          "&n=" + state.noteSeq + "&p=" + (state.pollSeq ?? -1));
+                          "&n=" + state.noteSeq + "&p=" + (state.pollSeq ?? -1) +
+                          // the lane looked at: its notes stay quiet (notify.when_focused)
+                          (document.hasFocus() && !document.hidden && state.lane
+                            ? "&looking=" + encodeURIComponent(state.lane) : ""));
       state.soundSeq = r.s;
       state.noteSeq = r.n;
       // "⟳ updating the lanes…" / "updated at 14:32": a lane with nothing new reads

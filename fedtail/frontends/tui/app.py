@@ -1022,6 +1022,9 @@ class FedtailApp(App, PostsMixin):
         for event in ("activity_updated", "activity_seen", "requests_updated"):
             self.core.on(event, lambda n, _p: self.in_ui(self.events_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
+        # notify.filtered = "remind": the core asked once at start
+        self.core.on("filtered_waiting", lambda _n, p: self.in_ui(
+            self.notify, _("filtered_waiting", n=p), timeout=30))
         # replies from other servers, or an open thread asked again: it grows
         self.core.on("thread_grew", lambda _n, p: self.in_ui(self.thread_grew, p))
         # read here or anywhere else (another window, the phone, a device through sync):

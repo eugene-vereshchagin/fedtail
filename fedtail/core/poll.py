@@ -426,6 +426,20 @@ class PollMixin:
                     f" ({steps})" if steps and took > slow else "")
             if self._poll_count == 1:  # the window said "getting the lanes…": done now
                 self.emit("first_poll_done", None)
+                if self.cfg["notify"].get("filtered", "remind") == "remind":
+                    self.filtered().add_done_callback(self._filtered_waiting)
+
+    def _filtered_waiting(self, fut):
+        """notify.filtered = "remind": once at start, whether the server holds someone's
+        notifications back — an event every interface says in its own line (Qt alone
+        asked, on a timer of its own: 21.11)."""
+        try:
+            got = fut.result()
+        except Exception as e:  # noqa: BLE001 — a reminder is never worth an error
+            log.debug("filtered at start: %s", e)
+            return
+        if got and got.get("pending"):
+            self.emit("filtered_waiting", int(got["pending"]))
 
     def poll_state(self):
         """Is a round going on, when did the last one come through, how many failed in
@@ -511,8 +525,9 @@ class PollMixin:
                     self._silence_checked = time.monotonic()
                     log.warning("silence: %s", e)
             ann = int(self.cfg["poll"].get("announcements_minutes", 30)) * 60
-            if ann and self.cfg["ui"]["announcements"] != "off" and \
-                    _due(self._announced_at, ann):
+            # 0: once, at the start (the example config's word), never again
+            if self.cfg["ui"]["announcements"] != "off" and \
+                    (_due(self._announced_at, ann) if ann else self._announced_at is None):
                 self._announced_at = time.monotonic()
                 try:
                     self._check_announcements()

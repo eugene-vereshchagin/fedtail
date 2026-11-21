@@ -292,7 +292,7 @@ def _menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("link", _("copy_handle_of", acct="@" + acc.handle),
                         url="fedtail:copyhandle/" + urlquote(acc.handle, safe=""),
                         group="author"))
-    if ctx.lists:
+    if ctx.lists and (ctx.cfg.get("lists") or {}).get("enabled", True):  # lists.enabled
         # a boost has two people: the one who wrote it and the one who boosted it (a
         # relay bot, say) — each by name, so it's clear who goes into the list
         who = [(author, "add_to_list_author")]

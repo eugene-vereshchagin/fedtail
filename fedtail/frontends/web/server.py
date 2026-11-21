@@ -32,6 +32,7 @@ from ...core.view import View
 from ...i18n import _
 from ...model import Account, Share, only_private, real
 from ...model.text import reply_mentions, snippet
+from .. import notifytext
 from ..common import actions, timed
 from ..common.cardtext import context_chars, direct_mark, fold, indent_of, shown_text
 from ..common.commands import Commands
@@ -417,9 +418,11 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
 
 # a profile's buttons (common/profile.py): every one
 WEB_PROFILE_ACTS = ("details", "edit_profile", "follow", "bell", "boosts", "langs",
+                    "home_hide", "watch_replies",
                     "mention", "mute", "block", "remove_follower", "endorse", "lists",
                     "collections", "collect",
-                    "following", "followers", "note", "copy_handle", "open_browser", "translate")
+                    "following", "followers", "note", "alias", "nick_color",
+                    "copy_handle", "open_browser", "translate")
 
 
 def _chosen(body):
@@ -623,11 +626,14 @@ class Web:
         view.on("notify", lambda _n, p: self.notified(p))
         view.on("auth_failed", lambda _n, _p: self.auth_lost())
         view.on("error", lambda _n, p: self.error_said(p))
+        # notify.filtered = "remind": the core asked once at start — a line, as an error's
+        view.on("filtered_waiting", lambda _n, p: self.error_said(
+            _("filtered_waiting", n=p), kind="say"))
         view.on("poll_state", lambda _n, _p: self.poll_changed())
 
     ERROR_AGAIN_S = 600  # the same words said again only after this long
 
-    def error_said(self, text):
+    def error_said(self, text, kind="error"):
         """The core's "error" (a part of a chain not sent, a lane that failed…): to the
         page, a line at its foot — the windows' status bar says it, the page heard
         nothing and the thread seemed sent whole (21.11). The same words once in a while,
@@ -643,7 +649,7 @@ class Web:
         with self.changed:
             self.note_seq += 1
             self.note_log.append((self.note_seq, {"title": "", "body": text, "lane": "",
-                                                  "thread": "", "kind": "error"}))
+                                                  "thread": "", "kind": kind}))
         self.bump()
 
     def _thread_news(self):
@@ -753,11 +759,18 @@ class Web:
                                                       "lane": n.lane, "thread": n.thread}))
         self.bump()
 
-    def notes_since(self, seq):
-        """The notes newer than seq (none for a page that just opened), and the newest."""
+    def notes_since(self, seq, looking_at=None):
+        """The notes newer than seq (none for a page that just opened), and the newest.
+        looking_at: the lane open on a page (or the phone) in front — its notes stay
+        quiet unless notify.when_focused (notifytext.quiet, the windows' rule); the
+        core's errors are always said."""
         with self.changed:
             got = [n for k, n in self.note_log if k > seq] if seq >= 0 else []
-            return got[-5:], self.note_seq
+            last = self.note_seq
+        cfg = self.core.cfg["notify"]
+        got = [n for n in got if n.get("kind") or not notifytext.quiet(
+            cfg, looking_at is not None and n.get("lane") == looking_at)]
+        return got[-5:], last
 
     def sounds_since(self, seq):
         """What the page should play: [{event, kind}] newer than seq ("file" — fetch
@@ -790,10 +803,11 @@ class Web:
         except OSError:
             return None
 
-    def wait_answer(self, since, sound_since, note_since=-1, poll_since=-1):
+    def wait_answer(self, since, sound_since, note_since=-1, poll_since=-1,
+                    looking_at=None):
         v = self.wait(since, poll_since=poll_since)
         sounds, last = self.sounds_since(sound_since)
-        notes, last_note = self.notes_since(note_since)
+        notes, last_note = self.notes_since(note_since, looking_at)
         from ..common import sidebar
         out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes,
                "p": getattr(self, "poll_seq", 0), "status": sidebar.status_words(self.core),
@@ -1515,6 +1529,7 @@ class Web:
         extra = self._profile_extras(acc, own, show) if acc else {}
         pinned = extra.pop("pinned", [])
         top = {e.id for e in pinned}
+        pinned = timed.pinned_shown(pinned, show, acc_id)  # "media": those with pictures
         info = account_json(acc)
         info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
                     header=_pic(acc.header_static) if acc else "",
@@ -1558,7 +1573,7 @@ class Web:
         from urllib.parse import urlparse
         core, cfg = self.core, self.core.cfg["feed"]
         futs = {}
-        if cfg.get("profile_pinned", True) and show != "media":
+        if cfg.get("profile_pinned", True):
             futs["pinned"] = core.pinned(acc.id)
         if cfg.get("profile_featured", True):
             futs["featured"] = core.featured(acc.id)
@@ -2180,7 +2195,7 @@ class Web:
         key = core.draft_key(parent.id if parent else None, quote) if away else None
         if away:  # kept here till it's out: a failure loses nothing typed
             core.save_draft(key, {"text": text, "cw": cw, "visibility": vis,
-                                  **({"language": lang} if lang else {})})
+                                  **({"language": lang} if lang else {})}, keep=True)
         from ..common.compose import fit_media
         given = media
         media = fit_media(media, core.cfg, core.caps, self.uploads_dir())  # too big: smaller
@@ -2571,7 +2586,9 @@ class Handler(BaseHTTPRequestHandler):
                                                      q.get("tab", ""), q.get("cursor", "")),
                   "/api/wait": lambda: self.web.wait_answer(
                       _int(q.get("v"), -1), _int(q.get("s"), -1), _int(q.get("n"), -1),
-                      _int(q.get("p"), -1))}
+                      _int(q.get("p"), -1),
+                      # the lane open while the tab is in front (notifytext.quiet)
+                      q["looking"] if "looking" in q else None)}
         if u.path.startswith("/sound/"):
             data = self.web.sound_file(u.path[len("/sound/"):])
             if data is None:

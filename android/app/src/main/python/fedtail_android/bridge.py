@@ -1128,13 +1128,18 @@ def _theme_fonts(name):
     return got
 
 
-def notes(since):
+def notes(since, looking=""):
     """What to tell the phone's notification shade since the note numbered `since`
     (notifytext's words, by notify.privacy): {"notes": [{title, body, lane, thread}],
-    "n": the newest note's number, "when_focused", "enabled"}."""
+    "errors": [the core's errors, said on the screen, not in the shade], "n": the newest
+    note's number, "enabled"}. looking: the lane open while the app is on screen — its
+    notes stay quiet unless notify.when_focused (notifytext.quiet, every interface's
+    rule; the phone kept quiet about every lane while open)."""
     def go():
         from fedtail.frontends.common import sidebar
-        got, n = _s["web"].notes_since(int(since))
+        got, n = _s["web"].notes_since(int(since), str(looking) or None)
+        errors = [x["body"] for x in got if x.get("kind")]  # an error, a word: on screen
+        got = [x for x in got if not x.get("kind")]
         core = _core()
         cfg = core.cfg["notify"]
         # the number on the launcher's icon (ui.icon_count — the windows' tray number);
@@ -1143,8 +1148,8 @@ def notes(since):
         names = [x["name"] for x in _s["web"].lanes()]
         count = sidebar.icon_total(view, core.cfg, sidebar.counts(view, names)) \
             if core.cfg["ui"].get("icon_count") else 0
-        return {"notes": got, "n": n, "enabled": bool(cfg.get("enabled", True)),
-                "when_focused": bool(cfg.get("when_focused", False)), "count": int(count)}
+        return {"notes": got, "errors": errors, "n": n,
+                "enabled": bool(cfg.get("enabled", True)), "count": int(count)}
     return _answer(go)
 
 

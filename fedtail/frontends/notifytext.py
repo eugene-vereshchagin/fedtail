@@ -90,6 +90,14 @@ def build(items, privacy="full", titles=None, lines=MAX_LINES):
                     for k in kinds]
 
 
+def quiet(cfg, on_screen):
+    """The one rule of every interface: a note about the lane the reader is looking at
+    (the window active, that lane open) is not shown, unless notify.when_focused. The
+    notes about other lanes come all the same — the page kept quiet about every lane
+    while its tab was in front, the phone while the app was (21.11)."""
+    return bool(on_screen) and not cfg.get("when_focused", False)
+
+
 def due(view, items, cfg, on_screen, titles=None):
     """The notes to show now for what the core says came (items: [(lane, a post,
     account or notification)]): none when notify.enabled is off; without the ones about
@@ -102,7 +110,7 @@ def due(view, items, cfg, on_screen, titles=None):
     notes = []
     for note in build(view.model_of(list(items)), cfg["privacy"], titles,
                       cfg.get("max_lines", MAX_LINES)):
-        if not cfg["when_focused"] and on_screen(note.lane):
+        if quiet(cfg, on_screen(note.lane)):
             log.info("notify: %s skipped, that lane is on screen (notify.when_focused)",
                      note.lane)
             continue

@@ -1483,7 +1483,7 @@ class ComposeScreen(Screen):
                 return
             app.show_error(_("send_failed_text", err=err))
         if away:  # post.send_in_background: out of the way at once, the draft kept
-            core.save_draft(self.key, self._snapshot())
+            core.save_draft(self.key, self._snapshot(), keep=True)
             app.notify(_("sent_background"))
             self.dismiss(True)
         app.later(fut, ok=ok, fail=fail)

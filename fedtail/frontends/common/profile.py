@@ -95,7 +95,7 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
         if following and supports("endorse"):
             out.append(Act("endorse", _("unendorse") if rel.endorsed else _("endorse"),
                            _("endorse_tip")))
-        if lists:
+        if lists and (cfg.get("lists") or {}).get("enabled", True):  # lists.enabled
             out.append(Act("lists", _("add_to_list")))
         if collections and supports("collections"):
             out.append(Act("collect", _("collect"), _("collect_tip")))

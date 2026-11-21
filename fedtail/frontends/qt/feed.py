@@ -1048,7 +1048,7 @@ class AccountWidget(_PagedTab):
         """Pinned posts first (marked 📌), then the rest by time."""
         top = {e.id for e in self.pinned}
         rest = self.shown([e for e in self.items if e.id not in top and self._keeps(e)])
-        pinned = self.shown(self.pinned)
+        pinned = self.shown(timed.pinned_shown(self.pinned, self.show, self.acc_id))
         short = self.core.short_ids(pinned + rest)
         parents = self.core.parents(pinned + rest)
         # their own name on their own profile: no link (it led back here, 08.11)

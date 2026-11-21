@@ -755,13 +755,16 @@ class BridgeNotesTest(_Base):
         from tests.fakes import BOB, FakeApi, status
         first = self.call("notes", -1)
         self.assertEqual(first["notes"], [])  # a page that just opened: nothing old
-        self.assertIn("when_focused", first)
+        self.assertEqual(first["errors"], [])  # the core's errors: on the screen
         FakeApi.world.add(status("950", BOB, "100", "ME", minute=59, text="ping from the test"),
                           mention=True)
         got = self.call("background_round", first["n"])
         self.assertTrue(any("ping from the test" in n["body"] for n in got["notes"]), got)
         again = self.call("notes", got["n"])
         self.assertEqual(again["notes"], [])  # said once
+        lane = got["notes"][0]["lane"]  # the app open on that lane: quiet about it
+        self.assertEqual(self.call("notes", first["n"], lane)["notes"], [])
+        self.assertTrue(self.call("notes", first["n"], "home")["notes"])  # not the others
 
     def test_ready_makes_the_core_once(self):
         # the app's own log (diag) stays off here: its file would outlive the test's

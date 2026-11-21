@@ -166,11 +166,15 @@ class AnnouncementsTest(TmpDir):
         core._announced_at = None
         core.poll_once()
         self.assertEqual(heard, [1, 0])
-        core.cfg["poll"]["announcements_minutes"] = 0  # 0: only at the start
-        core._announced_at = None
+        core.cfg["poll"]["announcements_minutes"] = 0  # 0: only at the start —
+        core._announced_at = None                     # asked then (it never was: 21.11)
         w.announcements = [{"id": "a2", "content": "", "published_at": "2026-10-30"}]
         core.poll_once()
-        self.assertEqual(heard, [1, 0])
+        self.assertEqual(heard, [1, 0, 1])
+        w.announcements = []
+        core._announced_at -= 10 ** 6                 # and never again
+        core.poll_once()
+        self.assertEqual(heard, [1, 0, 1])
 
 
 class MessageTimeTest(unittest.TestCase):

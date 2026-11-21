@@ -78,6 +78,13 @@ def keeps(entry, show, acc_id):
     return not p.reply_to or p.reply_to_author == acc_id
 
 
+def pinned_shown(pinned, show, acc_id):
+    """The pinned posts a profile puts on top with show: all of them, but under "media"
+    those with pictures — the windows showed every pinned post there, the page none
+    (21.11): one rule for every interface."""
+    return [e for e in pinned or () if show != "media" or keeps(e, "media", acc_id)]
+
+
 KEEP = -1  # the term as it is (a filter edit's first choice)
 
 
