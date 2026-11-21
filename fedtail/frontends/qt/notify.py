@@ -58,18 +58,15 @@ def icon_path():
 
 
 def use_theme_icon(theme, folder):
-    """Draw the icon in the theme's colours into folder/icon-<theme>.svg."""
+    """Draw the icon in the theme's colours into folder/icon-<theme>.svg (the choice is
+    iconart.app_icon_file's, GTK's too)."""
     global _themed
     from .. import iconart
-    c = iconart.colors(theme.icon, theme.c["accent"].name(), theme.c["hot"].name())
-    path = folder / f"icon-{theme.id}.svg"
-    text = iconart.svg(c)
-    try:
-        if not path.exists() or path.read_text("utf-8") != text:
-            path.write_text(text, "utf-8")
-        _themed = str(path)
-    except OSError as e:
-        log.warning("themed icon: %s", e)
+    got = iconart.app_icon_file({"ui": {"app_icon": "bubble", "themed_icon": True}},
+                                theme.id, theme.icon, theme.c["accent"].name(),
+                                theme.c["hot"].name(), folder)
+    if got.endswith(f"icon-{theme.id}.svg"):
+        _themed = got
     return icon_path()
 
 

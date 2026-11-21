@@ -69,6 +69,7 @@ class Theme:
         self.name = data.get("name") or self.id
         self.font = data["font"]
         self.shape = data["shape"]
+        self.icon = data.get("icon", {})  # the app icon's colours (iconart, ui.themed_icon)
         self.icon_dirs = list(data.get("icon_dirs") or ())  # the theme's own pictures
         self.pictures = data.get("pictures") or {}  # how they're coloured, from where
         self.icon_mode = "desktop"  # where the pictures come from: set by apply()

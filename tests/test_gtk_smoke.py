@@ -2483,6 +2483,51 @@ class GtkAgentTest(_GtkBase):
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkWindowSwitchesTest(_GtkBase):
+    """The window's own switches GTK took none of (21.11): ui.sidebar_footer,
+    ui.sidebar_width, ui.whats_this, ui.app_icon / ui.themed_icon."""
+    UI = {"sidebar_footer": False, "sidebar_width": 330, "whats_this": True,
+          "app_icon": "bubble", "themed_icon": True}
+
+    def test_they_are_taken(self):
+        from fedtail.frontends.gtk import gi_setup
+        self.assertFalse(self.win.footer.get_visible())
+        self.assertTrue(self.win.hints_on)
+        self.assertTrue(gi_setup.HINTS["on"])
+        pump(timeout=0.3)
+        bar = self.win.footer.get_ancestor(Gtk.Paned)
+        self.assertEqual(bar.get_position(), 330)
+        bar.set_position(360)  # dragged: kept for the next start, the config the same
+        self.assertTrue(pump(lambda: (self.view.get_state("sidebar_width") or {})
+                             .get("width") == 360, 3))
+        icon = self.win.app_icon()
+        self.assertTrue(icon.endswith(f"icon-{self.theme.id}.svg"), icon)
+        self.assertIn("<svg", Path(icon).read_text("utf-8"))
+        gi_setup.HINTS["on"] = False
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class AdwaitaMissingTest(unittest.TestCase):
+    def test_said_not_a_trace(self):
+        """ui.adwaita = "on" without libadwaita: a line that says what to install, not a
+        Python traceback (21.11)."""
+        import contextlib
+        import io
+        from types import SimpleNamespace as NS
+        from unittest import mock
+
+        from fedtail.frontends import gtk as front
+        from fedtail.frontends.gtk import gi_setup
+        core = NS(cfg={"ui": {"adwaita": "on", "accessibility": "off"}})
+        err = io.StringIO()
+        with mock.patch.object(gi_setup, "load_adwaita", side_effect=ImportError("Adw")), \
+                contextlib.redirect_stderr(err):
+            self.assertEqual(front.run(core, None, []), 3)
+        self.assertIn("libadwaita", err.getvalue())
+        self.assertIn("ui.adwaita", err.getvalue())
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkBigLaneTest(unittest.TestCase):
     """Thousands of posts in a lane: only a window of them is built, in batches, so the
     main loop never stops for long (the first try froze the desktop for good: 5.6 s for

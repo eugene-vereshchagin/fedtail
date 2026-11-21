@@ -72,15 +72,16 @@ def _pixmap_variant(pixmaps):
     return GLib.Variant.new_array(GLib.VariantType.new("(iiay)"), items)
 
 
-def _pixmaps():
-    """The opossum as the tray wants it: ARGB32, big-endian, at a few sizes."""
+def _pixmaps(path=None):
+    """The app icon as the tray wants it: ARGB32, big-endian, at a few sizes — the
+    opossum, or the bubble (ui.app_icon, ui.themed_icon: iconart.app_icon_file)."""
     from importlib import resources
     out = []
     try:
         import gi
         gi.require_version("GdkPixbuf", "2.0")
         from gi.repository import GdkPixbuf
-        path = str(resources.files("fedtail").joinpath("data/icons/fedtail.png"))
+        path = path or str(resources.files("fedtail").joinpath("data/icons/fedtail.png"))
         for side in (22, 32, 64):
             pb = GdkPixbuf.Pixbuf.new_from_file_at_size(path, side, side)
             if not pb.get_has_alpha():
@@ -102,11 +103,11 @@ def _pixmaps():
 class Tray:
     """One for the window. menu: [(label, fn)] — None for a separator."""
 
-    def __init__(self, bus, activate, menu, title):
+    def __init__(self, bus, activate, menu, title, icon=None):
         self.bus, self.activate, self.menu = bus, activate, menu
         self.title, self.tip, self.attention = title, title, False
         self.revision = 1
-        self.pixmaps = _pixmaps()
+        self.pixmaps = _pixmaps(icon)
         self._pixmap_variant = _pixmap_variant(self.pixmaps)  # made once: see there
         self.name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
         item = Gio.DBusNodeInfo.new_for_xml(ITEM_XML).interfaces[0]
@@ -243,7 +244,8 @@ def make(win, done):
 
     def build(bus):
         try:
-            return Tray(bus, win.toggle_from_tray, menu, win.get_title() or "fedtail")
+            return Tray(bus, win.toggle_from_tray, menu, win.get_title() or "fedtail",
+                        win.app_icon())
         except GLib.Error as e:
             log.warning("tray: %s", e.message)
             return None

@@ -81,3 +81,29 @@ def _terminal(c):
   <rect x="124" y="128" width="54" height="14" fill="{c['accent']}"/>
 </svg>
 """
+
+
+def app_icon_file(cfg, theme_id, icon_section, accent, hot, folder):
+    """The picture of the window, the tray and the notifications, by ui.app_icon and
+    ui.themed_icon — one choice for every window (GTK kept the opossum whatever they
+    said, 21.11): the opossum's PNG; the bubble's SVG; or the bubble in the theme's
+    colours, written to folder/icon-<theme>.svg (accent, hot: "#rrggbb")."""
+    import logging
+    from importlib import resources
+    from pathlib import Path
+    ui = cfg.get("ui") or {}
+    icons = resources.files("fedtail").joinpath("data/icons")
+    if ui.get("app_icon", "possum") != "bubble":
+        return str(icons.joinpath("fedtail.png"))
+    plain = str(icons.joinpath("fedtail.svg"))
+    if not ui.get("themed_icon", True) or folder is None:
+        return plain
+    path = Path(folder) / f"icon-{theme_id}.svg"
+    text = svg(colors(icon_section, accent, hot))
+    try:
+        if not path.exists() or path.read_text("utf-8") != text:
+            path.write_text(text, "utf-8")
+        return str(path)
+    except OSError as e:
+        logging.getLogger("fedtail.iconart").warning("themed icon: %s", e)
+        return plain

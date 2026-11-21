@@ -46,6 +46,14 @@ class Notifier:
         self.show(notifytext.Note("fedtail", _("notify_test_body"), "home"))
         return self.backend
 
+    def _icon(self):
+        fn = getattr(self.win, "app_icon", None)
+        if fn is None:
+            return None
+        if not hasattr(self, "_icon_path"):
+            self._icon_path = fn()
+        return self._icon_path
+
     def on_screen(self, lane):
         return self.win.is_active() and self.win.lane_on_screen(lane)
 
@@ -55,6 +63,9 @@ class Notifier:
         if self.backend == "gio":
             n = Gio.Notification.new(note.title)
             n.set_body(note.body)
+            icon = self._icon()
+            if icon:  # ui.app_icon / ui.themed_icon, as Qt's notifications
+                n.set_icon(Gio.FileIcon.new(Gio.File.new_for_path(icon)))
             # the C names end in _value; PyGObject knows them by their rename-to
             default = getattr(n, "set_default_action_and_target_value", None) or \
                 n.set_default_action_and_target
@@ -64,8 +75,9 @@ class Notifier:
             button(_("open_action"), f"app.{ACTION}", GLib.Variant("s", target))
             self.app.send_notification(None, n)
         elif self.backend == "notify-send":
-            argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=FedTail"],
-                                           note)
+            icon = self._icon()
+            argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=FedTail"]
+                                           + ([f"--icon={icon}"] if icon else []), note)
             def run():
                 try:
                     r = subprocess.run(argv, capture_output=True, timeout=30)

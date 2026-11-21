@@ -1002,7 +1002,11 @@ class Card(Gtk.Box):
                            lists=True,
                            translate=bool(getattr(c.view.caps, "translation", False)),
                            translates=getattr(c.view, "translation_languages", None),
-                           quote_reply=self._can_quote())
+                           quote_reply=self._can_quote(),
+                           # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as),
+                           # as Qt's and the page's — GTK had no such item (21.11)
+                           act_as=(lambda e: c.view.act_accounts(e))
+                           if _merged(c.view) and c.cfg["ui"].get("act_as", True) else None)
 
     def _fill_actions(self):
         if not hasattr(self, "actions"):
@@ -1080,6 +1084,10 @@ class Card(Gtk.Box):
             if it.kind == "separator":
                 box.append(Gtk.Separator())
                 continue
+            if it.kind == "act_as":  # a submenu of its own: whom, and what
+                it = actions.Item("submenu", it.label, data=[
+                    actions.Item("act_one", label, data=(e, tag, act))
+                    for label, e, tag, act in it.data])
             if it.kind == "submenu":
                 b = Gtk.Button(label=it.label + "  ›")
                 b.add_css_class("flat")
@@ -1099,8 +1107,8 @@ class Card(Gtk.Box):
                 box.append(b)
                 continue
             if it.kind not in ("link", "open", "copy", "long_form", "translate", "lists",
-                               "quote_reply"):
-                continue  # as another account: not in GTK yet
+                               "quote_reply", "act_one"):
+                continue
             b = Gtk.Button(label=it.label)
             b.add_css_class("flat")
             b.get_child().set_xalign(0)
@@ -1127,6 +1135,8 @@ class Card(Gtk.Box):
                 without_quote_fallback(self.post.text)), whole=not sel)
         elif it.kind == "long_form":
             self.ctx.win.read_whole(it.data)
+        elif it.kind == "act_one":  # ★ ♻ ↩ from another account (ui.act_as)
+            self.ctx.win.act_as(*it.data)
         elif it.kind == "link":
             self.ctx.on_link(it.url)
         elif it.kind == "open":
@@ -1254,3 +1264,9 @@ def _around_focus(texture, focus):
         return Gdk.Texture.new_for_pixbuf(part)
     except Exception:  # noqa: BLE001 — a picture never worth an error: as it is
         return texture
+
+
+def _merged(view):
+    """All accounts in one window: the merged core behind the view (act_as, others)."""
+    inner = getattr(view, "_core", view)
+    return hasattr(inner, "act_as") and bool(getattr(inner, "others", None))

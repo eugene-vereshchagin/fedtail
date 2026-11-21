@@ -53,7 +53,16 @@ def run(core, instance, argv):
         print(f"fedtail: the GTK interface needs GTK {need[0]}.{need[1]} or newer "
               f"(have {'.'.join(map(str, have))})", file=sys.stderr)
         return 3
-    Adw = gi_setup.load_adwaita(core.cfg["ui"].get("adwaita", "auto"))
+    try:
+        Adw = gi_setup.load_adwaita(core.cfg["ui"].get("adwaita", "auto"))
+    except (ImportError, ValueError):  # ui.adwaita = "on" without it: said, not a trace
+        from ... import deps
+        need = [n for n in deps.NEEDS if n.key == "libadwaita"]
+        line = deps.install_line(need)
+        print("fedtail: ui.adwaita = \"on\", but libadwaita isn't installed"
+              + (f" — {line}" if line else "") + "; or set ui.adwaita = \"auto\"",
+              file=sys.stderr)
+        return 3
     from ...core.view import View
     from ...desktop import desktop_id
     from . import theme as themes

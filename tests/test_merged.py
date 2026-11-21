@@ -511,6 +511,28 @@ class MergedRoutingTest(TmpDir):
         alone = Web(View(self.p), None)
         self.assertFalse([i for i in alone.post_menu("010")["items"] if i["kind"] == "act_as"])
 
+    def test_gtk_offers_act_as_too(self):
+        """GTK's ⋯ menu had no "From another account" (21.11): its card asks the same
+        common/actions with the merged view's accounts, as Qt and the page do."""
+        try:
+            from fedtail.frontends.gtk import card as cards
+        except (ImportError, ValueError):
+            self.skipTest("no GTK 4 here")
+        from types import SimpleNamespace as NS
+
+        from fedtail.core.view import View
+        from fedtail.frontends.common import actions
+        view = View(self.m)
+        self.assertTrue(cards._merged(view))
+        self.assertFalse(cards._merged(View(self.p)))
+        ctx = NS(cfg=self.m.cfg, me_id="ME", supports=lambda _w: True, subscribed=None,
+                 thread_quiet=None, in_thread=False, view=view)
+        actx = cards.Card._actx(NS(ctx=ctx, _can_quote=lambda: False))
+        post = view.by_id("work~500")
+        acts = [i for i in actions.menu(post, actx) if i.kind == "act_as"]
+        self.assertEqual(len(acts), 1)
+        self.assertEqual({a for _l, _e, _t, a in acts[0].data}, {"fav", "boost", "reply"})
+
     def test_web_reply_starts_from_the_account_that_got_it(self):
         """The editor's "From" of a reply (the page's, the phone's): the account the post
         came by; a new post — the main one; one account alone — nothing to choose."""

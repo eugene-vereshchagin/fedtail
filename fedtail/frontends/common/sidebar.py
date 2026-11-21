@@ -280,3 +280,20 @@ def strip(view, cfg, names, unread):
             and (unread.get(n) or 0) > 0]
     return ([{"name": n, "icon": picture(n), "main": True} for n in main] +
             [{"name": n, "icon": picture(n), "main": False} for n in rest])
+
+
+def width(view, cfg):
+    """The sidebar's width: ui.sidebar_width, or the width it was dragged to while the
+    config said the same (the windows remember it; GTK stood at 272 whatever it said)."""
+    want = max(180, int((cfg.get("ui") or {}).get("sidebar_width", 272) or 272))
+    got = view.get_state("sidebar_width")
+    if isinstance(got, dict) and got.get("cfg") == want and isinstance(got.get("width"), int):
+        return got["width"]
+    return want
+
+
+def width_dragged(view, cfg, px):
+    """The sidebar's edge dragged to px: kept for the next start, while ui.sidebar_width
+    stays what it is."""
+    want = max(180, int((cfg.get("ui") or {}).get("sidebar_width", 272) or 272))
+    view.set_state("sidebar_width", {"cfg": want, "width": int(px)})

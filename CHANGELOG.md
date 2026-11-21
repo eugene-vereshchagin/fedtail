@@ -133,6 +133,12 @@
   `feed.link_cards = "full"`.
 * GTK takes `ui.font_size` and `ui.mono_font`; the web page `ui.fonts`, `ui.font`,
   `ui.mono_font` and `ui.font_size` (it took the theme's family whatever they said).
+* GTK takes the window's own switches as Qt does: `ui.whats_this` from the start,
+  `ui.sidebar_footer`, `ui.sidebar_width` (and the width its edge is dragged to),
+  `ui.app_icon` / `ui.themed_icon` for the tray and the notifications; its post menu
+  has "From another account" with all accounts in one window (`ui.act_as`).
+* GTK with `ui.adwaita = "on"` and no libadwaita says what to install instead of
+  failing with a traceback.
 
 ## 0.23.7 — 2026-11-20
 

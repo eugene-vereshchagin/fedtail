@@ -784,17 +784,14 @@ class MainWindow(QMainWindow):
         return QIcon(pm)
 
     def _sidebar_width(self):
-        """ui.sidebar_width, or the width dragged to while the config said the same."""
-        want = self.cfg["ui"]["sidebar_width"]
-        got = self.core.get_state("sidebar_width")
-        if isinstance(got, dict) and got.get("cfg") == want and isinstance(got.get("width"), int):
-            return got["width"]
-        return want
+        """ui.sidebar_width, or the width dragged to (common/sidebar.width)."""
+        from ..common import sidebar as sb
+        return sb.width(self.core, self.cfg)
 
     def _sidebar_moved(self):
+        from ..common import sidebar as sb
         width = self.split.sizes()[0]
-        self.core.set_state("sidebar_width", {"cfg": self.cfg["ui"]["sidebar_width"],
-                                              "width": width})
+        sb.width_dragged(self.core, self.cfg, width)
         log.info("sidebar width %d", width)
 
     def _slow_text(self):

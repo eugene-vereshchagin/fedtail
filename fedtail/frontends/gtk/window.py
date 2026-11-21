@@ -234,7 +234,10 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.extra_tabs = {}     # key -> page: people, trends, search, a tag
         self.columns = None      # lanes side by side (❯), or None
-        self.hints_on = False    # ≡ → What's this?
+        self.hints_on = False    # ≡ → What's this? (ui.whats_this: on from the start)
+        if self.cfg["ui"].get("whats_this", False):  # GTK started it off whatever it said
+            from . import gi_setup
+            self.hints_on = gi_setup.HINTS["on"] = True
         if self.view.get_state("full_width"):  # ↔ as left last time
             self._column_width = self.cfg["ui"]["max_width"] or 760
             self.cfg["ui"]["max_width"] = 0
@@ -288,6 +291,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.footer.add_controller(foot_click)
         tip(self.footer, _("about"))
         side.append(self.footer)
+        self.footer.set_visible(bool(self.cfg["ui"].get("sidebar_footer", True)))
 
         self.stack = Gtk.Stack()
         self.curtain = self._build_curtain()  # every lane closed (Esc), as Qt's
@@ -320,8 +324,10 @@ class MainWindow(Gtk.ApplicationWindow):
         bar = self.read_write if self.split_mode else paned
         bar.set_resize_start_child(False)
         bar.set_shrink_start_child(False)
-        bar.set_position(272)
-
+        # ui.sidebar_width, or where its edge was dragged to (common/sidebar.width, as
+        # Qt's): GTK stood at 272 whatever it said
+        bar.set_position(sidebar.width(self.view, self.cfg))
+        bar.connect("notify::position", lambda b, _p: self._sidebar_dragged(b))
         # the status bar: whose this window is at the left, what happens, and in the
         # debugging mode how the window is drawn at the right
         self.status_line = Gtk.Label(xalign=0, hexpand=True)
@@ -1170,6 +1176,48 @@ class MainWindow(Gtk.ApplicationWindow):
         """"Report a bug on GitHub…" (gtk/issue.py), as Qt's."""
         from .issue import IssueWindow
         IssueWindow(self).present()
+
+    def app_icon(self):
+        """The tray's and the notifications' picture: ui.app_icon / ui.themed_icon, the
+        same choice as Qt's (iconart.app_icon_file) — GTK kept the opossum (21.11)."""
+        from .. import iconart
+        c = self.theme.c
+        hexof = (lambda x: x.name() if hasattr(x, "name") else str(x))
+        try:
+            return iconart.app_icon_file(self.cfg, self.theme.id, self.theme.icon,
+                                         hexof(c["accent"]), hexof(c["hot"]),
+                                         self.view.paths.cache_dir)
+        except Exception:  # noqa: BLE001 — a picture never stops the window
+            log.exception("app icon")
+            return None
+
+    def act_as(self, post, tag, action):
+        """★ / ♻ / ↩ from another account of the window (all in one): the post found on
+        its server, the action done there; a reply opens the editor on it (Qt's)."""
+        self.status(_("act_as_wait"), seconds=4)
+        v = self.view
+
+        def done(got):
+            if action == "reply":
+                if got is not None:
+                    self.compose(got)
+                return
+            via = v.via(got) if got is not None else ""
+            self.status(_("act_as_done", acct=via or "@" + (v.me.handle if v.me else "")),
+                        seconds=5)
+        self.call(v.act_as(post, tag, "find" if action == "reply" else action), done)
+
+    def _sidebar_dragged(self, bar):
+        """The sidebar's edge dragged: kept a moment after it stops (common/sidebar)."""
+        if getattr(self, "_side_timer", 0):
+            GLib.source_remove(self._side_timer)
+
+        def save():
+            self._side_timer = 0
+            if bar.get_position() > 0:
+                sidebar.width_dragged(self.view, self.cfg, bar.get_position())
+            return False
+        self._side_timer = GLib.timeout_add(600, save)
 
     def set_hints(self, on):
         from . import gi_setup

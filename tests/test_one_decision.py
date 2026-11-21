@@ -128,5 +128,25 @@ class LinkCardTest(unittest.TestCase):
                                     cfg))  # no title, no picture: nothing to draw
 
 
+class AppIconTest(unittest.TestCase):
+    def test_one_choice_for_both_windows(self):
+        """ui.app_icon / ui.themed_icon: the file is iconart's choice, Qt's and GTK's."""
+        import tempfile
+
+        from fedtail.frontends import iconart
+        with tempfile.TemporaryDirectory() as d:
+            got = iconart.app_icon_file({"ui": {"app_icon": "possum"}}, "night", {},
+                                        "#336699", "#ff6600", d)
+            self.assertTrue(got.endswith("fedtail.png"))
+            got = iconart.app_icon_file({"ui": {"app_icon": "bubble", "themed_icon": False}},
+                                        "night", {}, "#336699", "#ff6600", d)
+            self.assertTrue(got.endswith("fedtail.svg"))
+            got = iconart.app_icon_file({"ui": {"app_icon": "bubble", "themed_icon": True}},
+                                        "night", {}, "#336699", "#ff6600", d)
+            self.assertTrue(got.endswith("icon-night.svg"))
+            from pathlib import Path
+            self.assertIn("<svg", Path(got).read_text("utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
