@@ -116,9 +116,9 @@ class FlowTest {
             compose.waitUntil(ms) { ok() }
         } catch (e: ComposeTimeoutException) {
             val screen = try {
-                compose.onAllNodes(isRoot()).fetchSemanticsNodes().joinToString("\n---\n") {
-                    it.printTree()
-                }
+                // unmerged: a card's words merged into its node said only "К" (21.11)
+                compose.onAllNodes(isRoot(), useUnmergedTree = true).fetchSemanticsNodes()
+                    .joinToString("\n---\n") { it.printTree() }
             } catch (x: Throwable) {
                 "(no screen: $x)"
             }
