@@ -467,12 +467,14 @@ class FakeApi:
         reply_acc = self.w.statuses[in_reply_to_id]["account"]["id"] if in_reply_to_id else None
         st = status(str(self.w.seq), ME, in_reply_to_id, reply_acc, minute=59, vis=visibility,
                     text=text)
+        st["mentions"] = [{"id": a["id"], "acct": a["acct"]} for a in (BOB, NEWS)
+                          if f"@{a['acct'].split('@')[0]}" in text]  # as a server finds them
         self.w.posted.append((text, visibility, in_reply_to_id, markdown))
         self.w.add(st, home=True)
         return st
 
     def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False,
-                    media_attributes=None):
+                    media_attributes=None, sensitive=None, poll=None):
         old = self.w.statuses[sid]
         attrs = {m["id"]: m for m in media_attributes or ()}
         self.w.history.setdefault(sid, []).append(old)

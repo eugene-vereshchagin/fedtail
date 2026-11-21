@@ -33,6 +33,13 @@ def _iso_ago(seconds):
 PARENTS_FIRST = 20  # parents fetched before the rules sort a round's replies
 
 
+def _join(fresh, more):
+    """A source's new ids, then those of `more` not among them."""
+    fresh = list(fresh or ())
+    seen = set(fresh)
+    return fresh + [i for i in more or () if i not in seen]
+
+
 class Offline(Exception):
     """The account's own server out of reach at all — no network, its name not resolved,
     the connection refused: the round stops at the first such answer instead of asking
@@ -485,7 +492,12 @@ class PollMixin:
         with self._poll_lock:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
-            new_by_source = {}
+            # what a round cut short (out of reach, the token refused) had stored but not
+            # yet sorted into lanes nor told: this one takes it up — stored, a source's
+            # catch_up never brings it again (a free lane missed it for good, 21.11)
+            new_by_source = {k: list(v) for k, v in (self._unrouted or {}).items()
+                             if k in self.sources or k == "subs"}
+            self._unrouted = new_by_source
             browse_changed = set()  # browse sources that turned empty or stopped being so
             every = self.cfg["lists"]["refresh_minutes"] * 60
             self._step("start")
@@ -530,9 +542,9 @@ class PollMixin:
             if self._follows_threads() or self._needs_threads():
                 try:
                     sc = self.cfg["subs"]
-                    new_by_source["subs"] = subs.check(
+                    new_by_source["subs"] = _join(subs.check(
                         self.store, self.api, self.me["id"], sc["interval_minutes"],
-                        sc["active_days"], sc["max_threads"])
+                        sc["active_days"], sc["max_threads"]), new_by_source.get("subs"))
                 except Exception as e:
                     self._round_error("subs", e)
                 self._step("subs")
@@ -572,8 +584,9 @@ class PollMixin:
                         continue
                     try:
                         keep = int(self.cfg["lanes"].get("browse_keep", 200))
-                        new_by_source[name] = sources.refresh_top(
-                            self.store, self.sources[name], fc["page_size"], keep)
+                        new_by_source[name] = _join(sources.refresh_top(
+                            self.store, self.sources[name], fc["page_size"], keep),
+                            new_by_source.get(name))
                         # the newest `keep`, and what "Older" brought into an open lane
                         shown = max((self._limits.get(x.name, 0) for x in self.lanes
                                      if x.source == name), default=0)
@@ -593,8 +606,9 @@ class PollMixin:
                         browse_changed.add(name)
                     continue
                 try:
-                    new_by_source[name] = sources.catch_up(
-                        self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
+                    new_by_source[name] = _join(sources.catch_up(
+                        self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"]),
+                        new_by_source.get(name))
                     if not first_run and self._late_due(name):
                         late = sources.late_arrivals(
                             self.store, self.sources[name], fc["page_size"],
@@ -602,7 +616,7 @@ class PollMixin:
                         if late:
                             log.info("%s: %d came late (numbered back among the fetched)",
                                      name, len(late))
-                            new_by_source[name] += late
+                            new_by_source[name] = _join(new_by_source[name], late)
                     self._step(name)
                     self.store.prune(name, self.keep_per_lane())
                     self._step("prune")
@@ -728,6 +742,7 @@ class PollMixin:
                 self._step("notify")
                 self._sync_markers()
                 self._step("markers")
+            self._unrouted = None  # sorted and told: nothing left for the next round
             self._fetch_parents(new_statuses)
             self._step("parents")
             if _due(self._gc_done, max(1, self.cfg["storage"]["gc_hours"]) * 3600):

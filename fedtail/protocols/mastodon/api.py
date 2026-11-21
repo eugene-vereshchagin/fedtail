@@ -9,6 +9,7 @@ import os
 import re
 import threading
 import time
+from datetime import UTC
 from urllib.parse import quote, urlencode, urlsplit
 
 import requests
@@ -210,6 +211,18 @@ def _retry_after(headers):
         return 60.0
 
 
+def _left_s(expires_at, least=300):
+    """A poll's time left, in seconds, for an edit that sends it again (the server sets
+    its end anew from it); at least `least` — Mastodon's shortest poll."""
+    from datetime import datetime
+    try:
+        end = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+        left = (end - datetime.now(UTC)).total_seconds()
+    except (TypeError, ValueError):
+        return 86400  # no end known: a day, as the editor's default
+    return max(least, int(left))
+
+
 def seg(value):
     """An id as one segment of an API path: whatever it holds ("1/../../statuses/2/
     reblog", "?x", "#") can't become another path. Server ids (digits, ULIDs) pass as
@@ -332,11 +345,21 @@ class Api:
         log.log(level, "%s %s %s -> %s %.2f s %d B", method, path, shown,
                 r.status_code, took, len(r.content or b""))
         self._last.headers = r.headers
-        self._note_budget(r.headers)
+        # the budget of reading: a write's headers say its own throttle (Mastodon's
+        # uploads: 30 per half an hour) — taken for the server's, the 30th picture
+        # stopped every request, the lanes too, for up to half an hour (21.11)
+        general = method == "GET"
+        if general:
+            self._note_budget(r.headers)
         if r.status_code == 429:
-            until = self.budget.reset if self.budget.reset > time.time() else \
-                time.time() + _retry_after(r.headers)
-            self.budget = Budget(self.budget.limit, 0, until)
+            if general:
+                until = self.budget.reset if self.budget.reset > time.time() else \
+                    time.time() + _retry_after(r.headers)
+                self.budget = Budget(self.budget.limit, 0, until)
+            else:  # this kind of write waits; the rest goes on
+                reset = r.headers.get("X-RateLimit-Reset")
+                until = max(_when_reset(reset) if reset else 0,
+                            time.time() + (0 if reset else _retry_after(r.headers)))
             raise RateLimited(error_text(r), until)
         if r.status_code >= 400:
             raise ApiError(r.status_code, error_text(r))
@@ -450,7 +473,9 @@ class Api:
             # an empty list clears it: a form sends nothing for an empty array
             data["attribution_domains[]"] = list(attribution_domains) or [""]
         if fields is not None:
-            for i, (name, value) in enumerate(fields):
+            # none: one empty pair clears them (a form sends nothing for no fields, and
+            # the server kept the old ones — "saved", and nothing changed: 21.11)
+            for i, (name, value) in enumerate(fields or [("", "")]):
                 data[f"fields_attributes[{i}][name]"] = name
                 data[f"fields_attributes[{i}][value]"] = value
         files, opened = {}, []
@@ -970,10 +995,19 @@ class Api:
             return self._req("PUT", f"/api/v1/media/{seg(media_id)}", data=data, files=files)
 
     def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False,
-                    media_attributes=None):
+                    media_attributes=None, sensitive=None, poll=None):
         """Change my post. Media ids must be passed again, or they go away;
-        media_attributes: [{id, description, focus "x,y"}] — their words and focus anew."""
+        media_attributes: [{id, description, focus "x,y"}] — their words and focus anew.
+        sensitive, poll (the post's own: {options: [{title}], multiple, expires_at}) as
+        they were: Mastodon takes what isn't sent for "none" — pictures shown, the poll
+        and its votes gone (21.11)."""
         body = {"status": text, "spoiler_text": spoiler_text, "media_ids": list(media_ids)}
+        if sensitive is not None:
+            body["sensitive"] = bool(sensitive)
+        if poll and poll.get("options"):
+            body["poll"] = {"options": [o.get("title", "") for o in poll["options"]],
+                            "multiple": bool(poll.get("multiple")),
+                            "expires_in": _left_s(poll.get("expires_at"))}
         if media_attributes:
             body["media_attributes"] = [dict(m) for m in media_attributes]
         if markdown:

@@ -1258,6 +1258,15 @@ class CoreTest(TmpDir):
         self.assertEqual([m["id"] for m in st["media_attachments"]], ["m9"])  # kept
         self.assertTrue(st.get("edited_at"))
         self.assertEqual(len(core.history(mine).result()), 2)
+        # what the editor doesn't touch goes as it was: Mastodon takes "not sent" for
+        # "none" — sensitive pictures shown, the poll gone (21.11)
+        mine["sensitive"] = True
+        mine["poll"] = {"options": [{"title": "да"}, {"title": "нет"}], "multiple": False}
+        with mock.patch.object(FakeApi, "edit_status", autospec=True,
+                               side_effect=FakeApi.edit_status) as ed:
+            core.edit(mine, "ещё раз", "").result()
+        self.assertTrue(ed.call_args.kwargs["sensitive"])
+        self.assertEqual(ed.call_args.kwargs["poll"], mine["poll"])
 
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
@@ -2630,6 +2639,56 @@ class CoreTest(TmpDir):
         core.post("совсем другое", "private").result()
         self.assertEqual(w.send_keys[-1], w.send_keys[-2])
         self.assertTrue(w.send_keys[-1].startswith("fedtail-"))
+
+    def test_a_chain_part_lost_on_the_way_is_no_failed_send(self):
+        """Part 2 of a chain: no network. The first part is out — the send isn't "failed"
+        (sent again, the parts went out twice): the chain ends there and says so."""
+        import requests
+        core, w = self.make()
+        core.connect().result()
+        real = FakeApi.post_status
+        calls = []
+
+        def flaky(api, text, *a, **k):
+            calls.append(text)
+            if len(calls) == 2:
+                raise requests.ConnectionError("gone")
+            return real(api, text, *a, **k)
+        with mock.patch.object(FakeApi, "post_status", flaky):
+            st = core.post("раз\n---\nдва\n---\nтри", "unlisted").result()
+        self.assertEqual(st["chain"], 1)
+        self.assertEqual([x[0] for x in w.posted], ["раз"])
+        self.assertTrue(any(n == "error" and "1 / 3" in str(pl) for n, pl in self.events))
+
+    def test_a_direct_chain_names_its_people_in_every_part(self):
+        """A direct chain: parts 2+ name whom the first did — naming nobody, only I saw
+        them (21.11)."""
+        core, w = self.make()
+        core.connect().result()
+        core.post("@bob привет\n---\nещё\n---\n@bob и ещё", "direct").result()
+        self.assertEqual([x[0] for x in w.posted],
+                         ["@bob привет", "@bob@social.example ещё", "@bob и ещё"])
+        core.post("всем\n---\nдальше", "unlisted").result()  # public: as written
+        self.assertEqual(w.posted[-1][0], "дальше")
+
+    def test_a_post_made_anew_gets_a_key_of_its_own(self):
+        """The Idempotency-Key: another picture — another post; a post deleted (a
+        redraft) — the same words sent again are a new post, not the deleted one."""
+        core, w = self.make()
+        core.connect().result()
+        pic = self.tmp / "a.png"
+        pic.write_bytes(b"\x89PNG" + b"0" * 10)
+        core.post("смотри", "private", media=[(str(pic), "")]).result()
+        core.post("смотри", "private", media=[(str(pic), "кот")]).result()
+        self.assertNotEqual(w.send_keys[-1], w.send_keys[-2])
+        st = core.post("слово", "private").result()
+        first = w.send_keys[-1]
+        core.redraft(st).result()
+        core.post("слово", "private").result()
+        self.assertNotEqual(w.send_keys[-1], first)
+        again = w.send_keys[-1]
+        core.post("слово", "private").result()  # a retry of that one: its key
+        self.assertEqual(w.send_keys[-1], again)
 
     def test_post_language(self):
         core, w = self.make(post={"language": "ka"})

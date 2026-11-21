@@ -130,6 +130,21 @@ class PlumbingTest(unittest.TestCase):
             a.get("/p")
         self.assertEqual(len(s.calls), 1)
 
+    def test_a_writes_throttle_stops_only_writes(self):
+        """Mastodon's headers on a write say that write's own throttle (uploads: 30 per
+        half an hour): the 30th picture stopped every request, reading too (21.11)."""
+        reset = time.time() + 1200
+        spent = {"X-RateLimit-Limit": "30", "X-RateLimit-Remaining": "0",
+                 "X-RateLimit-Reset": str(reset)}
+        a, _s = make(Resp(body={"id": "M"}, headers=spent),
+                     Resp(429, {"error": "Too many requests"}, headers=spent))
+        a.post("/api/v2/media")
+        self.assertFalse(a.budget.spent())
+        with self.assertRaises(RateLimited) as e:
+            a.post("/api/v2/media")
+        self.assertAlmostEqual(e.exception.until, reset, delta=1)
+        self.assertFalse(a.budget.spent())  # the lanes are read all the same
+
     def test_429_without_headers_waits_retry_after(self):
         a, _s = make(Resp(429, {}, headers={"Retry-After": "30"}))
         with self.assertRaises(RateLimited) as e:
@@ -371,6 +386,14 @@ CALLS = [
     (lambda a: a.edit_status("5", "new", "cw", ["m"], True), "PUT", "/api/v1/statuses/5",
      {"json": {"status": "new", "spoiler_text": "cw", "media_ids": ["m"],
                "content_type": "text/markdown"}}),
+    (lambda a: a.edit_status("5", "t", sensitive=True, poll={
+        "options": [{"title": "a"}, {"title": "b"}], "multiple": True,
+        "expires_at": "2000-01-01T00:00:00Z"}), "PUT", "/api/v1/statuses/5",
+     {"json": {"sensitive": True, "poll": {"options": ["a", "b"], "multiple": True,
+                                           "expires_in": 300}}}),
+    (lambda a: a.update_credentials(fields=[]), "PATCH",
+     "/api/v1/accounts/update_credentials",
+     {"data": {"fields_attributes[0][name]": "", "fields_attributes[0][value]": ""}}),
     (lambda a: a.status_source("5"), "GET", "/api/v1/statuses/5/source", {}),
     (lambda a: a.status_history("5"), "GET", "/api/v1/statuses/5/history", {}),
     (lambda a: a.delete_status("5"), "DELETE", "/api/v1/statuses/5", {}),

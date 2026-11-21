@@ -410,7 +410,7 @@ def route(store, customs, new_by_source, world):
         if source not in wanted or not ids:
             continue
         idset = set(ids)
-        rows = [st for item_id, st in store.items(source, len(idset) + 50) if item_id in idset]
+        rows = [st for _item_id, st in store.items_by_id(source, idset)]
         for c in customs:
             if source not in c.feeds:
                 continue
@@ -440,7 +440,7 @@ def unsorted(store, lanes_now, new_by_source, ctx, taken):
             continue
         idset = set(ids)
         own = [x for x in lanes_now if x.source == source and not x.feeds]
-        rows = [st for item_id, st in store.items(source, len(idset) + 50) if item_id in idset]
+        rows = [st for _item_id, st in store.items_by_id(source, idset)]
         # held by another lane already: a lane of several sources, a list, a tag lane…
         others = {x.source for x in lanes_now if x.source and x.source != source}
         held = store.held_by(PREFIX, [st["id"] for st in rows]) | \

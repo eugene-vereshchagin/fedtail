@@ -1035,6 +1035,21 @@ class Store:
                 (source, limit)).fetchall()
         return [(r[0], self._parse(r[2], r[1])) for r in reversed(rows)]
 
+    def items_by_id(self, source, item_ids):
+        """These items of a source, wherever in it they sit, oldest → newest (as items).
+        The newest "how many + 50" missed a post that came late deep in a busy lane."""
+        ids = list(dict.fromkeys(item_ids))
+        rows = []
+        with self._reading() as db:
+            for i in range(0, len(ids), 500):  # SQLite's limit of parameters
+                part = ids[i:i + 500]
+                rows += db.execute(
+                    "SELECT i.item_id, s.data, s.id, i.sort FROM items i JOIN statuses s "
+                    f"ON s.id = i.status_id WHERE i.source=? AND i.item_id IN "
+                    f"({','.join('?' * len(part))})", (source, *part)).fetchall()
+        rows.sort(key=lambda r: r[3])
+        return [(r[0], self._parse(r[2], r[1])) for r in rows]
+
     def prune(self, source, keep):
         with self._tx() as db:
             cur = db.execute(

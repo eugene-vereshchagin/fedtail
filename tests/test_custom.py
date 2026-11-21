@@ -160,6 +160,59 @@ class CoreFreeLaneTest(FreeBase):
         self.assertEqual(self.ids(core, "botz"), ["007", "008"])
         self.assertEqual(self.ids(core), ["005", "009"])
 
+    def test_a_round_cut_short_hands_its_posts_on(self):
+        """A source stored its new posts, the next one failed (the network gone): the
+        round stopped before sorting them; the next round sorts them still (21.11: the
+        free lane never got them — stored, no source brought them again)."""
+        import requests
+        core, w = self.make([{"name": "botz", "source": ["home", "mentions"],
+                              "any": [{"author": "bot"}]}])
+        core.connect().result()
+        core.poll_once()
+        w.add(status("007", NEWS, minute=7), home=True)
+        src = core.sources["mentions"]
+        real = src.fetch
+
+        def down(*_a, **_k):
+            raise requests.ConnectionError("gone")
+        src.fetch = down
+        from fedtail.core.poll import Offline
+        with self.assertRaises(Offline):
+            core.poll_once()
+        self.assertIsNotNone(core.store.get_status("007"))  # stored already
+        src.fetch = real
+        self.events.clear()
+        core.poll_once()
+        self.assertEqual(self.ids(core, "botz"), ["007"])
+        self.assertTrue(any(n == "lanes_updated" and pl.get("botz") for n, pl in self.events))
+        self.events.clear()
+        core.poll_once()  # handed on once, not every round
+        self.assertFalse(any(n == "lanes_updated" and pl.get("botz") for n, pl in self.events))
+
+    def test_a_late_post_deep_in_a_busy_lane_is_sorted(self):
+        """A post come late sits far below the newest: it's sorted all the same (the
+        newest "how many + 50" missed it)."""
+        core, w = self.make([{"name": "botz", "source": ["home", "mentions"],
+                              "any": [{"author": "bot"}]}])
+        core.cfg["feed"]["page_size"] = 40
+
+        def post(n, who=BOB):
+            st = status(str(10000 + n), who)
+            st["created_at"] = f"2099-10-14T{10 + n // 60:02d}:{n % 60:02d}:00.000Z"
+            w.add(st, home=True)
+        core.connect().result()
+        for batch in range(5):  # Home fills up round by round, as it does
+            for n in range(batch * 80, batch * 80 + 80, 2):
+                post(n)
+            core.poll_once()
+        post(81, NEWS)  # written long ago, delivered only now: ~160 posts down
+        core._late_checked["home"] -= 3600
+        self.events.clear()
+        core.poll_once()
+        self.assertIsNotNone(core.store.get_status("10081"))
+        self.assertTrue(any(n == "lanes_updated" and pl.get("botz") for n, pl in self.events))
+        self.assertEqual(self.ids(core, "botz"), ["10081"])
+
     def test_filled_anew_when_the_rule_changes(self):
         core, w = self.make([FEED])
         w.local.append(w.add(status("002", LOCAL, minute=2)))

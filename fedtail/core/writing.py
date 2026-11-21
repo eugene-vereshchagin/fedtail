@@ -10,6 +10,7 @@ import requests
 
 from .model import interaction_policy, looks_sent, narrower, real, send_key
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import ServerError
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -22,6 +23,38 @@ class MaybeSent(Exception):
     def __init__(self, cause):
         from ..i18n import _
         super().__init__(_("post_maybe_sent", err=cause.__class__.__name__))
+
+
+def _post_print(media, sensitive, poll, extra):
+    """What besides its words makes a post the one it is, for its Idempotency-Key: its
+    files (path, size, words), sensitive, poll, quote, language."""
+    import os
+    files = []
+    for m in media or ():
+        try:
+            size = os.path.getsize(m[0])
+        except OSError:
+            size = -1
+        files.append((str(m[0]), size) + tuple(str(x) for x in m[1:]))
+    return repr((files, bool(sensitive), poll, extra.get("quoted_status_id"),
+                 extra.get("language")))
+
+
+def _mentions_of(st, me):
+    """@user@server of whom a post I made names, me aside."""
+    mine = str((me or {}).get("id") or "")
+    return [m["acct"] for m in st.get("mentions") or []
+            if m.get("acct") and str(m.get("id") or "") != mine]
+
+
+def _named(text, accts):
+    """`text` with those of `accts` it doesn't name yet put before it."""
+    def names(a):  # @bob@server, or @bob as typed (the server took it so)
+        user = re.escape(a.split("@")[0])
+        return re.search(rf"(?<![\w@])@{user}(@{re.escape(a.split('@', 1)[1])})?(?![\w@-])(?!\.\w)"
+                         if "@" in a else rf"(?<![\w@])@{user}(?![\w@-])(?!\.\w)", text, re.I)
+    lead = [f"@{a}" for a in accts if not names(a)]
+    return " ".join(lead + [text]) if lead else text
 
 
 class WritingMixin:
@@ -311,12 +344,12 @@ class WritingMixin:
                 return dict(st or {}, scheduled=True)
             started = time.time()
             wait = max(10, int(self.cfg["post"].get("send_timeout", 90)))
+            key = self._send_key(text, reply_to, visibility, spoiler,
+                                 _post_print(media, sensitive, poll, extra))
             try:
                 st = self.api.post_status(
                     text, visibility, reply_to, spoiler, ids, self.markdown,
-                    idempotency_key=send_key(self.me and self.me["id"], text, reply_to,
-                                             visibility, spoiler),
-                    timeout=(10, wait), **extra)
+                    idempotency_key=key, timeout=(10, wait), **extra)
             except (requests.Timeout, requests.ConnectionError) as e:
                 # the request may well have got there and the post been made, only the
                 # answer was lost: look before saying "not sent" (a retry = a double)
@@ -326,15 +359,36 @@ class WritingMixin:
                 log.info("send: no answer (%s), but the post is there: %s",
                          e.__class__.__name__, st.get("id"))
             log.debug("posted %s", st.get("id"))
+            self._note_send_key(st.get("id"), key)
             chain, prev = [st], st
+            # a chain to a few (direct, followers only): each part names whom the first
+            # did — a part naming nobody reached no one (21.11)
+            who = _mentions_of(st, self.me) if visibility in ("direct", "private") else []
+            more = {"language": lang} if lang else {}
+            for k in ("interaction_policy", "quote_policy"):
+                if k in extra:
+                    more[k] = extra[k]
             for i, part in enumerate(rest):  # the rest of a chain: each answering the last
+                part = _named(part, who)
+                pkey = self._send_key(part, prev["id"], visibility, spoiler)
+                begun = time.time()
                 try:
-                    prev = self.api.post_status(part, visibility, prev["id"], spoiler, [],
-                                                self.markdown,
-                                                **({"language": lang} if lang else {}))
+                    try:
+                        prev = self.api.post_status(part, visibility, prev["id"], spoiler,
+                                                    [], self.markdown, idempotency_key=pkey,
+                                                    timeout=(10, wait), **more)
+                    except (requests.Timeout, requests.ConnectionError) as e:
+                        found = self._find_sent(part, prev["id"], begun)
+                        if found is None:
+                            raise MaybeSent(e) from e
+                        prev = found
+                    self._note_send_key(prev.get("id"), pkey)
                     chain.append(prev)
-                except ApiError as e:
-                    log.warning("chain: part %d of %d failed: %s", i + 2, len(rest) + 1, e)
+                except (ApiError, ServerError, MaybeSent, requests.RequestException) as e:
+                    # the first part is out: a part that failed ends the chain there, and
+                    # says so — the send isn't a failure (again = the parts out twice)
+                    log.warning("chain: part %d of %d failed: %s", i + 2, len(rest) + 1,
+                                e.__class__.__name__)
                     self.emit("error", f"{len(chain)} / {len(rest) + 1}: {e}")
                     break
             if rest:
@@ -391,6 +445,39 @@ class WritingMixin:
             out.cancel()
         return out
 
+    # Mastodon keeps a key for an hour; a post deleted meanwhile burns its key: sent
+    # again (a redraft, the same words), it would answer with the deleted one, or 404
+    KEY_HOURS = 1
+
+    def _keys(self, name):
+        now = time.time()
+        return {k: v for k, v in (self.store.kv_get(name, {}) or {}).items()
+                if now - float(v[-1] if isinstance(v, list) else v) < self.KEY_HOURS * 3600}
+
+    def _send_key(self, *what):
+        import hashlib
+        key = send_key(self.me and self.me["id"], *what)
+        burnt = self._keys("send_keys_burnt")
+        while key in burnt:  # the same, made anew: a key of its own (the same each try)
+            key = "fedtail-" + hashlib.sha256(key.encode()).hexdigest()[:40]
+        return key
+
+    def _note_send_key(self, sid, key):
+        if sid:
+            kept = self._keys("send_keys")
+            kept[str(sid)] = [key, time.time()]
+            self.store.kv_set("send_keys", kept)
+
+    def _burn_send_key(self, sid):
+        """My post `sid` deleted: the key it was sent with is spent."""
+        kept = self._keys("send_keys")
+        got = kept.pop(str(sid), None)
+        if got:
+            burnt = self._keys("send_keys_burnt")
+            burnt[got[0]] = time.time()
+            self.store.kv_set("send_keys_burnt", burnt)
+            self.store.kv_set("send_keys", kept)
+
     def _find_sent(self, text, reply_to, since):
         """My post with this text (and this parent) made since then — or None, also when
         the server can't say right now either."""
@@ -415,9 +502,12 @@ class WritingMixin:
                           **({"focus": f"{float(focus[0]):.2f},{float(focus[1]):.2f}"}
                              if focus else {}))
                      for mid, (desc, focus) in (media or {}).items() if mid in ids]
-            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown,
-                                      media_attributes=attrs) if attrs else \
-                self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
+            keep = {"sensitive": bool(s.get("sensitive"))}  # as it was: see edit_status
+            if s.get("poll"):
+                keep["poll"] = s["poll"]
+            if attrs:
+                keep["media_attributes"] = attrs
+            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown, **keep)
             self.store.put_statuses([st])
             if draft_key:
                 self.delete_draft(draft_key)
@@ -468,6 +558,7 @@ class WritingMixin:
             except ApiError as e:
                 log.info("redraft %s: no source (%s), the text from the card", s["id"], e)
             self.api.delete_status(s["id"])
+            self._burn_send_key(s["id"])
             self.store.delete_status(s["id"])
             self.emit("status_deleted", s["id"])
             from .model import html_to_text

@@ -14,6 +14,24 @@
   editor put a tab character in instead of the tag offered.
 * The terminal's editor completes #tags, @names and :emoji: too: what fits is
   offered under the text, Tab puts it in.
+* Fixed: posts that came in a round the network broke off (Wi-Fi gone, the laptop
+  asleep) never got into free lanes or Unsorted and made no notification; the next
+  round sorts them now.
+* Fixed: a post that came late, far down a busy lane, wasn't sorted into free lanes
+  nor notified.
+* Fixed: a chain (`---`) whose second or later part was lost to the network said
+  "not sent" for the whole of it — sent again, the parts went out twice; the chain
+  now ends where it broke and says so.
+* Fixed: the later parts of a direct or followers-only chain named nobody, so only
+  you could see them; each part now names whom the first did.
+* Fixed: the same words sent again with another picture, or after a redraft within
+  the hour, could be taken by the server for the post made before ("sent", and
+  nothing new, or an error).
+* Fixed: editing a post on Mastodon showed its sensitive pictures and took its poll
+  away; they stay as they were.
+* Fixed: removing every extra field of the profile did nothing.
+* Fixed: after some thirty uploads in half an hour fedtail stopped asking the server
+  anything, the lanes too, for up to half an hour; only uploads wait now.
 
 ## 0.23.7 — 2026-11-20
 

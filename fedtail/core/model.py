@@ -149,13 +149,16 @@ def long_form_of(obj):
             "location": where}
 
 
-def send_key(me_id, text, reply_to, visibility, spoiler):
-    """The Idempotency-Key of a post: the same words to the same place give the same key,
-    so sending them again after a lost answer gives back the post already made (Mastodon
-    keeps keys for an hour) rather than a second one. Pictures aren't part of it: they
-    are uploaded anew, with new ids, on every try."""
+def send_key(me_id, text, reply_to, visibility, spoiler, more=""):
+    """The Idempotency-Key of a post: the same post to the same place gives the same key,
+    so sending it again after a lost answer gives back the post already made (Mastodon
+    keeps keys for an hour) rather than a second one. `more`: what else makes it the same
+    post — its pictures as files (uploaded anew, with new ids, on every try), poll,
+    sensitive, quote, language: the same words with another picture are another post,
+    not the one made before (21.11: a redraft to change a picture got "sent", nothing)."""
     import hashlib
-    raw = "\x1f".join(str(x or "") for x in (me_id, reply_to, visibility, spoiler, text))
+    raw = "\x1f".join(str(x or "") for x in (me_id, reply_to, visibility, spoiler, text,
+                                              more))
     return "fedtail-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:40]
 
 

@@ -304,6 +304,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._poll_lock = threading.Lock()
+        self._unrouted = None  # a cut round's new posts, for the next (poll.py)
         self._poller = None
         self._parent_inflight = set()
         self.new_options = []  # options the user's config doesn't mention yet
@@ -838,9 +839,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         for name, ids in new_by_source.items():
             if not ids:
                 continue
-            id_set = set(ids)
-            out += [st for item_id, st in self.store.items(name, len(ids) + 50)
-                    if item_id in id_set]
+            out += [st for _item_id, st in self.store.items_by_id(name, ids)]
         return out
 
     def _note_fresh(self, per_lane, new_requests, new_activity):
@@ -966,8 +965,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             if not ids:
                 continue
             per_lane[lane.name] = [item_id for item_id, st
-                                   in self.store.items(lane.source, len(ids) + 50)
-                                   if item_id in ids and lanes.keeps(lane, st, ctx)]
+                                   in self.store.items_by_id(lane.source, ids)
+                                   if lanes.keeps(lane, st, ctx)]
         return per_lane
 
     def _notify(self, per_lane, new_requests=(), new_activity=()):
@@ -987,7 +986,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             if not notify and not chime:
                 continue
             id_set = set(ids)
-            rows = self.store.items(lane.source, len(ids) + 50)
+            rows = self.store.items_by_id(lane.source, ids)
             if not self.cfg["feed"].get("repeat_boosts", False):  # not shown: no news
                 rows = self._without_repeats(lane.source, rows)
             sts = [st for item_id, st in rows if item_id in id_set]
@@ -2492,6 +2491,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 # gone already (deleted from the server's web, another client): the
                 # wish is done all the same — it goes here too, no error
                 log.info("delete %s: already gone on the server (%s)", s["id"], e.status)
+            self._burn_send_key(s["id"])
             self.store.delete_status(s["id"])
             self.emit("status_deleted", s["id"])
         return self.submit(job)
