@@ -100,7 +100,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.em
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -1343,8 +1345,16 @@ private fun Actions(p: PostItem, act: CardActions, menu: Boolean, setMenu: (Bool
 private fun CardMenu(p: PostItem, act: CardActions, open: Boolean, setOpen: (Boolean) -> Unit) {
     var info by remember { mutableStateOf<JSONObject?>(null) }
     // asked anew at each opening (last time's items stand till the answer: clearing them
-    // first made the UI test of this menu fail on CI's slow emulator, 31.10)
-    LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
+    // first made the UI test of this menu fail on CI's slow emulator, 31.10). The answer
+    // is put in on the main thread: the call came back on a worker, and a state written
+    // there wasn't seen by the sheet drawn in that same moment — it stayed the short one
+    // (the UI tests' "Reply with quote" waited 60 s for it on CI now and then, 30.10–21.11)
+    LaunchedEffect(open) {
+        if (open) {
+            val got = (act.menu ?: act.info)(p)
+            withContext(Dispatchers.Main) { info = got }
+        }
+    }
     IconButton(onClick = { setOpen(true) }, modifier = Modifier.size(48.dp)) {
         ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
