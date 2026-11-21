@@ -2665,14 +2665,7 @@ async function placeAct(act, values, confirmed, answer) {
   let r;
   // Drafts → Open of a set-aside new post: the core sets aside what "new" holds in its
   // place — hand it the page's own new-post text first, so that isn't lost
-  if (act[0] === "drafts" && act[1] === "open" && String(act[2] || "").startsWith("new")
-      && store("draft.new")) {
-    try {
-      await api("/api/draft_save", { key: "new", snap: { text: store("draft.new"), cw: "",
-        visibility: state.me.visibility, media: [], language: null, sensitive: false,
-        poll: null } });
-    } catch (e) { /* the core's own then */ }
-  }
+  if (act[0] === "drafts" && act[1] === "open") await flushDraft();
   try {
     r = await api("/api/place", { act, values: values || {}, confirmed: !!confirmed,
                                   answer: answer === undefined ? null : answer });
@@ -2719,8 +2712,50 @@ async function act(action, p) {
 }
 
 // ---- writing ------------------------------------------------------------------------------
+// the editor's draft is the core's (post.drafts_autosave, post.autosave_ms), as the
+// windows and the phone keep it: the whole editor, a moment after the typing stops — the
+// page kept the text alone in the browser, whatever the settings said (21.11)
+function draftSnap() {
+  return { text: $("#text").value, cw: $("#cw").hidden ? "" : $("#cw").value,
+           visibility: $("#vis").value, language: $("#lang").value || null,
+           sensitive: state.sensitive,
+           poll: state.poll && !state.media.length ? {
+             options: state.poll.options, expires_in: state.poll.expires_in,
+             multiple: state.poll.multiple } : null };
+}
+
+function saveDraftSoon() {
+  clearTimeout(state.draftTimer);
+  state.draftTimer = 0;
+  if (!state.draftKey) return;
+  const ms = ((state.me && state.me.editor) || {}).autosave_ms || 700;
+  state.draftTimer = setTimeout(flushDraft, ms);
+}
+
+async function flushDraft() {  // what waits to be kept, kept now (Esc, Drafts → Open)
+  if (!state.draftTimer) return;
+  clearTimeout(state.draftTimer);
+  state.draftTimer = 0;
+  if (!state.draftKey) return;
+  try { await api("/api/draft_save", { key: state.draftKey, snap: draftSnap() }); }
+  catch (e) { /* kept next time */ }
+}
+
+function startFrom(st) {  // the core's start: the draft kept, or a reply's names
+  if (st.text !== undefined) $("#text").value = st.text;
+  if (st.cw) { $("#cw").value = st.cw; showCw(true); }
+  if (st.language) { $("#lang").value = st.language; spellLang(); }
+  state.sensitive = !!st.sensitive;
+  if (st.poll) { state.poll = st.poll; drawPoll(); }
+  if (st.hint) hint(st.hint);
+  counter(true);
+}
+
 function compose(replyTo) {
   const d = $("#compose");
+  clearTimeout(state.draftTimer);
+  state.draftTimer = 0;
+  state.draftKey = null;
   state.replyTo = replyTo || null;
   state.edit = state.quote = null;
   state.media = [];
@@ -2744,8 +2779,8 @@ function compose(replyTo) {
     if (replyTo.warning) line.append(el("div", "muted", "⚠ " + replyTo.warning));
     // the whole post, to select a piece of it and quote it with ❝ (post.quote_prefix)
     if (replyTo.html) line.append(el("div", "whole", plainOf(replyTo)));
-    const draft = store("draft." + replyTo.sid);
-    t.value = draft || replyTo.reply_prefix || "";
+    t.value = replyTo.reply_prefix || "";
+    const opened = t.value;
     // who sees it and its warning: the core's (post.reply_never_wider, reply_warning),
     // as the windows and the phone start a reply — not a rule of the page's own
     $("#vis").value = state.me.visibility;
@@ -2753,18 +2788,25 @@ function compose(replyTo) {
     $("#cw").value = "";
     showCw(cwAtStart(), true);
     api("/api/draft_start", { reply_to: replyTo.sid }).then((st) => {
-      if (state.replyTo !== replyTo) return;  // another editor opened meanwhile
+      if (state.replyTo !== replyTo || state.edit || state.quote) return;  // another
+      state.draftKey = st.key;                                             // editor meanwhile
       // the reader's own pick while it was asked stays theirs
       if (st.visibility && $("#vis").value === first) $("#vis").value = st.visibility;
-      if (!$("#cw").value && st.cw) { $("#cw").value = st.cw; showCw(true); }
+      if (t.value === opened) startFrom(st);
+      else if (!$("#cw").value && st.cw) { $("#cw").value = st.cw; showCw(true); }
       showDrafts(st);
     }).catch(() => {});
   } else {
-    t.value = store("draft.new");
+    t.value = "";
     $("#vis").value = state.me.visibility;
     // "New draft": the core says whether this editor may (a new post's, Drafts on)
     api("/api/draft_start", {}).then((st) => {
       if (state.replyTo || state.edit || state.quote) return;
+      state.draftKey = st.key;
+      if (!t.value) {
+        if (st.visibility) $("#vis").value = st.visibility;
+        startFrom(st);
+      }
       state.shelvable = !!st.shelvable;
       $("#draft-shelve").hidden = !state.shelvable;
       showDrafts(st);
@@ -2807,7 +2849,8 @@ async function shelveDraft() {
     showDrafts(await api("/api/draft_shelve", { key: "new" }));
   } catch (e) { toast(e.message); return; }
   clearTimeout(state.checkTimer);
-  store("draft.new", "");
+  clearTimeout(state.draftTimer);
+  state.draftTimer = 0;
   $("#text").value = "";
   $("#cw").value = "";
   showCw(cwAtStart(), true);
@@ -2944,7 +2987,7 @@ function showCw(on, quiet) {
 const focusPoint = () => ((state.me || {}).editor || {}).focus_point !== false;
 const cwAtStart = () => !!((state.me || {}).editor || {}).cw_field;
 
-function counter() {
+function counter(quiet) {
   const n = [...$("#text").value].length + [...$("#cw").value].length;
   // the server's (max_characters), as told — of the account it goes from (all in one)
   const ed = state.me.editor || {};
@@ -2952,8 +2995,8 @@ function counter() {
   const limit = (from !== null && ed.limits && ed.limits[from]) || ed.limit;
   $("#chars").textContent = n && limit ? n + " / " + limit : "";
   $("#chars").classList.toggle("over", !!limit && n > limit);
-  const key = state.replyTo ? "draft." + state.replyTo.sid : "draft.new";
-  store(key, $("#text").value);
+  // typed: kept a moment after (the core's draft); an input event isn't "quiet"
+  if (quiet !== true) saveDraftSoon();
   clearTimeout(state.checkTimer);  // the chain and the #CamelCase hint, as the windows count
   state.checkTimer = setTimeout(checkText, 400);
 }
@@ -2979,6 +3022,7 @@ async function checkText() {
 }
 
 function closeCompose() {
+  flushDraft();  // Esc or ×: what was typed is kept now, not lost to the timer
   $("#compose").close();
   state.replyTo = state.edit = state.quote = null;
   $("#posts").focus();
@@ -2987,7 +3031,9 @@ function closeCompose() {
 // "Discard": the text and its draft gone, after a question (as the windows ask)
 function discard() {
   if ($("#text").value.trim() && !window.confirm(w("discard_q"))) return;
-  store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
+  clearTimeout(state.draftTimer);
+  state.draftTimer = 0;
+  if (state.draftKey) api("/api/draft_drop", { key: state.draftKey }).catch(() => {});
   $("#text").value = "";
   state.media = [];
   state.poll = null;
@@ -3015,6 +3061,8 @@ async function send(e, extra) {
   if (e) e.preventDefault();
   const body = postBody(extra);
   if (!body.text || state.busy) return;
+  clearTimeout(state.draftTimer);  // the core drops the draft once it is out
+  state.draftTimer = 0;
   state.busy = true;
   $("#send").disabled = true;
   try {
@@ -3042,7 +3090,6 @@ async function send(e, extra) {
       if (window.confirm(r.ask_lang.send + "?")) return await send(null, more);
       return;
     }
-    store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
     toast(r.message || w("sent"));
     closeCompose();
@@ -3783,6 +3830,7 @@ async function start() {
   $("#sched-toggle").title = w("schedule_tip");
   $("#sched-label").textContent = w("schedule_when");
   $("#sched-toggle").onclick = () => { $("#schedbox").hidden = !$("#schedbox").hidden; };
+  $("#sched-toggle").hidden = (me.editor || {}).schedule === false;  // post.schedule
   $("#text").placeholder = w("write");
   const vis = $("#vis");
   for (const v of ["public", "unlisted", "followers", "direct"]) {

@@ -247,6 +247,32 @@ class WebWritingTest(TmpDir):
         self.core.poll_once()
         self.assertFalse(webs.lane("home", keep=True)["jump"])
 
+    def test_the_editor_draft_is_the_cores(self):
+        """The page keeps its editor as a draft of the core's (post.drafts_autosave,
+        post.autosave_ms), the whole of it, gone once the post is out; "⏰ Later" by
+        post.schedule — the page kept the text alone in the browser (21.11)."""
+        webs = self.srv.web
+        facts = webs.editor_facts()
+        self.assertTrue(facts["schedule"])
+        self.assertEqual(facts["autosave_ms"], 700)
+        webs.core.cfg["post"].update(schedule=False, autosave_ms=50)
+        facts = webs.editor_facts()
+        self.assertFalse(facts["schedule"])
+        self.assertEqual(facts["autosave_ms"], 100)  # never less: a draft a key
+        st = webs.draft_start()
+        self.assertEqual(st["key"], "new")
+        webs.draft_save("new", {"text": "half", "cw": "careful", "visibility": "public",
+                                "language": "en"})
+        again = webs.draft_start()
+        self.assertTrue(again["restored"])
+        self.assertEqual((again["text"], again["cw"], again["language"]),
+                         ("half", "careful", "en"))
+        webs.post({"text": "half and done", "cw": "careful"})
+        self.assertIsNone(webs.core.get_draft("new"))  # out: no draft left
+        webs.draft_save("new", {"text": "another"})
+        webs.draft_drop("new")  # "Discard"
+        self.assertIsNone(webs.core.get_draft("new"))
+
     def test_a_failure_in_the_background_keeps_the_text(self):
         """The editor is gone at once: with post.drafts_autosave off, the draft meant to
         hold the text was never written, and a failure lost it (21.11)."""

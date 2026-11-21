@@ -2140,7 +2140,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun clearEditor() {
         composeText = ""
         composeCw = ""
-        composeCwOn = false
+        composeCwOn = cwAtStart()  // post.cw_field: the warning's field open from the start
         composeLang = editorFacts?.optString("language") ?: ""
         composeSensitive = false
         attachments = emptyList()
@@ -2165,6 +2165,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (Core.failed(got) == null) {
                 editorFacts = got
                 if (composeLang.isBlank()) composeLang = got.optString("language")
+                if (composeText.isBlank() && composeCw.isBlank()) composeCwOn = cwAtStart()
             }
         }
     }
@@ -2225,6 +2226,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun maxMedia(): Int = editorFacts?.optInt("max_media", 4) ?: 4
+    // the windows' editor switches, as the core says them (web/server.py editor_facts)
+    fun autosaveMs(): Long = (editorFacts?.optLong("autosave_ms", 700L) ?: 700L).coerceAtLeast(100L)
+    fun previewOn(): Boolean = editorFacts?.optBoolean("preview", true) ?: true
+    fun scheduleOn(): Boolean = editorFacts?.optBoolean("schedule", true) ?: true
+    private fun cwAtStart(): Boolean = editorFacts?.optBoolean("cw_field") ?: false
     fun maxOptions(): Int = editorFacts?.optInt("max_options", 4) ?: 4
     // the server's limit — of the account it goes from, all accounts in one (08.11)
     fun charLimit(): Int {

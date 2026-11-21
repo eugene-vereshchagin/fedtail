@@ -115,6 +115,13 @@
   page, the phone and in the terminal — each worked in the windows only.
 * The web page draws the buttons under a post as `card.actions` says: pictures,
   words or both (it drew glyphs whatever it said).
+* The web page keeps the editor as a draft the way the windows and the phone do —
+  the whole of it (warning, who sees it, language, poll), in Drafts and synced, after
+  `post.autosave_ms`, not at all with `post.drafts_autosave = false`; it kept the text
+  alone in the browser before. The phone waits `post.autosave_ms` too.
+* `post.cw_field`, `post.preview` and `post.schedule` work in the terminal's and the
+  phone's editors (and `post.schedule` on the web page): the warning's field behind
+  Ctrl+O → "Warning" in the terminal, no Preview, no "Later" when switched off.
 
 ## 0.23.7 — 2026-11-20
 

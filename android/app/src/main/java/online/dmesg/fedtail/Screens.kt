@@ -524,7 +524,7 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
     // kept as it goes (post.drafts_autosave): a moment after the typing stops
     LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn, model.composeVisibility,
         model.composeLang, model.pollOn, model.pollOptions, model.composeSensitive) {
-        delay(1500)
+        delay(model.autosaveMs())  // post.autosave_ms, as the windows wait
         model.saveDraft()
     }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -534,7 +534,8 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
         }
         val previewWords = stringResource(R.string.preview)
         // a word, not an eye: the eye is the threads' lane (09.11)
-        TextButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank()) {
+        if (model.previewOn()) TextButton(onClick = { model.preview() },  // post.preview
+            enabled = model.composeText.isNotBlank()) {
             Text(previewWords)
         }
         IconButton(onClick = { model.send() },
@@ -776,7 +777,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     onClick = { model.composeCwOn = !model.composeCwOn },
                     label = { ChipLabel(stringResource(R.string.cw_add)) }) }
                 if (!editing) {
-                    // "send later": the server keeps it until then (scheduled_at)
+                    // "send later": the server keeps it until then (scheduled_at);
+                    // post.schedule = false — no such chip, as the windows have no button
+                    if (model.scheduleOn() || model.composeWhen.isNotBlank())
                     add { m -> FilterChip(selected = model.composeWhen.isNotBlank(), modifier = m,
                         onClick = {
                             if (model.composeWhen.isNotBlank()) model.composeWhen = ""

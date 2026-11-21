@@ -32,7 +32,6 @@ EXEMPT = {
     ("tui", "ui.alt_text"): "no hover in a terminal; v shows a picture with its words",
     ("tui", "ui.media_grid"): "a terminal shows a line per attachment, no grid",
     ("tui", "post.focus_point"): "the terminal's editor sets no focus point",
-    ("tui", "post.cw_field"): "the terminal's editor always shows the warning's field",
     ("tui", "ui.post_keys"): "the terminal is the keyboard: its letters are its only way",
 }
 

@@ -907,7 +907,11 @@ class ComposeScreen(Screen):
             yield Select([(_(VIS_WORD[v]), v) for v in VISIBILITIES],
                          value=vis if vis in VISIBILITIES else "followers", allow_blank=False,
                          id="c-vis")
-            yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
+            cw = Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
+            # post.cw_field: the warning's field from the start, or behind Ctrl+O →
+            # "Warning" (as the windows' button) — the terminal showed it always (21.11)
+            cw.display = bool(st.cw) or bool(core.cfg["post"].get("cw_field", False))
+            yield cw
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
         with Horizontal(id="c-tools"):
             yield Button(_("emoji_pick"), id="c-emoji", tooltip=_("emoji_pick_tip"))
@@ -1154,6 +1158,13 @@ class ComposeScreen(Screen):
         self.query_one("#c-count", Static).update(Text(hint, style="yellow") if hint else
                                                   "")
 
+    def check_action(self, action, parameters):
+        """post.preview = false: no Ctrl+R (nor its word in the footer), as the windows
+        have no button then."""
+        if action == "preview":
+            return bool(self.app.core.cfg["post"].get("preview", True))
+        return True
+
     def action_preview(self):
         """Ctrl+R: the post as it will go (Esc — back to the text)."""
         from .more import PreviewScreen
@@ -1214,7 +1225,10 @@ class ComposeScreen(Screen):
                           "sensitive"))
         if not self.media:
             items.append(((_("detach") + " " if self.poll else "") + _("poll_add"), "poll"))
-        items.append(((_("detach") + " " if self.when else "") + _("schedule"), "when"))
+        if not self.query_one("#c-cw", Input).display:  # post.cw_field off: here
+            items.append(("⚠ " + _("cw_add"), "cw"))
+        if self.app.core.cfg["post"].get("schedule", True) or self.when:  # post.schedule
+            items.append(((_("detach") + " " if self.when else "") + _("schedule"), "when"))
         if self.edit is None:
             items.append((_("lang_other"), "lang"))
         if self.app.core.cfg["post"].get("spellcheck", True):
@@ -1250,6 +1264,11 @@ class ComposeScreen(Screen):
                     self.app.push_screen(AskScreen(_("poll_add"), _("tui_poll_options")),
                                          self._polled)
                     return
+            elif v == "cw":
+                field = self.query_one("#c-cw", Input)
+                field.display = True
+                field.focus()
+                return
             elif v == "when":
                 if self.when:
                     self.when = ""

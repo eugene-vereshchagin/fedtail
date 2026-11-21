@@ -1075,6 +1075,10 @@ class Web:
                 if len(accounts) > 1 else {},
                 "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES],
                 "preview": bool(self.core.cfg["post"].get("preview", True)),
+                # "⏰ Later" (post.schedule), the draft kept this long after the last key
+                # (post.autosave_ms): as the windows' editors
+                "schedule": bool(self.core.cfg["post"].get("schedule", True)),
+                "autosave_ms": cc.autosave_ms(self.core.cfg),
                 # the warning's field from the start, a picture's focus point: as the
                 # windows' editors (post.cw_field, post.focus_point)
                 "cw_field": bool(self.core.cfg["post"].get("cw_field", False)),
@@ -2209,7 +2213,8 @@ class Web:
             extra["account"] = str(body["account"])
         quote = str(body["quote"]) if body.get("quote") else None
         away = core.cfg["post"].get("send_in_background") and not when
-        key = core.draft_key(parent.id if parent else None, quote) if away else None
+        # the editor's draft (the core's, kept as it was typed): gone once the post is out
+        key = core.draft_key(parent.id if parent else None, quote)
         if away:  # kept here till it's out: a failure loses nothing typed
             core.save_draft(key, {"text": text, "cw": cw, "visibility": vis,
                                   **({"language": lang} if lang else {})}, keep=True)
@@ -2650,6 +2655,7 @@ class Handler(BaseHTTPRequestHandler):
             # what a reply starts with — who sees it, its warning (common/compose.start)
             "/api/draft_start": lambda: web.draft_start(str(body.get("reply_to") or "")),
             "/api/draft_save": lambda: web.draft_save(body.get("key"), body.get("snap") or {}),
+            "/api/draft_drop": lambda: web.draft_drop(body.get("key")),
             "/api/draft_shelve": lambda: web.draft_shelve(body.get("key")),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),

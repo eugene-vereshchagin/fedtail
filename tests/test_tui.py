@@ -448,6 +448,36 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: (core.get_draft(key) or {}).get(
                 "text", "").endswith("half a thought"))
 
+    async def test_the_editor_follows_its_switches(self):
+        """post.cw_field, post.preview, post.schedule: the terminal's editor showed the
+        warning's field, Ctrl+R and "Schedule" whatever they said (21.11). Driven by keys."""
+        from textual.widgets import Input
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.screens import ComposeScreen, MenuScreen
+        core, w = self.make(post={"cw_field": False, "preview": False, "schedule": False})
+        w.add(status("001", BOB, minute=1, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            app.query_one("#posts").focus()
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            ed = app.screen
+            self.assertFalse(ed.query_one("#c-cw", Input).display)  # behind Ctrl+O
+            await pilot.press("ctrl+r")  # no preview
+            await pilot.pause(0.2)
+            self.assertIs(app.screen, ed)
+            await pilot.press("ctrl+o")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            words = [x[1] for x in app.screen.items if isinstance(x, tuple)]
+            self.assertNotIn("when", words)  # no "Schedule"
+            self.assertIn("cw", words)
+            app.screen.dismiss("cw")  # "⚠ Warning": the field comes
+            await self.wait(pilot, lambda: ed.query_one("#c-cw", Input).display)
+
     async def test_tab_completes_a_tag_in_the_editor(self):
         """Typed by keys as a person types: "#geo", the line under the text offers
         #georgia, Tab puts it in. The terminal's editor completed nothing (20.11); with

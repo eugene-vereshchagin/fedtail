@@ -345,6 +345,26 @@ def by_hand(page, out):
         ERRORS.append("keys: Esc didn't close a dialog")
     if page.evaluate("state.cursor") != before:
         ERRORS.append("keys: j in a dialog moved the cursor of the lane behind it")
+    # typed, closed, opened again: the draft is the core's, the whole editor (the page
+    # kept the text alone in the browser, whatever post.drafts_autosave said: 21.11)
+    page.click("#write")
+    page.wait_for_timeout(500)
+    page.click("#text")
+    page.keyboard.type("a draft typed by hand")
+    page.wait_for_timeout(1500)  # post.autosave_ms and the request
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(400)
+    kept = page.evaluate("api('/api/draft_start', {}).then((st) => st.text)")
+    if kept != "a draft typed by hand":
+        ERRORS.append(f"drafts: the editor's text not kept by the core ({kept!r})")
+    page.click("#write")
+    page.wait_for_timeout(800)
+    if page.input_value("#text") != "a draft typed by hand":
+        ERRORS.append("drafts: the editor opened again without its draft")
+    page.evaluate("api('/api/draft_drop', { key: 'new' })")
+    page.evaluate("$('#text').value = ''")
+    page.click("#compose-close")
+    page.wait_for_timeout(300)
 
 
 def columns(page, out):
