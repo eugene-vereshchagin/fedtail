@@ -542,6 +542,27 @@ The code, from the first line to the icon, is written by Claude (Anthropic), an 
 came up with the idea, tested every build on his own fediverse node and reported what was
 wrong. Commits carry a `Co-Authored-By: Claude` line.
 
+### In numbers
+
+As of 21 November 2026, five weeks after the first commit (15 October):
+
+| What | Lines |
+|---|---|
+| the program in Python (core, Qt, GTK, terminal, web server, the phone's bridge) | ~87 000 |
+| tests | ~51 000 |
+| the Android app in Kotlin | ~9 400 |
+| the web page (JS, CSS, HTML) | ~4 700 |
+| tools, packaging, CI | ~10 700 |
+| docs in Markdown, Russian and English | ~20 000 |
+
+Some 163 000 lines of code without the docs; the sync server (its own repository) adds
+840 more. 1 133 commits, 38 releases.
+
+Tokens, from Claude Code's logs of 29 October – 21 November (the first two weeks' logs
+are no longer kept, so the real total is higher): about 2.3 billion processed — of
+them 2.29 billion read from the prompt cache, 16.5 million written to it, 4.4 million
+generated. Nearly all of it Claude Opus.
+
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
