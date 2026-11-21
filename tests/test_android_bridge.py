@@ -222,6 +222,7 @@ class BridgeTest(_Base):
         me = opened["me"]
         self.assertEqual((me["media_grid"], me["alt_text"], me["gifv"], me["image_viewer"],
                           me["read_button"]), ("natural", "tooltip", "play", "internal", False))
+        self.assertEqual((me["merge_pinned"], me["announcements_minutes"]), (False, 30))
         names = [x["name"] for x in opened["lanes"]]
         self.assertIn("home", names)
         lane = self.call("lane", "home", False)

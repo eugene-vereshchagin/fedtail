@@ -501,6 +501,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     // ---- the overview and the lanes ------------------------------------------------------
     var merged by mutableStateOf(false)      // all accounts in one window
+    var mergePinned by mutableStateOf(false) // ui.merge in the config: no switch then
+    private var announceMinutes = 30           // poll.announcements_minutes (0: at the start)
     var accountCount by mutableStateOf(1)
 
     /** ★ / ♻ / ↩ from another account of the window (the card's ⋯ → "As…"). */
@@ -647,6 +649,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         toNewBottom = me.optString("to_new", "bottom") != "top"
         holdSelects = me.optString("hold_text", "select") != "menu"
         merged = me.optBoolean("merged")
+        mergePinned = me.optBoolean("merge_pinned")
+        announceMinutes = me.optInt("announcements_minutes", 30)
         accountCount = me.optInt("accounts", 1)
         // phone.push: UnifiedPush when a distributor is there (not in the demo: no server)
         if (!demo) Push.setUp(getApplication(), me.optString("push", "auto"))
@@ -1068,10 +1072,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var announceOk by mutableStateOf("")
     private var announcedAt = 0L
 
-    /** Asked at the start and twice an hour (admins post rarely), as the windows do. */
+    /** Asked at the start and every poll.announcements_minutes (0: at the start only),
+     *  as the windows' core asks — the phone kept half an hour whatever it said. */
     private suspend fun checkAnnouncements(force: Boolean = false) {
         val now = System.currentTimeMillis()
-        if (!force && now - announcedAt < 30 * 60 * 1000L) return
+        if (!force && announcedAt > 0 &&
+            (announceMinutes <= 0 || now - announcedAt < announceMinutes * 60 * 1000L)) return
         announcedAt = now
         val got = Core.announcements()
         if (Core.failed(got) != null) return

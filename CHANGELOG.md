@@ -139,6 +139,13 @@
   has "From another account" with all accounts in one window (`ui.act_as`).
 * GTK with `ui.adwaita = "on"` and no libadwaita says what to install instead of
   failing with a traceback.
+* Web Push shows what `notify.privacy` lets: who without the text with `"sender"`,
+  neither with `"count"` (it showed the server's whole text).
+* The web page opens a picture in the browser with `ui.image_viewer = "browser"`; with
+  `ui.merge` set in the config the terminal, the web page and the phone don't offer a
+  merge switch that couldn't change anything; the phone asks for the server's
+  announcements every `poll.announcements_minutes`, and its "To the new" in the lane's
+  ⋮ (`phone.to_new = "top"`) says how many and shows only when there are any.
 
 ## 0.23.7 — 2026-11-20
 

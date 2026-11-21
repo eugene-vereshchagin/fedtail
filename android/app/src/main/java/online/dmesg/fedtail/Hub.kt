@@ -145,7 +145,7 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                     DropdownMenuItem(text = { Text(stringResource(R.string.my_profile)) },
                                         onClick = { menu = false; model.openProfile(model.myId) })
                                 }
-                                if (model.accountCount > 1 || model.merged) {
+                                if ((model.accountCount > 1 || model.merged) && !model.mergePinned) {
                                     DropdownMenuItem(text = {
                                         Text((if (model.merged) "☑ " else "☐ ") +
                                             stringResource(R.string.merge_accounts))

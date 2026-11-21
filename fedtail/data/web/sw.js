@@ -12,10 +12,15 @@ self.addEventListener("push", (event) => {
   try { n = event.data ? event.data.json() : {}; } catch (e) { n = {}; }
   // Mastodon's payload: title, body, icon, notification_id, notification_type, and the
   // access token, which stays here unused
-  const title = String(n.title || "fedtail");
+  // notify.privacy (the server writes PRIVACY above this file): "sender" — who, not
+  // what; "count" — neither, as every window's notifications
+  const privacy = typeof PRIVACY === "string" ? PRIVACY : "full";
+  const title = privacy === "count" ? "fedtail" : String(n.title || "fedtail");
   const options = {
-    body: String(n.body || ""),
-    icon: typeof n.icon === "string" && n.icon.startsWith("https://") ? n.icon : undefined,
+    body: privacy === "full" ? String(n.body || "") : "",
+    // their face says who: not with "count"
+    icon: privacy !== "count" && typeof n.icon === "string" && n.icon.startsWith("https://")
+      ? n.icon : undefined,
     tag: "fedtail-" + String(n.notification_id || Date.now()),
     data: { type: String(n.notification_type || "") },
   };

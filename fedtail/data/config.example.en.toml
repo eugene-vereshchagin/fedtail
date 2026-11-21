@@ -1843,7 +1843,7 @@ overview = "lanes"
 layout = "auto"
 
 # The lane's "↓ N" button (to the new posts, how many): "bottom" — over the "write" button,
-# by the thumb; "top" — in the lane's bar, beside its name.
+# by the thumb; "top" — "To the new N" in the ⋮ menu of the lane's bar.
 to_new = "bottom"
 
 # A long press on a post's words: "select" — selects them (drag the handles, then copy or

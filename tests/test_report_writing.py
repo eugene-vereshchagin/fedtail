@@ -145,8 +145,9 @@ class WebWritingTest(TmpDir):
         self.w.add(status("001", BOB, minute=1, vis="public"), home=True)
         self.core.connect().result()
         self.core.poll_once()
-        self.srv = web.make_server(self.core, "127.0.0.1", 0,
-                                   web.load_key(self.core.paths.data_dir))
+        self.key = web.load_key(self.core.paths.data_dir)
+        self.srv = web.make_server(self.core, "127.0.0.1", 0, self.key)
+        self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.addCleanup(self.srv.server_close)
         self.addCleanup(self.srv.shutdown)
@@ -290,6 +291,27 @@ class WebWritingTest(TmpDir):
         ui.update(font="x; } body { color: red")  # a font name, nothing else
         ui["fonts"] = "custom"
         self.assertNotIn("color: red", webs.theme_css())
+
+    def test_web_push_says_what_privacy_lets(self):
+        """notify.privacy reaches Web Push: the service worker is told it (it showed the
+        server's whole text whatever the setting said: 21.11)."""
+        webs = self.srv.web
+        js = self.req("/sw.js")[2]
+        self.assertTrue(js.startswith('const PRIVACY = "full";'))
+        webs.core.cfg["notify"]["privacy"] = "count"
+        js = self.req("/sw.js")[2]
+        self.assertTrue(js.startswith('const PRIVACY = "count";'))
+        self.assertIn('privacy === "full" ? String(n.body', js)
+
+    def test_the_page_is_told_the_window_switches(self):
+        """ui.image_viewer = "browser" and ui.merge set in the config reach the page: it
+        opened its own viewer, and offered a merge switch that changed nothing (21.11)."""
+        webs = self.srv.web
+        me = webs.me()
+        self.assertEqual((me["image_viewer"], me["merge_pinned"]), ("internal", False))
+        webs.core.cfg["ui"].update(image_viewer="browser", merge=["all"])
+        me = webs.me()
+        self.assertEqual((me["image_viewer"], me["merge_pinned"]), ("browser", True))
 
     def test_a_failure_in_the_background_keeps_the_text(self):
         """The editor is gone at once: with post.drafts_autosave off, the draft meant to

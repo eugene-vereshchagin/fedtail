@@ -453,7 +453,9 @@ private fun LaneMore(model: AppModel, name: String, state: LazyListState,
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             val unread = model.posts.count { it.unread }
-            if (!model.toNewBottom) DropdownMenuItem(text = { Text(stringResource(R.string.to_new)) },
+            // phone.to_new = "top": here, with how many (the windows' "↓ N"), when any
+            if (!model.toNewBottom && unread > 0) DropdownMenuItem(
+                text = { Text(stringResource(R.string.to_new) + " $unread") },
                 onClick = { open = false; model.holdBreaks++; scope.launch {
                     aim(state, model.posts, model.newestFirst,
                         before = if (model.newestFirst) 0 else 1, divider = model.divider?.first) } })

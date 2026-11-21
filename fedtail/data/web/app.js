@@ -327,7 +327,9 @@ function renderOne(m, all, p, i) {
       if (m.w && m.h) { img.width = m.w; img.height = m.h; }
       if (m.focus) img.style.objectPosition = focusAt(m.focus);  // a square: around it
       img.onload = () => { img.title = m.alt; };
-      img.onclick = () => view(m, all);
+      // ui.image_viewer = "browser": the picture opens there, as in the windows
+      img.onclick = () => (state.me.image_viewer === "browser" ? window.open(m.url, "_blank",
+        "noopener") : view(m, all));
       // a preview the server couldn't make: the original; neither — say so, try later
       img.onerror = () => {
         const src = img.getAttribute("src");
@@ -857,8 +859,9 @@ function menuItems() {  // every item of the menu by its key: [label, do, tip]
   if (canNotify() && Notification.permission !== "granted") items.notify = [w("web_notify"), askNotify];
   items.push = [w("web_push"), pushToggle, w("web_push_tip")];
   items.notify_test = [w("debug_notify"), testNotify];
-  items.merge = [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge,
-                 w("accounts_merge_tip")];
+  if (!state.me.merge_pinned)  // ui.merge in the config decides then (as Qt greys it)
+    items.merge = [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge,
+                   w("accounts_merge_tip")];
   return items;
 }
 

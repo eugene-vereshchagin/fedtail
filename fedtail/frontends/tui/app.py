@@ -2203,9 +2203,10 @@ class FedtailApp(App, PostsMixin):
                  (_("debug_notify"), ("notify", None)),
                  (_("debug_sound"), ("test_sound", None)), "-",
                  (_("issue_menu") + " …", ("place", "issue")), "-",
-                 (self.corner_words(), ("corner", None), _("debug_corner_tip")),
-                 (("☑ " if self.merged() else "☐ ") + _("accounts_merge"), ("merge", None),
-                  _("accounts_merge_tip"))]
+                 (self.corner_words(), ("corner", None), _("debug_corner_tip"))]
+        if not self.core.cfg["ui"].get("merge"):  # the config decides then (as Qt greys it)
+            items.append((("☑ " if self.merged() else "☐ ") + _("accounts_merge"),
+                          ("merge", None), _("accounts_merge_tip")))
 
         def chosen(v):
             if v is None:

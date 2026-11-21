@@ -55,6 +55,16 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8"),
           # Web Push: shows what the user's server sends to this browser (data/web/sw.js)
           "/sw.js": ("sw.js", "text/javascript; charset=utf-8")}
+def sw_head(cfg):
+    """The service worker's first line: what a Web Push notification may show
+    (notify.privacy — "full", "sender": who without the text, "count": neither). The
+    browser showed the server's whole text whatever it said (21.11); a changed setting
+    changes the file, and the browser takes the new one."""
+    privacy = (cfg.get("notify") or {}).get("privacy", "full")
+    privacy = privacy if privacy in ("full", "sender", "count") else "full"
+    return f'const PRIVACY = "{privacy}";\n'
+
+
 POSSUM = {"/possum.png": ("fedtail.png", "image/png"),
           "/possum.gif": ("fedtail-swing.gif", "image/gif")}
 # img-src blob:: a picture attached, shown before it goes (URL.createObjectURL of the
@@ -915,6 +925,9 @@ class Web:
                 "notify": {"when_focused": c["notify"]["when_focused"]},
                 "editor": self.editor_facts(),
                 "merged": self.merged(),
+                # ui.merge set in the config: the menu's switch has nothing to say
+                "merge_pinned": bool(c["ui"].get("merge")),
+                "image_viewer": c["ui"].get("image_viewer", "internal"),
                 "words": dict({k: _(k) for k in WORDS},
                               short_id_tip=actions.short_id_tip(c))}
 
@@ -2594,7 +2607,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._forbidden()
         if u.path in STATIC:
             name, ctype = STATIC[u.path]
-            return self._send(HTTPStatus.OK, static_text(name), ctype)
+            text = static_text(name)
+            if name == "sw.js":  # what a push may say: notify.privacy, as every window
+                text = sw_head(self.web.core.cfg) + text
+            return self._send(HTTPStatus.OK, text, ctype)
         if u.path in POSSUM:  # the curtain's opossum: still, or swinging while updating
             data = resources.files("fedtail").joinpath(
                 "data/icons/" + POSSUM[u.path][0]).read_bytes()

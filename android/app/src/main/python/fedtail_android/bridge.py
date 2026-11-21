@@ -434,6 +434,9 @@ def open():  # noqa: A001 — what Kotlin calls it
         out["image_viewer"] = core.cfg["ui"].get("image_viewer", "internal")
         out["push"] = core.cfg["phone"]["push"]
         out["merged"] = bool(_s["web"].merged())
+        out["merge_pinned"] = bool(core.cfg["ui"].get("merge"))  # the config decides
+        # how often the server's announcements are asked (0: at the start only)
+        out["announcements_minutes"] = int(core.cfg["poll"].get("announcements_minutes", 30))
         out["accounts"] = sum(1 for p in _profiles() if p["logged_in"])
         return {"me": out, "lanes": web.lanes()}
     return _answer(go)
