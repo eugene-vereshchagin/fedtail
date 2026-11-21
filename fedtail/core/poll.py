@@ -395,6 +395,8 @@ class PollMixin:
             got = self._poll_once()
             self._last_poll_ok = time.time()
             self._fails_in_row = 0
+            if self._poll_count == 0:  # the first round came through: once at start
+                self._filtered_waiting()
             return got
         except RateLimited:  # the server asks to wait: not a failure of the network
             raise
@@ -426,20 +428,26 @@ class PollMixin:
                     f" ({steps})" if steps and took > slow else "")
             if self._poll_count == 1:  # the window said "getting the lanes…": done now
                 self.emit("first_poll_done", None)
-                if self.cfg["notify"].get("filtered", "remind") == "remind":
-                    self.filtered().add_done_callback(self._filtered_waiting)
 
-    def _filtered_waiting(self, fut):
-        """notify.filtered = "remind": once at start, whether the server holds someone's
-        notifications back — an event every interface says in its own line (Qt alone
-        asked, on a timer of its own: 21.11)."""
+    def _filtered_waiting(self):
+        """notify.filtered = "remind": once, after the first round that came through,
+        whether the server holds someone's notifications back — an event every interface
+        says in its own line (Qt alone asked, on a timer of its own: 21.11). Asked here,
+        in the round: one request, none when offline."""
+        if (self.cfg.get("notify") or {}).get("filtered", "remind") != "remind":
+            return
         try:
-            got = fut.result()
+            if not self.supports("notification_policy"):
+                return
+            policy = self._api("notification_policy", self.api.notification_policy) or {}
+            n = (policy.get("summary") or {}).get("pending_requests_count")
+            if n is None:
+                n = len(self.api.notification_requests() or ())
         except Exception as e:  # noqa: BLE001 — a reminder is never worth an error
             log.debug("filtered at start: %s", e)
             return
-        if got and got.get("pending"):
-            self.emit("filtered_waiting", int(got["pending"]))
+        if n:
+            self.emit("filtered_waiting", int(n))
 
     def poll_state(self):
         """Is a round going on, when did the last one come through, how many failed in
