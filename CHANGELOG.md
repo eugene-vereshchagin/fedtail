@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.8 — 2026-11-22
 
 **In short: every setting does the same in all five interfaces.** A sweep of each of
