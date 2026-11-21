@@ -55,6 +55,19 @@ def prune(folder, limit, ours, what):
     return gone
 
 
+def write(path, data):
+    """A cached file written whole or not at all: into a ".part" beside it, then put in
+    its place — a reader at the same moment (the prefetch, a lane, the web page's
+    /pic) saw half a picture, took it for broken and threw it away (21.11)."""
+    import os
+    part = path.with_name(f"{path.name}.{os.getpid()}.{id(data)}.part")
+    try:
+        part.write_bytes(data)
+        os.replace(part, path)
+    finally:
+        part.unlink(missing_ok=True)
+
+
 def prune_all(cfg, cache_dir):
     """Both caches within their budgets. → (pictures gone, videos gone)."""
     ui = cfg.get("ui") or {}

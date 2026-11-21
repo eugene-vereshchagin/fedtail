@@ -243,6 +243,23 @@ class GtkByHandTest(_ByHand, _GtkBase):
         xdo("key", "f")
         self.assertTrue(pump(lambda: self.world.statuses[sid].get("favourited"), 3))
 
+    def test_the_editor_follows_the_window(self):
+        """The window resized by hand: the editor stays in its middle — placed on the
+        window's size, not on every frame (a tick kept the clock going, 21.11)."""
+        dlg = self.win.compose()
+        self.assertTrue(pump(lambda: dlg.get_mapped(), 3))
+        pump(timeout=0.5)
+        self.assertFalse(getattr(dlg, "_ticking", 0))
+        xdo("windowsize", self._xid(self.win), 1300, 900)
+
+        def centred():
+            ov = self.win.overlay
+            w = ov.get_width()
+            return w >= 1200 and abs(dlg.get_margin_start() - dlg.get_margin_end()) <= 2 \
+                and dlg.get_margin_start() > 100
+        self.assertTrue(pump(centred, 5), (self.win.overlay.get_width(),
+                                           dlg.get_margin_start(), dlg.get_margin_end()))
+
     def test_ctrl_enter_sends(self):
         """Ctrl+Enter in the editor's text sends (the text field put a new line in, the
         editor never heard the key: 21.11)."""

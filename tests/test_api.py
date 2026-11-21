@@ -582,12 +582,19 @@ class PagingTest(unittest.TestCase):
         a.quotes("5")
         self.assertEqual(s.calls[-1][2]["params"]["limit"], 40)
 
-    def test_all_pages_stop_at_a_short_page(self):
+    def test_all_pages_follow_the_link_to_the_end(self):
+        """The end is no next link, or an empty page — not a page shorter than asked:
+        Pleroma and Akkoma give 40 a page, and the mutes stopped at 40 (21.11)."""
         full = [{"id": str(i)} for i in range(80)]
+        forty = [{"id": f"p{i}"} for i in range(40)]
         a, s = make(Resp(body=full, links={"next": {"url": "?max_id=5"}}),
-                    Resp(body=[{"id": "x"}], links={"next": {"url": "?max_id=1"}}))
+                    Resp(body=[{"id": "x"}], links={"next": {"url": "?max_id=1"}}),
+                    Resp(body=[], links={"next": {"url": "?max_id=0"}}))
         self.assertEqual(len(a.mutes()), 81)
-        self.assertEqual(len(s.calls), 2)
+        self.assertEqual(len(s.calls), 3)
+        a, s = make(Resp(body=forty, links={"next": {"url": "?max_id=5"}}),
+                    Resp(body=forty[:7], links={}))
+        self.assertEqual(len(a.mutes()), 47)
         a, s = make(Resp(body=full, links={}))
         self.assertEqual(len(a.blocks()), 80)
         self.assertEqual(len(s.calls), 1)
@@ -652,6 +659,23 @@ class WritingTest(unittest.TestCase):
                                                 "focus": "0.50,-0.25"})
             self.assertEqual(first[2]["files"]["file"][2], "image/jpeg")
             self.assertTrue(s.calls[1][1].endswith("/api/v1/media/M"))
+
+    def test_an_upload_still_processing_is_said_not_sent(self):
+        """A video the server still processes after the wait: a clear error, not a post
+        with it unready (refused, and the retry uploaded it all again)."""
+        with tempfile.TemporaryDirectory() as d:
+            clip = Path(d) / "clip.mp4"
+            clip.write_bytes(b"mp4")
+            a, _s = make(Resp(202, {"id": "M", "url": None}),
+                         *[Resp(206, {"id": "M", "url": None}) for _ in range(200)])
+            real_sleep = api_mod.time.sleep
+            api_mod.time.sleep = lambda _s: None
+            try:
+                with self.assertRaises(ApiError) as e:
+                    a.upload_media(str(clip))
+            finally:
+                api_mod.time.sleep = real_sleep
+            self.assertIn("processing", str(e.exception))
 
     def test_upload_media_v1_on_old_servers(self):
         with tempfile.TemporaryDirectory() as d:

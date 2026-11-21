@@ -321,7 +321,10 @@ class MergedCore:
         groups = {}
         for item, st in entries:
             core, tag, sid = self.split(st["id"])
-            groups.setdefault(tag, (core, []))[1].append((item, dict(st, id=sid)))
+            # the whole of it as its account's core has it: a boost's post id too (only
+            # the top id unprefixed, a boost stayed unread after its post was read)
+            own = self._unwrap(tag, st) if tag else dict(st, id=sid)  # the main: as it is
+            groups.setdefault(tag, (core, []))[1].append((item, own))
         out = set()
         for tag, (core, own) in groups.items():
             out |= {self._p(tag, i) for i in core.unread_ids(own)}

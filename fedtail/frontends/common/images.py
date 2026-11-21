@@ -407,7 +407,8 @@ class Cache:
                 len(data), hint)  # once per kind in the normal log
             said.add(kind)
         else:  # never keep an error page or half a file
-            p.write_bytes(data)
+            from ...core import diskcache
+            diskcache.write(p, data)
             self._count_write()
         return img
 
@@ -805,6 +806,7 @@ def fetch_picture(cache_dir, url, opener, readable=None):
     if fmt is None:  # cut short, or not a picture: never into the cache
         log.debug("prefetch %s: %d B, %s — not kept", url, len(data), why)
         return None
-    p.write_bytes(data)
+    from ...core import diskcache
+    diskcache.write(p, data)
     log.debug("prefetch %s: %d B in %.1f s", url, len(data), time.monotonic() - t)
     return p

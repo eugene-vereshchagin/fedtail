@@ -255,3 +255,44 @@ class ConfigEditTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CursorTest(unittest.TestCase):
+    """Bookmarks and likes page by the server's Link cursor (core/sources._Cursor)."""
+
+    def test_older_goes_on_from_where_it_stood(self):
+        from fedtail.core import sources
+
+        class Api:  # pages of 2, by a cursor of its own: p1 → p2 → p3 → end
+            bookmarks_next = None
+
+            def __init__(self):
+                self.asked = []
+
+            def bookmarks(self, limit=40, max_id=None):
+                self.asked.append(max_id)
+                page = {None: ("p2", [1, 2]), "p2": ("p3", [3, 4]), "p3": (None, [5])}
+                self.bookmarks_next, ids = page[max_id]
+                return [{"id": str(i)} for i in ids]
+        api = Api()
+        c = sources._Cursor(api.bookmarks, "bookmarks_next")
+        c()                                     # a round: the newest page
+        self.assertEqual([s["id"] for s in c(max_id="2")], ["3", "4"])
+        c()                                     # another round: "older" stays where it is
+        self.assertEqual([s["id"] for s in c(max_id="4")], ["5"])
+        self.assertEqual(c(max_id="5"), [])      # the end: not the first page again
+        self.assertEqual(api.asked, [None, "p2", None, "p3"])
+
+
+class DiskCacheWriteTest(unittest.TestCase):
+    def test_written_whole_or_not_at_all(self):
+        from fedtail.core import diskcache
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ("a" * 40)
+            diskcache.write(p, b"picture")
+            self.assertEqual(p.read_bytes(), b"picture")
+            with mock.patch("os.replace", side_effect=OSError("disk full")), \
+                    self.assertRaises(OSError):
+                diskcache.write(p, b"other")
+            self.assertEqual(p.read_bytes(), b"picture")  # the old one, whole
+            self.assertEqual(sorted(x.name for x in Path(d).iterdir()), [p.name])

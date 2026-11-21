@@ -31,15 +31,39 @@ def notification_entry(n):
 
 class _Cursor:
     """A stream that pages by the Link header: "older" continues from where the
-    previous page ended, whatever the oldest stored item is."""
+    previous older page ended, whatever the oldest stored item is. The newest page
+    (each round) only gives "older" its start until "older" has gone further back:
+    every round set it back to page 2 — "Older" brought nothing, and a lane whose
+    "Older" brought nothing stopped asking (21.11); at the end, "older" asked the
+    first page again."""
+
+    pages_on = True  # fetch_older: a page of what's stored already isn't the end
 
     def __init__(self, fetch, attr):
-        self.fetch_page, self.attr, self.next = fetch, attr, None
+        import threading
+        self.fetch_page, self.attr = fetch, attr
+        self.older = None   # where "older" goes on
+        self.paged = False  # "older" has gone back at least once
+        self.end = False    # the server said there's nothing older
+        self.lock = threading.Lock()  # the round's thread and "older"'s
+
+    def _next(self):
+        return getattr(self.fetch_page.__self__, self.attr, None)
 
     def __call__(self, limit=40, max_id=None, min_id=None):
-        page = self.fetch_page(limit=limit, max_id=self.next if max_id else None)
-        self.next = getattr(self.fetch_page.__self__, self.attr, None)
-        return page
+        with self.lock:
+            if not max_id:  # the newest page
+                page = self.fetch_page(limit=limit)
+                if not self.paged:
+                    self.older = self._next()
+                    self.end = self.older is None
+                return page
+            if self.end:
+                return []
+            page = self.fetch_page(limit=limit, max_id=self.older)
+            self.older, self.paged = self._next(), True
+            self.end = self.older is None
+            return page
 
 
 def make_sources(api, me_id):
@@ -270,4 +294,12 @@ def fetch_older(store, source, page_size):
         source.fetch(limit=page_size)
     entries = _entries(source, page)
     new = set(store.put_items(source.name, entries))
+    # a stream paged by its own cursor (bookmarks, likes) starts "older" after its
+    # newest page: pages already stored (an earlier run's) go by till one brings news
+    tries = 0
+    while page and not new and getattr(source.fetch, "pages_on", False) and tries < 5:
+        tries += 1
+        page = source.fetch(limit=page_size, max_id=oldest or "older")
+        entries = _entries(source, page)
+        new = set(store.put_items(source.name, entries))
     return [st for item_id, st, _ in entries if item_id in new]

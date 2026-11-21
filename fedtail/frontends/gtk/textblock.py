@@ -25,7 +25,7 @@ import re
 import time
 import weakref
 
-from .gi_setup import Gdk, Gtk, Pango
+from .gi_setup import Gdk, GLib, Gtk, Pango
 
 _TAG = re.compile(r"<(/?)a\b([^>]*)>|<[^>]*>|&[^;]+;|[^<&]+", re.S)
 _CODE = re.compile(r":([A-Za-z0-9_]{1,64}):")
@@ -316,6 +316,9 @@ class TextBlock(Gtk.Widget):
         rect = Gdk.Rectangle()
         rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
         pop.set_pointing_to(rect)
+        # closed: let go of it (each right click left one more on the block, 21.11)
+        pop.connect("closed", lambda p: GLib.idle_add(
+            lambda: (p.get_parent() is not None and p.unparent(), GLib.SOURCE_REMOVE)[1]))
         pop.popup()
         self._tag_pop = pop  # (tests)
         return pop

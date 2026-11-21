@@ -86,6 +86,10 @@ class WebTest(TmpDir):
         with urllib.request.urlopen(r, timeout=30) as resp:
             self.assertEqual(resp.headers["Content-Type"], "image/png")
             self.assertEqual(resp.read(), png())
+            # kept a day by the browser: one Cache-Control, not no-store beside it
+            # (the browser took no-store and fetched every face at every redraw)
+            self.assertEqual(resp.headers.get_all("Cache-Control"),
+                             ["private, max-age=86400"])
         # not in the cache and nowhere to get it from (the tests are offline): 404
         self.assertEqual(self.req(web._pic("https://nowhere.example/x.png"))[0], 404)
         self.assertEqual(self.req("/pic?u=" + url, cookie=False)[0], 403)
@@ -218,7 +222,9 @@ class WebTest(TmpDir):
         except urllib.error.HTTPError as e:
             self.assertEqual(e.code, 303)
             cookie = e.headers["Set-Cookie"]
-            self.assertIn(f"{web.COOKIE}={self.key}", cookie)
+            # named by the port: two profiles' pages on 127.0.0.1 keep a cookie each
+            port = self.srv.server_address[1]
+            self.assertIn(f"{web.COOKIE}_{port}={self.key}", cookie)
             self.assertIn("HttpOnly", cookie)
             self.assertIn("SameSite=Strict", cookie)
         code, _h, _b = self.req("/?k=wrong", cookie=False)
@@ -233,7 +239,8 @@ class WebTest(TmpDir):
         with self.assertRaises(urllib.error.HTTPError) as e:
             opener.open(self.base + path, timeout=10)
         self.assertEqual(e.exception.code, 303)
-        self.assertIn(f"{web.COOKIE}={self.key}", e.exception.headers["Set-Cookie"])
+        self.assertIn(f"{web.COOKIE}_{self.srv.server_address[1]}={self.key}",
+                      e.exception.headers["Set-Cookie"])
         self.assertEqual(self.req(path, cookie=False)[0], 403)  # used: dead
         old = self.srv.web.login_link(self.base)
         token = old.split("t=")[1]

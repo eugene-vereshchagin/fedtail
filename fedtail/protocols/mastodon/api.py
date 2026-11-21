@@ -36,6 +36,9 @@ class TooBig(requests.RequestException):
     """The answer is bigger than any API answer should be (MAX_ANSWER)."""
 
 
+PROCESSING_WAIT_S = 300  # an upload the server still processes: waited for this long
+
+
 def _read_capped(r, cap):
     """The body read, but no more than cap bytes: past that the connection is dropped
     and TooBig raised — a server's (or proxy's) gigabyte never fills the memory. A
@@ -789,7 +792,9 @@ class Api:
         for _ in range(pages):
             items, cursor = self.get_page(path, self._page(80, cursor))
             out += items
-            if not cursor or len(items) < 80:  # a page not full is the last one
+            # the end: no next link, or nothing — not "fewer than asked": Pleroma and
+            # Akkoma give 40 a page, and the mutes and blocks stopped at 40 (21.11)
+            if not cursor or not items:
                 break
         return out
 
@@ -936,11 +941,17 @@ class Api:
                 if thumb is not None:
                     thumb.seek(0)
                 media = self.post("/api/v1/media", data=data, files=files)
-        # Mastodon processes v2 uploads asynchronously: wait until it's ready
-        for _ in range(30):
-            if media.get("url"):
-                break
-            time.sleep(1)
+        # Mastodon processes v2 uploads asynchronously: wait until it's ready — a long
+        # video on a slow server takes minutes; sent unready, the post was refused (422)
+        # and the retry uploaded it all again (21.11)
+        waited = 0.0
+        while not media.get("url"):
+            if waited >= PROCESSING_WAIT_S:
+                raise ApiError(422, "the server is still processing the attachment — "
+                                    "send again in a minute")
+            pause = min(5.0, 1.0 + waited / 10)
+            time.sleep(pause)
+            waited += pause
             media = self.get(f"/api/v1/media/{seg(media['id'])}")
         return media
 

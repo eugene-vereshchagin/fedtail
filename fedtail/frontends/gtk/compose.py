@@ -321,7 +321,13 @@ class ComposeWindow(Gtk.Box):
             self.set_halign(Gtk.Align.FILL)
             self.set_valign(Gtk.Align.FILL)
             win.overlay.add_overlay(self)
-            self._ticking = self.add_tick_callback(lambda *_a: self._place())
+            # placed anew when the window's size changes — not every frame: a tick
+            # callback kept the frame clock going all the while the editor was open
+            # (the processor awake on a laptop's battery, 21.11)
+            self._watch = [win.connect(f"notify::{p}", lambda *_a: self._place_soon())
+                           for p in ("default-width", "default-height", "maximized",
+                                     "fullscreened")]
+            self.connect("map", lambda *_a: self._place_soon())
             self._place()
         else:
             self.host = Gtk.Window(transient_for=win, title=self.title)
@@ -345,6 +351,25 @@ class ComposeWindow(Gtk.Box):
     def _toggle_big(self):
         self.view.set_state("compose_big", not self._big())
         self._place()
+
+    def _place_soon(self):
+        """_place once the window has its new size (a frame or two after it's asked),
+        till it's the size it stays."""
+        if getattr(self, "_placing", 0):
+            return
+        tries = [0]
+
+        def again():
+            before = (self.win.overlay.get_width(), self.win.overlay.get_height())
+            self._place()
+            tries[0] += 1
+            if tries[0] < 20 and (before[0] <= 0 or tries[0] < 3 or before != getattr(
+                    self, "_placed_for", None)):
+                self._placed_for = before
+                return GLib.SOURCE_CONTINUE
+            self._placing = 0
+            return GLib.SOURCE_REMOVE
+        self._placing = GLib.timeout_add(50, again)
 
     def _place(self):
         """In the middle of the window: ui.compose_size per cent of it (⤡: 90), or at
@@ -375,9 +400,12 @@ class ComposeWindow(Gtk.Box):
         self._closing()
         self.closed = True
         if self.inline:
-            if getattr(self, "_ticking", 0):
-                self.remove_tick_callback(self._ticking)
-                self._ticking = 0
+            for h in getattr(self, "_watch", ()):
+                self.win.disconnect(h)
+            self._watch = []
+            if getattr(self, "_placing", 0):
+                GLib.source_remove(self._placing)
+                self._placing = 0
             parent = self.get_parent()
             if parent is not None:
                 self.win.overlay.remove_overlay(self)

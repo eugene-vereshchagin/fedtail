@@ -687,9 +687,14 @@ class Store:
 
     def delete_status(self, sid):
         with self._tx() as db:
-            db.execute("DELETE FROM statuses WHERE id=?", (sid,))
-            db.execute("DELETE FROM items WHERE status_id=?", (sid,))
-            self._parsed.pop(sid, None)
+            # and the boosts of it: each holds the whole post (its text stayed in the
+            # lanes after the post was deleted, 21.11)
+            boosts = [r[0] for r in db.execute(
+                "SELECT id FROM statuses WHERE json_extract(data, '$.reblog.id') = ?", (sid,))]
+            for x in [sid, *boosts]:
+                db.execute("DELETE FROM statuses WHERE id=?", (x,))
+                db.execute("DELETE FROM items WHERE status_id=?", (x,))
+                self._parsed.pop(x, None)
             self.status_version += 1
 
     def mark_missing(self, sid):
@@ -930,11 +935,12 @@ class Store:
     def mark_deleted(self, status_id):
         """Its server no longer has this post (404/410 when fetched again): kept here,
         marked — a card says so, a rule may ask (state = "deleted")."""
-        got = list(self.kv_get("deleted", []) or ())
-        if status_id not in got:
-            self.kv_set("deleted", (got + [status_id])[-self.DELETED_KEEP:])
-            return True
-        return False
+        with self.lock:  # read and written as one: two at once lost one
+            got = list(self.kv_get("deleted", []) or ())
+            if status_id not in got:
+                self.kv_set("deleted", (got + [status_id])[-self.DELETED_KEEP:])
+                return True
+            return False
 
     def deleted_set(self):
         return set(self.kv_get("deleted", []) or ())

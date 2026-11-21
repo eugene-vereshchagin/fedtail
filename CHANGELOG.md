@@ -73,6 +73,21 @@
   terminal shows link cards and folds a tail of #tags.
 * The terminal's editor keeps its draft as you type (`post.drafts_autosave`), not only
   on Esc; a post deleted from the command line goes from the screen.
+* Fixed: scrolling Bookmarks or Likes back stopped loading older pages after a poll
+  round; at the end, "Older" asked for the first page again.
+* Fixed: with several accounts in one window, a boost that came by another account
+  stayed unread after its post was read.
+* Fixed: deleting your post left the boosts of it, with its whole text, in the lanes.
+* Fixed: on Pleroma and Akkoma only the first 40 muted or blocked people were known.
+* Fixed: a video the server took longer than half a minute to process went into the
+  post unready and the post was refused; fedtail waits up to five minutes and says so
+  if it is still not ready.
+* Fixed, web page: the browser didn't keep pictures and asked for every face again
+  at every redraw; two profiles' pages on the same machine logged each other out.
+* Fixed, GTK: a right click on a #tag left its menu behind each time; the editor
+  inside the window kept the frame clock running all the while it was open.
+* Fixed: a picture in the cache could be read half-written by another part of the
+  program and thrown away as broken.
 
 ## 0.23.7 — 2026-11-20
 

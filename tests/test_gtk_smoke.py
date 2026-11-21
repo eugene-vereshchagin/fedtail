@@ -1433,6 +1433,8 @@ class GtkSmokeTest(_GtkBase):
                                       i18n._("tag_everywhere_n", tag="cats")])
         self.assertIn(i18n._("tag_mute_n", tag="cats"), labels)
         pop.popdown()
+        # closed, it is let go: right clicks don't pile popovers up on the block
+        self.assertTrue(pump(lambda: pop.get_parent() is None, 2))
 
     def test_select_text_and_quote_it_in_a_reply(self):
         """As Qt: text selected in a post — right click: Quote in reply, Copy; the

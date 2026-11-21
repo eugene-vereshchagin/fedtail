@@ -28,6 +28,21 @@ class IterItemsTest(unittest.TestCase):
 
 
 class LinkItemsTest(unittest.TestCase):
+    def test_a_post_deleted_takes_its_boosts_along(self):
+        """A boost holds the whole post: its text stayed in the lanes after the post
+        was deleted (21.11)."""
+        from .fakes import BOB, NEWS, status
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        s = Store(Path(d.name) / "s.db")
+        post = status("700", BOB, minute=1, text="gone soon")
+        boost = dict(status("701", NEWS, minute=2), reblog=post)
+        s.put_items("home", [("700", post, post["created_at"]),
+                             ("701", boost, boost["created_at"])])
+        s.delete_status("700")
+        self.assertEqual(s.items("home", 10), [])
+        self.assertIsNone(s.get_status("701"))
+
     def test_a_stored_post_linked_not_written_again(self):
         """A free lane takes its feeds' posts (core/custom.py): only the items go in;
         the posts stay as stored, and a boost's first sight is the boosted post's."""

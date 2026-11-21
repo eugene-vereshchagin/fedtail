@@ -113,6 +113,18 @@ class MergedRoutingTest(TmpDir):
         self.assertEqual((core, tag, own["id"], own["account"]["id"]),
                          (self.w, "work", "999", "Z"))
 
+    def test_a_boost_is_read_with_its_post_in_any_account(self):
+        """The other account's boost counts read once its post is read — the post's
+        id inside the boost stayed prefixed, and the boost unread for good (21.11)."""
+        post = status("600", BOB, minute=20, text="the post")
+        boost = dict(status("601", NEWS, minute=21), reblog=post)
+        self.work.add(post)
+        self.work.add(boost, home=True)
+        self.w.poll_once()
+        self.w.store.mark_read(["600"])
+        entry = ("work~601", self.m.wrap("work", self.w.store.get_status("601")))
+        self.assertEqual(self.m.unread_ids([entry]), set())
+
     def test_then_passes_errors_on(self):
         bad = Future()
         bad.set_exception(KeyError("x"))

@@ -2440,11 +2440,17 @@ class Handler(BaseHTTPRequestHandler):
                   args[1] if len(args) > 1 else "")
 
     # ---- plumbing ----------------------------------------------------------------
+    def _cookie(self):
+        """The key's cookie, named by the port: a browser keeps cookies by host, not by
+        port — two profiles' pages on 127.0.0.1 logged each other out (21.11)."""
+        return f"{COOKIE}_{self.server.server_address[1]}"
+
     def _authorized(self):
         raw = self.headers.get("Cookie") or ""
+        names = (self._cookie(), COOKIE)  # (the plain name: pages logged in before)
         for part in raw.split(";"):
             name, _sep, value = part.strip().partition("=")
-            if name == COOKIE and hmac.compare_digest(value.encode(), self.web.key.encode()):
+            if name in names and hmac.compare_digest(value.encode(), self.web.key.encode()):
                 return True
         return False
 
@@ -2453,7 +2459,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        # no-store, unless the answer says its own (a picture: a day) — both sent, the
+        # browser took no-store and fetched every face again at every redraw (21.11)
+        if not any(k.lower() == "cache-control" for k, _v in extra):
+            self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Security-Policy", CSP)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -2507,7 +2516,7 @@ class Handler(BaseHTTPRequestHandler):
             # for links people kept from before — both end in the cookie and "/"
             if self.web.use_link(q["t"]) if "t" in q else \
                     hmac.compare_digest(q["k"].encode(), self.web.key.encode()):
-                cookie = f"{COOKIE}={self.web.key}; HttpOnly; SameSite=Strict; Path=/; " \
+                cookie = f"{self._cookie()}={self.web.key}; HttpOnly; SameSite=Strict; Path=/; " \
                          f"Max-Age={400 * 24 * 3600}"
                 self._send(HTTPStatus.SEE_OTHER, b"", "text/plain",
                            extra=(("Set-Cookie", cookie), ("Location", "/")))

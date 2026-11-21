@@ -815,7 +815,8 @@ class View:
         if not kind.startswith(("text/", "video/", "audio/")) and \
                 imagesniff.readable(data)[0] is not None:
             try:
-                path.write_bytes(data)
+                from . import diskcache
+                diskcache.write(path, data)
             except OSError:
                 pass
         return data
