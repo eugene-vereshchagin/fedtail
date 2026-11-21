@@ -439,7 +439,9 @@ class PollMixin:
         try:
             if not self.supports("notification_policy"):
                 return
-            policy = self._api("notification_policy", self.api.notification_policy) or {}
+            # asked as is: a 404 here (an older server) marks nothing unsupported — the
+            # place asks for itself when opened
+            policy = self.api.notification_policy() or {}
             n = (policy.get("summary") or {}).get("pending_requests_count")
             if n is None:
                 n = len(self.api.notification_requests() or ())
