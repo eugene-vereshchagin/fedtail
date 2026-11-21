@@ -107,6 +107,14 @@
   `feed.watch_replies`, `feed.aliases`, `feed.nick_colors`).
 * A profile's "Media": the pinned posts with pictures on top, in every interface —
   the windows showed every pinned post there, the web page and the phone none.
+* `feed.on_new = "jump_to_newest"` goes to the new posts in GTK, the terminal, the web
+  page and the phone too (only the Qt window went).
+* `read.mark_read = "on_open"` reads a lane as it opens in the terminal and on the
+  phone too; `read.read_button` puts ✓ under an unread post on the web page and the
+  phone; `feed.show_reply_context = false` hides "in reply to" over replies on the web
+  page, the phone and in the terminal — each worked in the windows only.
+* The web page draws the buttons under a post as `card.actions` says: pictures,
+  words or both (it drew glyphs whatever it said).
 
 ## 0.23.7 — 2026-11-20
 

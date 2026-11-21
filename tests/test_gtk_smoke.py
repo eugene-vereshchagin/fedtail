@@ -2475,6 +2475,24 @@ class GtkBigLaneTest(unittest.TestCase):
         self.assertGreater(lv.list.total, page * 50)  # the body: every place
         self.assertLess(self.worst, self.STEP_MAX, "the main loop stopped for too long")
 
+    def test_new_posts_take_it_to_the_newest_end(self):
+        """feed.on_new = "jump_to_newest": scrolled up, new posts come — the lane goes
+        to them, as Qt's (GTK stood where it was: 21.11)."""
+        from fedtail.protocols.mastodon import adapter
+        lv = self.lane()
+        self.loop(lambda: not lv._pending(), 5)
+        lv.adj.set_value(max(0, lv.adj.get_value() - lv.adj.get_page_size() * 6))
+        self.loop(lambda: not lv._pending(), 5)
+        self.assertNotIn(self.big[-1][0], lv.order)  # far from the end now
+        self.view.cfg["feed"]["on_new"] = "jump_to_newest"
+        self.big.append(("99999", adapter.post(status("99999", BOB, minute=58,
+                                                      text="<p>новый</p>"), "t")))
+        lv.refresh()
+        self.assertTrue(self.loop(lambda: "99999" in lv.order and not lv._pending(), 5))
+        pump(timeout=0.3)
+        self.assertGreaterEqual(lv.adj.get_value() + lv.adj.get_page_size(),
+                                lv.adj.get_upper() - 2)  # at the newest end
+
     def test_scrolling_up_grows_without_a_jump(self):
         """Scrolled up past what's built: the cards there come, the far ones go, and
         the post on top of the screen stays where it is while the places above it

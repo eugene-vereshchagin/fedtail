@@ -85,6 +85,7 @@
     <string name="boost">Boost</string>
     <string name="unboost">Undo boost</string>
     <string name="bookmark">Bookmark</string>
+    <string name="mark_one_read">Mark read</string>
     <string name="unbookmark">Remove the bookmark</string>
     <string name="sub_thread">Follow the thread</string>
     <string name="unsub_thread">Leave the thread</string>

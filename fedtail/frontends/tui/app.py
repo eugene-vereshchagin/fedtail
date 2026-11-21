@@ -1206,7 +1206,7 @@ class FedtailApp(App, PostsMixin):
             lv = self._main("#posts", ListView)
         except NoMatches:  # a redraw queued (a post sent) while the app was closing
             return
-        from ..common.lane import SEPARATOR
+        from ..common.lane import SEPARATOR, jumps_to_new
         m = self.lane_model(name)
         if first:  # opened anew: "new below" stands where reading stands now
             m.separator = None
@@ -1260,7 +1260,24 @@ class FedtailApp(App, PostsMixin):
         elif m.current_filter() != "all" or m.conversations():
             line += Text("  · " + self.lane_choice_words(m), style="dim")
         self._main("#title", Static).update(line)
+        # read.mark_read = "on_open": read as it opens (the windows' rule; the marks stay
+        # on screen till next time) — the terminal only read on scrolling (21.11). A lane
+        # opened before its posts came (the start): read when they first do
+        if first:
+            self._read_when_filled = name if m.read_on_open() and not rows else None
+        opening = first or getattr(self, "_read_when_filled", None) == name and rows
+        if opening and rows:
+            self._read_when_filled = None
+        if opening and m.read_on_open() and (unread or events_unread):
+            if unread:
+                core.mark_read(sorted(unread))
+            if events_unread:
+                core.mark_activity_seen()
         keys = [k for k, _e, _m in rows]
+        had = {k for k, _e, _m in getattr(self, "_rows", ())}
+        if not first and had and jumps_to_new(core.cfg, had, keys):
+            # feed.on_new = "jump_to_newest": to the newest end, as the windows (21.11)
+            keep = keys[0] if m.newest_first else keys[-1]
         if keep is not None and keep not in keys and not first:
             # the cursor's row went (a follow request answered): a neighbour's, not the
             # lane's start (02.11)

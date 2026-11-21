@@ -520,30 +520,36 @@ function renderQuote(q, inner) {
 
 function renderActions(p, inThread) {
   const row = el("div", "acts");
-  const btn = (label, title, on, fn) => {
-    const b = el("button", on ? "on" : "", label);
+  // card.actions: "icons" — the glyph, "text" — the word, "both" — the two (the windows'
+  // switch; the page drew glyphs whatever it said, 21.11). The word is the tip always.
+  const style = (state.me && state.me.actions) || "both";
+  const n = (x) => (x ? " " + x : "");
+  const btn = (glyph, title, on, fn, count) => {
+    const label = style === "icons" ? glyph : style === "text" ? title : glyph + " " + title;
+    const b = el("button", on ? "on" : "", label + n(count));
     b.type = "button";
     b.title = title;
     b.onclick = fn;
     row.append(b);
     return b;
   };
-  const n = (x) => (x ? " " + x : "");
   if (p.chars) {  // card.char_count: the core's words, on the left before Reply
     const c = el("span", "chars", p.chars);
     c.title = w("char_count_tip");
     row.append(c);
   }
-  btn("↩" + n(p.counts.replies), w("reply"), false, () => compose(p));
-  btn((p.mine.liked ? "★" : "☆") + n(p.counts.likes), p.mine.liked ? w("faved") : w("fav"),
-      p.mine.liked, () => act("like", p));
+  btn("↩", w("reply"), false, () => compose(p), p.counts.replies);
+  btn(p.mine.liked ? "★" : "☆", p.mine.liked ? w("faved") : w("fav"),
+      p.mine.liked, () => act("like", p), p.counts.likes);
   if (p.can_boost)  // the core's word (common/actions.can_boost)
-    btn("♻" + n(p.counts.shares), p.mine.shared ? w("boosted") : w("boost"), p.mine.shared,
-        () => act("share", p));
+    btn("♻", p.mine.shared ? w("boosted") : w("boost"), p.mine.shared,
+        () => act("share", p), p.counts.shares);
   if (!state.me || state.me.bookmark_button !== false)  // ui.bookmark_button
     btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
         () => act("bookmark", p));
   if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at));
+  if (p.unread && state.me && state.me.read_button)  // read.read_button: ✓ under the unread
+    btn("✓", w("mark_one_read"), false, () => linkAct("fedtail:readone/" + p.sid, p));
   if (p.url) {
     const a = link("↗", p.url);
     a.title = w("open_browser");
@@ -1147,7 +1153,9 @@ async function selectLane(name, keep) {
     again = box.querySelector(`[data-id="${CSS.escape(h.id)}"]`);
     if (again) { oldTop = h.top; break; }
   }
-  if (again) {
+  if (data.jump && data.posts.length) {  // feed.on_new = "jump_to_newest": the core's word
+    setCursor(newestFirst ? 0 : data.posts.length - 1, false, "start");
+  } else if (again) {
     box.scrollTop += again.getBoundingClientRect().top - oldTop;
     const ci = state.posts.findIndex((x) => x.id === cursorId);
     if (ci >= 0) markCursor(ci);
@@ -1160,11 +1168,10 @@ async function selectLane(name, keep) {
     state.startWhere = data.start_where;  // its card on top or at the bottom
     setCursor(at >= 0 ? at : (newestFirst ? 0 : data.posts.length - 1), false, "start");
   }
-  if (state.me.mark_read === "on_open" && !keep) {  // the lane is read once it is open;
-    const ids = data.posts.filter((p) => p.unread).map((p) => p.id)   // the marks stay
-      .concat(unseenEvents(data));                                    // till next time
-    if (ids.length) api("/api/read", { ids }).catch(() => {});
-  }
+  // read.mark_read = "on_open": the core says what is read as the lane opens (the marks
+  // stay on screen till next time)
+  const ids = keep ? [] : data.read_on_open || [];
+  if (ids.length) api("/api/read", { ids }).catch(() => {});
 }
 
 // a lane's rows in the order they stand: its posts and, among them, the events it takes
@@ -1505,7 +1512,9 @@ async function loadPane(p, keep) {
   paneCount(p);
   paneRead(p);
   const again = anchor && p.body.querySelector(`[data-id="${CSS.escape(anchor)}"]`);
-  if (again) {
+  if (data.jump) {  // feed.on_new = "jump_to_newest": the core's word
+    p.body.scrollTop = newestFirst ? 0 : p.body.scrollHeight;
+  } else if (again) {
     p.body.scrollTop += again.getBoundingClientRect().top - oldTop;
   } else if (data.posts.length) {  // where the lane starts: the core's, else the newest end
     const found = data.start ? data.posts.findIndex((x) => x.id === data.start) : -1;
@@ -1517,10 +1526,8 @@ async function loadPane(p, keep) {
     } else if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
     if (card) holdCard(p.body, card, bottom, 8);
   }
-  if (state.me.mark_read === "on_open" && !keep) {
-    const ids = data.posts.filter((x) => x.unread).map((x) => x.id).concat(unseenEvents(data));
-    if (ids.length) api("/api/read", { ids }).catch(() => {});
-  }
+  const ids = keep ? [] : data.read_on_open || [];  // read.mark_read = "on_open": the core's
+  if (ids.length) api("/api/read", { ids }).catch(() => {});
 }
 
 function unseenEvents(data) {  // the keys of a lane's event rows not seen yet ("event:<id>")

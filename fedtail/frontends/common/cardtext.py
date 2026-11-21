@@ -31,6 +31,12 @@ def context_chars(cfg):
     return int((cfg.get("feed") or {}).get("reply_context_chars", CONTEXT_CHARS))
 
 
+def context_on(cfg):
+    """feed.show_reply_context: over a reply in a lane, a line of what it answers — the
+    windows honoured it, the page, the phone and the terminal drew it always (21.11)."""
+    return bool((cfg.get("feed") or {}).get("show_reply_context", True))
+
+
 def indent_of(cfg, depth):
     """How many steps in a thread's post of this depth is drawn: feed.thread_indent_max
     at most (the model's INDENT_MAX by default) — one number for every interface."""
@@ -219,7 +225,7 @@ def card_words(spec, cfg, date, in_thread=None):
     if not in_thread:
         if parent == "missing":
             w.context = Bit(_("ctx_missing"))
-        elif parent is None and p.reply_to and cfg["feed"].get("show_reply_context", True):
+        elif parent is None and p.reply_to and context_on(cfg):
             w.context = Bit(_("ctx_loading"))
         elif isinstance(parent, Post):
             w.context = Bit("↑ " + _("ctx_reply", name=name_of(parent.author),

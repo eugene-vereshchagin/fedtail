@@ -10,7 +10,7 @@ from ...i18n import _
 from ...model import Share, real
 from ...model.text import html_to_text, snippet
 from ..common import actions
-from ..common.cardtext import fold
+from ..common.cardtext import context_on, fold
 from ..common.commands import Commands  # noqa: F401 — the TUI's, now shared
 
 
@@ -100,7 +100,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
         out.head.append(("muted", "🔒"))
     if unread:
         out.head.append(("unread", "●"))
-    if p.reply_to and tcfg.get("show_context", True) and number is None:
+    # feed.show_reply_context for every interface; tui.show_context the terminal's own
+    if p.reply_to and tcfg.get("show_context", True) and context_on(core.cfg) and number is None:
         if parent == "missing":
             out.context = "↳ " + _("tui_parent_gone")
         elif parent is not None:

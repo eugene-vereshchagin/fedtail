@@ -275,6 +275,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var markOnScroll by mutableStateOf(true)
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
     var bookmarkButton by mutableStateOf(true)  // ui.bookmark_button: 🔖 beside ↩ ★ ♻
+    var readButton by mutableStateOf(false)     // read.read_button: ✓ under an unread post
     // a private message among posts: the core's "frame", "fill", "badge" or "none"
     // (ui.direct_highlight, the theme's shape.direct)
     var directMark by mutableStateOf("frame")
@@ -628,6 +629,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
         bookmarkButton = me.optBoolean("bookmark_button", true)
+        readButton = me.optBoolean("read_button")
         directMark = me.optString("direct_mark", "frame")
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
@@ -813,8 +815,21 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         startKey = got.optString("start").takeIf { it.isNotBlank() }
             ?.let { s -> list.firstOrNull { it.id == s }?.key }
         startBottom = got.optString("start_where") == "bottom"
-        if (!keep) opening += 1
+        if (!keep) {
+            opening += 1
+            // read.mark_read = "on_open": read as it opens — the core's decision, as the
+            // windows' (the phone marked only while scrolling: 21.11)
+            got.optJSONArray("read_on_open")?.let { arr ->
+                val now = (0 until arr.length()).map { arr.getString(it) }.toSet()
+                val ids = list.filter { it.unread && (it.id in now || it.key in now) }.map { it.id }
+                if (ids.isNotEmpty()) viewModelScope.launch { Core.read(ids) }
+            }
+        }
         pendingAim?.let { key -> if (list.any { it.key == key }) { aimKey = key; pendingAim = null } }
+        // feed.on_new = "jump_to_newest": new cards came — to the newest end, the core's
+        // word (common/lane.jumps_to_new; the phone stood where it was, 21.11)
+        if (keep && got.optBoolean("jump") && list.isNotEmpty())
+            aimKey = (if (newestFirst) list.first() else list.last()).key
     }
 
     var laneSwitches by mutableStateOf<LaneSwitches?>(null)

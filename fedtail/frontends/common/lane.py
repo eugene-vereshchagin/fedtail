@@ -394,20 +394,23 @@ class LaneModel:
                       langs=", ".join(view.cfg["lanes"].get("languages") or ()))
             info = info + " · " + words if info else words
         posts = [e for _, e in entries]
-        parents = view.parents(posts)
+        from .cardtext import context_on
+        context = context_on(view.cfg)  # feed.show_reply_context off: none asked or shown
+        parents = view.parents(posts) if context else {}
         answers = view.my_replies(posts)  # {post id: [my replies to it]}
         short = view.short_ids(posts)
         specs, unknown = [], []
         for item_id, e in entries:
             parent = parents.get(e.id)
-            if parent is None and real(e).reply_to:
+            if parent is None and real(e).reply_to and context:
                 unknown.append(e)
             pid = real(e).id
             specs.append(make_spec(view, item_id, e, parent=parent, unread=e.id in unread,
                                    extra={"my_replies": answers.get(pid, []),
                                           "short_id": short.get(pid)}))
         if self.conversations():
-            specs = self._conversation_specs(entries, unread, parents, answers, short)
+            specs = self._conversation_specs(entries, unread, parents if context else None,
+                                             answers, short)
         gone = getattr(view, "deleted_ids", None)
         gone = gone() if callable(gone) else set()
         if gone:  # its server no longer has it: kept, marked (feeds.md §2.4)
@@ -541,7 +544,8 @@ class LaneModel:
             pid = real(top).id
             specs.append(make_spec(
                 view, "conv:" + g["key"], top,
-                parent=parents.get(top.id) or view.parent(top),
+                parent=(parents.get(top.id) or view.parent(top)) if parents is not None
+                else None,
                 unread=g["unread"] > 0,
                 extra={"my_replies": answers.get(pid, []),
                        "short_id": more_short.get(pid) or short.get(pid),
@@ -764,6 +768,13 @@ def age_days(p, cfg):
     from datetime import UTC, datetime
     days = (datetime.now(UTC) - p.created).days
     return days if days > limit else 0
+
+
+def jumps_to_new(cfg, had, keys):
+    """feed.on_new = "jump_to_newest": the lane drawn anew has cards it hadn't (had: the
+    keys before) — the reader is taken to the newest end. Qt alone did it (21.11)."""
+    return (cfg.get("feed") or {}).get("on_new") == "jump_to_newest" and \
+        any(k not in had for k in keys if k != SEPARATOR)
 
 
 def message_seconds(cfg, seconds):

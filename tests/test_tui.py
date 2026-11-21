@@ -34,6 +34,47 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 return True
         self.fail("condition not reached")
 
+    async def test_a_lane_is_read_as_it_opens(self):
+        """read.mark_read = "on_open": the windows, the page and the phone read a lane as
+        it opens; the terminal read only while scrolling (21.11)."""
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        core, w = self.make(read={"mark_read": "on_open"},
+                            feed={"first_run_mark_read": False})
+        for i in range(3):
+            w.add(status(f"01{i}", BOB, minute=10 + i, text=f"post {i}", vis="public"),
+                  home=True)
+        core.poll_once()  # there when the lane opens
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            ids = [(None, {"id": f"01{i}"}) for i in range(3)]
+            await self.wait(pilot, lambda: app.lane == "home" and not core.unread_ids(ids))
+
+    async def test_new_posts_take_the_cursor_to_them(self):
+        """feed.on_new = "jump_to_newest": the terminal goes to the newest end when new
+        posts come, as the windows (it stood: 21.11)."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp
+        core, w = self.make(feed={"on_new": "jump_to_newest", "first_run_mark_read": False,
+                                  "order": "oldest_first"})
+        for i in range(3):
+            w.add(status(f"02{i}", BOB, minute=20 + i, text=f"old {i}", vis="public"),
+                  home=True)
+        core.poll_once()
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.wait(pilot, lambda: app.lane == "home" and
+                            len(app.query_one("#posts").children) >= 3)
+            posts = app.query_one("#posts", ListView)
+            posts.index = 0
+            await pilot.pause(0.2)
+            w.add(status("029", BOB, minute=29, text="the newest", vis="public"), home=True)
+            core.poll_once()
+            await self.wait(pilot, lambda: getattr(posts.highlighted_child, "key", None)
+                            == "029")
+
     async def test_lanes_posts_keys_and_commands(self):
         from textual.widgets import Input, ListView
 

@@ -35,6 +35,7 @@ from ..common.lane import (
     LaneModel,
     conversation_line,
     dwell_ms,
+    jumps_to_new,
     reading_now,
     seen,
 )
@@ -295,6 +296,7 @@ class LaneView(Gtk.Box):
                 self.sep_above, sep = (sp.key, sep.extra["separator"]), False
             keys.append(sp.key)
         old_keys = self.keys
+        old_order = list(old_keys)
         self.keys, self.specs = keys, {sp.key: sp for sp in specs if sp.key != SEPARATOR}
         self.unread = {k for k in keys if self.specs[k].unread}
         self.index = index = {k: i for i, k in enumerate(keys)}
@@ -322,6 +324,8 @@ class LaneView(Gtk.Box):
         self._lay_out()
         if not self.positioned:
             self._open(specs)
+        elif jumps_to_new(self.ctx.cfg, set(old_order), keys):  # feed.on_new, as Qt's
+            self._go_end(self.newest_first)
         elif anchor is not None:
             self._hold_at(anchor)
         self._realize()

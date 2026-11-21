@@ -34,7 +34,7 @@ from ...model import Account, Share, only_private, real
 from ...model.text import reply_mentions, snippet
 from .. import notifytext
 from ..common import actions, timed
-from ..common.cardtext import context_chars, direct_mark, fold, indent_of, shown_text
+from ..common.cardtext import context_chars, context_on, direct_mark, fold, indent_of, shown_text
 from ..common.commands import Commands
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
@@ -407,7 +407,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
         out["indent"] = indent_of(view.cfg, depth)  # how far in it is drawn, as the windows
-    if p.reply_to and number is None:
+    if p.reply_to and number is None and context_on(view.cfg):  # feed.show_reply_context
         if parent == "missing":
             out["context"] = {"missing": True}
         elif parent is not None:
@@ -883,6 +883,10 @@ class Web:
                 "dwell_ms": int(c["read"].get("dwell_ms", 350)),
                 # the card's 🔖 beside ↩ ★ ♻ (ui.bookmark_button), as the windows'
                 "bookmark_button": bool(c["ui"].get("bookmark_button", True)),
+                # the buttons under a post: glyphs, words or both (card.actions); the ✓
+                # under an unread one (read.read_button) — the page drew neither (21.11)
+                "actions": c["ui"].get("actions", "both"),
+                "read_button": bool(c["read"].get("read_button", False)),
                 # the posts' letters (window.post_keys), a picture's words under it or
                 # on hover (ui.alt_text), pictures in squares (ui.media_grid): as the
                 # windows show them (the page did one way whatever they said, 21.11)
@@ -1280,7 +1284,20 @@ class Web:
                                    item_id=sp.key, spec=sp))
         events += [dict(x, before=None) for x in waiting]  # after the last post
         lane = core.lane_by_name[name]
+        # read.mark_read = "on_open": what's unread here is read as it opens — the core's
+        # decision (common/lane.py), the page and the phone only mark it
+        # feed.on_new = "jump_to_newest": cards it hadn't since last drawn — to the newest
+        # end (the windows' rule, common/lane.jumps_to_new; the page and the phone stood)
+        from ..common.lane import jumps_to_new
+        drawn = [sp.key for sp in specs]
+        had = getattr(m, "web_drawn", None)
+        jump = bool(keep and had is not None and jumps_to_new(core.cfg, had, drawn))
+        m.web_drawn = set(drawn)
+        now_read = [x["id"] for x in posts if x.get("unread")] + \
+            [x["key"] for x in events if x["event"].get("unread")] \
+            if m.read_on_open() and not keep else []
         return {"name": name, "title": title, "posts": posts, "info": built.info,
+                "read_on_open": now_read, "jump": jump,
                 "waiting": bool(core.lane_waiting(name)) and not posts,  # browse: asked
                 "divider": divider, "events": events, "start": start,
                 "start_where": where,
@@ -2359,7 +2376,7 @@ class Web:
 
 
 # words the page shows, in the profile's language
-WORDS = ("direct_badge", "direct_badge_tip",
+WORDS = ("direct_badge", "direct_badge_tip", "mark_one_read",
          "reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", "thread",
          "write", "send", "sent", "tui_back", "web_thread", "follow", "unfollow",
          "acc_follows_you", "web_cw", "web_show", "web_load_error", "web_empty",

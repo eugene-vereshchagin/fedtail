@@ -29,7 +29,7 @@ from ...model import Relationship, only_private
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity, timed
-from ..common.lane import MEDIA_KINDS, LaneModel
+from ..common.lane import MEDIA_KINDS, LaneModel, jumps_to_new
 from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
 from .card import CardSpec, make_spec
@@ -476,10 +476,9 @@ class LaneWidget(QWidget):
                 # same way as when a drawn lane is shown
                 QTimer.singleShot(0, self._initial_position)
         else:
-            jump = self.cfg["feed"]["on_new"] == "jump_to_newest"
             had = set(self.view.keys())
             self.view.set_specs(specs, keep_position=True)
-            if jump and any(s.key not in had for s in specs):
+            if jumps_to_new(self.cfg, had, [s.key for s in specs]):  # feed.on_new
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
         empty = built.empty

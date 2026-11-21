@@ -203,6 +203,50 @@ class WebWritingTest(TmpDir):
         self.assertEqual(sorted(pinned("posts")), ["060", "061"])
         self.assertEqual(pinned("media"), ["061"])
 
+    def test_read_as_it_opens_the_core_says_what(self):
+        """read.mark_read = "on_open": the page and the phone take what to read from the
+        core — the phone read only on scrolling (21.11)."""
+        webs = self.srv.web
+        self.w.add(status("070", BOB, minute=7, vis="public", text="new one"), home=True)
+        self.core.poll_once()
+        webs.core.cfg["read"]["mark_read"] = "on_scroll"
+        self.assertEqual(webs.lane("home")["read_on_open"], [])
+        webs.core.cfg["read"]["mark_read"] = "on_open"
+        self.assertIn("070", webs.lane("home")["read_on_open"])
+        self.assertEqual(webs.lane("home", keep=True)["read_on_open"], [])  # standing there
+
+    def test_no_reply_context_when_switched_off(self):
+        """feed.show_reply_context = false: no "in reply to" line over a reply on the
+        page or the phone either (they drew it always: 21.11)."""
+        webs = self.srv.web
+        self.w.add(status("080", BOB, "001", BOB["id"], minute=8, vis="public",
+                          text="an answer"), home=True)
+        self.core.poll_once()
+        reply = lambda: next(p for p in webs.lane("unsorted")["posts"]  # noqa: E731
+                             if p["id"] == "080")
+        for _i in range(100):  # its parent asked and stored
+            if "context" in reply():
+                break
+            time.sleep(0.02)
+        self.assertIn("context", reply())
+        webs.core.cfg["feed"]["show_reply_context"] = False
+        self.assertNotIn("context", reply())
+
+    def test_jump_to_the_newest_the_core_says_when(self):
+        """feed.on_new = "jump_to_newest": the page and the phone are told to go to the
+        newest end when new cards came (Qt alone went: 21.11)."""
+        webs = self.srv.web
+        webs.core.cfg["feed"]["on_new"] = "jump_to_newest"
+        self.assertFalse(webs.lane("home")["jump"])  # opened: where reading starts
+        self.assertFalse(webs.lane("home", keep=True)["jump"])  # nothing new
+        self.w.add(status("090", BOB, minute=9, vis="public", text="newer"), home=True)
+        self.core.poll_once()
+        self.assertTrue(webs.lane("home", keep=True)["jump"])
+        webs.core.cfg["feed"]["on_new"] = "keep_position"
+        self.w.add(status("091", BOB, minute=10, vis="public", text="newest"), home=True)
+        self.core.poll_once()
+        self.assertFalse(webs.lane("home", keep=True)["jump"])
+
     def test_a_failure_in_the_background_keeps_the_text(self):
         """The editor is gone at once: with post.drafts_autosave off, the draft meant to
         hold the text was never written, and a failure lost it (21.11)."""

@@ -39,6 +39,9 @@ class TuiModelTest(TmpDir):
         self.assertIn("☆ 3", shown.foot)
         gone = model.show_post(core, st, parent="missing")
         self.assertIn("deleted", gone.context)
+        core.cfg["feed"]["show_reply_context"] = False  # every interface's switch (21.11)
+        self.assertEqual(model.show_post(core, st, parent=parent).context, "")
+        core.cfg["feed"]["show_reply_context"] = True
         core.cfg["tui"]["show_context"] = False
         self.assertEqual(model.show_post(core, st, parent=parent).context, "")
         # in a thread: the /N number instead of the context line

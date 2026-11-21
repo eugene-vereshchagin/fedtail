@@ -151,6 +151,8 @@ class CardActions(
     val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
     val pollRefresh: (PostItem) -> Unit = {},
     val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
+    val readButton: Boolean = false,                 // read.read_button: ✓ under an unread post
+    val readOne: (PostItem) -> Unit = {},
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
     val holdSelects: Boolean = true,                 // phone.hold_text: a long press selects words
     // a private message among posts (the core's: ui.direct_highlight, the theme's
@@ -176,6 +178,7 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
     bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects,
+    readButton = readButton, readOne = { markRead(listOf(it.key), inThread = it in threadPosts) },
     directMark = directMark, directColor = hexColor(themeColors["direct"]),
     onDirect = hexColor(themeColors["on-direct"]))
 
@@ -1264,6 +1267,13 @@ private fun Actions(p: PostItem, act: CardActions, menu: Boolean, setMenu: (Bool
             ThemedIcon("bookmark", if (p.bookmarked) Glyphs.Bookmarked else Glyphs.Bookmark, said,
                 Modifier.size(18.dp),
                 tint = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey)
+        }
+        // read.read_button: ✓ under an unread post, as the windows' (the phone had none)
+        if (act.readButton && p.unread) TextButton(onClick = { act.readOne(p) },
+            contentPadding = PaddingValues(horizontal = 8.dp)) {
+            val said = stringResource(R.string.mark_one_read)
+            Text("✓", fontSize = 15.sp, color = grey,
+                 modifier = Modifier.semantics { contentDescription = said })
         }
         Spacer(Modifier.weight(1f))
         CardMenu(p, act, menu, setMenu)

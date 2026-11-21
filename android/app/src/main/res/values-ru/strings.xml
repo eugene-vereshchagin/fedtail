@@ -84,6 +84,7 @@
     <string name="boost">Бустнуть</string>
     <string name="unboost">Отменить буст</string>
     <string name="bookmark">В закладки</string>
+    <string name="mark_one_read">Прочитано</string>
     <string name="unbookmark">Убрать из закладок</string>
     <string name="sub_thread">Подписаться на тред</string>
     <string name="unsub_thread">Отписаться от треда</string>
