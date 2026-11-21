@@ -2110,6 +2110,15 @@ class GtkPanelsTest(_GtkBase):
         finally:
             self.win.ctx.cfg["feed"]["link_cards"] = "full"
 
+    def test_a_bot_says_so(self):
+        """A bot's card: "@news [бот]", as Qt's — GTK said nothing (21.11)."""
+        from fedtail.frontends.gtk import card as cards
+        from fedtail.protocols.mastodon import adapter
+        c = cards.Card(self.win.ctx, "099", adapter.post(status("099", NEWS, minute=33,
+                                                                text="новости"), "t"))
+        labels = [w.get_label() or "" for w in _walk(c) if isinstance(w, Gtk.Label)]
+        self.assertTrue(any(f"[{i18n._('bot')}]" in t for t in labels), labels)
+
     def test_squares_cut_around_the_focus(self):
         """ui.media_grid = "square": a picture cut around the author's focus point, as
         Qt's — GTK cut around the centre (21.11)."""

@@ -141,6 +141,8 @@
   failing with a traceback.
 * Web Push shows what `notify.privacy` lets: who without the text with `"sender"`,
   neither with `"count"` (it showed the server's whole text).
+* A bot's post says "bot" on its card in GTK, the terminal, the web page and the
+  phone too — its server's word or `lanes.extra_bots` (only the Qt window said it).
 * The web page opens a picture in the browser with `ui.image_viewer = "browser"`; with
   `ui.merge` set in the config the terminal, the web page and the phone don't offer a
   merge switch that couldn't change anything; the phone asks for the server's

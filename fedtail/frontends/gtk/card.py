@@ -13,6 +13,7 @@ from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
 from ..common.cardtext import (
+    bot_mark,
     context_chars,
     direct_mark,
     fold,
@@ -394,6 +395,8 @@ class Card(Gtk.Box):
             head.append(name)
             self.who = [name]  # who wrote it, as drawn: the tools stay off it (tests)
             at = "@" + p.author.handle
+            if bot_mark(p.author, ctx.cfg):  # "[bot]", as Qt's (lanes.extra_bots too)
+                at += f" [{_('bot')}]"
             handle = _label(GLib.markup_escape_text(at) if p.author.id == self.profile_of
                             else link_markup(f"fedtail:account/{p.author.id}", at),
                             ("ft-muted",), markup=True)

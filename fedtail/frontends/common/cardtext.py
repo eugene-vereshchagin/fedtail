@@ -31,6 +31,13 @@ def context_chars(cfg):
     return int((cfg.get("feed") or {}).get("reply_context_chars", CONTEXT_CHARS))
 
 
+def bot_mark(acc, cfg):
+    """Is the author a bot — its server says so (`bot`), or lanes.extra_bots names it:
+    the card's "[bot]". Only Qt's card said so (21.11)."""
+    from ...model.text import is_bot
+    return acc is not None and is_bot(acc, (cfg.get("lanes") or {}).get("extra_bots", ()))
+
+
 def context_on(cfg):
     """feed.show_reply_context: over a reply in a lane, a line of what it answers — the
     windows honoured it, the page, the phone and the terminal drew it always (21.11)."""
@@ -224,6 +231,8 @@ def card_words(spec, cfg, date, in_thread=None):
         w.meta.append(Bit(date(p.created), thread_url(p.id, spec.open_at), kind="time"))
     w.meta.append(Bit(actions.vis_word(p.visibility), tip=actions.vis_word(p.visibility),
                       kind="vis"))
+    if bot_mark(p.author, cfg):  # a bot, as its server says or lanes.extra_bots
+        w.meta.append(Bit(_("bot"), kind="bot"))
     if p.edited:
         w.meta.append(Bit(_("edited_mark"), f"fedtail:history/{p.id}",
                           _("edited_tip", when=date(p.edited)), kind="edited"))

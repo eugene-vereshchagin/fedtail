@@ -313,6 +313,26 @@ class WebWritingTest(TmpDir):
         me = webs.me()
         self.assertEqual((me["image_viewer"], me["merge_pinned"]), ("browser", True))
 
+    def test_a_bot_said_on_every_card(self):
+        """A bot's post says so on the page, the phone and in the terminal (their words
+        are common/cardtext's) — only Qt's card did (21.11); lanes.extra_bots too."""
+        from tests.fakes import NEWS
+        webs = self.srv.web
+        self.w.add(status("095", NEWS, minute=9, vis="public", text="news"), home=True)
+        self.w.add(status("096", BOB, minute=10, vis="public", text="me"), home=True)
+        self.core.poll_once()
+        posts = {p["id"]: p for lane in [x["name"] for x in webs.lanes()]
+                 for p in webs.lane(lane)["posts"]}
+
+        def kinds(sid):
+            return [b.get("kind") for b in posts[sid]["words"]["meta"]]
+        self.assertIn("bot", kinds("095"))
+        self.assertNotIn("bot", kinds("096"))
+        webs.core.cfg["lanes"]["extra_bots"] = ["@" + BOB["acct"]]
+        posts = {p["id"]: p for lane in [x["name"] for x in webs.lanes()]
+                 for p in webs.lane(lane)["posts"]}
+        self.assertIn("bot", kinds("096"))
+
     def test_a_failure_in_the_background_keeps_the_text(self):
         """The editor is gone at once: with post.drafts_autosave off, the draft meant to
         hold the text was never written, and a failure lost it (21.11)."""
