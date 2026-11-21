@@ -261,6 +261,9 @@ class VideoOverlay(QWidget):
         self.btn = self._button("⏸", _("player_pause_tip"), self.toggle)
         bar.addWidget(self.btn)
         self.slider = SeekSlider()
+        # clicked, it kept the keys: ← → moved it a millisecond, PgUp/PgDn went nowhere
+        # (21.11) — the player's keys are the player's, as its buttons' are
+        self.slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.slider.seek.connect(lambda v: self.player.setPosition(v))
         bar.addWidget(self.slider, 1)
         self.time = QLabel("0:00")

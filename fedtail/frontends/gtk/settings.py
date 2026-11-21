@@ -9,7 +9,7 @@ import logging
 
 from ...i18n import _
 from ..common import settings as model_of
-from .gi_setup import GLib, Gtk, vscroll
+from .gi_setup import GLib, Gtk, close_on_esc, vscroll
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ def _label(text, *classes, wrap=False, select=False):
 class SettingsWindow(Gtk.Window):
     def __init__(self, win):
         super().__init__(transient_for=win, title=_("settings_title"))
+        close_on_esc(self)
         self.win = win
         self.view = win.view
         self.path = model_of.config_file(self.view)

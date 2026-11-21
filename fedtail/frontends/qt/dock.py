@@ -91,6 +91,9 @@ class InputDock(QWidget):
         self.text.setMinimumHeight(FACE)
         self.text.textChanged.connect(self._count)
         self.text.installEventFilter(self)
+        # a picture dropped or pasted: an attachment — the text field took its address
+        # as text, "file:///…", and nothing was attached (21.11)
+        self.text.viewport().installEventFilter(self)
         # #tags, @names, :emoji: as in the Compose window (installed after this filter,
         # so it sees the keys first: Enter picks from its list, doesn't send)
         from .complete import Completer
@@ -318,8 +321,50 @@ class InputDock(QWidget):
         self.send_btn.setEnabled(0 < n <= limit and
                                  self.text.toPlainText().strip() != self._prefill.strip())
 
+    def add_paths(self, paths):
+        """Files dropped or pasted: with the next post, each once, up to the server's
+        limit."""
+        known = {p for p, _d in self.media}
+        limit = getattr(self.win.core.caps, "max_media", 4) or 4
+        for p in paths:
+            if p not in known and len(self.media) < limit:
+                known.add(p)
+                self.media.append((p, ""))
+        self.attach_btn.setToolTip("\n".join(p for p, _d in self.media) or _("dock_attach"))
+        self.dress()
+
+    def _take(self, mime):
+        from PySide6.QtGui import QImage
+
+        from .compose import media_paths, save_image
+        paths = media_paths(mime)
+        if not paths and mime.hasImage() and not mime.hasText():
+            img = QImage(mime.imageData())
+            saved = save_image(self.win.core, img) if not img.isNull() else None
+            paths = [saved] if saved else []
+        if paths:
+            self.add_paths(paths)
+        return bool(paths)
+
     def eventFilter(self, obj, e):
         from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QGuiApplication, QKeySequence
+
+        from .compose import media_paths
+        t = e.type()
+        if obj is self.text.viewport():
+            if t in (QEvent.Type.DragEnter, QEvent.Type.DragMove) and \
+                    (media_paths(e.mimeData()) or e.mimeData().hasImage()):
+                e.acceptProposedAction()
+                return True
+            if t == QEvent.Type.Drop and self._take(e.mimeData()):
+                e.acceptProposedAction()
+                return True
+            return super().eventFilter(obj, e)
+        if obj is self.text and t == QEvent.Type.KeyPress and \
+                e.matches(QKeySequence.StandardKey.Paste) and \
+                self._take(QGuiApplication.clipboard().mimeData()):
+            return True
         if obj is self.text and e.type() in (QEvent.Type.ShortcutOverride,
                                              QEvent.Type.KeyPress) and self._formatting():
             from .markup import apply, by_key

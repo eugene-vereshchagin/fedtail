@@ -40,7 +40,7 @@ from ..common.lane import (
 )
 from ..common.strip import Strip
 from .card import Card, Separator, link_markup, rich_line
-from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
+from .gi_setup import Gdk, GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
@@ -254,6 +254,16 @@ class LaneView(Gtk.Box):
         self.adj.connect("value-changed", lambda _a: self._older_in_sight())
         self.adj.connect("changed", lambda _a: self._apply_target())
         self.append(self.scroll)
+        # j / k, r f b m o, Enter (ui.post_keys, common/postkeys.py): the keys of the
+        # posts — the lane takes the focus when a card is clicked, so they come here
+        self.cursor_key = None
+        self.set_focusable(True)
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self._post_key)
+        self.add_controller(keys)
+        click = Gtk.GestureClick()
+        click.connect("pressed", lambda *_a: self._take_keys())
+        self.list.add_controller(click)
 
     # ---- the lane's contents ---------------------------------------------------------
     def refresh(self):
@@ -679,6 +689,8 @@ class LaneView(Gtk.Box):
             self.list.queue_resize()
         self.rows[k] = card
         self.boxes[k] = box
+        if k == self.cursor_key:  # built again: still the keys' post
+            card.add_css_class("ft-keyed")
         i = self.index[k]
         lo, hi = 0, len(self.order)
         while lo < hi:  # the order of the lane: a bisection
@@ -688,6 +700,53 @@ class LaneView(Gtk.Box):
             else:
                 hi = mid
         self.order.insert(lo, k)
+
+    # ---- the keys of the posts -----------------------------------------------------------
+    def _take_keys(self):
+        root = self.get_root()
+        focus = root.get_focus() if root is not None else None
+        if focus is None or not (focus is self or focus.is_ancestor(self)):
+            self.grab_focus()
+
+    def _posts(self):
+        return [k for k in self.keys if self.specs.get(k) is not None and
+                self.specs[k].entry is not None and not self.specs[k].extra.get("event")]
+
+    def _post_key(self, _ctl, keyval, _code, state):
+        from ..common import postkeys
+        mods = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | \
+            Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.SUPER_MASK
+        if state & mods or not self.ctx.cfg["ui"].get("post_keys", True):
+            return False
+        root = self.get_root()
+        focus = root.get_focus() if root is not None else None
+        if isinstance(focus, (Gtk.Text, Gtk.TextView, Gtk.Entry)):
+            return False  # typing somewhere: its letters
+        name = (Gdk.keyval_name(keyval) or "").lower()
+        posts = self._posts()
+        if name in postkeys.WALK:
+            key = postkeys.step(posts, self.cursor_key, postkeys.WALK[name],
+                                self._first_visible())
+            if key is None:
+                return False
+            self.put_cursor(key)
+            return True
+        action = postkeys.ACTIONS.get(name)
+        if action is None or self.cursor_key not in posts:
+            return False
+        self.ctx.on_link(postkeys.link(action, self.specs[self.cursor_key].post.id))
+        return True
+
+    def put_cursor(self, key):
+        """The cursor (the keys' post) to key: marked, and on screen."""
+        old = self.rows.get(self.cursor_key)
+        if old is not None:
+            old.remove_css_class("ft-keyed")
+        self.cursor_key = key
+        self.bring(key)
+        card = self.rows.get(key)
+        if card is not None:
+            card.add_css_class("ft-keyed")
 
     def _first_visible(self):
         """The first card reaching below the screen's top (by the places)."""

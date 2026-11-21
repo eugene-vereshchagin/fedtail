@@ -48,7 +48,9 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/sw.js": ("sw.js", "text/javascript; charset=utf-8")}
 POSSUM = {"/possum.png": ("fedtail.png", "image/png"),
           "/possum.gif": ("fedtail-swing.gif", "image/gif")}
-CSP = ("default-src 'self'; img-src 'self' data:; media-src https: 'self'; "
+# img-src blob:: a picture attached, shown before it goes (URL.createObjectURL of the
+# file chosen, pasted, dropped — the page's own; blocked, no attachment showed, 21.11)
+CSP = ("default-src 'self'; img-src 'self' data: blob:; media-src https: 'self'; "
        "style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
        "base-uri 'none'; form-action 'self'")
 WAIT_SECONDS = 25

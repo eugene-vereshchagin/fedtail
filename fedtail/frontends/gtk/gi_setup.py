@@ -100,6 +100,29 @@ def forget(widget):
 
 
 
+def close_on_esc(window):
+    """Esc closes `window`, as a dialog's does in Qt (a plain Gtk.Window has no such
+    key in GTK 4: About, Settings and the rest stayed open, 21.11). Bubbling: what is
+    inside (a list, a search) has the key first."""
+    keys = Gtk.EventControllerKey()
+    keys.connect("key-pressed", lambda _c, keyval, _k, _s:
+                 keyval == Gdk.KEY_Escape and (window.close(), True)[1])
+    window.add_controller(keys)
+    return window
+
+
+def focus_back(win, widget):
+    """The keys back where they were before an overlay (the editor, a picture, a video)
+    took them — or to the lane in front; else GTK handed them to the first focusable
+    widget it found, the sidebar's menu button, and the next Space opened it (21.11)."""
+    if widget is not None and widget.get_root() is win and widget.get_mapped() and \
+            widget.get_focusable() and widget.grab_focus():
+        return
+    lane = getattr(win, "current_lane_view", lambda: None)()
+    if lane is not None and lane.get_mapped():
+        lane.grab_focus()
+
+
 def tip(widget, text):
     """A tooltip given when it's asked for, not set ahead (once per widget):
     Gtk.Widget.set_tooltip_text also updates the widget's accessible description, and

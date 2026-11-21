@@ -167,6 +167,100 @@ class GtkByHandTest(_ByHand, _GtkBase):
         self.assertEqual(self.text_of(dlg.text), "hi #georgia ")
 
 
+    def test_a_picture_dropped_on_an_edit_leaves_it_open(self):
+        """An edit sends no new pictures: a drop on it said nothing and closed it, a
+        new post opening in its place (21.11) — now the edit stays and says so."""
+        from fedtail.i18n import _
+
+        from .fakes import ME
+        mine = self.world.add(status("121", ME, text="моё"), home=True)
+        self.core.store.put_statuses([mine])
+        ed = self.win.compose_panel(edit=self.view.by_id("121"))
+        self.assertTrue(pump(lambda: ed.text.get_mapped() and self.text_of(ed.text) == "моё",
+                             5))
+        self.drag_to(ed.text)
+        pump(timeout=0.5)
+        self.assertIs(self.win.composer, ed)
+        self.assertFalse(ed.closed)
+        self.assertEqual(ed.media, [])
+        self.assertEqual(ed.hint.get_text(), _("edit_media_kept"))
+
+    def test_esc_gives_the_keys_back(self):
+        """The editor closed by Esc: the keys go back where they were — GTK handed them
+        to the sidebar's menu button, and the next Space opened it (21.11)."""
+        entry = self.win.cmdline.entry
+        xdo("windowfocus", "--sync", self._xid(self.win))
+        entry.grab_focus()
+        pump(lambda: self.win.get_focus() is not None and
+             (self.win.get_focus() is entry or self.win.get_focus().is_ancestor(entry)), 2)
+        dlg = self.win.compose()
+        pump(lambda: dlg.text.has_focus(), 3)
+        self.type_into(dlg.text, "", "Escape")
+        self.assertTrue(pump(lambda: dlg.closed, 2))
+        f = self.win.get_focus()
+        self.assertTrue(f is entry or (f is not None and f.is_ancestor(entry)),
+                        f"the keys went to {type(f).__name__}")
+
+    def test_esc_closes_a_window_of_its_own(self):
+        """About, Settings, a page: Esc closes them, as Qt's dialogs (a plain Gtk.Window
+        has no such key: they stayed open, 21.11)."""
+        from fedtail.frontends.gtk import about
+        from fedtail.frontends.gtk.dialogs import Page
+        for make in (lambda: about.show(self.win),
+                     lambda: Page(self.win, "page", "<p>text</p>")):
+            dlg = make()
+            dlg.present()
+            self.assertTrue(pump(lambda d=dlg: d.get_mapped(), 3))
+            xdo("windowfocus", "--sync", self._xid(dlg))
+            xdo("key", "Escape")
+            self.assertTrue(pump(lambda d=dlg: not d.get_mapped(), 2),
+                            f"{type(dlg).__name__} stayed open")
+
+    def test_the_keys_of_the_posts(self):
+        """A card clicked, then j / k walk the posts and f likes the one under the
+        cursor, as in Qt, the terminal and the web page (GTK had none: 21.11)."""
+        lane = self.win.lane_views["home"]
+        self.win.select_lane("home")
+        self.assertTrue(pump(lambda: lane.get_mapped() and lane.rows, 3))
+        x, y = self._at(lane.list, 200, 20)
+        xdo("windowfocus", "--sync", self._xid(self.win))
+        xdo("mousemove", x, y)
+        xdo("click", 1)
+        pump(timeout=0.3)
+        posts = lane._posts()
+        xdo("key", "j")
+        pump(timeout=0.3)
+        first = lane.cursor_key
+        self.assertIn(first, posts)
+        self.assertIn("ft-keyed", lane.rows[first].get_css_classes())
+        xdo("key", "j")
+        pump(timeout=0.3)
+        self.assertNotEqual(lane.cursor_key, first)
+        xdo("key", "k")
+        pump(timeout=0.3)
+        self.assertEqual(lane.cursor_key, first)
+        sid = lane.specs[first].post.id
+        xdo("key", "f")
+        self.assertTrue(pump(lambda: self.world.statuses[sid].get("favourited"), 3))
+
+    def test_ctrl_enter_sends(self):
+        """Ctrl+Enter in the editor's text sends (the text field put a new line in, the
+        editor never heard the key: 21.11)."""
+        dlg = self.win.compose()
+        pump(lambda: dlg.text.get_mapped(), 3)
+        self.type_into(dlg.text, "hello", "ctrl+Return")
+        self.assertTrue(pump(lambda: self.world.posted, 5), "not sent")
+        self.assertEqual(self.world.posted[-1][0], "hello")
+
+    def test_ctrl_k_makes_a_link(self):
+        self.core.cfg["account"]["markdown"] = "on"
+        dlg = self.win.compose()
+        pump(lambda: dlg.text.get_mapped(), 3)
+        self.assertIsNotNone(dlg.format_bar)
+        self.type_into(dlg.text, "hi", "ctrl+a", "ctrl+k")
+        self.assertEqual(self.text_of(dlg.text), "[hi](https://)")
+
+
 class GtkSplitByHandTest(_ByHand, _GtkBase):
     UI = {"layout": "split"}
 

@@ -1,8 +1,8 @@
 """The formatting buttons over a Qt editor (post.format_bar): a row of small buttons and
 their shortcuts; what each one does to the text is frontends/common/markup.py's."""
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QKeySequence, QShortcut, QTextCursor
+from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtGui import QFont, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QVBoxLayout, QWidget
 
 from ...i18n import _
@@ -35,6 +35,29 @@ def by_key(e):
                  if f.keys and QKeySequence(f.keys)[0] == combo), None)
 
 
+class _Keys(QObject):
+    """Ctrl+B / Ctrl+I / Ctrl+K taken by the text itself, before any shortcut: a
+    QShortcut of the text's beside the main window's own Ctrl+K (search) was ambiguous
+    — Qt ran neither, the window's handler then ran its own: the editor inside the
+    window sent Ctrl+K to the search box (21.11)."""
+
+    def __init__(self, edit):
+        super().__init__(edit)
+        self.edit = edit
+        edit.installEventFilter(self)
+
+    def eventFilter(self, obj, e):
+        t = e.type()
+        if obj is self.edit and t in (QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress):
+            name = by_key(e)
+            if name:
+                e.accept()
+                if t == QEvent.Type.KeyPress:
+                    apply(self.edit, name)
+                return True
+        return False
+
+
 def bar(edit, cfg, markdown, shortcuts=True):
     """The buttons for `edit` (its shortcuts work while it has the focus) — a column for
     a place at the side, a row above or below — or None when post.format_bar says there
@@ -65,10 +88,8 @@ def bar(edit, cfg, markdown, shortcuts=True):
         b.clicked.connect(lambda _c=False, n=f.name: apply(edit, n))
         row.addWidget(b)
         w.buttons[f.name] = b
-        if f.keys and shortcuts:
-            sc = QShortcut(QKeySequence(f.keys), edit)
-            sc.setContext(Qt.ShortcutContext.WidgetShortcut)
-            sc.activated.connect(lambda n=f.name: apply(edit, n))
+    if shortcuts:
+        w.keys = _Keys(edit)
     row.addStretch(1)
     return w
 

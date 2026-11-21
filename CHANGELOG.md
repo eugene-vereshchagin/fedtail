@@ -32,6 +32,30 @@
 * Fixed: removing every extra field of the profile did nothing.
 * Fixed: after some thirty uploads in half an hour fedtail stopped asking the server
   anything, the lanes too, for up to half an hour; only uploads wait now.
+* Fixed, GTK: Ctrl+Enter in the editor put a new line in instead of sending.
+* Fixed, GTK: a picture dropped on the editor while editing a post closed the edit
+  and opened a new post; an edit now stays and says it keeps its pictures. In Qt and
+  GTK alike, a picture pasted or dropped into an edit showed as attached and went
+  nowhere.
+* Fixed, GTK: after Esc closed the editor, a picture or a video, the keys went to the
+  sidebar's menu button; they go back where they were.
+* Fixed, GTK: Esc didn't close About, Settings, the report form, the login and the
+  other windows of their own.
+* GTK has the keys of the posts: j / k between posts, r f b m o and Enter on the one
+  under the cursor (`window.post_keys`), and F3 / Shift+F3 in Find.
+* Fixed, Qt: Ctrl+K in the editor inside the window jumped to the search box instead
+  of making a link.
+* Fixed, Qt: a picture dropped or pasted onto the split layout's input line went in
+  as its `file:///…` address; it is attached now.
+* Fixed, Qt: a click on the video's timeline took the player's keys (← → and
+  PgUp/PgDn did nothing after it).
+* Fixed, web page: a file dropped on the page opened in the browser in place of
+  fedtail; it is attached now (the editor opens for it). A picture attached showed
+  no preview.
+* Fixed, web page: Enter on a focused button and Esc in a dialog acted on the post
+  behind; an input method's Enter could pick a completion.
+* Fixed, Android: a `magnet:`, `gemini:` or `xmpp:` link with no app on the phone to
+  open it closed fedtail.
 
 ## 0.23.7 — 2026-11-20
 

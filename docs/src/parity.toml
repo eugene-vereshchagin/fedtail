@@ -49,6 +49,20 @@ note.ru = "Ссылка в тексте поста на .mp4, .webm, .mp3, .opus
 note.en = "A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server that didn't take a big attachment leaves it so) plays in the same player as attachments: over the window in Qt and GTK, mpv in the terminal, the phone's player on the phone (`media.links_in_player`). The web page needs none: the browser plays such a file itself."
 
 [[capability]]
+id = "thread-keys"
+area = "reading"
+gtk = "no"
+tui = "partly"
+web = "no"
+android = "na"
+name.ru = "Клавиши треда: ] [ и −"
+name.en = "A thread's keys: ] [ and −"
+note.ru = "`]` / `[` — к следующему / предыдущему комментарию верхнего уровня, `-` — свернуть ветку: в окне Qt; в терминале — `]` и `[` без `-`. Окну GTK и веб-странице их пока нет (клавиши постов j / k, r f b m o там есть); телефону — не нужны: там нет клавиатуры."
+note.en = "`]` / `[` — the next / previous top-level comment, `-` — fold the branch: in the Qt window; the terminal has `]` and `[` without `-`. The GTK window and the web page don't have them yet (the posts' keys j / k, r f b m o they do have); the phone needs none: it has no keyboard."
+android_note.ru = "На телефоне нет клавиатуры."
+android_note.en = "The phone has no keyboard."
+
+[[capability]]
 id = "char-count-tip"
 area = "reading"
 tui = "na"

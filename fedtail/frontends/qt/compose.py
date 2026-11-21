@@ -908,6 +908,12 @@ class Compose(QDialog):
         self.media.addItem(it)
 
     def add_paths(self, paths):
+        """Files in as attachments (a drop, a paste). An edit takes none (it sends no new
+        pictures: shown, they went nowhere): it says so instead."""
+        if self.edit:
+            if paths:
+                self.hint.setText(_("edit_media_kept"))
+            return
         known = {m[0] for m in self._media_list()}
         paths = [p for p in paths if p not in known]
         left = self.core.caps.max_media - self.media.count()

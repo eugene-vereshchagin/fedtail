@@ -186,4 +186,5 @@
     <string name="draft_shelve">Новый черновик</string>
     <string name="draft_shelved">Отложено в «Черновики» — они тут же, кнопкой рядом</string>
     <string name="loading">Загрузка…</string>
+    <string name="no_app_for_link">На телефоне нет приложения для такой ссылки</string>
 </resources>

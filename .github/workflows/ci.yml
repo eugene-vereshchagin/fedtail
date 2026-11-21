@@ -271,6 +271,16 @@ jobs:
         run: |
           set -o pipefail
           timeout -s ABRT 1800 xvfb-run -a python3 -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+      - name: Qt by hand (the real pointer and keys, Qt on X11)
+        # tests/test_qt_by_hand.py: a process of its own — the run above made its Qt
+        # offscreen; FEDTAIL_BY_HAND turns its skip into a failure
+        shell: bash
+        env:
+          QT_QPA_PLATFORM: xcb
+          FEDTAIL_BY_HAND: "1"
+        run: |
+          set -o pipefail
+          timeout -s ABRT 600 xvfb-run -a python3 -X faulthandler -m unittest -v tests.test_qt_by_hand 2>&1 | tee -a test-output.txt
       - name: Failures as annotations
         if: failure()
         run: python3 .github/annotate.py test-output.txt

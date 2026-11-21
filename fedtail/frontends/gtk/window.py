@@ -589,6 +589,8 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>l", self.open_cmdline)
         add("<Control>n", self.compose)
         add("<Control>f", self.find_bar.open)
+        add("F3", lambda: self.find_bar.step(1))  # as Qt's FindNext / FindPrevious
+        add("<Shift>F3", lambda: self.find_bar.step(-1))
         add("<Control>k", self.search.grab_focus)  # the sidebar's search, as in Qt
         add("F5", self.view.refresh_by_hand)
         add("<Control>q", self.close)
@@ -603,7 +605,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _dropped(self, paths):
         c = self.composer
-        if c is None or c.closed or c.edit:
+        if c is None or c.closed:  # an edit open stays: it says it takes no pictures
             c = self.compose_panel()
         if c is not None:
             c.add_paths(paths)

@@ -69,6 +69,7 @@ class VideoPlayer(Gtk.Box):
         self.closed = False
         self.stream = None
         win.player = self
+        self._focus_was = win.get_focus()  # given back on closing
         win.overlay.add_overlay(self)
         self.grab_focus()
         self.load()
@@ -168,6 +169,8 @@ class VideoPlayer(Gtk.Box):
             self.win.overlay.remove_overlay(self)
         if getattr(self.win, "player", None) is self:
             self.win.player = None
+        from .gi_setup import focus_back
+        focus_back(self.win, self._focus_was)
 
     def _key(self, _c, keyval, _code, _state):
         from .gi_setup import Gdk

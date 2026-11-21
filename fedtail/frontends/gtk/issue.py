@@ -4,12 +4,13 @@ read and edit, "Open GitHub" opens the tracker's new-issue page with it."""
 from __future__ import annotations
 
 from ...i18n import _
-from .gi_setup import Gtk
+from .gi_setup import Gtk, close_on_esc
 
 
 class IssueWindow(Gtk.Window):
     def __init__(self, win):
         super().__init__(transient_for=win, modal=True, title=_("issue_title"))
+        close_on_esc(self)
         from ... import issue
         from ..common.places import Places
         self.win = win

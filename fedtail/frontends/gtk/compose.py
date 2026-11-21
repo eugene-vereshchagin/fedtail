@@ -18,7 +18,7 @@ from ...model import VISIBILITIES, Scheduled, real
 from ...model.text import snippet
 from ..common import compose as rules
 from ..common.actions import vis_word
-from .gi_setup import Gdk, GLib, GObject, Gtk, Pango, tip
+from .gi_setup import Gdk, GLib, GObject, Gtk, Pango, close_on_esc, focus_back, tip
 
 log = logging.getLogger(__name__)
 
@@ -274,13 +274,13 @@ class ComposeWindow(Gtk.Box):
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
-        # Tab completes before the text field takes it (it puts a tab character in, and
-        # the bubbling key never came here: no completion ever, 20.11)
-        tab = Gtk.EventControllerKey()
-        tab.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        tab.connect("key-pressed", lambda _c, keyval, _k, _s:
-                    keyval == Gdk.KEY_Tab and self._complete())
-        self.add_controller(tab)
+        # Tab, Ctrl+Enter, Ctrl+B/I/K: looked at before the text field takes them (it
+        # puts in a tab character, a new line — the bubbling key never came here: no
+        # completion, Ctrl+Enter never sent, 20–21.11)
+        first = Gtk.EventControllerKey()
+        first.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        first.connect("key-pressed", self._key_first)
+        self.add_controller(first)
         self.view.prepare_completion()  # what #tags and @names complete from
         # pictures and files: dropped on the editor or pasted (Ctrl+V) — attachments;
         # the paste is looked at before the text field takes it as text
@@ -311,6 +311,7 @@ class ComposeWindow(Gtk.Box):
         """Into the main window over the lanes (one editor at a time: an open one closes,
         its text kept as a draft), or into a window of its own."""
         win = self.win
+        self._focus_was = win.get_focus()  # given back on closing
         if self.inline:
             old = getattr(win, "composer", None)
             if old is not None and not old.closed:
@@ -382,6 +383,7 @@ class ComposeWindow(Gtk.Box):
                 self.win.overlay.remove_overlay(self)
             if getattr(self.win, "composer", None) is self:
                 self.win.composer = None
+            focus_back(self.win, getattr(self, "_focus_was", None))
         elif self.host is not None:
             host, self.host = self.host, None
             host.destroy()
@@ -731,7 +733,13 @@ class ComposeWindow(Gtk.Box):
         return self.view.paths.data_dir
 
     def add_paths(self, paths):
-        """Files in as attachments (a drop, a paste, a drop on the window), each once."""
+        """Files in as attachments (a drop, a paste, a drop on the window), each once.
+        An edit takes none (it sends no new pictures: shown, they went nowhere): it says
+        so instead."""
+        if self.edit:
+            if paths:
+                self.hint.set_text(_("edit_media_kept"))
+            return
         known = {m[0] for m in self.media}
         for path in paths:
             if path not in known:
@@ -923,13 +931,12 @@ class ComposeWindow(Gtk.Box):
         self.buffer.insert_at_cursor(items[0][0] + " ")
         return True
 
-    def _key(self, _ctl, keyval, _code, state):
-        from gi.repository import Gdk
+    def _key_first(self, _ctl, keyval, _code, state):
         ctrl = state & Gdk.ModifierType.CONTROL_MASK
-        if keyval == Gdk.KEY_Return and ctrl:
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and ctrl:
             self.send()
             return True
-        if keyval == Gdk.KEY_Tab and self._complete():
+        if keyval == Gdk.KEY_Tab and not ctrl and self._complete():
             return True
         if ctrl and self.format_bar is not None and self.text.has_focus():
             from .markup import KEYS, apply
@@ -937,6 +944,9 @@ class ComposeWindow(Gtk.Box):
             if name:  # Ctrl+B / Ctrl+I / Ctrl+K: the formatting buttons' keys
                 apply(self.text, name)
                 return True
+        return False
+
+    def _key(self, _ctl, keyval, _code, state):
         if keyval == Gdk.KEY_Escape:
             self.close()
             return True
@@ -1083,7 +1093,8 @@ class ComposeWindow(Gtk.Box):
         minutes on; an hour on to start with)."""
         from datetime import UTC, datetime, timedelta
         start = datetime.now().astimezone() + timedelta(hours=1)
-        dlg = Gtk.Window(title=_("schedule"), transient_for=self.get_root(), modal=True)
+        dlg = close_on_esc(Gtk.Window(title=_("schedule"), transient_for=self.get_root(),
+                                      modal=True))
         dlg.add_css_class("fedtail")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for m in ("top", "bottom", "start", "end"):
@@ -1148,7 +1159,8 @@ class ComposeWindow(Gtk.Box):
             _("chain_count", n=len(parts)) if len(parts) > 1 else "",
             _("preview_media", n=len(self.media)) if self.media else "",
             _("preview_md") if md else _("preview_plain")) if x)
-        dlg = Gtk.Window(title=_("preview"), transient_for=self.get_root(), modal=True)
+        dlg = close_on_esc(Gtk.Window(title=_("preview"), transient_for=self.get_root(),
+                                      modal=True))
         dlg.set_default_size(640, 520)
         dlg.add_css_class("fedtail")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

@@ -1,13 +1,14 @@
 """Login: register the app, open the browser, paste the code (as qt/login.py)."""
 
 from ...i18n import _
-from .gi_setup import GLib, Gtk
+from .gi_setup import GLib, Gtk, close_on_esc
 
 
 class LoginDialog(Gtk.Window):
     def __init__(self, win, done, expect=None):
         super().__init__(transient_for=win, modal=True,
                          title=_("login_title", profile=win.core.paths.profile))
+        close_on_esc(self)
         self.win, self.core, self.done, self.expect = win, win.core, done, expect
         self.url = None
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

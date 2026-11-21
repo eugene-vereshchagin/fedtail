@@ -77,6 +77,7 @@ class ImageViewer(Gtk.Box):
         self._click_timer = 0
         self.closed = False
         win.viewer = self
+        self._focus_was = win.get_focus()  # given back on closing
         win.overlay.add_overlay(self)
         self.grab_focus()
         # (not focusable until it's on screen: the card clicked kept the keys — again
@@ -183,6 +184,8 @@ class ImageViewer(Gtk.Box):
             self.win.overlay.remove_overlay(self)
         if getattr(self.win, "viewer", None) is self:
             self.win.viewer = None
+        from .gi_setup import focus_back
+        focus_back(self.win, self._focus_was)
 
     def _key(self, _c, keyval, _code, _state):
         from .gi_setup import Gdk

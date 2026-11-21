@@ -817,6 +817,9 @@ class QtSmokeTest(unittest.TestCase):
         dlg.show()
         self.pump(until=lambda: dlg.text.toPlainText() == "очепятка")
         self.assertFalse(dlg.vis.isEnabled())
+        dlg.add_paths(["/tmp/pasted.png"])  # a paste, a drop: an edit sends no new picture
+        self.assertEqual(dlg.media.count(), 0)
+        self.assertEqual(dlg.hint.text(), i18n._("edit_media_kept"))
         dlg.text.setPlainText("опечатка")
         dlg.send()
         self.pump(until=lambda: "опечатка" in self.core.store.get_status("120")["content"])

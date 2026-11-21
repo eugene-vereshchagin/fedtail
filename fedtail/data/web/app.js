@@ -3104,6 +3104,8 @@ function focusWords(m) {
 
 // ---- the editor's extras: pictures with descriptions, a poll, later ---------------------
 async function attachFiles(files) {
+  // an edit sends no new pictures: shown, they went nowhere — it says so instead
+  if (state.edit) { if (files.length) toast(w("edit_media_kept")); return; }
   const max = (state.me.editor || {}).max_media || 4;
   for (const f of files) {
     if (state.media.length >= max) { toast(w("media_limit", { n: max })); break; }
@@ -3347,6 +3349,7 @@ document.addEventListener("click", async (e) => {
 
 // ---- keys --------------------------------------------------------------------------------
 document.addEventListener("keydown", (e) => {
+  if (e.isComposing || e.keyCode === 229) return;  // an input method's word going in
   if (e.key === "Enter" && !state.lane && state.curtainLast && $("#posts .curtain") &&
       !["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(document.activeElement?.tagName)) {
     e.preventDefault();
@@ -3367,6 +3370,9 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
+  // a dialog over the page (a choice, a text, the preview): its own keys — Enter its
+  // button, Esc closes it; the lane's keys acted on the post behind it (21.11)
+  if (document.querySelector("dialog[open]:not(#compose)")) return;
   if (!$("#pop").hidden && e.key === "Escape") { e.preventDefault(); closePopup(); return; }
   if (!$("#menuwin").hidden && e.key === "Escape") { e.preventDefault(); closeMenu(); return; }
   if (!$("#menuwin").hidden) { menuKeys(e); return; }
@@ -3385,6 +3391,9 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if ($("#compose").open || e.ctrlKey || e.metaKey || e.altKey) return;
+  // Enter or Space on a button, a link: they press it (the thread under the cursor
+  // opened instead)
+  if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("button, a")) return;
   const p = current();
   const keys = {
     j: () => setCursor(state.cursor + 1), k: () => setCursor(state.cursor - 1),
@@ -3731,6 +3740,20 @@ async function start() {
     const files = [...(e.clipboardData || {}).files || []];
     if (files.length) { e.preventDefault(); attachFiles(files); }
   });
+  // a file dropped anywhere on the page: attached (the editor opens for it), as the
+  // windows do — the browser opened the file in place of the page (21.11)
+  const carriesFiles = (e) => [...((e.dataTransfer || {}).types || [])].includes("Files");
+  document.addEventListener("dragover", (e) => {
+    if (carriesFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }
+  });
+  document.addEventListener("drop", (e) => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();
+    const files = [...e.dataTransfer.files];
+    if (!files.length || !state.me) return;
+    if (!$("#compose").open) compose(null);
+    attachFiles(files);
+  });
   $("#poll-toggle").title = w("poll_add_tip");
   $("#poll-toggle").onclick = () => {
     state.poll = state.poll ? null : { options: ["", ""], expires_in: 86400, multiple: false };
@@ -3872,6 +3895,8 @@ function completePut(i) {
 }
 
 function completeKeys(e) {
+  // the Enter that ends an input method's word is the word's, not a pick (Firefox)
+  if (e.isComposing || e.keyCode === 229) return;
   if (!completeState.items.length) return;
   const n = completeState.items.length;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {

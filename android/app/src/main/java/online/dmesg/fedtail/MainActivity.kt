@@ -1,9 +1,11 @@
 package online.dmesg.fedtail
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,10 +41,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             FedtailTheme(model.themeColors, model.themeLight, model.themeFont, model.themeScale,
                 model.themePictures) {
-                App(model, openBrowser = { url ->
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }, share = { path -> shareFile(path) })
+                App(model, openBrowser = { url -> view(url) }, share = { path -> shareFile(path) })
             }
+        }
+    }
+
+    /** A link to the app that opens it: a browser, or a magnet:, gemini:, xmpp: link's
+     *  own app — none on the phone, Android threw and fedtail closed (21.11). */
+    private fun view(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.no_app_for_link), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -86,7 +96,7 @@ class MainActivity : ComponentActivity() {
             Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
             else -> null
         } ?: return
-        model.openShared(text) { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+        model.openShared(text) { url -> view(url) }
     }
 
     /** fedtail://oauth?code=… — the server sends the browser back here after "allow". */

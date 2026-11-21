@@ -16,7 +16,7 @@
 | `test` | каждый пуш и PR | все тесты на Python 3.11, 3.12 и 3.13 с Qt из pip, без экрана; потом fedtail ставится как пакет и запускается |
 | `web-check` | каждый пуш и PR | веб-страница в Chromium (Playwright): `tools/web_check.py` — все ленты, меню ≡ и ⋯, редактор, тред, просмотрщик, ширина телефона, удержание карточки при открытии, чтение в колонке; при неудаче её скриншоты остаются; `release` её ждёт |
 | `budgets` | каждый пуш и PR | стенд памяти (`tools/membench.py`: 2000 постов, 20 лент, час опроса) — одно ядро и окно Qt — против потолков памяти, времени, виджетов и кэша картинок (`tests/test_budgets.py`, docs/ru/dev/memory.md, шаг 8); `release` его ждёт |
-| `debian` | каждый пуш и PR | все тесты на Debian 13 с Qt и GTK 4 из apt, под Xvfb — настоящая цель |
+| `debian` | каждый пуш и PR | все тесты на Debian 13 с Qt и GTK 4 из apt, под Xvfb — настоящая цель; затем отдельно `tests.test_qt_by_hand`, Qt на X11 (xcb) |
 | `windows` | каждый пуш и PR | все тесты на Windows с Qt из pip (docs/ru/dev/windows.md использует те же пакеты и команду, тест проверяет) |
 | `windows-build` | пуш в `main` | `fedtail.exe` одним файлом (PyInstaller, `packaging/build.py`) с Qt 6.9, как и для Linux (6.10 и новее требуют SSE4.2), один раз запускается; установщик `fedtail-setup.exe` (Inno Setup, `packaging/windows/fedtail.iss`); оба подписываются, если есть сертификат для подписи кода (секреты `WINDOWS_CERT_PFX` — .pfx в base64 — и `WINDOWS_CERT_PASSWORD`), иначе без подписи |
 | `linux-build` | пуш в `main` | `fedtail` для Linux одним файлом, собирается на Debian 12, чтобы работал и на старых системах, с Qt 6.9 (6.10 и новее требуют SSE4.2), и проверяется на эмулированном процессоре времён Phenom |

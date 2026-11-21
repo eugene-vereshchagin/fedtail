@@ -9,7 +9,7 @@ import logging
 
 from ...i18n import _
 from .. import pango
-from .gi_setup import GLib, Gtk, Pango, tip, vscroll
+from .gi_setup import GLib, Gtk, Pango, close_on_esc, tip, vscroll
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def _window(parent, title, width=560, height=440):
     win = Gtk.Window(title=title, transient_for=parent, modal=False)
     win.set_default_size(width, height)
     win.add_css_class("fedtail")
-    return win
+    return close_on_esc(win)
 
 
 def _buttons(*buttons):
@@ -154,6 +154,7 @@ class Page(Gtk.Window):
         super().__init__(title=title, transient_for=parent)
         self.set_default_size(width, height)
         self.add_css_class("fedtail")
+        close_on_esc(self)
         self.on_link = on_link
         box = _box(0, 0)
         self.label = Gtk.Label(xalign=0, yalign=0, wrap=True)

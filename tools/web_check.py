@@ -275,6 +275,7 @@ def with_playwright(base, key, out, core):
             if page.input_value("#text"):
                 ERRORS.append("editor: Discard kept the draft")
             page.click("#compose-close")
+            by_hand(page, out)
             img = page.locator("#posts article.post img[src*='img.example'], "
                                 "#posts article.post .media img").first
             if img.count():
@@ -293,6 +294,57 @@ def with_playwright(base, key, out, core):
             column_dwell(page)
             page.close()
         browser.close()
+
+
+def by_hand(page, out):
+    """What a person does that the page's own code has to let through (21.11): a file
+    dropped on the page is attached (the browser opened it in place of the page); Enter
+    on a focused button presses it; a dialog keeps its keys (Enter, Esc) — the lane's
+    keys acted on the post behind it."""
+    url = page.url
+    page.evaluate("""() => {
+        const dt = new DataTransfer();
+        const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAA'
+            + 'DUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+        dt.items.add(new File([png], 'drop.png', { type: 'image/png' }));
+        const at = document.querySelector('#posts');
+        for (const type of ['dragenter', 'dragover', 'drop'])
+            at.dispatchEvent(new DragEvent(type, { dataTransfer: dt, bubbles: true,
+                                                   cancelable: true }));
+    }""")
+    page.wait_for_timeout(1200)
+    if page.url != url:
+        ERRORS.append("drop: a file dropped on the page took the page away")
+    elif not page.is_visible("#compose"):
+        ERRORS.append("drop: a file dropped on the page opened no editor")
+    elif page.evaluate("state.media.length") != 1:
+        ERRORS.append("drop: a file dropped on the page wasn't attached")
+    else:
+        page.screenshot(path=str(out / "desktop-05d-dropped.png"))
+    if page.is_visible("#compose"):
+        page.evaluate("state.media = []; drawAttached()")
+        page.click("#compose-close")
+        page.wait_for_timeout(300)
+    # Enter on a focused button presses it (the thread under the cursor opened instead)
+    page.focus("#write")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(400)
+    if not page.is_visible("#compose"):
+        ERRORS.append("keys: Enter on a focused button (✎) didn't press it")
+    else:
+        page.click("#compose-close")
+        page.wait_for_timeout(300)
+    # a dialog's keys are its own: Esc closes it, the lane's keys don't go behind it
+    page.evaluate("info('text')")
+    page.wait_for_timeout(200)
+    before = page.evaluate("state.cursor")
+    page.keyboard.press("j")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if page.evaluate("document.querySelector('#info').open"):
+        ERRORS.append("keys: Esc didn't close a dialog")
+    if page.evaluate("state.cursor") != before:
+        ERRORS.append("keys: j in a dialog moved the cursor of the lane behind it")
 
 
 def columns(page, out):

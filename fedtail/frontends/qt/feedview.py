@@ -32,6 +32,7 @@ from ... import diag
 from ...i18n import _
 from ...model import Share
 from ...model import real as real_entry
+from ..common import postkeys
 from ..common.lane import seen
 from ..common.strip import Strip
 from .card import _set_prop as _mark
@@ -580,10 +581,11 @@ class FeedView(QScrollArea):
         return lo
 
     # ---- keys -------------------------------------------------------------------------
-    # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys)
-    POST_KEYS = {Qt.Key.Key_R: "reply", Qt.Key.Key_F: "fav", Qt.Key.Key_B: "boost",
-                 Qt.Key.Key_M: "bookmark", Qt.Key.Key_O: "thread",
-                 Qt.Key.Key_Return: "thread", Qt.Key.Key_Enter: "thread"}
+    # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys):
+    # the table every window shares (common/postkeys.py)
+    POST_KEYS = {getattr(Qt.Key, "Key_" + {"enter": "Enter", "return": "Return"}.get(
+        name, name.upper())): action for name, action in postkeys.ACTIONS.items()
+        if name != "kp_enter"}
 
     def keyPressEvent(self, e):
         from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
@@ -613,16 +615,14 @@ class FeedView(QScrollArea):
         if not posts:
             return False
         if key in (Qt.Key.Key_J, Qt.Key.Key_K):
-            if self.cursor_key not in posts:
-                # start from the post at the top of the screen
-                top = self.verticalScrollBar().value()
-                guess = self._guess()
-                nxt = next((k for k in posts if self._ys.get(k, 0) + self._height(k, guess)
-                            > top + 4), posts[0])
-            else:
-                i = posts.index(self.cursor_key) + (1 if key == Qt.Key.Key_J else -1)
-                nxt = posts[max(0, min(len(posts) - 1, i))]
-            self.put_cursor(nxt)
+            # no cursor yet: from the post at the top of the screen
+            top = self.verticalScrollBar().value()
+            guess = self._guess()
+            first = next((k for k in posts if self._ys.get(k, 0) + self._height(k, guess)
+                          > top + 4), posts[0])
+            self.put_cursor(postkeys.step(posts, self.cursor_key,
+                                          postkeys.WALK["j" if key == Qt.Key.Key_J else "k"],
+                                          first))
             return True
         if key in (Qt.Key.Key_BracketRight, Qt.Key.Key_BracketLeft):
             # a thread: the next / previous comment at the top of the tree (depth 1)
@@ -642,7 +642,7 @@ class FeedView(QScrollArea):
         if action is None or self.cursor_key not in posts:
             return False
         p = self._spec(self.cursor_key).post
-        self.ctx.on_link(f"fedtail:{action}/{p.id}")
+        self.ctx.on_link(postkeys.link(action, p.id))
         return True
 
     def _fold_branch(self, posts):

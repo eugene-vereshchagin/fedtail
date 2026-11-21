@@ -90,6 +90,8 @@ class WebTest(TmpDir):
         self.assertEqual(self.req(web._pic("https://nowhere.example/x.png"))[0], 404)
         self.assertEqual(self.req("/pic?u=" + url, cookie=False)[0], 403)
         self.assertNotIn("https:", web.CSP.split("img-src")[1].split(";")[0])
+        # an attachment's picture before it goes: the page's own object URL
+        self.assertIn("blob:", web.CSP.split("img-src")[1].split(";")[0])
 
     def test_a_page_that_hangs_up_is_no_error(self):
         # a reload or a closed tab while /api/wait waits: the answer has nowhere to go —

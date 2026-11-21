@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from ...i18n import _
 from ..common import about as facts_of
-from .gi_setup import Gdk, GLib, Gtk, gtk_version
+from .gi_setup import Gdk, GLib, Gtk, close_on_esc, gtk_version
 
 CSS = """
 .ft-about-card { border-radius: 8px; padding: 8px 12px; }
@@ -34,7 +34,7 @@ def _card():
 
 def show(win):
     a = facts_of.facts(win.view, "GTK", ".".join(str(x) for x in gtk_version()))
-    dlg = Gtk.Window(transient_for=win, modal=True, title=_("about"))
+    dlg = close_on_esc(Gtk.Window(transient_for=win, modal=True, title=_("about")))
     dlg.set_default_size(640, -1)
     global _provider
     if _provider is None:  # once a run: the cards' own few rules over the theme's
