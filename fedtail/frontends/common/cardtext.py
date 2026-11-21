@@ -37,6 +37,21 @@ def context_on(cfg):
     return bool((cfg.get("feed") or {}).get("show_reply_context", True))
 
 
+def link_card(p, cfg):
+    """The page a post links to, if its card is drawn (feed.link_cards): not "off", a
+    card worth drawing (an address and a title or a picture), and the post has no
+    pictures nor a quote shown — the link is to what's quoted, mostly. Qt hid it beside
+    a quote, the others drew both (21.11): one rule. → the card, or None."""
+    feed = cfg.get("feed") or {}
+    c = getattr(p, "card", None)
+    if c is None or feed.get("link_cards", "full") == "off" or not c.url or \
+            not (c.title or c.image) or p.media:
+        return None
+    if getattr(p, "quote", None) is not None and feed.get("quotes", "card") != "off":
+        return None
+    return c
+
+
 def indent_of(cfg, depth):
     """How many steps in a thread's post of this depth is drawn: feed.thread_indent_max
     at most (the model's INDENT_MAX by default) — one number for every interface."""

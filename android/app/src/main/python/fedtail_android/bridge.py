@@ -423,13 +423,15 @@ def open():  # noqa: A001 — what Kotlin calls it
         out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
                                       "start_at", "mark_read", "visibility", "sensitive_media",
                                       "expand_cw", "dwell_ms", "bookmark_button",
-                                      "read_button", "direct_mark")}
+                                      "read_button", "direct_mark", "media_grid",
+                                      "alt_text", "gifv")}
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
         out["prefetch"] = core.cfg["feed"].get("prefetch", "previews")  # pictures ahead
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]
         out["to_new"] = core.cfg["phone"].get("to_new", "bottom")
         out["hold_text"] = core.cfg["phone"].get("hold_text", "select")
+        out["image_viewer"] = core.cfg["ui"].get("image_viewer", "internal")
         out["push"] = core.cfg["phone"]["push"]
         out["merged"] = bool(_s["web"].merged())
         out["accounts"] = sum(1 for p in _profiles() if p["logged_in"])

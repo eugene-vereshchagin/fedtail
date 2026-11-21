@@ -34,7 +34,15 @@ from ...model import Account, Share, only_private, real
 from ...model.text import reply_mentions, snippet
 from .. import notifytext
 from ..common import actions, timed
-from ..common.cardtext import context_chars, context_on, direct_mark, fold, indent_of, shown_text
+from ..common.cardtext import (
+    context_chars,
+    context_on,
+    direct_mark,
+    fold,
+    indent_of,
+    link_card,
+    shown_text,
+)
 from ..common.commands import Commands
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
@@ -224,6 +232,8 @@ def media_json(m):
     out = {"kind": m.kind, "preview": _pic(m.preview),
            "url": _pic(url) if m.kind == "image" else _https(url),
            "alt": m.alt, "w": m.width, "h": m.height}
+    if m.focus:  # the author's focus point: squares are cut around it (ui.media_grid)
+        out["focus"] = [m.focus[0], m.focus[1]]
     if m.kind == "image" and m.remote_url and m.remote_url != url:
         # gone from my server (404): the same picture on its author's (Images.elsewhere)
         out["elsewhere"] = _pic(m.remote_url)
@@ -382,7 +392,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
                    "likes": p.counts.likes},
         "mine": {"liked": p.mine.liked, "shared": p.mine.shared,
                  "bookmarked": p.mine.bookmarked},
-        "poll": poll_json(p.poll), "card": card_json(p.card, view.cfg),
+        "poll": poll_json(p.poll), "card": card_json(link_card(p, view.cfg), view.cfg),
         "quote": quote_json(view, p.quote),
         "unread": bool(unread), "own": bool(me and p.author.id == me.id),
         "reply_to": p.reply_to, "lang": p.lang,
@@ -887,6 +897,7 @@ class Web:
                 # under an unread one (read.read_button) — the page drew neither (21.11)
                 "actions": c["ui"].get("actions", "both"),
                 "read_button": bool(c["read"].get("read_button", False)),
+                "gifv": c["ui"].get("gifv", "play"),  # a gif loops on screen or on a click
                 # the posts' letters (window.post_keys), a picture's words under it or
                 # on hover (ui.alt_text), pictures in squares (ui.media_grid): as the
                 # windows show them (the page did one way whatever they said, 21.11)
@@ -978,11 +989,30 @@ class Web:
 
     def theme_css(self):
         """The page's colours from the theme (themes/*.toml, the same files the windows
-        read): "" for system (the browser's light or dark) or a theme that won't load."""
+        read): "" for system (the browser's light or dark) or a theme that won't load.
+        Its fonts as the windows' (ui.fonts, ui.font, ui.mono_font, ui.font_size) — the
+        page took the theme's family whatever they said (21.11)."""
         colors, light, family = self.theme_colors()
+        ui = self.core.cfg["ui"]
+        mode = ui.get("fonts", "theme")
+        mono = ""
+        if mode == "custom":
+            family, mono = ui.get("font") or "", ui.get("mono_font") or ""
+        elif mode == "system":
+            family = ""
+        safe = re.compile(r"[\w\s,\"'-]*")
+        family = family if safe.fullmatch(family) else ""
+        mono = mono if safe.fullmatch(mono) else ""
+        size = int(ui.get("font_size") or 0)
         lines = [f"  --{k}: {v};" for k, v in colors.items()]
+        extra = ""
+        if mono:
+            extra += (f"#cmd, .post .alias, .post .num, .post .body pre, .post .body code "
+                      f"{{ font-family: {mono}, ui-monospace, monospace; }}\n")
+        if size:
+            extra += f".post .body {{ font-size: {size}pt; }}\n"
         if not lines and not family:
-            return ""
+            return extra
         css = ":root, :root:root {\n" + "\n".join(lines) + "\n  --shadow: none;\n}\n" \
             if lines else ""
         if lines:  # the theme's own colours: light or dark is the theme's, not the browser's
@@ -990,7 +1020,7 @@ class Web:
                 ":root { color-scheme: only dark; }\n"
         if family:
             css += f"body {{ font-family: {family}; }}\n"
-        return css
+        return css + extra
 
     def merged(self):
         """All accounts in one window: ui.merge, or switched on from a menu (state)."""
@@ -2381,7 +2411,7 @@ class Web:
 
 
 # words the page shows, in the profile's language
-WORDS = ("direct_badge", "direct_badge_tip", "mark_one_read",
+WORDS = ("direct_badge", "direct_badge_tip", "mark_one_read", "gif_click_play",
          "reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", "thread",
          "write", "send", "sent", "tui_back", "web_thread", "follow", "unfollow",
          "acc_follows_you", "web_cw", "web_show", "web_load_error", "web_empty",

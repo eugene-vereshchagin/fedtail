@@ -2085,6 +2085,90 @@ class GtkPanelsTest(_GtkBase):
         self.assertIsNotNone(four.media_box.get_child_at(0, 1))
         self.assertEqual(four.media_box.get_child_at(0, 0).h, 115)
 
+    def test_a_link_card_with_its_picture(self):
+        """feed.link_cards = "full": the page's picture over its words, as Qt's — GTK
+        drew the words alone (21.11); "text": the words alone."""
+        from gi.repository import Gdk, GdkPixbuf
+
+        from fedtail.frontends.gtk import card as cards
+        from fedtail.protocols.mastodon import adapter
+        pb = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, 40, 20)
+        asked = []
+        self.win.ctx.images.get = lambda url, cb, **_k: (asked.append(url),
+                                                         cb(Gdk.Texture.new_for_pixbuf(pb)))
+        raw = status("097", BOB, minute=32, text="ссылка")
+        raw["card"] = {"url": "https://e.test/page", "title": "Страница",
+                       "image": "https://e.test/page.png", "type": "link"}
+        c = cards.Card(self.win.ctx, "097", adapter.post(raw, "t"))
+        pics = [w for w in _walk(c) if isinstance(w, Gtk.Picture) and w.get_visible()]
+        self.assertEqual(asked.count("https://e.test/page.png"), 1)
+        self.assertTrue(pics)
+        self.win.ctx.cfg["feed"]["link_cards"] = "text"
+        try:
+            c = cards.Card(self.win.ctx, "098", adapter.post(dict(raw, id="098"), "t"))
+            self.assertEqual(asked.count("https://e.test/page.png"), 1)  # not asked again
+        finally:
+            self.win.ctx.cfg["feed"]["link_cards"] = "full"
+
+    def test_squares_cut_around_the_focus(self):
+        """ui.media_grid = "square": a picture cut around the author's focus point, as
+        Qt's — GTK cut around the centre (21.11)."""
+        from gi.repository import Gdk, GdkPixbuf
+
+        from fedtail.frontends.gtk.card import _around_focus
+        pb = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, 200, 100)
+        pb.fill(0xff0000ff)  # red
+        pb.new_subpixbuf(100, 0, 100, 100).fill(0x0000ffff)  # the right half blue
+        tex = Gdk.Texture.new_for_pixbuf(pb)
+
+        def colour(t):
+            data = t.save_to_png_bytes().get_data()
+            loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+            loader.write(data)
+            loader.close()
+            px = loader.get_pixbuf().get_pixels()
+            return tuple(px[:3])
+        right = _around_focus(tex, (1.0, 0.0))
+        self.assertEqual((right.get_width(), right.get_height()), (100, 100))
+        self.assertEqual(colour(right), (0, 0, 255))
+        self.assertEqual(colour(_around_focus(tex, (-1.0, 0.0))), (255, 0, 0))
+
+    def test_a_gif_loops_in_its_card(self):
+        """ui.gifv = "play": a gif loops, silent, in its card while it is on screen —
+        GTK showed a still frame whatever it said (21.11); "click": the still and a tip."""
+        from fedtail.frontends.gtk import card as cards
+        from fedtail.frontends.gtk import player
+        from fedtail.protocols.mastodon import adapter
+        if not player.available():
+            self.skipTest("no media backend (GStreamer) here")
+        self.win.images.http.get = lambda *_a, **_k: (_ for _ in ()).throw(OSError("off"))
+        raw = status("095", BOB, minute=31, text="гифка")
+        raw["media_attachments"] = [{"id": "g1", "type": "gifv", "url": "https://e.test/g.mp4",
+                                     "preview_url": "https://e.test/g.png",
+                                     "meta": {"original": {"width": 400, "height": 300}}}]
+
+        def pictures(c):
+            return [w for w in _walk(c.media_box) if isinstance(w, Gtk.Picture)]
+        c = cards.Card(self.win.ctx, "095", adapter.post(raw, "t"))
+        holder = Gtk.Window(child=c)
+        holder.present()
+        self.assertTrue(pump(lambda: any(isinstance(p.get_paintable(), Gtk.MediaFile)
+                                         for p in pictures(c)), 3))
+        holder.close()
+        pump(timeout=0.2)
+        self.assertEqual(cards._looping, set())  # off screen: stopped
+        self.win.ctx.cfg["ui"]["gifv"] = "click"
+        try:
+            c = cards.Card(self.win.ctx, "096", adapter.post(dict(raw, id="096"), "t"))
+            holder = Gtk.Window(child=c)
+            holder.present()
+            pump(timeout=0.5)
+            self.assertFalse(any(isinstance(p.get_paintable(), Gtk.MediaFile)
+                                 for p in pictures(c)))
+            holder.close()
+        finally:
+            self.win.ctx.cfg["ui"]["gifv"] = "play"
+
     def test_the_player_over_the_window(self):
         """A video: the player over the window, its keys as Qt's (no media backend
         here: it is built and driven all the same); without one — the browser."""
@@ -2669,6 +2753,29 @@ class GtkThemeTest(unittest.TestCase):
             tile = css.split(".ft-lane-tile {")[1].split("}")[0]
             glossy = theme.c["button_end"].css() != theme.c["button"].css()
             self.assertEqual("shade(" not in tile, glossy, p.stem)
+
+    def test_font_size_and_the_fixed_width_font(self):
+        """ui.font_size and ui.mono_font (ui.fonts = "custom"): GTK took neither, Qt
+        both (21.11). The CSS says them, and GTK takes it."""
+        from fedtail.core import config
+        from fedtail.frontends.gtk import theme as themes
+        cfg, _w = config.validate({"ui": {"font_size": 14, "fonts": "custom",
+                                          "font": "Sans", "mono_font": "Courier"}})
+        captured = {}
+        real = themes._load_css
+        themes._load_css = lambda prov, css: (captured.setdefault("css", css), real(prov, css))
+        try:
+            themes.apply(cfg)
+        finally:
+            themes._load_css = real
+        css = captured["css"]
+        self.assertIn("font-size: 14pt", css.split(".ft-sidebar")[0])
+        self.assertIn('"Courier", monospace', css.split(".ft-mono {")[1].split("}")[0])
+        prov = Gtk.CssProvider()
+        errors = []
+        prov.connect("parsing-error", lambda _p, _s, e: errors.append(e.message))
+        real(prov, css)
+        self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":

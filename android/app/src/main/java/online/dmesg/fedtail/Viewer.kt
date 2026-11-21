@@ -143,7 +143,7 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
 /** One video, gif or sound: plays when shown, stops and lets go when left. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
-private fun MediaPlayer(url: String, gif: Boolean, key: Int) {
+internal fun MediaPlayer(url: String, gif: Boolean, key: Int, fill: Boolean = false) {
     val context = LocalContext.current
     val player = remember(url, key) {
         ExoPlayer.Builder(context).build().apply {
@@ -160,6 +160,8 @@ private fun MediaPlayer(url: String, gif: Boolean, key: Int) {
             this.player = player
             useController = !gif
             setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            // in a card's tile: the gif fills it, cut as the picture is
+            if (fill) resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
         }
     })
 }

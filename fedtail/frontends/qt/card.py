@@ -40,6 +40,7 @@ from ..common.cardtext import (
     fold,
     indent_of,
     inner_quote_bit,
+    link_card,
     newcomer_bit,
     only_counts_differ,
     shown_text,
@@ -615,10 +616,9 @@ class PostRow(QWidget):
             cv.addWidget(media)
         if quote:
             cv.addWidget(self._quote(quote, quote_mode))
-        elif not media:
-            card = self._link_card(p)
-            if card:
-                cv.addWidget(card)
+        card = self._link_card(p)  # common/cardtext.link_card decides, for every one
+        if card:
+            cv.addWidget(card)
         if p.poll:
             cv.addWidget(self._poll(p))
         reacted = emoji_reactions(p) if self.ctx.cfg["feed"].get("emoji", True) else []
@@ -1392,7 +1392,11 @@ class PostRow(QWidget):
                     upgrade = full if single and full and full != src else None
                 else:  # gifv / video: a still frame here, played over the window on a click
                     upgrade = None
-                    lab.setToolTip(plain_tip(_("media_" + m.kind) + " ▶ " + m.alt))
+                    lab.setToolTip(plain_tip(
+                        # ui.gifv = "click": a gif waits for it (the same words everywhere)
+                        _("gif_click_play") + " " + m.alt
+                        if m.kind == "gifv" and self.ctx.loop_gifv is None
+                        else _("media_" + m.kind) + " ▶ " + m.alt))
                     lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm, moving))
                     src = m.preview
                     if m.kind == "gifv" and self.ctx.loop_gifv is not None:
@@ -1482,8 +1486,8 @@ class PostRow(QWidget):
         """The page a post links to, as the server saw it: title, a line or two of
         description, the site, a picture (feed.link_cards)."""
         mode = self.ctx.cfg["feed"].get("link_cards", "full")
-        c = p.card
-        if mode == "off" or c is None or not c.url or not (c.title or c.image):
+        c = link_card(p, self.ctx.cfg)
+        if c is None:
             return None
         url = c.url
         box = ClickFrame()

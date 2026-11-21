@@ -273,6 +273,24 @@ class WebWritingTest(TmpDir):
         webs.draft_drop("new")  # "Discard"
         self.assertIsNone(webs.core.get_draft("new"))
 
+    def test_the_page_takes_the_font_settings(self):
+        """ui.fonts, ui.font, ui.mono_font, ui.font_size on the page as in the windows
+        (it took the theme's family whatever they said: 21.11)."""
+        webs = self.srv.web
+        ui = webs.core.cfg["ui"]
+        ui.update(fonts="custom", font="Inter, Noto Sans", mono_font="Courier", font_size=13)
+        css = webs.theme_css()
+        self.assertIn("font-family: Inter, Noto Sans;", css)
+        self.assertIn("font-family: Courier, ui-monospace", css)
+        self.assertIn(".post .body { font-size: 13pt; }", css)
+        ui.update(fonts="system", font_size=0)
+        css = webs.theme_css()
+        self.assertNotIn("Inter", css)
+        self.assertNotIn("font-size", css)
+        ui.update(font="x; } body { color: red")  # a font name, nothing else
+        ui["fonts"] = "custom"
+        self.assertNotIn("color: red", webs.theme_css())
+
     def test_a_failure_in_the_background_keeps_the_text(self):
         """The editor is gone at once: with post.drafts_autosave off, the draft meant to
         hold the text was never written, and a failure lost it (21.11)."""

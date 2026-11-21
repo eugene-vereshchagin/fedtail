@@ -105,6 +105,7 @@ data class MediaItem(
     val fileText: Boolean = false,  // …a text one, read here (Place.TextFile)
     val index: Int = 0,             // its place among the post's attachments (the core's)
     val elsewhere: String = "",     // the same picture on its author's server: my server lost it
+    val focusX: Float = 0f, val focusY: Float = 0f, // the author's focus point, -1…1 (y up)
 )
 
 /** A button of a place (common/places.py Btn): act = [place, key, data]. */
@@ -276,6 +277,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
     var bookmarkButton by mutableStateOf(true)  // ui.bookmark_button: 🔖 beside ↩ ★ ♻
     var readButton by mutableStateOf(false)     // read.read_button: ✓ under an unread post
+    var mediaLook by mutableStateOf(MediaLook()) // ui.media_grid, alt_text, gifv, image_viewer
     // a private message among posts: the core's "frame", "fill", "badge" or "none"
     // (ui.direct_highlight, the theme's shape.direct)
     var directMark by mutableStateOf("frame")
@@ -630,6 +632,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
         bookmarkButton = me.optBoolean("bookmark_button", true)
         readButton = me.optBoolean("read_button")
+        mediaLook = MediaLook(grid = me.optString("media_grid", "natural"),
+            alt = me.optString("alt_text", "tooltip"),
+            gifvPlay = me.optString("gifv", "play") == "play",
+            viewerOutside = me.optString("image_viewer", "internal") == "browser")
         directMark = me.optString("direct_mark", "frame")
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
@@ -2552,7 +2558,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 MediaItem(str(m, "kind"), str(m, "preview"), str(m, "url"), str(m, "alt"),
                     m.optInt("w"), m.optInt("h"), str(m.optJSONObject("file"), "name"),
                     m.optJSONObject("file")?.optBoolean("text") ?: false, it,
-                    str(m, "elsewhere"))
+                    str(m, "elsewhere"),
+                    (m.optJSONArray("focus")?.optDouble(0) ?: 0.0).toFloat(),
+                    (m.optJSONArray("focus")?.optDouble(1) ?: 0.0).toFloat())
             }.filter { it.preview.isNotBlank() || it.url.isNotBlank() },
             card = card?.let { LinkCard(str(it, "url"), str(it, "title"), str(it, "provider"),
                 str(it, "image"), str(it, "description")) },

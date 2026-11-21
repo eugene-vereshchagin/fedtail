@@ -218,6 +218,10 @@ class BridgeTest(_Base):
         self.assertTrue(got["demo"])
         opened = self.call("open")
         self.assertEqual(opened["me"]["handle"], "mira")
+        # the windows' switches the phone draws by (it drew one way whatever they said)
+        me = opened["me"]
+        self.assertEqual((me["media_grid"], me["alt_text"], me["gifv"], me["image_viewer"],
+                          me["read_button"]), ("natural", "tooltip", "play", "internal", False))
         names = [x["name"] for x in opened["lanes"]]
         self.assertIn("home", names)
         lane = self.call("lane", "home", False)

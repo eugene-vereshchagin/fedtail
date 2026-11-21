@@ -129,6 +129,12 @@ why.en = "Only Qt says \"the browser didn't open\" in the bug report: it alone l
 keys = ["issue_not_opened"]
 
 [[wording]]
+in = ["tui"]
+why.ru = "Терминал не играет гифки в ленте: он пишет строку «гифка», а `v` показывает её кадр. Подсказки «клик — проиграть» ему не к чему."
+why.en = "The terminal plays no gifs in a lane: it writes a \"gif\" line, and `v` shows its still. A \"click to play\" tip has nothing to go on there."
+keys = ["gif_click_play"]
+
+[[wording]]
 in = ["qt", "tui", "web"]
 why.ru = "GTK закрепляет вкладку правым щелчком сразу, без меню, и говорит об этом подсказкой."
 why.en = "GTK pins a tab on a right click at once, with no menu, and says so in a tooltip."

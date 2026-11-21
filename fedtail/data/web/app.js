@@ -325,6 +325,7 @@ function renderOne(m, all, p, i) {
       // its place kept before it comes (the server says its size): pictures coming in
       // pushed the posts below away, and the one the lane opened on went off screen
       if (m.w && m.h) { img.width = m.w; img.height = m.h; }
+      if (m.focus) img.style.objectPosition = focusAt(m.focus);  // a square: around it
       img.onload = () => { img.title = m.alt; };
       img.onclick = () => view(m, all);
       // a preview the server couldn't make: the original; neither — say so, try later
@@ -347,8 +348,17 @@ function renderOne(m, all, p, i) {
     if (m.preview) v.poster = m.preview;
     v.preload = "none";
     v.playsInline = true;
-    if (m.kind === "gifv") { v.loop = true; v.muted = true; v.autoplay = true; v.preload = "auto"; }
-    else v.controls = true;
+    if (m.kind === "gifv") {  // ui.gifv, as the windows: loops on screen, or on a click
+      v.loop = true;
+      v.muted = true;
+      if (state.me && state.me.gifv === "click") {
+        v.title = w("gif_click_play");
+        v.onclick = (e) => { e.stopPropagation(); if (v.paused) v.play(); else v.pause(); };
+      } else {
+        v.preload = "auto";
+        gifWatch(v);
+      }
+    } else v.controls = true;
     v.title = m.alt;
     v.onerror = () => fail(null);
     cell.append(v);
@@ -361,6 +371,34 @@ function renderOne(m, all, p, i) {
   } else cell.append(broken(m));
   if (caption) cell.append(caption);
   return cell;
+}
+
+// the author's focus point (x, y in -1…1, y up) as CSS's object-position: a square of
+// the grid cut around it, as the windows cut it (the page cut around the centre)
+function focusAt(f) {
+  const pc = (v) => Math.round(Math.max(0, Math.min(100, v * 100))) + "%";
+  return pc((f[0] + 1) / 2) + " " + pc((1 - f[1]) / 2);
+}
+
+// ui.gifv = "play": a gif loops while it is on screen, three at most at once (the
+// windows' bound) — the page played every one on the page, seen or not
+const gifs = { playing: new Set(), seen: null };
+function gifWatch(v) {
+  if (!gifs.seen) {
+    gifs.seen = new IntersectionObserver((all) => {
+      for (const e of all) {
+        const g = e.target;
+        if (e.isIntersecting && gifs.playing.size < 3) {
+          gifs.playing.add(g);
+          g.play().catch(() => gifs.playing.delete(g));
+        } else if (!e.isIntersecting && gifs.playing.has(g)) {
+          gifs.playing.delete(g);
+          g.pause();
+        }
+      }
+    }, { threshold: 0.3 });
+  }
+  gifs.seen.observe(v);
 }
 
 async function mediaMenu(p, i, anchor) {

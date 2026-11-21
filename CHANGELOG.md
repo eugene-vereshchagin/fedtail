@@ -122,6 +122,17 @@
 * `post.cw_field`, `post.preview` and `post.schedule` work in the terminal's and the
   phone's editors (and `post.schedule` on the web page): the warning's field behind
   Ctrl+O → "Warning" in the terminal, no Preview, no "Later" when switched off.
+* `ui.gifv`: GTK and the phone loop a gif right in its card, as Qt does; the web page
+  waits for a click with `"click"`; three at most loop at once everywhere.
+* A grid of squares (`ui.media_grid = "square"`) is cut around the author's focus point
+  in GTK, on the web page and on the phone, as in Qt. The phone draws pictures as
+  `ui.media_grid`, `ui.alt_text` and `ui.image_viewer` say, and a fifth picture and
+  on show as "+N" on the fourth tile (they had no tile at all).
+* A link card shows beside neither pictures nor a quote, in every interface (Qt hid
+  it beside a quote, the rest drew both); GTK draws its picture with
+  `feed.link_cards = "full"`.
+* GTK takes `ui.font_size` and `ui.mono_font`; the web page `ui.fonts`, `ui.font`,
+  `ui.mono_font` and `ui.font_size` (it took the theme's family whatever they said).
 
 ## 0.23.7 — 2026-11-20
 

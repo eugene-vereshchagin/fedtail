@@ -104,5 +104,29 @@ class WebProfileButtonsTest(unittest.TestCase):
         self.assertEqual(sorted(keys - set(WEB_PROFILE_ACTS)), [])
 
 
+class LinkCardTest(unittest.TestCase):
+    def test_one_rule_for_every_interface(self):
+        """Qt hid the link card beside a quote, GTK, the page and the terminal drew both
+        (21.11): common/cardtext.link_card says for all of them."""
+        from types import SimpleNamespace as NS
+
+        from fedtail.frontends.common.cardtext import link_card
+        from fedtail.model import Card, Quote
+        card = Card("https://e.test/a", title="A page", image="https://e.test/a.png")
+        cfg = {"feed": {"link_cards": "full", "quotes": "card"}}
+        post = NS(card=card, media=(), quote=None)
+        self.assertIs(link_card(post, cfg), card)
+        self.assertIsNone(link_card(NS(card=card, media=("m",), quote=None), cfg))
+        quoted = NS(card=card, media=(), quote=Quote())
+        self.assertIsNone(link_card(quoted, cfg))  # the quote is shown: no card
+        cfg["feed"]["quotes"] = "off"
+        self.assertIs(link_card(quoted, cfg), card)  # quotes not shown: the card is
+        cfg["feed"]["link_cards"] = "off"
+        self.assertIsNone(link_card(post, cfg))
+        cfg["feed"]["link_cards"] = "text"
+        self.assertIsNone(link_card(NS(card=Card("https://e.test/b"), media=(), quote=None),
+                                    cfg))  # no title, no picture: nothing to draw
+
+
 if __name__ == "__main__":
     unittest.main()

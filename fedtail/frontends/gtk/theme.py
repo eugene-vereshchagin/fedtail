@@ -102,7 +102,9 @@ class Theme:
                 f".ft-direct-badge {{ background: {d.css()}; color: {on}; border-radius: 3px; "
                 f"padding: 0 5px; font-weight: bold; }}")
 
-    def css(self, font_family="", post_scale=1.0):
+    def css(self, font_family="", post_scale=1.0, font_size=0, mono=""):
+        """font_size: ui.font_size, points (0 — the system's); mono: the fixed-width
+        family (ui.fonts / ui.mono_font) — GTK took neither, as Qt does (21.11)."""
         c = {k: v.css() for k, v in self.c.items()}
         r = int(self.shape.get("radius", 12))
         br = int(self.shape.get("button_radius", 8))
@@ -113,6 +115,9 @@ class Theme:
                 f"background: {c['card']}; border: 1px solid {c['card_border']}; "
                 f"border-radius: {r}px;")
         fam = f"font-family: {css_families(font_family)};" if font_family else ""
+        if font_size:
+            fam += f" font-size: {int(font_size)}pt;"
+        mono_fam = (css_families(mono) + ", monospace") if mono else "monospace"
         # the curtain's tiles: the theme's glossy buttons where it has them (button_end),
         # else a card a little lighter on top
         gloss = c.get("button_end", c["button"]) != c["button"]
@@ -168,7 +173,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-name {{ color: {c['name']}; font-weight: bold; }}
 .ft-muted, .ft-card .ft-muted {{ color: {c['muted']}; }}
 .ft-dot {{ color: {c['dot']}; }}
-.ft-mono {{ font-family: monospace; color: {c['muted']}; }}
+.ft-mono {{ font-family: {mono_fam}; color: {c['muted']}; }}
 .ft-ctx {{ background: {c['ctx']}; border-left: 3px solid {c['ctx_bar']}; padding: 3px 8px;
           color: {c['muted']}; border-radius: 0 {br}px {br}px 0; }}
 .ft-myreply {{ background: {c['myreply']}; color: {c['on_myreply']}; padding: 2px 8px;
@@ -203,7 +208,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-avatar-square {{ border-radius: 0; }}
 .ft-thumb {{ border-radius: {br}px; background: {c['ctx']}; }}
 .ft-cmdline {{ background: {c['panel']}; padding: 4px 0; }}
-.ft-cmdline entry {{ font-family: monospace; }}
+.ft-cmdline entry {{ font-family: {mono_fam}; }}
 entry, spinbutton, dropdown > button {{ background: {c['field']}; color: {c['text']};
     border: 1px solid {c['field_border']}; }}
 entry:focus-within {{ border-color: {c['accent']}; }}
@@ -285,7 +290,10 @@ def apply(cfg, name=None):
     # went before: "Tahoma" on a Linux without it became whatever fontconfig chose,
     # while Qt drew PT Sans that comes with fedtail (the night of 23.10)
     theme.font_family = first_available(family)
-    css = theme.css(family, float(theme.font.get("post_scale") or 1.0))
+    mono = {"custom": cfg["ui"].get("mono_font") or "",
+            "theme": theme.font.get("mono") or ""}.get(mode, "")
+    css = theme.css(family, float(theme.font.get("post_scale") or 1.0),
+                    int(cfg["ui"].get("font_size") or 0), mono)
     display = Gdk.Display.get_default()
     if display is None:
         return theme

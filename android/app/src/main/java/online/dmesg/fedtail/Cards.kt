@@ -59,6 +59,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +68,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
@@ -125,6 +127,17 @@ import androidx.compose.foundation.interaction.DragInteraction
 val LocalCardHold = androidx.compose.runtime.compositionLocalOf<(() -> Unit)?> { null }
 
 /** What a card can ask for; the lane and the thread give the same (AppModel.cardActions). */
+/** How a post's pictures are drawn, the windows' switches: ui.media_grid ("natural" —
+ *  each its own shape, "square" — squares cut around the focus point), ui.alt_text
+ *  ("caption" — the description under them), ui.gifv ("play" — a gif loops in place),
+ *  ui.image_viewer ("browser" — a tap opens the picture there). The phone drew one way
+ *  whatever they said (21.11). */
+data class MediaLook(val grid: String = "natural", val alt: String = "tooltip",
+                     val gifvPlay: Boolean = true, val viewerOutside: Boolean = false)
+
+/** The gifs looping in cards right now: three at most, as the windows' bound. */
+object GifLoops { var playing by mutableIntStateOf(0) }
+
 class CardActions(
     val open: (PostItem) -> Unit, val reply: (PostItem) -> Unit, val like: (PostItem) -> Unit,
     val media: (List<MediaItem>, Int) -> Unit,
@@ -152,6 +165,7 @@ class CardActions(
     val pollRefresh: (PostItem) -> Unit = {},
     val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
     val readButton: Boolean = false,                 // read.read_button: ✓ under an unread post
+    val mediaLook: MediaLook = MediaLook(),
     val readOne: (PostItem) -> Unit = {},
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
     val holdSelects: Boolean = true,                 // phone.hold_text: a long press selects words
@@ -164,7 +178,10 @@ class CardActions(
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
     open = { openThread(it.sid, it.openAt) }, reply = { compose(it) }, like = { act(it, "like") },
-    media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
+    media = { list, i ->  // ui.image_viewer = "browser": a picture opens there
+        if (mediaLook.viewerOutside && list[i].kind == "image") openBrowser(list[i].url)
+        else openMedia(list, i)
+    }, link = { openLink(it, openBrowser) },
     textFile = { p, m -> openTextFile(p, m) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
@@ -178,7 +195,7 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
     bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects,
-    readButton = readButton, readOne = { markRead(listOf(it.key), inThread = it in threadPosts) },
+    readButton = readButton, mediaLook = mediaLook, readOne = { markRead(listOf(it.key), inThread = it in threadPosts) },
     directMark = directMark, directColor = hexColor(themeColors["direct"]),
     onDirect = hexColor(themeColors["on-direct"]))
 
@@ -969,7 +986,7 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     // one read here, any other in the browser; the grid gets the pictures only
     val (files, visual) = p.media.partition { it.file.isNotEmpty() }
     if (visual.isNotEmpty()) {
-        MediaGrid(visual, blurred = hideSensitive && p.sensitive,
+        MediaGrid(visual, blurred = hideSensitive && p.sensitive, look = act.mediaLook,
             menu = act.mediaMenu?.let { f -> val m: suspend (Int) -> JSONArray = { i -> f(p, visual[i].index) }; m },
             browser = act.browser) { i -> act.media(visual, i) }
     }
@@ -1116,7 +1133,7 @@ private fun Link(c: LinkCard, act: CardActions) {
 
 /** One picture wide, by its own proportions (within reason); more — two per row, square. */
 @Composable
-fun MediaGrid(media: List<MediaItem>, blurred: Boolean,
+fun MediaGrid(media: List<MediaItem>, blurred: Boolean, look: MediaLook = MediaLook(),
               menu: (suspend (Int) -> JSONArray)? = null, browser: (String) -> Unit = {},
               open: (Int) -> Unit) {
     var shown by remember(media) { mutableStateOf(!blurred) }
@@ -1131,16 +1148,35 @@ fun MediaGrid(media: List<MediaItem>, blurred: Boolean,
         if (media.size == 1) {
             val m = media[0]
             val ratio = if (m.w > 0 && m.h > 0) (m.w.toFloat() / m.h).coerceIn(0.66f, 2.2f) else 1.6f
-            Tile(m, Modifier.fillMaxWidth().aspectRatio(ratio), shown, hold?.let { { it(0) } }) { tap(0) }
+            Tile(m, Modifier.fillMaxWidth().aspectRatio(ratio), shown, look, false,
+                 hold?.let { { it(0) } }) { tap(0) }
         } else {
+            val square = look.grid == "square"
+            val ratioOf = { m: MediaItem ->
+                if (m.w > 0 && m.h > 0) (m.w.toFloat() / m.h).coerceIn(0.5f, 2.2f) else 1f }
+            // four tiles; more — "+N" on the fourth, a tap opens the viewer there and on
+            // (the fifth and on had no tile at all, 21.11)
+            val more = media.size - 4
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 media.take(4).chunked(2).forEachIndexed { row, pair ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // "natural": a row as tall as both keep their shapes in it, each its own
+                    val rowRatio = if (square) 2f else pair.sumOf { ratioOf(it).toDouble() }.toFloat()
+                    Row(Modifier.fillMaxWidth().aspectRatio(if (pair.size == 1 && !square)
+                            rowRatio * 2 else rowRatio),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         pair.forEachIndexed { col, m ->
                             val i = row * 2 + col
-                            Tile(m, Modifier.weight(1f).aspectRatio(1f), shown, hold?.let { { it(i) } }) { tap(i) }
+                            Box(Modifier.weight(if (square) 1f else ratioOf(m)).fillMaxHeight()) {
+                                Tile(m, Modifier.fillMaxSize(), shown, look, square,
+                                     hold?.let { { it(i) } }) { tap(i) }
+                                if (i == 3 && more > 0) Box(Modifier.fillMaxSize()
+                                    .background(Color(0x88000000)), contentAlignment = Alignment.Center) {
+                                    Text("+$more", color = Color.White, fontSize = 22.sp,
+                                         fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        if (pair.size == 1) Spacer(Modifier.weight(if (square) 1f else ratioOf(pair[0])))
                     }
                 }
             }
@@ -1152,6 +1188,12 @@ fun MediaGrid(media: List<MediaItem>, blurred: Boolean,
                     .clip(RoundedCornerShape(8.dp)).background(Color(0x99000000))
                     .padding(horizontal = 12.dp, vertical = 8.dp))
         }
+    }
+    // ui.alt_text = "caption": the descriptions under the pictures, as the windows write them
+    if (look.alt == "caption" && shown) media.filter { it.alt.isNotBlank() }.forEach { m ->
+        Text(m.alt, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+             maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+             modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -1184,8 +1226,8 @@ private fun MediaMenu(items: JSONArray?, browser: (String) -> Unit, close: () ->
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, hold: (() -> Unit)? = null,
-                 onClick: () -> Unit) {
+private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, look: MediaLook = MediaLook(),
+                 square: Boolean = false, hold: (() -> Unit)? = null, onClick: () -> Unit) {
     val menuWords = stringResource(R.string.media_menu)
     val haptic = LocalHapticFeedback.current
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).then(
@@ -1213,17 +1255,28 @@ private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, hold: (() -> 
                 .data(source).crossfade(true).build(),
                 onError = { if (m.elsewhere.isNotBlank() && source != m.elsewhere) source = m.elsewhere },
                 contentDescription = said, contentScale = ContentScale.Crop,
+                // a square: cut around the author's focus point, as the windows cut it
+                alignment = if (square) BiasAlignment(m.focusX, -m.focusY) else Alignment.Center,
                 modifier = Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.blur(28.dp)))
         } else {
             Box(Modifier.fillMaxSize().semantics { contentDescription = said })
         }
-        if (m.kind == "video" || m.kind == "gifv" || m.kind == "audio") {
+        // ui.gifv = "play": a gif loops here, silent, while its card is on screen
+        var looping by remember(m.url) { mutableStateOf(false) }
+        if (m.kind == "gifv" && look.gifvPlay && shown && m.url.isNotBlank()) {
+            DisposableEffect(m.url) {
+                if (GifLoops.playing < 3) { GifLoops.playing += 1; looping = true }
+                onDispose { if (looping) { GifLoops.playing -= 1; looping = false } }
+            }
+            if (looping) MediaPlayer(m.url, gif = true, key = 0, fill = true)
+        }
+        if ((m.kind == "video" || m.kind == "gifv" || m.kind == "audio") && !looping) {
             Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0x99000000)),
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.PlayArrow, null, tint = Color.White)
             }
         }
-        if (m.alt.isNotBlank() && shown) {
+        if (m.alt.isNotBlank() && shown && look.alt != "caption") {
             Text("ALT", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Color(0x99000000))

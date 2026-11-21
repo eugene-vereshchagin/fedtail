@@ -18,6 +18,7 @@ from ..common.cardtext import (
     fold,
     indent_of,
     inner_quote_bit,
+    link_card,
     newcomer_bit,
     only_counts_differ,
     shown_text,
@@ -492,8 +493,7 @@ class Card(Gtk.Box):
         quote_mode = ctx.cfg["feed"].get("quotes", "card")
         if p.quote is not None and quote_mode != "off":
             inner.append(self._quote_of(p.quote, quote_mode))
-        cards = ctx.cfg["feed"].get("link_cards", "full")
-        if p.card is not None and not p.media and cards != "off":
+        if link_card(p, ctx.cfg) is not None:  # common/cardtext decides, for every one
             inner.append(self._link_card(p.card))
         reacted = sorted(((r.name, r.count) for r in p.reactions if r.count > 0),
                          key=lambda x: -x[1]) if ctx.cfg["feed"].get("emoji", True) else []
@@ -668,8 +668,10 @@ class Card(Gtk.Box):
             full = m.url or m.remote_url
             if m in visual:
                 tw, th = thumb_box(m.width, m.height, height, max_w)
-                if len(visual) > 1 and self.ctx.cfg["ui"].get("media_grid") == "square":
+                square = len(visual) > 1 and self.ctx.cfg["ui"].get("media_grid") == "square"
+                if square:
                     tw = th = 150  # ui.media_grid: several pictures cut to squares, as Qt's
+                self._square = square
                 if covered:
                     cell = Gtk.Button(label="⚠ " + _("sensitive_media") + "\n" +
                                       _("sensitive_click"))
@@ -743,7 +745,10 @@ class Card(Gtk.Box):
         over.add_overlay(state)
 
         def came(paintable):
-            pic.set_paintable(paintable)
+            if getattr(self, "_square", False) and m.focus:  # around the focus, as Qt's
+                paintable = _around_focus(paintable, m.focus)
+            if not getattr(pic, "looping", False):  # a gif playing here: not its still
+                pic.set_paintable(paintable)
             state.set_visible(False)
 
         def failed():
@@ -761,6 +766,10 @@ class Card(Gtk.Box):
             play.set_halign(Gtk.Align.CENTER)
             play.set_valign(Gtk.Align.CENTER)
             over.add_overlay(play)
+            if m.kind == "gifv" and self.ctx.cfg["ui"].get("gifv", "play") == "play":
+                _loop_gifv(pic, play, m, getattr(self.ctx, "images", None))
+            elif m.kind == "gifv":
+                tip(over, _("gif_click_play"))
         click = Gtk.GestureClick()
         if m.kind == "image" and m in images:
             idx = images.index(m)
@@ -957,7 +966,31 @@ class Card(Gtk.Box):
             text += "\n" + GLib.markup_escape_text(card.description[:200])
         lab = _label(text, ("ft-ctx",), markup=True, wrap=True)
         lab.connect("activate-link", self._link)
-        return lab
+        if self.ctx.cfg["feed"].get("link_cards", "full") != "full" or not card.image or \
+                getattr(self.ctx, "images", None) is None:
+            return lab
+        # "full": the page's picture over its words, as Qt's and the page's (GTK drew the
+        # words alone: 21.11); a click on it opens the link
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        pic = Gtk.Picture()
+        pic.set_can_shrink(True)
+        pic.set_content_fit(Gtk.ContentFit.COVER)
+        pic.add_css_class("ft-thumb")
+        pic.set_overflow(Gtk.Overflow.HIDDEN)
+        pic.set_size_request(-1, 160)
+        pic.set_visible(False)  # till it comes: no empty box if it never does
+
+        def came(paintable):
+            pic.set_paintable(paintable)
+            pic.set_visible(True)
+        self.ctx.images.get(card.image, came, max_side=640, owner=pic)
+        click = Gtk.GestureClick()
+        click.connect("released", lambda *_a: self.ctx.on_link(card.url))
+        pic.add_controller(click)
+        pic.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
+        box.append(pic)
+        box.append(lab)
+        return box
 
     # ---- buttons and the menu ------------------------------------------------------
     def _actx(self):
@@ -1154,3 +1187,70 @@ class Separator(Gtk.Box):
         lab = _label(text, ("ft-separator",), xalign=0.5)
         lab.set_hexpand(True)
         self.append(lab)
+
+
+# ui.gifv = "play": a gif loops, silent, right in its card while the card is on screen —
+# three at most at once (as Qt's); GTK showed a still frame and ▶ whatever it said (21.11)
+GIFS_AT_ONCE = 3
+_looping = set()
+
+
+def _loop_gifv(pic, play, m, images):
+    from . import player
+    url = m.url or m.remote_url
+    if not url or not player.available():
+        return  # no GStreamer: the still frame, a click plays it over the window
+    from .gi_setup import Gio
+    stream = {}
+
+    def start(_w=None):
+        if len(_looping) >= GIFS_AT_ONCE or pic in _looping:
+            return
+        if "s" not in stream:
+            local = images.video_local(url) if images is not None else None
+            if not local and images is not None:
+                images.prefetch_video([url])  # on disk for the next time
+            f = Gio.File.new_for_path(local) if local else Gio.File.new_for_uri(url)
+            s = Gtk.MediaFile.new_for_file(f)
+            s.set_loop(True)
+            s.set_muted(True)
+            stream["s"] = s
+        _looping.add(pic)
+        pic.looping = True
+        pic.set_paintable(stream["s"])
+        play.set_visible(False)
+        stream["s"].play()
+
+    def stop(_w=None):
+        if pic in _looping:
+            _looping.discard(pic)
+            if "s" in stream:
+                stream["s"].pause()
+
+    pic.connect("map", start)
+    pic.connect("unmap", stop)
+    pic.connect("destroy", stop)
+
+
+def _around_focus(texture, focus):
+    """A square of the picture cut around the author's focus point (x, y in -1…1, y up)
+    — the grid's squares were cut around the centre in GTK (21.11). The picture as it
+    was if it can't be cut."""
+    try:
+        w, h = texture.get_width(), texture.get_height()
+        side = min(w, h)
+        fx = max(-1.0, min(1.0, float(focus[0])))
+        fy = max(-1.0, min(1.0, float(focus[1])))
+        cx, cy = (fx + 1) / 2 * w, (1 - fy) / 2 * h
+        x = int(min(max(cx - side / 2, 0), w - side))
+        y = int(min(max(cy - side / 2, 0), h - side))
+        if (x, y) == (0, 0) and w == h:
+            return texture
+        from gi.repository import GdkPixbuf
+        loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+        loader.write(texture.save_to_png_bytes().get_data())
+        loader.close()
+        part = loader.get_pixbuf().new_subpixbuf(x, y, side, side)
+        return Gdk.Texture.new_for_pixbuf(part)
+    except Exception:  # noqa: BLE001 — a picture never worth an error: as it is
+        return texture

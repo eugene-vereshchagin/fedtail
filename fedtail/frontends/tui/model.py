@@ -10,7 +10,7 @@ from ...i18n import _
 from ...model import Share, real
 from ...model.text import html_to_text, snippet
 from ..common import actions
-from ..common.cardtext import context_on, fold
+from ..common.cardtext import context_on, fold, link_card
 from ..common.commands import Commands  # noqa: F401 — the TUI's, now shared
 
 
@@ -155,9 +155,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     out.foot = "  ".join(foot)
     # the page a post links to (feed.link_cards, "full" and "text" alike: a terminal
     # has no picture for it) — its title and site, as the windows' card says
-    card = p.card
-    if card is not None and card.url and (card.title or card.image) and \
-            core.cfg["feed"].get("link_cards", "full") != "off":
+    card = link_card(p, core.cfg)  # common/cardtext decides, for every interface
+    if card is not None:
         site = card.provider or (card.url.split("/")[2] if "//" in card.url else "")
         out.below.append(("link", "🔗 " + " · ".join(x for x in (card.title, site) if x)))
     if words is not None:
