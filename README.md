@@ -545,20 +545,20 @@ wrong. Commits carry a `Co-Authored-By: Claude` line.
 ### In numbers
 
 <!-- stats -->
-As of 21 November 2026, counted at the release (the first commit: 15 October 2026):
+As of 22 November 2026, counted at the release (the first commit: 15 October 2026):
 
 | What | Lines |
 |---|---|
-| the program in Python (core, Qt, GTK, terminal, web server, the phone's bridge) | ~87 000 |
-| tests | ~51 000 |
-| the Android app in Kotlin | ~9 400 |
-| the web page (JS, CSS, HTML) | ~4 700 |
+| the program in Python (core, Qt, GTK, terminal, web server, the phone's bridge) | ~88 000 |
+| tests | ~52 000 |
+| the Android app in Kotlin | ~9 500 |
+| the web page (JS, CSS, HTML) | ~4 800 |
 | tools, packaging, CI | ~12 000 |
 | docs in Markdown, Russian and English | ~20 000 |
 
-Some 165 000 lines of code without the docs; the sync server (its own repository) adds 800 more. 1 134 commits, 38 releases.
+Some 166 000 lines of code without the docs; the sync server (its own repository) adds 800 more. 1 147 commits, 39 releases.
 
-Tokens, from Claude Code's logs since 29 October 2026 (the earlier logs are gone, so the real total is higher): about 2.32 billion processed — of them 2.3 billion read from the prompt cache, 16.5 million written to it, 4.4 million generated. Nearly all of it Claude Opus.
+Tokens, from Claude Code's logs since 29 October 2026 (the earlier logs are gone, so the real total is higher): about 2.58 billion processed — of them 2.55 billion read from the prompt cache, 18 million written to it, 4.8 million generated. Nearly all of it Claude Opus.
 <!-- /stats -->
 
 ## License

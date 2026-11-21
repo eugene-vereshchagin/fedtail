@@ -5,7 +5,22 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.8 — 2026-11-22
+
+**In short: every setting does the same in all five interfaces.** A sweep of each of
+fedtail's ~340 settings through Qt, GTK, the terminal, the web page and the phone: what
+one window honoured and another ignored is decided once now, and a test holds it so;
+plus the fixes of a fresh look over the whole code.
+
+<!-- For the site's builder (an agent): a release of the 0.23 branch, together with
+     fedtail-sync 0.23.8 (the same server under the new number; protocol 2). The release
+     files are named as in 0.23.6–0.23.7 — and there are many kinds of them now, worth
+     the download page's attention: the Windows installer and portable .exe, the Linux
+     binary, an AppImage (+ .zsync for updates), a Flatpak bundle, Debian packages
+     (fedtail_X_all.deb, or fedtail-common + -qt / -gtk / -tui), a Fedora RPM (+ the
+     .spec), an Arch package (+ PKGBUILD), a Python wheel, the source tarball, the
+     Android APK, SHA256SUMS; besides the files: a Docker image of the web interface on
+     ghcr.io and a Nix flake in the repository. -->
 
 * Fixed, GTK: a picture dragged onto the editor's text went in as its `file:///…`
   address instead of being attached; a drop now attaches it wherever it lands.
