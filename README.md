@@ -544,7 +544,8 @@ wrong. Commits carry a `Co-Authored-By: Claude` line.
 
 ### In numbers
 
-As of 21 November 2026, five weeks after the first commit (15 October):
+<!-- stats -->
+As of 21 November 2026, counted at the release (the first commit: 15 October 2026):
 
 | What | Lines |
 |---|---|
@@ -552,16 +553,13 @@ As of 21 November 2026, five weeks after the first commit (15 October):
 | tests | ~51 000 |
 | the Android app in Kotlin | ~9 400 |
 | the web page (JS, CSS, HTML) | ~4 700 |
-| tools, packaging, CI | ~10 700 |
+| tools, packaging, CI | ~12 000 |
 | docs in Markdown, Russian and English | ~20 000 |
 
-Some 163 000 lines of code without the docs; the sync server (its own repository) adds
-840 more. 1 133 commits, 38 releases.
+Some 165 000 lines of code without the docs; the sync server (its own repository) adds 800 more. 1 134 commits, 38 releases.
 
-Tokens, from Claude Code's logs of 29 October – 21 November (the first two weeks' logs
-are no longer kept, so the real total is higher): about 2.3 billion processed — of
-them 2.29 billion read from the prompt cache, 16.5 million written to it, 4.4 million
-generated. Nearly all of it Claude Opus.
+Tokens, from Claude Code's logs since 29 October 2026 (the earlier logs are gone, so the real total is higher): about 2.32 billion processed — of them 2.3 billion read from the prompt cache, 16.5 million written to it, 4.4 million generated. Nearly all of it Claude Opus.
+<!-- /stats -->
 
 ## License
 

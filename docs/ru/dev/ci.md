@@ -71,7 +71,8 @@
 
 1. В разделе `## What's next` в `CHANGELOG.md` есть всё, что пользователь заметит со времени прошлого релиза.
 2. Одним коммитом: в `fedtail/__init__.py` — `X.Y.Z`, заголовок CHANGELOG становится `## X.Y.Z — <дата>`,
-   у пришедших в нём возможностей в `docs/src/features/` вместо `"next"` стоит `since = "X.Y.Z"`, `python3 tools/docs_build.py`.
+   у пришедших в нём возможностей в `docs/src/features/` вместо `"next"` стоит `since = "X.Y.Z"`, `python3 tools/docs_build.py`,
+   `python3 tools/stats.py` (цифры в README пересчитаны, вместе с ними `docs/src/tokens.json`).
 3. Пуш. Когда CI зелёный, задача `release` ставит тег и публикует; сайт подтягивается.
 4. Сразу после: поднять до `X.Y.Z+1.dev0` с новым разделом `## What's next` — без номера: какой будет следующий, решается при выпуске.
 

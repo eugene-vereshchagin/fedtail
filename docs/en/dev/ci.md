@@ -71,7 +71,8 @@ checksum checked, listed in `fedtail/_vendor/VENDORED.toml`; a copy in the syste
 
 1. The `## What's next` section of `CHANGELOG.md` has everything user-visible since the last release.
 2. In one commit: `fedtail/__init__.py` says `X.Y.Z`, the CHANGELOG heading becomes `## X.Y.Z — <date>`,
-   the features that came in it have `since = "X.Y.Z"` instead of `"next"` in `docs/src/features/`, `python3 tools/docs_build.py`.
+   the features that came in it have `since = "X.Y.Z"` instead of `"next"` in `docs/src/features/`, `python3 tools/docs_build.py`,
+   `python3 tools/stats.py` (the READMEs' numbers counted anew, `docs/src/tokens.json` with them).
 3. Push. When CI is green, the `release` job tags and publishes; the site follows.
 4. Right after: bump to `X.Y.Z+1.dev0` with a new `## What's next` section — no number in it: which one comes next is decided at the release.
 
