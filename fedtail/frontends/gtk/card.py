@@ -472,6 +472,10 @@ class Card(Gtk.Box):
         # without the "RE:" line, the quote drawn below (common/cardtext.shown_text)
         from dataclasses import replace as _replace
         whole = _replace(p, text=shown_text(p, self.ctx.cfg))
+        if self.ctx.cfg["feed"].get("collapse_tags", True):  # a tail of #tags: "… +N",
+            from ...model.text import collapse_tag_stuffing  # as Qt's and the page's
+            whole = _replace(whole, text=collapse_tag_stuffing(whole.text,
+                                                               full=bool(ctx.in_thread)))
         folded = fold(whole.text, self.ctx.cfg, bool(ctx.in_thread))
         self.text_box.append(self._body(_replace(whole, text=folded[0]) if folded else whole))
         if folded:  # feed.fold_chars: the beginning, and the rest on a press
@@ -664,6 +668,8 @@ class Card(Gtk.Box):
             full = m.url or m.remote_url
             if m in visual:
                 tw, th = thumb_box(m.width, m.height, height, max_w)
+                if len(visual) > 1 and self.ctx.cfg["ui"].get("media_grid") == "square":
+                    tw = th = 150  # ui.media_grid: several pictures cut to squares, as Qt's
                 if covered:
                     cell = Gtk.Button(label="⚠ " + _("sensitive_media") + "\n" +
                                       _("sensitive_click"))

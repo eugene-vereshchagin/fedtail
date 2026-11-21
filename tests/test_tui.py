@@ -358,6 +358,55 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
 
 
+    async def test_a_post_deleted_by_command_goes_from_the_screen(self):
+        """D #id twice: the post deleted, and its row gone (it stayed till a redraw)."""
+        from textual.widgets import Input
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem, PostItem
+        core, w = self.make()
+        w.add(status("001", ME, minute=1, vis="public", text="oops"), home=True)
+        w.add(status("002", BOB, minute=2, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+
+            def shown():
+                return {getattr(getattr(i, "entry", None), "id", None)
+                        for i in app.query_one("#posts").children if isinstance(i, PostItem)}
+            await self.wait(pilot, lambda: "001" in shown())
+            alias = core.short_ids([core.store.get_status("001")])["001"]
+            cmd = app.query_one("#cmd", Input)
+            for _ in range(2):  # asked first, then done
+                cmd.focus()
+                cmd.value = f"D #{alias}"
+                await pilot.press("enter")
+                await pilot.pause(0.2)
+            await self.wait(pilot, lambda: "001" not in w.statuses)
+            await self.wait(pilot, lambda: "001" not in shown())
+
+    async def test_the_editor_keeps_its_draft_while_typing(self):
+        """post.drafts_autosave: what is typed is kept a moment after the last key, not
+        only on Esc — an SSH dropped lost it (21.11)."""
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.screens import ComposeScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, vis="public"), home=True)
+        core.cfg["post"]["autosave_ms"] = 100
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            app.query_one("#posts").focus()
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            key = app.screen.key
+            await pilot.press(*"half a thought")
+            await self.wait(pilot, lambda: (core.get_draft(key) or {}).get(
+                "text", "").endswith("half a thought"))
+
     async def test_tab_completes_a_tag_in_the_editor(self):
         """Typed by keys as a person types: "#geo", the line under the text offers
         #georgia, Tab puts it in. The terminal's editor completed nothing (20.11); with

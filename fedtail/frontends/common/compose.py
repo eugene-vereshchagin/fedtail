@@ -321,6 +321,77 @@ def fit_for_server(path, caps, folder, images):
     return str(out)
 
 
+class PilImages:
+    """What fit_for_server needs, with Pillow — for the interfaces without a toolkit's
+    pictures of their own: the web page (and the phone through it), the terminal. Only
+    the windows made a big photo fit; the others had it refused after the upload
+    (21.11)."""
+
+    @staticmethod
+    def size(path):
+        from PIL import Image
+        try:
+            with Image.open(path) as im:
+                return im.size
+        except Exception:  # noqa: BLE001 — not a picture Pillow reads: as it is
+            return None
+
+    @staticmethod
+    def load(path):
+        from PIL import Image, ImageOps
+        try:
+            with Image.open(path) as im:
+                return ImageOps.exif_transpose(im)  # a phone's photo stands as taken
+        except Exception:  # noqa: BLE001
+            return None
+
+    @staticmethod
+    def dims(img):
+        return img.size
+
+    @staticmethod
+    def scaled(img, w, h):
+        from PIL import Image
+        return img.resize((max(1, w), max(1, h)), Image.LANCZOS)
+
+    @staticmethod
+    def alpha(img):
+        return img.mode in ("RGBA", "LA", "PA") or "transparency" in img.info
+
+    @staticmethod
+    def save(img, out, kind, quality):
+        try:
+            if kind == "jpeg":
+                img.convert("RGB").save(out, "JPEG", quality=quality, optimize=True)
+            else:
+                img.save(out, "PNG", optimize=True)
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
+
+def pil_images():
+    """PilImages when Pillow is there, else None (a picture then goes as it is)."""
+    try:
+        import PIL.Image  # noqa: F401
+    except ImportError:
+        return None
+    return PilImages
+
+
+def fit_media(media, cfg, caps, folder, images=None):
+    """The editor's media tuples (path, …) with each picture made to fit the server
+    (fit_for_server) when post.resize_images says so; images: the toolkit's, else
+    Pillow's when it is there."""
+    media = [tuple(m) for m in media]
+    if not (cfg.get("post") or {}).get("resize_images", True):
+        return media
+    images = images or pil_images()
+    if images is None:
+        return media
+    return [(fit_for_server(m[0], caps, folder, images),) + m[1:] for m in media]
+
+
 # ---- the post's language --------------------------------------------------------------
 OTHER_LANG = "\x00other"
 LANG_NAMES = {"tok": "toki pona", "jbo": "la .lojban.", "eo": "Esperanto",

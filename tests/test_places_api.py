@@ -54,6 +54,16 @@ class PlacesApiTest(unittest.TestCase):
         page = self.pl.page("report", "300")
         rules = next(x for x in page.form if x.name == "rules")
         self.assertEqual(rules.choices, (("1", "Be kind"),))
+        # someone of another server: "forward to their moderators", ticked as
+        # post.report_forward says, the server named (the terminal and the web page said
+        # "{host}", unticked, and offered it for my own server's people too: 21.11)
+        fwd = next(x for x in page.form if x.name == "forward")
+        self.assertEqual(fwd.label, i18n._("report_forward", host="social.example"))
+        self.assertTrue(fwd.value)
+        from .fakes import NEWS
+        self.w.add(status("301", NEWS, text="mine"), home=True)
+        self.core.poll_once()
+        self.assertNotIn("forward", [x.name for x in self.pl.page("report", "301").form])
         out = self.pl.act("report", "send", "300", {"category": "violation", "rules": []})
         self.assertEqual(out.error, i18n._("report_rules_need"))
         out = self.pl.act("report", "send", "300", {"category": "violation", "rules": ["1"],

@@ -494,9 +494,8 @@ class Cache:
         """The video cache within ui.video_disk_mb (10 GB): the ones not played the
         longest go first."""
         limit = int(self.core.cfg["ui"].get("video_disk_mb", 10000)) * 1024 * 1024
-        return self._prune(self.video_dir, limit,
-                           lambda p: len(p.stem) == 40 and p.suffix != ".part",
-                           "video cache")
+        from ...core import diskcache
+        return self._prune(self.video_dir, limit, diskcache.is_video, "video cache")
 
     def _count_write(self):
         self._since_prune += 1
@@ -509,43 +508,13 @@ class Cache:
         first (a cache that only grew held gigabytes after a few weeks). Only our
         picture files are touched — names of 40 hex digits."""
         limit = int(self.core.cfg["ui"].get("image_disk_mb", 1000)) * 1024 * 1024
-        return self._prune(self.cache_dir, limit,
-                           lambda p: len(p.name) == 40 and
-                           all(c in "0123456789abcdef" for c in p.name), "image cache")
+        from ...core import diskcache
+        return self._prune(self.cache_dir, limit, diskcache.is_picture, "image cache")
 
-    def _prune(self, folder, limit, ours, what):
-        if limit <= 0:
-            return 0
-        files, total = [], 0
-        try:
-            for p in folder.iterdir():
-                if not p.is_file() or not ours(p):
-                    continue
-                try:
-                    st = p.stat()
-                except OSError:
-                    continue
-                files.append((st.st_mtime, st.st_size, p))
-                total += st.st_size
-        except OSError:
-            return 0
-        if total <= limit:
-            return 0
-        files.sort()  # oldest used first
-        target = int(limit * 0.8)  # some room, so it isn't pruned again right away
-        freed = gone = 0
-        for _mtime, size, p in files:
-            if total - freed <= target:
-                break
-            try:
-                p.unlink()
-                freed += size
-                gone += 1
-            except OSError:
-                pass
-        log.info("%s: %d files, %.0f MB let go (%.0f MB kept, limit %d MB)", what, gone,
-                 freed / 2**20, (total - freed) / 2**20, limit // 2**20)
-        return gone
+    @staticmethod
+    def _prune(folder, limit, ours, what):
+        from ...core import diskcache
+        return diskcache.prune(folder, limit, ours, what)
 
     def local(self, url):
         """The cached file of a picture already downloaded, or None (for rich text that

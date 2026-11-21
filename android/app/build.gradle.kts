@@ -158,6 +158,7 @@ chaquopy {
         pip {
             install("requests")
             install("cryptography") // sync's AES-GCM (core/sync/crypto.py)
+            install("Pillow") // a photo too big for the server made to fit (common/compose.py)
         }
     }
     sourceSets {

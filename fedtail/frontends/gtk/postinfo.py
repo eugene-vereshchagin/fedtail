@@ -76,10 +76,11 @@ def report(win, st):
     hint.add_css_class("ft-muted")
     box.append(hint)
     box.append(frame)
-    remote = "@" in acc.handle
-    fwd = Gtk.CheckButton(label=_("report_forward", host=acc.handle.split("@")[-1]))
-    fwd.set_active(remote and win.cfg["post"].get("report_forward", True))
-    fwd.set_visible(remote)
+    from ..common.actions import report_forward
+    offer = report_forward(win.cfg, acc.handle)
+    fwd = Gtk.CheckButton(label=offer[0] if offer else "")
+    fwd.set_active(bool(offer and offer[1]))
+    fwd.set_visible(offer is not None)
     box.append(fwd)
     cancel = Gtk.Button(label=_("cancel"))
     send = Gtk.Button(label=_("report_send"))

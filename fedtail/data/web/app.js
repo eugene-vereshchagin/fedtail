@@ -266,7 +266,8 @@ function renderPost(p, inThread) {
 }
 
 function renderMedia(p) {
-  const box = el("div", "media n" + Math.min(p.media.length, 4));
+  const box = el("div", "media n" + Math.min(p.media.length, 4) +
+                 (state.me.media_grid === "square" && p.media.length > 1 ? " square" : ""));
   const veiled = p.sensitive && !p.warning && state.me.sensitive_media === "hide";
   const show = () => {
     box.textContent = "";
@@ -299,7 +300,8 @@ function renderOne(m, all, p, i) {
     cell.append(a);
     return cell;
   }
-  const caption = m.alt ? el("figcaption", "alt", m.alt) : null;
+  // ui.alt_text: the description under the picture ("caption"), or on hover only
+  const caption = m.alt && state.me.alt_text === "caption" ? el("figcaption", "alt", m.alt) : null;
   if (caption) {  // three lines; a click: the whole description (and back)
     caption.title = m.alt.length > 200 ? m.alt.slice(0, 200) + "…" : "";
     caption.onclick = (e) => { e.stopPropagation(); caption.classList.toggle("open"); };
@@ -2742,7 +2744,7 @@ function compose(replyTo) {
     $("#vis").value = state.me.visibility;
     const first = $("#vis").value;
     $("#cw").value = "";
-    showCw(false);
+    showCw(cwAtStart(), true);
     api("/api/draft_start", { reply_to: replyTo.sid }).then((st) => {
       if (state.replyTo !== replyTo) return;  // another editor opened meanwhile
       // the reader's own pick while it was asked stays theirs
@@ -2764,7 +2766,7 @@ function compose(replyTo) {
   state.shelvable = false;
   $("#draft-shelve").hidden = true;
   $("#drafts-open").hidden = true;
-  if (!replyTo) { $("#cw").value = ""; showCw(false); }
+  if (!replyTo) { $("#cw").value = ""; showCw(cwAtStart(), true); }
   $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
   $("#vis").disabled = false;  // an edit before locked these (composeFrom)
   $("#attach").title = w("attach");
@@ -2801,7 +2803,7 @@ async function shelveDraft() {
   store("draft.new", "");
   $("#text").value = "";
   $("#cw").value = "";
-  showCw(false);
+  showCw(cwAtStart(), true);
   state.media = [];
   state.poll = null;
   state.sensitive = false;
@@ -2925,11 +2927,15 @@ function fillFrom(replyTo) {
   sel.title = w("post_from_tip");
 }
 
-function showCw(on) {
+function showCw(on, quiet) {
   $("#cw").hidden = !on;
   $("#cw-toggle").classList.toggle("on", on);
-  if (on) $("#cw").focus();
+  if (on && !quiet) $("#cw").focus();
 }
+
+// post.cw_field: the warning's field shown in every new editor, as the windows'
+const focusPoint = () => ((state.me || {}).editor || {}).focus_point !== false;
+const cwAtStart = () => !!((state.me || {}).editor || {}).cw_field;
 
 function counter() {
   const n = [...$("#text").value].length + [...$("#cw").value].length;
@@ -3152,9 +3158,10 @@ function drawEditMedia(box) {
       const img = el("img");
       img.src = m.url;
       img.alt = m.alt;
-      img.title = w("focus_tip");
+      // post.focus_point: a click sets where the main thing is (off: the picture alone)
+      img.title = focusPoint() ? w("focus_tip") : m.alt || "";
       img.referrerPolicy = "no-referrer";
-      img.onclick = (e) => aimFocus(m, img, e);
+      if (focusPoint()) img.onclick = (e) => aimFocus(m, img, e);
       pic.append(img);
       if (m.focus) {
         const dot = el("span", "focus-mark");
@@ -3193,8 +3200,8 @@ function drawAttached() {
       const img = el("img");
       img.src = m.url;
       img.alt = m.alt;
-      img.title = w("focus_tip");
-      img.onclick = (e) => aimFocus(m, img, e);
+      img.title = focusPoint() ? w("focus_tip") : m.alt || "";
+      if (focusPoint()) img.onclick = (e) => aimFocus(m, img, e);
       pic.append(img);
       if (m.focus) {  // the mark where the crop will centre
         const dot = el("span", "focus-mark");
@@ -3391,6 +3398,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if ($("#compose").open || e.ctrlKey || e.metaKey || e.altKey) return;
+  // window.post_keys off: the posts' letters (common/postkeys.py) aren't keys
+  if (state.me && state.me.post_keys === false && /^[jkrfbmo]$|^Enter$/.test(e.key)) return;
   // Enter or Space on a button, a link: they press it (the thread under the cursor
   // opened instead)
   if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("button, a")) return;
@@ -3519,6 +3528,7 @@ async function askNotify() {
 }
 
 function showNote(note) {
+  if (note.kind === "error") { toast(note.body); return; }  // the core's error: said here
   state.shown.push(note.title);
   if (!canNotify() || Notification.permission !== "granted") return;
   const looking = document.hasFocus() && !document.hidden;

@@ -72,6 +72,36 @@ class WebApiTest(TmpDir):
         me = json.loads(self.req("/api/me")[2])
         self.assertTrue(me["bookmark_button"])  # ui.bookmark_button, the windows' default
 
+    def test_the_cards_follow_the_settings(self):
+        """feed.link_cards, feed.custom_emoji, feed.text_markup, ui.alt_text,
+        ui.media_grid, window.post_keys: the page shows what the windows show (it drew
+        one way whatever they said, 21.11)."""
+        st = self.w.add(status("403", BOB, text="~~old~~ :blob:", vis="public"), home=True)
+        st["card"] = {"url": "https://news.example/a", "title": "A",
+                      "image": "https://news.example/a.png"}
+        st["emojis"] = [{"shortcode": "blob", "url": "https://example.test/blob.png"}]
+        self.core.poll_once()
+
+        def card():
+            got = json.loads(self.req("/api/lane?name=home")[2])["posts"]
+            return next(p for p in got if p["sid"] == "403")
+        p = card()
+        self.assertTrue(p["card"]["image"])
+        self.assertIn("<s>old</s>", p["html"])
+        self.assertIn("<img", p["html"])
+        feed = self.core.cfg["feed"]
+        feed.update(link_cards="text", custom_emoji=False, text_markup=False)
+        self.addCleanup(feed.update, link_cards="full", custom_emoji=True, text_markup=True)
+        p = card()
+        self.assertEqual(p["card"]["image"], "")
+        self.assertNotIn("<s>", p["html"])
+        self.assertNotIn("<img", p["html"])
+        feed["link_cards"] = "off"
+        self.assertIsNone(card()["card"])
+        me = json.loads(self.req("/api/me")[2])
+        self.assertEqual((me["post_keys"], me["alt_text"], me["media_grid"]),
+                         (True, "tooltip", "natural"))
+
     def test_edit_describes_my_pictures(self):
         mine = self.w.add(status("400", ME, text="pic", vis="public"), home=True)
         mine["media_attachments"] = [{"id": "m9", "type": "image",

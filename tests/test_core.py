@@ -2690,6 +2690,25 @@ class CoreTest(TmpDir):
         core.post("слово", "private").result()  # a retry of that one: its key
         self.assertEqual(w.send_keys[-1], again)
 
+    def test_the_picture_cache_is_kept_within_its_size_by_the_core(self):
+        """ui.image_disk_mb: the core trims the files of every interface's pictures — the
+        windows' picture cache did, the web page, the phone and the terminal never."""
+        import hashlib
+        import os
+        core, _w = self.make(ui={"image_disk_mb": 1})
+        d = core.paths.cache_dir
+        d.mkdir(parents=True, exist_ok=True)
+        names = [hashlib.sha1(str(i).encode()).hexdigest() for i in range(4)]
+        for i, n in enumerate(names):
+            (d / n).write_bytes(b"x" * 400_000)
+            os.utime(d / n, (1000 + i, 1000 + i))  # the first the longest unused
+        (d / "keep.txt").write_bytes(b"x" * 10)  # not ours: never touched
+        core.collect_garbage()
+        left = sorted(p.name for p in d.iterdir() if p.is_file())
+        self.assertNotIn(names[0], left)
+        self.assertIn(names[-1], left)
+        self.assertIn("keep.txt", left)
+
     def test_post_language(self):
         core, w = self.make(post={"language": "ka"})
         core.connect().result()

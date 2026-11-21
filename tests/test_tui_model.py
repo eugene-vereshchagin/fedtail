@@ -45,6 +45,22 @@ class TuiModelTest(TmpDir):
         self.assertEqual(model.show_post(core, st, number=2, parent=parent).head[0],
                          ("num", "/2"))
 
+    def test_link_cards_and_tag_tails(self):
+        """feed.link_cards and feed.collapse_tags, as the windows and the page show them
+        (the terminal had no link card at all, and every tag of a tail: 21.11)."""
+        core, _w = self.make()
+        tags = " ".join(f'<a href="https://x.test/tags/t{i}">#t{i}</a>' for i in range(8))
+        st = status("004", BOB, minute=4, text=f"<p>look</p><p>{tags}</p>")
+        st["card"] = {"url": "https://news.example/a", "title": "A story",
+                      "provider_name": "News"}
+        view = View(core)
+        shown = model.show_post(view, to_post(st))
+        self.assertIn(("link", "🔗 A story · News"), shown.below)
+        self.assertTrue(any("+5" in line for line in shown.body), shown.body)
+        core.cfg["feed"]["link_cards"] = "off"
+        self.assertFalse([b for b in model.show_post(view, to_post(st)).below
+                          if b[0] == "link"])
+
     def test_cw_folds_unless_expand(self):
         core, _w = self.make(ui={"expand_cw": False, "arts_mode": False})
         st = status("003", BOB, minute=3, text="spoiler")

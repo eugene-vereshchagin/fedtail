@@ -1074,6 +1074,37 @@ class ComposeScreen(Screen):
     def on_text_area_changed(self, _e):
         self.show_count()
         self.show_suggest()
+        self._autosave_soon()
+
+    def on_input_changed(self, e):
+        if getattr(e.input, "id", "") == "c-cw":
+            self._autosave_soon()
+
+    def _autosave_soon(self):
+        """post.drafts_autosave: the draft kept a moment after the last key, as the
+        windows' and the page's editors keep theirs — the terminal kept it only on Esc,
+        and an SSH dropped lost what was typed (21.11)."""
+        core = self.app.core
+        if not core.cfg["post"].get("drafts_autosave", True) or self.initial is None:
+            return
+        timer = getattr(self, "_autosave", None)
+        if timer is not None:
+            timer.stop()
+        from ..common.compose import autosave_ms
+        self._autosave = self.set_timer(autosave_ms(core.cfg) / 1000, self._autosave_now)
+
+    def _autosave_now(self):
+        self._autosave = None
+        if self.sending or not self.is_mounted:
+            return
+        from ..common import compose as cc
+        core = self.app.core
+        snap = self._snapshot()
+        what = cc.keep(snap, self.initial, bool(core.get_draft(self.key)))
+        if what == "save":
+            core.save_draft(self.key, snap)
+        elif what == "delete":
+            core.delete_draft(self.key)
 
     # ---- completing #tags, @names, :emoji: (as the windows: common/compose.py) ----------
     def _token(self):
@@ -1286,9 +1317,13 @@ class ComposeScreen(Screen):
         self.show_extras()
 
     def _media_out(self):
-        """The pictures to send: (path, description[, None, cover])."""
-        return [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
-                for path, alt in self.media]
+        """The pictures to send: (path, description[, None, cover]) — a picture bigger
+        than the server takes made to fit (post.resize_images, Pillow), as the windows'."""
+        out = [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
+               for path, alt in self.media]
+        from ..common import compose as cc
+        core = self.app.core
+        return cc.fit_media(out, core.cfg, core.caps, core.paths.cache_dir)
 
     def _media_changes(self):
         """{id: (description, focus)} of my post's pictures whose words changed."""

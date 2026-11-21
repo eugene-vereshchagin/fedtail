@@ -116,8 +116,12 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if (not p.warning and not folded) or ((config.expand_cw(core.cfg) or open_cw)
                                           and not folded):
         # feed.fold_chars: a long post's beginning in a lane; Enter opens the whole thread
-        long = fold(p.text, core.cfg, in_thread=number is not None)
-        for para in html_to_text(long[0] if long else p.text).split("\n"):
+        text = p.text
+        if core.cfg["feed"].get("collapse_tags", True):  # a tail of #tags: "… +N",
+            from ...model.text import collapse_tag_stuffing  # as the windows and the page
+            text = collapse_tag_stuffing(text, full=number is not None)
+        long = fold(text, core.cfg, in_thread=number is not None)
+        for para in html_to_text(long[0] if long else text).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
             out.body.pop()
@@ -148,6 +152,13 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if via:  # every account in one window: the one that got it (and acts on it)
         foot.append("⇄ " + via)
     out.foot = "  ".join(foot)
+    # the page a post links to (feed.link_cards, "full" and "text" alike: a terminal
+    # has no picture for it) — its title and site, as the windows' card says
+    card = p.card
+    if card is not None and card.url and (card.title or card.image) and \
+            core.cfg["feed"].get("link_cards", "full") != "off":
+        site = card.provider or (card.url.split("/")[2] if "//" in card.url else "")
+        out.below.append(("link", "🔗 " + " · ".join(x for x in (card.title, site) if x)))
     if words is not None:
         if words.quote is not None:
             out.below.append(("quote", words.quote.text))

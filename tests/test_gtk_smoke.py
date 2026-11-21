@@ -1319,6 +1319,42 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(win.get_title(), "notes.txt")
         win.close()
 
+    def test_settings_qt_honoured_and_gtk_ignored(self):
+        """feed.collapse_tags, post.cw_field, post.focus_point: GTK did as Qt does only
+        with their defaults (21.11)."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        tags = " ".join(f'<a href="https://x.test/tags/t{i}">#t{i}</a>' for i in range(8))
+        card = Card(self.win.ctx, "g", adapter.post(status("094", BOB, minute=2,
+                                                           text=f"<p>a</p><p>{tags}</p>")))
+        self.assertIn("+5", card.body_block.layout.get_text())  # "… +5"
+        self.win.cfg["post"]["cw_field"] = True
+        self.addCleanup(self.win.cfg["post"].__setitem__, "cw_field", False)
+        dlg = self.win.compose()
+        self.assertTrue(dlg.cw.get_visible())
+        dlg.close()
+        self.win.cfg["post"]["focus_point"] = False
+        self.addCleanup(self.win.cfg["post"].__setitem__, "focus_point", True)
+        dlg = self.win.compose()
+        dlg.add_paths([str(self._png())])
+        self.assertFalse([w for w in _walk(dlg.media_box) if isinstance(w, Gtk.Button)
+                          and w.get_label() == "◎"])
+        dlg.media.clear()
+        dlg.close()
+
+    def _png(self):
+        import struct
+        import zlib
+        from pathlib import Path
+
+        def chunk(k, d):
+            return struct.pack(">I", len(d)) + k + d + struct.pack(">I", zlib.crc32(k + d))
+        path = Path(self._tmp.name) / "p.png"
+        path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(
+            ">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(
+                b"\x00\x10\x20\x30")) + chunk(b"IEND", b""))
+        return path
+
     def test_a_long_post_folds(self):
         """feed.fold_chars (12.11): its beginning and "Show all", as Qt's."""
         from fedtail.frontends.gtk.card import Card

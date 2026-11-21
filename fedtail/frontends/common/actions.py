@@ -82,6 +82,17 @@ class Button:
     who: str = ""
 
 
+def report_forward(cfg, handle):
+    """A report's "forward to their moderators too": (its words, ticked) for someone of
+    another server — ticked as post.report_forward says; None for my own server's (no
+    one else to forward to). Every window's report form asks this (the terminal's and
+    the web page's said "{host}", unticked, for anyone: 21.11)."""
+    if "@" not in (handle or ""):
+        return None
+    return (_("report_forward", host=handle.split("@")[-1]),
+            bool((cfg.get("post") or {}).get("report_forward", True)))
+
+
 def can_boost(p):
     """Can this post be boosted? Public and quiet public only: a followers' or a direct
     post the server refuses — every interface asks this (the phone offered it on every

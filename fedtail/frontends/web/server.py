@@ -182,10 +182,11 @@ def account_json(acc):
     return out
 
 
-def web_clean(html, link_chars=40):
-    """Server HTML, cleaned (richtext.clean) — minus the inline styles meant for Qt,
-    which the page's CSP refuses anyway."""
-    return clean(html, link_chars=link_chars).replace(' style="text-decoration:none;"', "")
+def web_clean(html, link_chars=40, markup=False):
+    """Server HTML, cleaned (richtext.clean; markup: ~~text~~ struck, feed.text_markup) —
+    minus the inline styles meant for Qt, which the page's CSP refuses anyway."""
+    return clean(html, markup=markup, link_chars=link_chars).replace(
+        ' style="text-decoration:none;"', "")
 
 
 _SHORTCODE = re.compile(r":([A-Za-z0-9_]{1,64}):")
@@ -252,11 +253,21 @@ def poll_json(poll):
                 _("poll_multiple") if poll.multiple and not poll.expired else "") if x)}
 
 
-def card_json(card):
-    if card is None or not _https(card.url):
+def card_json(card, cfg=None):
+    """The page a post links to (feed.link_cards: "full", "text" — no picture, "off" —
+    none), as the windows draw it."""
+    mode = ((cfg or {}).get("feed") or {}).get("link_cards", "full")
+    if card is None or mode == "off" or not _https(card.url):
         return None
     return {"url": card.url, "title": card.title, "description": card.description,
-            "image": _pic(card.image), "provider": card.provider}
+            "image": _pic(card.image) if mode == "full" else "", "provider": card.provider}
+
+
+def _emoji(cfg, html, emojis):
+    """with_emojis, unless feed.custom_emoji is off: then :shortcode: stays text, as in
+    the windows."""
+    return with_emojis(html, emojis) if (cfg.get("feed") or {}).get("custom_emoji", True) \
+        else html
 
 
 def quote_json(view, quote):
@@ -314,7 +325,8 @@ def words_json(view, spec, date):
     by = getattr(spec.entry, "by", None)
     if w.boosted is not None and by is not None and by.emojis and ":" in name_of(by):
         name = escape(name_of(by))
-        boosted_html = escape(w.boosted.text).replace(name, with_emojis(name, by.emojis), 1)
+        boosted_html = escape(w.boosted.text).replace(name, _emoji(view.cfg, name, by.emojis),
+                                                      1)
     return {"boosted": bit_json(w.boosted), "boosted_html": boosted_html,
             "meta": [bit_json(b) for b in w.meta],
             "context": bit_json(w.context), "warning": w.warning, "folded": w.folded,
@@ -350,6 +362,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         html = view.in_app(_with(p, text=html))
     me = view.me
     folded = fold(html, view.cfg, number is not None or depth is not None)
+    markup = bool(view.cfg["feed"].get("text_markup", True))  # ~~struck~~, as the windows
     out = {
         "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
         "account": account_json(p.author), "created": _iso(p.created),
@@ -357,16 +370,19 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         "can_boost": actions.can_boost(p),
         "chars": actions.char_count(entry, view.cfg),  # card.char_count: "" — off
         "warning": p.warning, "sensitive": p.sensitive,
-        "html": with_emojis(web_clean(html, richtext_link_chars(view.cfg)), p.emojis),
+        "html": _emoji(view.cfg, web_clean(html, richtext_link_chars(view.cfg), markup),
+                       p.emojis),
         # feed.fold_chars: a long post's beginning, "html" the whole on "Show all"
-        "fold": {"html": with_emojis(web_clean(folded[0], richtext_link_chars(view.cfg)),
-                                     p.emojis), "label": folded[1]} if folded else None,
+        "fold": {"html": _emoji(view.cfg, web_clean(folded[0], richtext_link_chars(view.cfg),
+                                                    markup), p.emojis),
+                 "label": folded[1]} if folded else None,
         "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
         "counts": {"replies": p.counts.replies, "shares": p.counts.shares,
                    "likes": p.counts.likes},
         "mine": {"liked": p.mine.liked, "shared": p.mine.shared,
                  "bookmarked": p.mine.bookmarked},
-        "poll": poll_json(p.poll), "card": card_json(p.card), "quote": quote_json(view, p.quote),
+        "poll": poll_json(p.poll), "card": card_json(p.card, view.cfg),
+        "quote": quote_json(view, p.quote),
         "unread": bool(unread), "own": bool(me and p.author.id == me.id),
         "reply_to": p.reply_to, "lang": p.lang,
         "reply_prefix": reply_mentions(p, me.handle if me else ""),
@@ -606,7 +622,29 @@ class Web:
         view.on("sound", lambda _n, p: self.chime(p))
         view.on("notify", lambda _n, p: self.notified(p))
         view.on("auth_failed", lambda _n, _p: self.auth_lost())
+        view.on("error", lambda _n, p: self.error_said(p))
         view.on("poll_state", lambda _n, _p: self.poll_changed())
+
+    ERROR_AGAIN_S = 600  # the same words said again only after this long
+
+    def error_said(self, text):
+        """The core's "error" (a part of a chain not sent, a lane that failed…): to the
+        page, a line at its foot — the windows' status bar says it, the page heard
+        nothing and the thread seemed sent whole (21.11). The same words once in a while,
+        not every round."""
+        text = str(text or "").strip()
+        if not text:
+            return
+        now = time.monotonic()
+        said = self.__dict__.setdefault("_errors_said", {})
+        if now - said.get(text, -self.ERROR_AGAIN_S) < self.ERROR_AGAIN_S:
+            return
+        said[text] = now
+        with self.changed:
+            self.note_seq += 1
+            self.note_log.append((self.note_seq, {"title": "", "body": text, "lane": "",
+                                                  "thread": "", "kind": "error"}))
+        self.bump()
 
     def _thread_news(self):
         """A thread grew or a post changed: an open thread is drawn anew (thread_seq —
@@ -831,6 +869,12 @@ class Web:
                 "dwell_ms": int(c["read"].get("dwell_ms", 350)),
                 # the card's 🔖 beside ↩ ★ ♻ (ui.bookmark_button), as the windows'
                 "bookmark_button": bool(c["ui"].get("bookmark_button", True)),
+                # the posts' letters (window.post_keys), a picture's words under it or
+                # on hover (ui.alt_text), pictures in squares (ui.media_grid): as the
+                # windows show them (the page did one way whatever they said, 21.11)
+                "post_keys": bool(c["ui"].get("post_keys", True)),
+                "alt_text": c["ui"].get("alt_text", "tooltip"),
+                "media_grid": c["ui"].get("media_grid", "natural"),
                 "message_percent": int(c["ui"].get("message_percent", 100)),
                 "unfocused_seconds": float(c["read"].get("unfocused_seconds", 5)),
                 "sensitive_media": config.sensitive_media(c),
@@ -1013,6 +1057,10 @@ class Web:
                 if len(accounts) > 1 else {},
                 "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES],
                 "preview": bool(self.core.cfg["post"].get("preview", True)),
+                # the warning's field from the start, a picture's focus point: as the
+                # windows' editors (post.cw_field, post.focus_point)
+                "cw_field": bool(self.core.cfg["post"].get("cw_field", False)),
+                "focus_point": bool(self.core.cfg["post"].get("focus_point", True)),
                 # spell checking: the browser's own (post.spellcheck), in the post's
                 # language — the windows check with the system's dictionaries
                 "spellcheck": bool(self.core.cfg["post"].get("spellcheck", True)),
@@ -2133,12 +2181,15 @@ class Web:
         if away:  # kept here till it's out: a failure loses nothing typed
             core.save_draft(key, {"text": text, "cw": cw, "visibility": vis,
                                   **({"language": lang} if lang else {})})
+        from ..common.compose import fit_media
+        given = media
+        media = fit_media(media, core.cfg, core.caps, self.uploads_dir())  # too big: smaller
         fut = core.post(text, vis, parent, cw, language=lang, quote=quote,
                         media=media, sensitive=bool(body.get("sensitive")), poll=poll,
                         scheduled_at=when, draft_key=key, **extra)
 
         def tidy(f):  # sent or not: the copies go (a focus may ride along as the third)
-            for m in media:
+            for m in media + given:
                 Path(m[0]).unlink(missing_ok=True)
                 if len(m) > 3 and m[3]:  # and the cover's
                     Path(m[3]).unlink(missing_ok=True)

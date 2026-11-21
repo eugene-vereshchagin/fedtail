@@ -53,7 +53,7 @@ STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
          "dm_badge": "bold white on red",
          "unread": "bold green", "quote": "italic", "myreply": "dim cyan",
-         "conv": "cyan", "divider": "bold green", "newcomer": "bold red",
+         "conv": "cyan", "divider": "bold green", "newcomer": "bold red", "link": "blue",
          # an event's row (event_lines): its links stand out as the windows' do
          "notice": "bold yellow", "hide": "dim", "yes": "bold green", "no": "red",
          "event_post": "italic dim"}
@@ -1032,6 +1032,9 @@ class FedtailApp(App, PostsMixin):
         self.core.on("refreshed", lambda _n, p: self.in_ui(self._refreshed, p))
         # a post changed — liked, boosted, edited, here or anywhere else: shown anew
         self.core.on("status_updated", lambda _n, p: self.in_ui(self.post_changed, p))
+        # a post deleted — from the command line, another window, the phone: gone from
+        # the screen (only the ⋯ menu's Delete redrew it, 21.11)
+        self.core.on("status_deleted", lambda _n, _p: self.in_ui(self.refresh_lane))
         # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
         self.core.on("thread_progress", lambda _n, p: self.in_ui(self.thread_progress, p))
         # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top

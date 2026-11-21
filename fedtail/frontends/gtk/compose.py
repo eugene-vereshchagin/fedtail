@@ -583,9 +583,12 @@ class ComposeWindow(Gtk.Box):
             self._set_language(language)
 
     def _set_cw(self, text):
+        """The warning's text; its field shown when there is one — or always, with
+        post.cw_field (as Qt's)."""
         self.cw.set_text(text or "")
-        self.cw_btn.set_active(bool(text))
-        self.cw.set_visible(bool(text))
+        shown = bool(text) or bool(self.cfg["post"].get("cw_field"))
+        self.cw_btn.set_active(shown)
+        self.cw.set_visible(shown)
 
     def _set_vis(self, vis):
         self.vis.set_selected(VISIBILITIES.index(vis) if vis in VISIBILITIES else 2)
@@ -649,7 +652,7 @@ class ComposeWindow(Gtk.Box):
         images = getattr(self.win, "images", None)
         local = images.local(m.preview or m.url) if images is not None and \
             m.kind == "image" else None
-        if local:
+        if local and self.cfg["post"].get("focus_point", True):
             aim = Gtk.Button(label="◎")
             aim.add_css_class("flat")
             tip(aim, _("focus_tip"))
@@ -771,7 +774,8 @@ class ComposeWindow(Gtk.Box):
         alt.connect("changed", lambda _e: self._changed())
         row.append(alt)
         item = [path, alt, list(focus) if focus else None]
-        if path.lower().rsplit(".", 1)[-1] in ("png", "jpg", "jpeg", "gif", "webp"):
+        if path.lower().rsplit(".", 1)[-1] in ("png", "jpg", "jpeg", "gif", "webp") and \
+                self.cfg["post"].get("focus_point", True):
             aim = Gtk.Button(label="◎")  # where on the picture the main thing is (Qt's)
             aim.add_css_class("flat")
             tip(aim, _("focus_tip"))

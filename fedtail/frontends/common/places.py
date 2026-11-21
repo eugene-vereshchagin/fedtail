@@ -1213,8 +1213,11 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
         if rules:  # "Breaks the server's rules": which (Mastodon asks for at least one)
             form.append(Field("rules", _("report_rules"), [], "checks", rules,
                               tip=_("report_violation")))
-        form += [Field("comment", _("report_why"), "", "text"),
-                 Field("forward", _("report_forward"), False, "check")]
+        form.append(Field("comment", _("report_why"), "", "text"))
+        from .actions import report_forward
+        fwd = report_forward(self.view.cfg, real(p).author.handle)
+        if fwd is not None:
+            form.append(Field("forward", fwd[0], fwd[1], "check"))
         page.form = tuple(form)
         page.submit = self._btn(_("report_send"), "report", "send", sid, primary=True)
         return page

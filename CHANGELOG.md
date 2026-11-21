@@ -56,6 +56,23 @@
   behind; an input method's Enter could pick a completion.
 * Fixed, Android: a `magnet:`, `gemini:` or `xmpp:` link with no app on the phone to
   open it closed fedtail.
+* Fixed, the terminal and the web page: the report form said "{host}" and offered to
+  forward the report for anyone, unticked; it names the server, follows
+  `post.report_forward`, and isn't there for your own server's people.
+* The web page and the phone say what went wrong as the windows do (a chain's part
+  not sent, a lane that failed) — they said nothing.
+* The picture cache on disk stays within `ui.image_disk_mb` whatever interface you
+  use: the web page, the phone and the terminal filled it without end.
+* The web page, the phone and the terminal make a photo too big for the server fit
+  (`post.resize_images`), as the windows do — the server refused it after the upload.
+  The phone app now carries Pillow for it.
+* Settings the windows followed and the others didn't: the web page and the phone now
+  follow `feed.link_cards`, `feed.custom_emoji`, `feed.text_markup`, `ui.alt_text`,
+  `ui.media_grid`, `window.post_keys`, `post.cw_field` and `post.focus_point`; GTK
+  `feed.collapse_tags`, `ui.media_grid`, `post.cw_field` and `post.focus_point`; the
+  terminal shows link cards and folds a tail of #tags.
+* The terminal's editor keeps its draft as you type (`post.drafts_autosave`), not only
+  on Esc; a post deleted from the command line goes from the screen.
 
 ## 0.23.7 — 2026-11-20
 

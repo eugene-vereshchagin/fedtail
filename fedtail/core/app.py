@@ -801,6 +801,11 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         """Forget posts nothing points at (Store.gc); over the size budget, cut every
         lane shorter and collect again, until it fits or lanes reach KEEP_FLOOR."""
         self._gc_done = time.monotonic()
+        try:  # the pictures' files too, whichever interface fetched them (diskcache.py)
+            from . import diskcache
+            diskcache.prune_all(self.cfg, self.paths.cache_dir)
+        except Exception as e:  # noqa: BLE001 — never the round
+            log.warning("disk cache: %s", e)
         sc = self.cfg["storage"]
         wanted = max(KEEP_FLOOR, sc["keep_per_lane"])
         try:

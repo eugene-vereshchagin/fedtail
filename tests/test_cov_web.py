@@ -480,6 +480,28 @@ class WebApiTest(WebBase):
             po.return_value = f
             self.assertEqual(wb.post({"text": "e"}), {"id": None, "url": ""})
 
+    def test_a_big_photo_is_made_to_fit(self):
+        """A photo over the server's limits goes smaller, as the windows send it (the
+        page and the phone sent it whole, the server refused it after the upload), and
+        no copy of it stays behind."""
+        import io
+
+        from PIL import Image
+        wb = self.web
+        buf = io.BytesIO()
+        Image.new("RGB", (3000, 2000), (200, 30, 30)).save(buf, "PNG")
+        tok = wb.upload(buf.getvalue(), "photo.png")["token"]
+        given = str(wb.upload_path(tok))
+        caps = wb.core.caps
+        with mock.patch.object(caps, "image_pixels", 1_000_000), \
+                mock.patch.object(caps, "image_bytes", 0):
+            wb.post({"text": "смотри", "media": [{"token": tok, "alt": "red"}],
+                     "alt_ok": True})
+        path = self.w.uploads[-1][0]
+        self.assertNotEqual(path, given)
+        self.assertTrue(path.endswith(".jpg"))
+        self.assertEqual([p for p in wb.uploads_dir().iterdir()], [])  # all tidied
+
     def test_editor_facts_with_several_accounts(self):
         with mock.patch.object(self.web.core, "post_accounts",
                                return_value=([("", "@me@x"), ("w", "@w@y")], "")):
@@ -579,6 +601,13 @@ class WebApiTest(WebBase):
                 self.assertLogs("fedtail", "ERROR"):
             wb.notified([("home", {"id": "001"})])
         self.assertEqual(wb.note_seq, 0)
+        # the core's "error" (a chain's part not sent…) reaches the page, once a while
+        self.core.events.emit("error", "2 / 3: gone")
+        self.core.events.emit("error", "2 / 3: gone")
+        notes, seq = wb.notes_since(0)
+        self.assertEqual([(n["kind"], n["body"]) for n in notes], [("error", "2 / 3: gone")])
+        wb.note_log.clear()
+        wb.note_seq = 0
 
         class Snd:
             def __init__(self, kind, value="", file=""):

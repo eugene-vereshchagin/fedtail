@@ -2573,10 +2573,11 @@ class MainWindow(QMainWindow):
         why = QPlainTextEdit()
         why.setPlaceholderText(_("report_why"))
         lay.addWidget(why, 1)
-        remote = "@" in acc.handle
-        fwd = QCheckBox(_("report_forward", host=acc.handle.split("@")[-1]))
-        fwd.setChecked(remote and self.cfg["post"].get("report_forward", True))
-        fwd.setVisible(remote)
+        from ..common.actions import report_forward
+        offer = report_forward(self.cfg, acc.handle)
+        fwd = QCheckBox(offer[0] if offer else "")
+        fwd.setChecked(bool(offer and offer[1]))
+        fwd.setVisible(offer is not None)
         lay.addWidget(fwd)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         send = buttons.addButton(_("report_send"), QDialogButtonBox.ButtonRole.AcceptRole)

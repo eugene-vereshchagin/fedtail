@@ -187,6 +187,9 @@ img.emoji { height: 1.3em; width: auto; vertical-align: -0.25em; margin: 0 1px; 
                              font-weight: 600; }
 .post .media { display: grid; gap: 4px; margin-top: 8px; grid-template-columns: 1fr 1fr; }
 .post .media.n1 { grid-template-columns: 1fr; }
+/* ui.media_grid = "square": several pictures cut to squares, as the windows' */
+.post .media.square img, .post .media.square video { aspect-ratio: 1; object-fit: cover;
+  width: 100%; height: auto; }
 .post .media figure { margin: 0; min-width: 0; }
 .post .media img, .post .media video { width: 100%; height: auto; max-height: 380px;
                                         object-fit: cover;
