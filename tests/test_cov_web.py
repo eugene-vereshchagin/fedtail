@@ -485,8 +485,10 @@ class WebApiTest(WebBase):
         page and the phone sent it whole, the server refused it after the upload), and
         no copy of it stays behind."""
         import io
-
-        from PIL import Image
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("no Pillow (it goes as it is then)")
         wb = self.web
         buf = io.BytesIO()
         Image.new("RGB", (3000, 2000), (200, 30, 30)).save(buf, "PNG")

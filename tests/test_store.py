@@ -32,9 +32,10 @@ class LinkItemsTest(unittest.TestCase):
         """A boost holds the whole post: its text stayed in the lanes after the post
         was deleted (21.11)."""
         from .fakes import BOB, NEWS, status
-        d = tempfile.TemporaryDirectory()
+        d = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(d.cleanup)
         s = Store(Path(d.name) / "s.db")
+        self.addCleanup(s.db.close)  # before the folder goes (Windows keeps it open)
         post = status("700", BOB, minute=1, text="gone soon")
         boost = dict(status("701", NEWS, minute=2), reblog=post)
         s.put_items("home", [("700", post, post["created_at"]),

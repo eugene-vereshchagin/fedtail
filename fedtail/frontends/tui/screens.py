@@ -1317,13 +1317,9 @@ class ComposeScreen(Screen):
         self.show_extras()
 
     def _media_out(self):
-        """The pictures to send: (path, description[, None, cover]) — a picture bigger
-        than the server takes made to fit (post.resize_images, Pillow), as the windows'."""
-        out = [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
-               for path, alt in self.media]
-        from ..common import compose as cc
-        core = self.app.core
-        return cc.fit_media(out, core.cfg, core.caps, core.paths.cache_dir)
+        """The pictures to send: (path, description[, None, cover])."""
+        return [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
+                for path, alt in self.media]
 
     def _media_changes(self):
         """{id: (description, focus)} of my post's pictures whose words changed."""
@@ -1458,7 +1454,11 @@ class ComposeScreen(Screen):
                 core.edit(self.edit, text, cw)
         else:
             fut = core.post(text, vis, self.reply_to, cw, language=lang or None,
-                            quote=self.quote, draft_key=self.key, media=self._media_out(),
+                            quote=self.quote, draft_key=self.key,
+                            # a picture bigger than the server takes made to fit
+                            # (post.resize_images, Pillow), as the windows send it
+                            media=cc.fit_media(self._media_out(), core.cfg, core.caps,
+                                               core.paths.cache_dir),
                             sensitive=self.sensitive and bool(self.media),
                             poll=None if self.media else self.poll,
                             scheduled_at=cc.when_utc(self.when),
