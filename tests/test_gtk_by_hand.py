@@ -243,6 +243,46 @@ class GtkByHandTest(_ByHand, _GtkBase):
         xdo("key", "f")
         self.assertTrue(pump(lambda: self.world.statuses[sid].get("favourited"), 3))
 
+    def test_the_keys_of_a_thread(self):
+        """A thread's tab clicked: j / k walk its posts, ] / [ go to the next / previous
+        top comment, - folds the branch and shows it again (common/postkeys) — the tab
+        had no keys at all, only the lane (23.11)."""
+        self.world.add(status("8000", BOB, minute=1, text="root"), home=True)
+        for i, parent in ((1, "8000"), (2, "8000"), (3, "8001"), (4, "8000")):
+            self.world.add(status(f"800{i}", BOB, parent, "B", minute=1 + i, text=f"c{i}"))
+        self.win.open_thread("8000")
+        page = self.win.threads["8000"]
+        self.assertTrue(pump(lambda: len(page.items) == 5 and page.get_mapped(), 5))
+        pump(timeout=0.3)
+        keys = page.keys
+        got = []
+        real_press = keys.press
+        keys.press = lambda name: got.append(name) or real_press(name)
+        x, y = self._at(page, 200, 20)
+        xdo("windowfocus", "--sync", self._xid(self.win))
+        xdo("mousemove", x, y)
+        xdo("click", 1)
+        pump(timeout=0.3)
+        xdo("key", "j")
+        pump(timeout=0.3)
+        self.assertIsNotNone(keys.cursor, (got, self.win.get_focus(),
+                                           self.win.is_active()))
+        keys.put_cursor("8000")
+        for k, want in (("bracketright", "8001"), ("bracketright", "8002"),
+                        ("bracketleft", "8001")):
+            xdo("key", k)
+            pump(timeout=0.3)
+            self.assertEqual(keys.cursor, want, k)
+        deep = keys._card("8003")
+        xdo("key", "minus")
+        self.assertTrue(pump(lambda: not deep.get_visible(), 2))
+        xdo("key", "j")
+        pump(timeout=0.3)
+        self.assertEqual(keys.cursor, "8002")  # the folded one stepped over
+        xdo("key", "k")
+        xdo("key", "minus")
+        self.assertTrue(pump(lambda: deep.get_visible(), 2))
+
     def test_the_editor_follows_the_window(self):
         """The window resized by hand: the editor stays in its middle — placed on the
         window's size, not on every frame (a tick kept the clock going, 21.11)."""

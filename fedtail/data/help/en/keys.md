@@ -31,7 +31,7 @@ hit by mistake.
 | `m` | bookmark |
 | `o`, `Enter` | open the thread |
 | `]` / `[` | in a thread: the next / previous top-level comment |
-| `-` | in a thread: fold the branch (from a deep reply — its top comment's whole branch), again — unfold (the window) |
+| `-` | in a thread: fold the branch (from a deep reply — its top comment's whole branch), again — unfold (the windows, the terminal) |
 
 To turn these letters off — `window.post_keys = false`.
 

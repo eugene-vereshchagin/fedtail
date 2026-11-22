@@ -1863,6 +1863,8 @@ class MainWindow(Gtk.ApplicationWindow):
         page.posts = []
         page.items, page.new, page.went, page.box = [], set(), None, box
         self.threads[root] = page
+        from .threadkeys import ThreadKeys
+        page.keys = ThreadKeys(self, page)  # j / k, r f b m o, ] [ - (common/postkeys)
         from .threadhead import ThreadHead
         page.head = ThreadHead(self, root)  # as Qt's: what it is, Subscribe, Refresh
         box.append(page.head)
@@ -1959,6 +1961,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def close_thread(self, root):
         page = self.threads.pop(root, None)
         if page is not None:
+            if getattr(page, "keys", None) is not None:
+                page.keys.detach()  # its keys leave the window (threadkeys.py)
             self._drop_tab(page)
         self._tab_switched()
 

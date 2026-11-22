@@ -224,6 +224,42 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
             await pilot.press("q")
 
+    async def test_thread_keys(self):
+        """] / [ the next / previous top comment, - folds the branch and shows it again —
+        pressed, as in Qt (common/postkeys); the terminal had no - (23.11)."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, ThreadScreen
+        core, w = self.make()
+        w.add(status("700", BOB, minute=1, text="root", vis="public"), home=True)
+        for i, parent in ((1, "700"), (2, "700"), (3, "701"), (4, "700")):
+            w.add(status(f"70{i}", BOB, parent, "B", minute=1 + i, text=f"c{i}"))
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            screen = ThreadScreen("700")
+            app.push_screen(screen)
+            await self.wait(pilot, lambda: app.screen is screen and
+                            len(screen.query_one("#posts", ListView).children) == 5,
+                            timeout=30)
+            lv = screen.query_one("#posts", ListView)
+            lv.index = 0
+            at = lambda: lv.children[lv.index].key  # noqa: E731
+            await pilot.press("right_square_bracket")
+            self.assertEqual(at(), "701")
+            await pilot.press("right_square_bracket")
+            self.assertEqual(at(), "702")  # 703 (under 701) stepped over
+            await pilot.press("left_square_bracket")
+            self.assertEqual(at(), "701")
+            deep = next(i for i in lv.children if i.key == "703")
+            await pilot.press("minus")
+            self.assertFalse(deep.display)
+            await pilot.press("j")
+            self.assertEqual(at(), "702")  # the folded one stepped over
+            await pilot.press("k", "minus")
+            self.assertTrue(deep.display)
+            await pilot.press("q")
+
     async def test_thread_to_the_next_new_one(self):
         """NOTES/15, as the windows': N goes to the next comment new as the thread
         opened (the screen reads it whole at once), after the cursor."""

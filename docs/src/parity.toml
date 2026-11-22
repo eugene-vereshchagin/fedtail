@@ -51,14 +51,12 @@ note.en = "A link in a post's text to a .mp4, .webm, .mp3, .opus… (a server th
 [[capability]]
 id = "thread-keys"
 area = "reading"
-gtk = "no"
-tui = "partly"
 web = "no"
 android = "na"
 name.ru = "Клавиши треда: ] [ и −"
 name.en = "A thread's keys: ] [ and −"
-note.ru = "`]` / `[` — к следующему / предыдущему комментарию верхнего уровня, `-` — свернуть ветку: в окне Qt; в терминале — `]` и `[` без `-`. Окну GTK и веб-странице их пока нет (клавиши постов j / k, r f b m o там есть); телефону — не нужны: там нет клавиатуры."
-note.en = "`]` / `[` — the next / previous top-level comment, `-` — fold the branch: in the Qt window; the terminal has `]` and `[` without `-`. The GTK window and the web page don't have them yet (the posts' keys j / k, r f b m o they do have); the phone needs none: it has no keyboard."
+note.ru = "`]` / `[` — к следующему / предыдущему комментарию верхнего уровня, `-` — свернуть ветку и развернуть снова: в окнах Qt и GTK и в терминале, по одному правилу (common/postkeys). На веб-странице тред открывается сбоку, а курсор клавиш (j / k) там ходит только по ленте — у треда его пока нет; телефону клавиши не нужны: там нет клавиатуры."
+note.en = "`]` / `[` — the next / previous top-level comment, `-` — fold the branch and unfold it again: in the Qt and GTK windows and the terminal, by one rule (common/postkeys). On the web page a thread opens at the side, and the keys' cursor (j / k) walks only the lane there — a thread has none yet; the phone needs none: it has no keyboard."
 android_note.ru = "На телефоне нет клавиатуры."
 android_note.en = "The phone has no keyboard."
 
@@ -133,6 +131,12 @@ in = ["tui"]
 why.ru = "Терминал не играет гифки в ленте: он пишет строку «гифка», а `v` показывает её кадр. Подсказки «клик — проиграть» ему не к чему."
 why.en = "The terminal plays no gifs in a lane: it writes a \"gif\" line, and `v` shows its still. A \"click to play\" tip has nothing to go on there."
 keys = ["gif_click_play"]
+
+[[wording]]
+in = ["tui", "web"]
+why.ru = "Видео играют свои плееры окон Qt и GTK: на медленном сервере их поток сдаётся, и они ждут копию на диске, говоря «загружаю видео целиком». Терминал отдаёт видео mpv или браузеру, веб-страница и телефон — браузеру и системному плееру: те ждут сервер сами, ждать им нечего."
+why.en = "The Qt and GTK windows play videos in players of their own: on a slow server their stream gives up, and they wait for the copy on disk, saying \"fetching it whole\". The terminal hands videos to mpv or the browser, the web page and the phone to the browser and the system's player: those wait for the server themselves, there is nothing for them to wait for."
+keys = ["video_fetching"]
 
 [[wording]]
 in = ["qt", "tui", "web"]

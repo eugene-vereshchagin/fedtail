@@ -116,15 +116,18 @@ class ThreadWindow:
         top, vh = adj.get_value(), adj.get_page_size() or 600
         lo, hi = top - self.AHEAD * vh, top + vh + self.AHEAD * vh
         far_lo, far_hi = top - self.KEEP * vh, top + vh + self.KEEP * vh
-        ys = [self._y(s) for s in self.slots]
-        if any(y is None for y in ys) or not self.slots[-1].get_height() or \
+        shown = [s for s in self.slots if s.get_visible()]  # a folded branch (-): none
+        if not shown:
+            return GLib.SOURCE_REMOVE
+        ys = [self._y(s) for s in shown]
+        if any(y is None for y in ys) or not shown[-1].get_height() or \
                 (len(ys) > 1 and ys[-1] <= ys[0]):  # not laid out yet: after the next frame
             GLib.timeout_add(50, lambda: (self.soon(), GLib.SOURCE_REMOVE)[1])
             return GLib.SOURCE_REMOVE
         # the reading place: the first slot beginning on the screen (common/strip)
         anchor = next((i for i, y in enumerate(ys) if y >= top), None)
         moved = 0
-        for slot, y in zip(self.slots, ys, strict=True):
+        for slot, y in zip(shown, ys, strict=True):
             h = slot.get_height()
             if slot.card is None and y < hi and y + h > lo:
                 grew = self._build(slot)

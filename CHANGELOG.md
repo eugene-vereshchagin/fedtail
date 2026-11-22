@@ -25,6 +25,9 @@
   is fetched at once, not behind the videos fetched ahead, and a fetch that failed is
   tried again. The same in GTK's player and for gifs looping in the cards (they stood
   still for good).
+- **A thread's keys in GTK and the terminal.** GTK's thread tab had no keys at all — now
+  `j` / `k`, `r f b m o`, Enter, `]` / `[` (the next / previous top comment) and `-` (fold
+  the branch) work there as in Qt; the terminal gets `-`. One rule (`common/postkeys`).
 
 ## 0.23.8 — 2026-11-22
 

@@ -519,9 +519,10 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
-Binding("right_square_bracket", "top_comment(1)", show=False),
+                Binding("right_square_bracket", "top_comment(1)", show=False),
                 Binding("left_square_bracket", "top_comment(-1)", show=False),
-                                Binding("o", "browser", _("open_browser"), show=False),
+                Binding("minus", "fold_branch", show=False),
+                Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
                 Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("full_stop", "post_menu", "⋯"),
@@ -562,16 +563,35 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         self.later(self.app.core.thread(self.status_id), ok=self.fill)
 
     def action_top_comment(self, step):
-        """] / [: the next / previous comment at the top of the tree (as the windows')."""
+        """] / [: the next / previous comment at the top of the tree (common/postkeys,
+        as the windows' and the page's; folded ones stepped over)."""
+        from ..common import postkeys
         lv = self.query_one("#posts", ListView)
         items = list(lv.children)
-        at = lv.index or 0
-        tops = [i for i, it in enumerate(items) if getattr(it, "depth", 0) <= 1 and i]
-        if not tops:
+        shown = [i for i, it in enumerate(items) if not it.disabled]
+        nxt = postkeys.top_comment(shown, lv.index, step,
+                                   lambda i: getattr(items[i], "depth", 0))
+        if nxt is not None:
+            lv.index = nxt
+
+    def action_fold_branch(self):
+        """-: the branch under the comment at the cursor folded away, or shown again — its
+        top comment's, from however deep (common/postkeys, as the windows')."""
+        from ..common import postkeys
+        lv = self.query_one("#posts", ListView)
+        items = list(lv.children)
+        if lv.index is None or not items:
             return
-        nxt = next((i for i in tops if i > at), tops[-1]) if step > 0 else \
-            next((i for i in reversed(tops) if i < at), tops[0])
-        lv.index = nxt
+        head, below = postkeys.branch(list(range(len(items))), lv.index,
+                                      lambda i: getattr(items[i], "depth", 0))
+        hidden = {i for i, it in enumerate(items) if it.disabled}
+        self._folded = getattr(self, "_folded", set())
+        if not postkeys.fold(self._folded, hidden, head, below):
+            return
+        for i, it in enumerate(items):
+            it.disabled = i in hidden
+            it.display = i not in hidden
+        lv.index = head
 
     def action_next_new(self):
         """N: the comment the core names after the one under the cursor (common to every
@@ -586,6 +606,7 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
             self.app.notify(_("thread_next_new_tip"), timeout=3)
 
     async def fill(self, items_in):
+        self._folded = set()  # the cards made anew: none folded
         if not (self.query("#posts") and self.query("#title")):
             return  # the screen went (or isn't drawn yet) while its thread came: no place
         core = self.app.core
