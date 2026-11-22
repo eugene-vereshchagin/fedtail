@@ -197,3 +197,54 @@ class WebSlowServerTest(Base):
         out.assert_called_once_with(revoke=False)
         self.assertEqual(got["said"], i18n._("auth_failed"))
         self.assertIn("login", got)
+
+
+class EmojiOffEverywhereTest(Base):
+    """feed.emoji = false: no emoji at all — the windows took them out; the page, the
+    phone (the page's JSON) and the terminal showed every one, GTK in names (23.11).
+    feed.custom_emoji = false: :blob: stays text, no picture. One rule: cardtext."""
+
+    def post(self):
+        from fedtail.protocols.mastodon import adapter
+
+        from .fakes import status as st
+        blob = [{"shortcode": "blob", "url": "https://x.example/blob.png",
+                 "static_url": "https://x.example/blob.png"}]
+        raw = st("095", dict(BOB, display_name="Bob :blob: 🔥", emojis=blob), minute=3,
+                 text="hello :blob: world 🔥")
+        raw["emojis"] = blob
+        return adapter.post(raw)
+
+    def shown(self, core, p):
+        from fedtail.frontends.tui.model import show_post
+        from fedtail.frontends.web.server import post_json
+        view = View(core)
+        page = post_json(view, p)
+        tui = show_post(core, p)
+        return (page["html"] + " " + page["account"]["name"] + " " +
+                page["account"].get("name_html", ""),
+                " ".join(tui.body) + " " + " ".join(t for _k, t in tui.head))
+
+    def test_three_looks(self):
+        core, _w = self.make()
+        p = self.post()
+        page, term = self.shown(core, p)
+        self.assertIn('<img class="emoji"', page)  # pictures (the terminal: the code)
+        core.cfg["feed"]["custom_emoji"] = False
+        page, term = self.shown(core, p)
+        self.assertNotIn("<img", page)
+        self.assertIn(":blob:", page)
+        core.cfg["feed"]["emoji"] = False
+        page, term = self.shown(core, p)
+        for where, text in (("page/phone", page), ("terminal", term)):
+            self.assertIn("hello", text, where)
+            self.assertIn("Bob", text, where)
+            self.assertNotIn(":blob:", text, where)
+            self.assertNotIn("🔥", text, where)
+            self.assertNotIn("<img", text, where)
+
+    def test_a_name_of_only_emoji_shows_the_login(self):
+        from fedtail.frontends.common.cardtext import emoji_cut
+        core, _w = self.make(feed={"emoji": False})
+        self.assertEqual(emoji_cut(core.cfg, "🔥 :blob:", (), "bob"), "bob")
+        self.assertEqual(emoji_cut(core.cfg, "Bob 🔥", ()), "Bob ")

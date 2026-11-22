@@ -1,6 +1,5 @@
 """One post on screen, and the "new below" divider."""
 
-import re
 from dataclasses import replace
 from urllib.parse import quote, unquote
 
@@ -37,6 +36,8 @@ from ..common import actions
 from ..common.cardtext import (
     context_chars,
     direct_mark,
+    emoji_cut,
+    emoji_look,
     fold,
     indent_of,
     inner_quote_bit,
@@ -58,7 +59,7 @@ from ..common.lane import true_kind as _true_kind
 from ..common.links import THREAD_AT, file_link
 from ..richtext import link_chars, plain_tip
 from .gone import drop
-from .text import clean, display_name, emojify, esc, link, strip_emoji
+from .text import clean, display_name, emojify, esc, link
 
 RAIL_W = 20
 THUMB_H = 170
@@ -184,13 +185,13 @@ class EventRow(QWidget):
     def _names_emoji(self, lab, html, emojis):
         """:blobcat: in the names: the server's pictures, as on a card (PostRow's
         _emoji_label; feed.emoji, feed.custom_emoji) — they stood as :code: (30.10)."""
-        feed = self.ctx.cfg["feed"]
         if not emojis:
             return
-        if not feed.get("emoji", True):
-            lab.setText(strip_emoji(html, emojis))
+        look = emoji_look(self.ctx.cfg)  # common/cardtext: one rule for every interface
+        if look == "none":
+            lab.setText(emoji_cut(self.ctx.cfg, html, emojis))
             return
-        if not feed.get("custom_emoji", True) or getattr(self.ctx, "images", None) is None:
+        if look == "text" or getattr(self.ctx, "images", None) is None:
             return
         lab.ensurePolished()
         px = max(14, lab.fontMetrics().height())
@@ -479,13 +480,12 @@ class PostRow(QWidget):
         downloaded yet are fetched and put in when they come (feed.custom_emoji).
         feed.emoji = false: no emoji at all, neither pictures nor Unicode ones; a name
         that was nothing but emoji falls back to the html given as fallback."""
-        if not self.ctx.cfg["feed"].get("emoji", True):
-            out = strip_emoji(html, emojis)
-            if fallback is not None and not re.sub(r"<[^>]*>|\s|&nbsp;", "", out):
-                out = fallback
-            return self._label(out, name, selectable, wrap)
+        look = emoji_look(self.ctx.cfg)  # common/cardtext: one rule for every interface
+        if look == "none":
+            return self._label(emoji_cut(self.ctx.cfg, html, emojis, fallback), name,
+                               selectable, wrap)
         lab = self._label(html, name, selectable, wrap)
-        if not emojis or not self.ctx.cfg["feed"].get("custom_emoji", True):
+        if not emojis or look == "text":
             return lab
         lab.ensurePolished()
         px = max(14, lab.fontMetrics().height())

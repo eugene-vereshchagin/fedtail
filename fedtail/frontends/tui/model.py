@@ -75,6 +75,11 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
         out.head.append(("alias", f"#{alias}"))
     out.head.append(("who", "@" + (acc.handle or "?")))
     name = acc.name.strip()
+    if name:  # feed.emoji off: the name without them (common/cardtext), as the windows
+        from html import escape, unescape
+
+        from ..common.cardtext import emoji_cut
+        name = unescape(emoji_cut(core.cfg, escape(name), acc.emojis)).strip()
     if name and name != acc.username:
         out.head.append(("name", name))
     if acc.color:  # people.nick_colors: who in my colour for them
@@ -122,7 +127,9 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
             from ...model.text import collapse_tag_stuffing  # as the windows and the page
             text = collapse_tag_stuffing(text, full=number is not None)
         long = fold(text, core.cfg, in_thread=number is not None)
-        for para in html_to_text(long[0] if long else text).split("\n"):
+        from ..common.cardtext import emoji_cut  # feed.emoji off: none, as the windows
+        shown = emoji_cut(core.cfg, long[0] if long else text, p.emojis)
+        for para in html_to_text(shown).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
             out.body.pop()

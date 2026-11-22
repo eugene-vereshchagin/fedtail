@@ -1465,7 +1465,7 @@ class GtkSmokeTest(_GtkBase):
         drawn when it comes (Pango has no picture in a line: TextBlock's shapes); copied,
         it says :blob:; feed.custom_emoji off — the code stays text. As Qt's, the page's."""
         from fedtail.frontends.gtk.card import Card
-        from fedtail.frontends.gtk.gi_setup import Gdk, GLib
+        from fedtail.frontends.gtk.gi_setup import Gdk, GLib, Gtk
         from fedtail.frontends.gtk.textblock import TextBlock
         from fedtail.protocols.mastodon import adapter
         blob = [{"shortcode": "blob", "url": "https://x.example/blob.png",
@@ -1504,6 +1504,17 @@ class GtkSmokeTest(_GtkBase):
             self.assertIn(":blob:", plain[0].text())
         finally:
             cfg["custom_emoji"] = True
+        # feed.emoji off: not one, in the text nor in the name (the name kept them, 23.11)
+        cfg["emoji"] = False
+        try:
+            card = Card(self.win.ctx, "e3", adapter.post(st))
+            shown = " ".join([w.text() for w in _walk(card) if isinstance(w, TextBlock)] +
+                             [w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label)])
+            self.assertIn("hello", shown)
+            self.assertIn("Bob", shown)
+            self.assertNotIn(":blob:", shown)
+        finally:
+            cfg["emoji"] = True
 
     def test_quotes(self):
         """As Qt's: the quoted post framed inside; one that quotes too — a line inside the

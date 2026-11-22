@@ -16,6 +16,8 @@ from ..common.cardtext import (
     bot_mark,
     context_chars,
     direct_mark,
+    emoji_cut,
+    emoji_look,
     fold,
     indent_of,
     inner_quote_bit,
@@ -58,8 +60,7 @@ def name_of(account):
 def emoji_urls(ctx, emojis):
     """{code: url} of a server's emoji to draw as pictures here, or None: feed.emoji or
     feed.custom_emoji off, or none."""
-    feed = ctx.cfg["feed"]
-    if not emojis or not feed.get("emoji", True) or not feed.get("custom_emoji", True):
+    if not emojis or emoji_look(ctx.cfg) != "pictures":  # common/cardtext
         return None
     return richtext.emoji_urls(emojis) or None
 
@@ -73,6 +74,7 @@ def rich_line(ctx, markup, emojis, css=(), on_link=None, wrap=False):
     """A line of markup (a name, "boosted by …") as a label — or, with a server's emoji in
     it, a TextBlock that draws their pictures, which a label can't (one line, cut with
     "…", unless wrap). on_link(url): a link clicked in it."""
+    markup = emoji_cut(ctx.cfg, markup, emojis)  # feed.emoji off: none (names showed them)
     urls = emoji_urls(ctx, emojis)
     if urls and any(f":{code}:" in markup for code in urls):
         from .textblock import TextBlock
@@ -611,8 +613,7 @@ class Card(Gtk.Box):
         html = self.ctx.view.in_app(p) if cfg["ui"]["links_in_app"] else p.text
         html = richtext.clean(html, markup=cfg["feed"]["text_markup"],
                               link_chars=richtext.link_chars(cfg))
-        if not cfg["feed"]["emoji"]:
-            html = richtext.strip_emoji(html, p.emojis)
+        html = emoji_cut(cfg, html, p.emojis)  # feed.emoji off: none (common/cardtext)
         # one Pango layout, not a wrapping label: a quarter of the cost (textblock.py)
         from .textblock import TextBlock
         self.body_block = TextBlock(pango.markup(html, sanitized=True),

@@ -20,6 +20,7 @@ import threading
 import time
 from datetime import datetime
 from html import escape
+from html import unescape as html_unescape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
@@ -38,6 +39,8 @@ from ..common.cardtext import (
     context_chars,
     context_on,
     direct_mark,
+    emoji_cut,
+    emoji_look,
     fold,
     indent_of,
     link_card,
@@ -189,14 +192,22 @@ def _iso(t):
     return t.isoformat().replace("+00:00", "Z") if t else ""
 
 
-def account_json(acc):
+def account_json(acc, cfg=None):
+    """A person for the page and the phone. cfg: feed.emoji / feed.custom_emoji
+    (common/cardtext.emoji_look) — none: the name without emoji (its login if nothing is
+    left); text: :blobcat: as it is; pictures (also without cfg): name_html."""
     if acc is None:
         return {"id": None, "handle": "", "name": "", "avatar": "", "url": "", "bot": False}
     out = {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
            "avatar": _pic(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
     if acc.color:  # people.nick_colors: my colour for their name
         out["color"] = acc.color
-    if acc.emojis and ":" in out["name"]:  # :blobcat: in a name — its picture, as in a post
+    look = emoji_look(cfg) if cfg is not None else "pictures"
+    if look == "none":
+        out["name"] = html_unescape(emoji_cut(cfg, escape(out["name"]), acc.emojis,
+                                              escape(acc.username or acc.handle)))
+    elif look == "pictures" and acc.emojis and ":" in out["name"]:
+        # :blobcat: in a name — its picture, as in a post
         out["name_html"] = with_emojis(escape(out["name"]), acc.emojis)
     return out
 
@@ -285,10 +296,13 @@ def card_json(card, cfg=None):
 
 
 def _emoji(cfg, html, emojis):
-    """with_emojis, unless feed.custom_emoji is off: then :shortcode: stays text, as in
-    the windows."""
-    return with_emojis(html, emojis) if (cfg.get("feed") or {}).get("custom_emoji", True) \
-        else html
+    """html as the windows show it (common/cardtext.emoji_look): the server's pictures,
+    :shortcode: as text (feed.custom_emoji off), or no emoji at all (feed.emoji off — the
+    page and the phone showed every one)."""
+    look = emoji_look(cfg)
+    if look == "none":
+        return emoji_cut(cfg, html, emojis)
+    return with_emojis(html, emojis) if look == "pictures" else html
 
 
 def quote_json(view, quote):
@@ -299,7 +313,7 @@ def quote_json(view, quote):
         return {"id": quote.id, "note": _(key)}
     q = quote.post
     # behind its warning, as the windows show it (cardtext.quote_bit): the warning, not the words
-    return {"id": q.id, "account": account_json(q.author),
+    return {"id": q.id, "account": account_json(q.author, view.cfg),
             "text": "⚠ " + q.warning if q.warning else snippet(q, 300),
             "warning": q.warning or "",
             "created": _iso(q.created), "media": len(q.media)}
@@ -314,7 +328,7 @@ def bit_json(b):
         if b is not None else None
 
 
-def event_json(spec, dismiss_one=True):
+def event_json(spec, dismiss_one=True, cfg=None):
     """An event's row (common/activity.EventParts) as the page and the phone draw it:
     who (names with their fedtail:account/ links), what, when, the post it is about
     and its link, × (fedtail:eventhide/…), a request's yes / no links with their words.
@@ -326,7 +340,11 @@ def event_json(spec, dismiss_one=True):
     html = []
     for i, (name, _url) in enumerate(parts.people):
         emojis = parts.emojis[i] if i < len(parts.emojis) else ()
-        html.append(with_emojis(escape(name), emojis) if emojis and ":" in name else "")
+        look = emoji_look(cfg) if cfg is not None else "pictures"
+        if look == "none":  # no emoji at all: the name without them, as the windows
+            parts.people[i] = (html_unescape(emoji_cut(cfg, escape(name), emojis)), _url)
+        html.append(with_emojis(escape(name), emojis)
+                    if look == "pictures" and emojis and ":" in name else "")
     return {"kind": parts.kind, "people": [list(x) for x in parts.people],
             "people_html": html, "more": parts.more,
             "what": parts.what, "when": parts.when, "notice": parts.notice,
@@ -386,7 +404,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     markup = bool(view.cfg["feed"].get("text_markup", True))  # ~~struck~~, as the windows
     out = {
         "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
-        "account": account_json(p.author), "created": _iso(p.created),
+        "account": account_json(p.author, view.cfg), "created": _iso(p.created),
         "edited": p.edited is not None, "visibility": p.visibility,
         "can_boost": actions.can_boost(p),
         "chars": actions.char_count(entry, view.cfg),  # card.char_count: "" — off
@@ -409,7 +427,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         "reply_prefix": reply_mentions(p, me.handle if me else ""),
     }
     if isinstance(entry, Share):
-        out["shared_by"] = account_json(entry.by)
+        out["shared_by"] = account_json(entry.by, view.cfg)
     via = view.via(entry) if hasattr(view, "via") else ""
     if via:  # all accounts in one window: which of mine got it (and acts on it)
         out["via"] = {"text": "→ " + via, "tip": _("via_tip", acct=via)}
@@ -884,7 +902,7 @@ class Web:
                 return dict(self.me(), said=t["text"])
         self.core.start_polling()
         me = self.core.me
-        return {"me": account_json(me), "handle": me.handle if me else "",
+        return {"me": account_json(me, c), "handle": me.handle if me else "",
                 "version": __version__, "server": (self.core.auth or {}).get("server"),
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
@@ -1327,7 +1345,7 @@ class Web:
             if sp.extra.get("event"):  # an event's row: its parts, every action a link
                 if pending is not None:
                     divider, pending = {"before": sp.key, "text": pending}, None
-                waiting.append({"key": sp.key, "event": event_json(sp, dismiss_one)})
+                waiting.append({"key": sp.key, "event": event_json(sp, dismiss_one, self.core.cfg)})
                 continue
             e = sp.entry
             events += [dict(x, before=e.id) for x in waiting]
@@ -1602,8 +1620,8 @@ class Web:
         pinned = extra.pop("pinned", [])
         top = {e.id for e in pinned}
         pinned = timed.pinned_shown(pinned, show, acc_id)  # "media": those with pictures
-        info = account_json(acc)
-        info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
+        info = account_json(acc, core.cfg)
+        info.update(note=_emoji(core.cfg, web_clean(acc.note), acc.emojis) if acc else "",
                     header=_pic(acc.header_static) if acc else "",
                     counts=" · ".join((_("posts_n", n=acc.posts),
                                        _("followers_n", n=acc.followers),
@@ -1671,7 +1689,7 @@ class Web:
                           "tags": [t.name for t in feat["tags"] if t.name]})
         if people:
             lines.append({"title": _("featured_people"),
-                          "people": [account_json(a) for a in people],
+                          "people": [account_json(a, self.core.cfg) for a in people],
                           "text": ", ".join("@" + a.handle for a in people)})
         out["featured"] = lines
         known = [a for a in got.get("familiar") or [] if a.id]
@@ -1683,7 +1701,8 @@ class Web:
             from html import unescape
             words = unescape(re.sub(r"<[^>]+>", "", _("moved_to", acct="@" + acc.moved.handle)))
             out["moved"] = {"text": words,
-                            "account": account_json(acc.moved), "open": _("moved_open")}
+                            "account": account_json(acc.moved, self.core.cfg),
+                            "open": _("moved_open")}
         return out
 
     def _remote_host(self, acc):
@@ -2365,7 +2384,7 @@ class Web:
             if r.kind == "post":
                 row["post"] = next(made)
             elif r.kind == "account" and r.data is not None:
-                row["account"] = account_json(r.data)
+                row["account"] = account_json(r.data, self.core.cfg)
             elif r.kind == "html":
                 row["html"] = web_clean(r.title) if name not in ("help", "news") else r.title
                 row["title"] = ""

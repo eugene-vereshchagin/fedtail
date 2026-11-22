@@ -13,6 +13,11 @@
   as the windows do. The terminal and the web page try again too (the terminal only said
   it; `fedtail --web` ended); a token the server refuses leads to the login everywhere.
   One rule for all: `frontends/common/connecting.py`.
+- **"No emoji at all" works everywhere.** With `feed.emoji = false` the windows took
+  emoji out of posts, but the web page, the phone and the terminal showed every one, and
+  GTK kept them in names; with `feed.custom_emoji = false` the page and the phone still
+  drew the pictures in names. One rule now (`common/cardtext.emoji_look`), in posts,
+  names, the boost's and the reply's lines and Activity.
 
 ## 0.23.8 — 2026-11-22
 

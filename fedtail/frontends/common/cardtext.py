@@ -70,6 +70,31 @@ def name_of(acc):
     return (acc.name or acc.username or acc.handle) if acc is not None else "?"
 
 
+def emoji_look(cfg):
+    """How emoji are shown: "none" (feed.emoji off: not one — the server's pictures,
+    Unicode ones, reactions), "text" (feed.custom_emoji off: :blobcat: stays text) or
+    "pictures". The page, the phone and the terminal showed them all with emoji off; GTK
+    in names (23.11) — one rule now."""
+    feed = cfg.get("feed") or {}
+    if not feed.get("emoji", True):
+        return "none"
+    return "pictures" if feed.get("custom_emoji", True) else "text"
+
+
+def emoji_cut(cfg, html, emojis=(), fallback=None):
+    """html (sanitized HTML or Pango markup) as feed.emoji says: without any emoji when
+    it is off. fallback: what a name made of nothing but emoji shows instead (its login)."""
+    if emoji_look(cfg) != "none":
+        return html
+    import re
+
+    from ..richtext import strip_emoji
+    out = strip_emoji(html, emojis)
+    if fallback is not None and not re.sub(r"<[^>]*>|\s|&nbsp;", "", out):
+        return fallback
+    return out
+
+
 @dataclass
 class Bit:
     """A piece of words; link: where a click goes (a fedtail: link), or ""; kind: what
@@ -223,7 +248,7 @@ def card_words(spec, cfg, date, in_thread=None):
     w = CardWords()
     if isinstance(entry, Share):
         by = entry.by
-        text = "♻ " + _("boosted_by", name=name_of(by))
+        text = "♻ " + _("boosted_by", name=emoji_cut(cfg, name_of(by), by.emojis, by.handle))
         if entry.created:
             text += " · " + _("boost_time", when=date(entry.created))
         w.boosted = Bit(text, f"fedtail:account/{by.id}")
@@ -252,7 +277,8 @@ def card_words(spec, cfg, date, in_thread=None):
         elif parent is None and p.reply_to and context_on(cfg):
             w.context = Bit(_("ctx_loading"))
         elif isinstance(parent, Post):
-            w.context = Bit("↑ " + _("ctx_reply", name=name_of(parent.author),
+            w.context = Bit("↑ " + _("ctx_reply", name=emoji_cut(cfg, name_of(parent.author),
+                                                     parent.author.emojis, parent.author.handle),
                                      text=snippet(parent, context_chars(cfg))),
                             f"fedtail:thread/{p.id}")
     warned = list(p.filtered) if not cfg["ui"].get("arts_mode") else []
@@ -267,7 +293,7 @@ def card_words(spec, cfg, date, in_thread=None):
     conv = conversation_line(spec)
     if conv is not None:
         w.conversation = Bit(conv[0], thread_url(conv[1], spec.open_at))
-    if cfg["feed"].get("emoji", True):
+    if emoji_look(cfg) != "none":
         reacted = sorted(((r.name, r.count) for r in p.reactions if r.count > 0),
                          key=lambda x: -x[1])
         w.reactions = " ".join((name if len(name) <= 4 else ":" + name.strip(":") + ":")
@@ -280,7 +306,8 @@ def card_words(spec, cfg, date, in_thread=None):
     return w
 
 
-__all__ = ["Bit", "CardWords", "card_words", "inner_quote_bit", "name_of", "newcomer_bit",
+__all__ = ["Bit", "CardWords", "card_words", "emoji_cut", "emoji_look", "inner_quote_bit",
+           "name_of", "newcomer_bit",
            "newcomers", "quote_bit", "shown_text", "thread_news_bit"]
 
 
