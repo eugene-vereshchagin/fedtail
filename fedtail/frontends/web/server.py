@@ -313,7 +313,7 @@ def quote_json(view, quote):
         return {"id": quote.id, "note": _(key)}
     q = quote.post
     # behind its warning, as the windows show it (cardtext.quote_bit): the warning, not the words
-    return {"id": q.id, "account": account_json(q.author, view.cfg),
+    return {"id": q.id, "account": account_json(q.author, getattr(view, "cfg", None)),
             "text": "⚠ " + q.warning if q.warning else snippet(q, 300),
             "warning": q.warning or "",
             "created": _iso(q.created), "media": len(q.media)}

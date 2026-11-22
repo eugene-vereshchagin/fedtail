@@ -1965,6 +1965,9 @@ class QtSmokeTest(unittest.TestCase):
         import threading
         from pathlib import Path
 
+        from fedtail.frontends.qt import player
+        if not player.available():
+            self.skipTest("no QtMultimedia here")
         from PySide6.QtMultimedia import QMediaPlayer
 
         from fedtail.frontends.qt.player import VideoOverlay
