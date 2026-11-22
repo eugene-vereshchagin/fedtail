@@ -320,7 +320,9 @@ class VideoOverlay(QWidget):
         log.info("video: playing in the window (%s, %d of %d)", m.kind, self.i + 1,
                  len(self.items))
         self.problem.hide()
-        self.player.setSource(source(m))
+        src = source(m)
+        self._from_disk = src.isLocalFile()
+        self.player.setSource(src)
         self.player.play()
 
     def go(self, step):
@@ -377,9 +379,39 @@ class VideoOverlay(QWidget):
         self.btn.setText("⏸" if playing else "▶")
 
     def _error(self, _err, text=""):
-        log.warning("video: %s", text or self.player.errorString())
-        self.problem.setText(_("player_failed", err=text or self.player.errorString()))
+        err = text or self.player.errorString()
+        if not getattr(self, "_from_disk", True) and self._wait_for_disk(err):
+            return
+        log.warning("video: %s", err)
+        self.problem.setText(_("player_failed", err=err))
         self.problem.show()
+
+    def _wait_for_disk(self, err):
+        """The server's stream didn't open (a slow server: the player gives up in some
+        5 s): the copy on disk fetched now and played once it's there — it said "can't
+        play" and the second or third try played (23.11). False: no disk copy to wait
+        for (ui.video_disk_mb = 0)."""
+        fut = _cache.video_fetch(media_url(self.m)) if _cache is not None else None
+        if fut is None:
+            return False
+        log.info("video: the stream didn't open (%s): played from disk once fetched", err)
+        self.problem.setText(_("video_fetching"))
+        self.problem.show()
+        m = self.m
+
+        def got(path):
+            if getattr(self, "_closed", False) or self.m is not m:
+                return  # closed, or another video of the post meanwhile
+            self._from_disk = True  # no second wait: its error is said
+            if not path:
+                self._error(None, err)
+                return
+            log.info("video: from disk (%s), fetched", m.kind)
+            self.problem.hide()
+            self.player.setSource(QUrl.fromLocalFile(path))
+            self.player.play()
+        self.win.bridge.call(fut, ok=got, fail=lambda _e: got(None))
+        return True
 
     def toggle(self):
         from PySide6.QtMultimedia import QMediaPlayer
@@ -397,6 +429,7 @@ class VideoOverlay(QWidget):
         self.ctx.open_url(media_url(self.m))
 
     def close_player(self):
+        self._closed = True
         self.player.stop()
         self.player.setSource(QUrl())
         self.win.removeEventFilter(self)
@@ -462,6 +495,8 @@ class InlineLoop(QObject):
     """A gifv looping in its card, muted, drawn into the card's picture label — only
     while the label is on screen (checked twice a second), the still frame otherwise."""
 
+    fetched = Signal(str)  # its copy on disk came (the stream didn't open): its path
+
     def __init__(self, label, m, fit):
         """fit(QPixmap) -> the pixmap as the card shows pictures (size, corners)."""
         from PySide6.QtMultimedia import QMediaPlayer, QVideoSink
@@ -497,10 +532,10 @@ class InlineLoop(QObject):
             self.player.setVideoSink(self.sink)
             self.player.setLoops(INFINITE)
             self.sink.videoFrameChanged.connect(self._frame)
-            self.player.errorOccurred.connect(
-                lambda _e, t="": (log.info("gifv: %s", t or self.player.errorString()),
-                                  self.timer.stop()))
-            self.player.setSource(source(self.m))
+            self.player.errorOccurred.connect(self._error)
+            src = source(self.m)
+            self._from_disk = src.isLocalFile()
+            self.player.setSource(src)
         if self.player.playbackState() != self._QMediaPlayer.PlaybackState.PlayingState:
             _Loops.start(self)
             self.player.play()
@@ -509,6 +544,36 @@ class InlineLoop(QObject):
         _Loops.stop(self)
         if self.player is not None:
             self.player.pause()
+
+    def _error(self, _e, text=""):
+        """The stream didn't open (a slow server): played from its copy on disk once
+        fetched, as the player does — it stood still for good (23.11)."""
+        err = text or self.player.errorString()
+        log.info("gifv: %s", err)
+        self.timer.stop()
+        if getattr(self, "_from_disk", True) or _cache is None:
+            return
+        fut = _cache.video_fetch(media_url(self.m))
+        if fut is None:
+            return
+        self._from_disk = True  # once
+        self.fetched.connect(self._play_local)
+
+        def came(f):  # (a worker's thread: the signal takes it to the GUI's)
+            if f.cancelled() or f.exception() is not None or not f.result():
+                return
+            try:
+                self.fetched.emit(f.result())
+            except RuntimeError:  # the card went meanwhile
+                pass
+        fut.add_done_callback(came)
+
+    def _play_local(self, path):
+        try:
+            self.player.setSource(QUrl.fromLocalFile(path))
+        except RuntimeError:  # the card went meanwhile
+            return
+        self.timer.start()
 
     def _frame(self, frame):
         # every frame came to the GUI thread whole: converted, scaled, rounded — 0.6–1.7 s

@@ -2222,6 +2222,36 @@ class GtkPanelsTest(_GtkBase):
         self.assertTrue(p._key(None, Gdk.KEY_Escape, 0, 0))
         self.assertIsNone(self.win.player)
 
+    def test_a_stream_that_doesnt_open_plays_from_disk(self):
+        """As Qt's (23.11): the server's stream fails (a slow server) — "fetching it
+        whole" said, the copy on disk played once it's there; it didn't come — the
+        error said. (No media backend here: the stream's error is given by hand.)"""
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from fedtail.frontends.gtk import player
+        from fedtail.frontends.gtk.gi_setup import GLib
+        from fedtail.model import Media
+        ref = self.view.by_id("011").ref
+        url = "https://e.test/slow.mp4"
+        p = player.VideoPlayer(self.win, [Media(ref, "video", url=url)], 0)
+        self.addCleanup(lambda: self.win.player is not None and p.close())
+        images = self.win.images
+        fut = Future()
+        with mock.patch.object(images, "video_fetch", return_value=fut) as fetch:
+            p._failed(GLib.Error("Could not open file"))
+            fetch.assert_called_once_with(url)
+        self.assertEqual(p.caption.get_text(), i18n._("video_fetching"))
+        path = images._video_path(url)
+        path.write_bytes(b"\0" * 16)
+        self.addCleanup(path.unlink, missing_ok=True)
+        fut.set_result(str(path))
+        self.assertTrue(pump(lambda: p.stream.get_file() is not None and
+                             p.stream.get_file().get_path() == str(path), 3))
+        # from disk now: its own error is said, nothing waited for again
+        p._failed(GLib.Error("broken"))
+        self.assertEqual(p.caption.get_text(), i18n._("player_failed", err="broken"))
+
     def test_viewer_over_the_window(self):
         from fedtail.frontends.gtk import viewer
         media = list(self._post_with_pictures(3).media)

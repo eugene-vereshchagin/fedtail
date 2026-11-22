@@ -540,6 +540,31 @@ class ImagesTest(unittest.TestCase):
             self.assertIsNone(self.c.video_local(url), url)
             self.assertEqual(list(self.c.video_dir.glob("*.part")), [])
 
+    def test_the_watched_video_is_fetched_now_and_again(self):
+        """video_fetch (the players, when the server's stream doesn't open): a Future of
+        the path, fetched now — not behind the queue of ones fetched ahead — and again
+        after a try that failed (a failed one stayed "seen": never asked again, 23.11)."""
+        import threading
+        url = "https://a/w.mp4"
+        self.net[url] = Answer(status=500)
+        self.assertIsNone(self.c.video_fetch(url).result(timeout=10))  # failed…
+        self.net[url] = Answer(chunks=[b"wat", b"ch"], kind="video/mp4")
+        got = self.c.video_fetch(url).result(timeout=10)  # …asked again
+        self.assertEqual(Path(got).read_bytes(), b"watch")
+        self.assertIs(self.c.video_fetch(url), self.c._video_futs[url])  # there: kept
+        # the ahead-fetching queue busy: the watched one doesn't wait behind it
+        hold = threading.Event()
+        self.c.video_pool.submit(hold.wait, 10)
+        later = "https://a/later.mp4"
+        self.net[later] = Answer(b"L", kind="video/mp4")
+        self.c.prefetch_video([later])
+        self.assertFalse(self.c._video_futs[later].running())  # queued
+        self.assertEqual(Path(self.c.video_fetch(later).result(timeout=10)).read_bytes(), b"L")
+        hold.set()
+        self.core.cfg["ui"]["video_disk_mb"] = 0
+        self.assertIsNone(self.c.video_fetch("https://a/off.mp4"))
+        self.assertIsNone(self.c.video_fetch(""))
+
     def test_every_tenth_video_prunes(self):
         self.c._videos_written = 9
         self.net["https://a/t.mp4"] = Answer(b"v")

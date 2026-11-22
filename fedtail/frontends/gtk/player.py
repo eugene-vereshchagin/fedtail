@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from ...i18n import _
-from .gi_setup import Gio, Gtk, tip
+from .gi_setup import Gio, GLib, Gtk, tip
 
 log = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class VideoPlayer(Gtk.Box):
         url = media_url(m)
         images = self.win.images
         local = images.video_local(url) if images is not None and url else None
+        self._from_disk = bool(local)
         if local:
             log.info("video: from disk (%s)", m.kind)
             f = Gio.File.new_for_path(local)
@@ -118,7 +119,33 @@ class VideoPlayer(Gtk.Box):
         if err is None:
             return
         log.info("video: %s", err.message)
+        if not self._from_disk and self._wait_for_disk(err.message):
+            return
         self.caption.set_text(_("player_failed", err=err.message))
+
+    def _wait_for_disk(self, err):
+        """The server's stream didn't open (a slow server): the copy on disk fetched
+        now and played once it's there, as Qt's player does (23.11). False: no disk
+        copy to wait for (ui.video_disk_mb = 0)."""
+        images = self.win.images
+        m = self.media[self.i]
+        fut = images.video_fetch(media_url(m)) if images is not None else None
+        if fut is None:
+            return False
+        self._from_disk = True  # once
+        self.caption.set_text(_("video_fetching"))
+
+        def came(path):
+            if self.media[self.i] is not m or self.get_root() is None:
+                return GLib.SOURCE_REMOVE  # another one, or closed, meanwhile
+            if path:
+                self.load()  # on disk now: from there
+            else:
+                self.caption.set_text(_("player_failed", err=err))
+            return GLib.SOURCE_REMOVE
+        fut.add_done_callback(lambda f: GLib.idle_add(
+            came, None if f.cancelled() or f.exception() is not None else f.result()))
+        return True
 
     def _caption(self):
         m = self.media[self.i]

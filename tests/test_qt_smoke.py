@@ -1955,6 +1955,112 @@ class QtSmokeTest(unittest.TestCase):
         tab._next_count()
         self.assertTrue(tab.next_btn.isHidden())
 
+    def test_a_slow_servers_video_plays_from_disk(self):
+        """23.11: a server slow to answer — the player's own stream gave up in some 5 s
+        ("Could not open file"), the second or third try played (from disk by then).
+        Now it says it's fetching the video and plays the copy on disk once it's there.
+        A real player, a real file, a real socket that waits 8 s before it answers."""
+        import shutil
+        import socket
+        import threading
+        from pathlib import Path
+
+        from PySide6.QtMultimedia import QMediaPlayer
+
+        from fedtail.frontends.qt.player import VideoOverlay
+        from fedtail.model import Media, Ref
+        if shutil.which("ffmpeg") is None:
+            self.skipTest("no ffmpeg to make a video")
+        import subprocess
+        video = Path(self._tmp.name) / "v.mp4"
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                        "testsrc=size=160x120:rate=25", "-t", "2", "-pix_fmt", "yuv420p",
+                        str(video)], check=True, timeout=60)
+        body = video.read_bytes()
+        srv = socket.socket()
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(8)
+        port = srv.getsockname()[1]
+        asked = []
+
+        def serve():
+            while True:
+                try:
+                    c, _a = srv.accept()
+                except OSError:
+                    return
+                threading.Thread(target=answer, args=(c,), daemon=True).start()
+
+        def answer(c):
+            c.recv(65536)
+            asked.append(time.monotonic())
+            time.sleep(8)  # slow: longer than the player waits
+            try:
+                c.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: video/mp4\r\nContent-Length: "
+                          + str(len(body)).encode() + b"\r\nConnection: close\r\n\r\n" + body)
+            except OSError:
+                pass
+            c.close()
+        threading.Thread(target=serve, daemon=True).start()
+        self.addCleanup(srv.close)
+        own = self.core._own_hosts
+        self.core._own_hosts = lambda: {*own(), "127.0.0.1"}  # media of my own server
+        self.addCleanup(setattr, self.core, "_own_hosts", own)
+        url = f"http://127.0.0.1:{port}/v.mp4"
+        m = Media(Ref("mastodon", "t", "m1"), kind="video", url=url)
+        overlay = VideoOverlay(self.win, self.win.ctx, m)
+        self.addCleanup(overlay.close_player)
+        # the stream gives up — said, and fetched whole
+        self.assertTrue(self.pump(until=lambda: overlay.problem.text() ==
+                                  i18n._("video_fetching"), timeout=20))
+        self.assertTrue(self.pump(until=lambda: overlay.player.source().isLocalFile() and
+                                  overlay.player.playbackState() ==
+                                  QMediaPlayer.PlaybackState.PlayingState, timeout=30))
+        self.assertTrue(overlay.problem.isHidden())
+        self.assertEqual(overlay.player.error(), QMediaPlayer.Error.NoError)
+
+    def test_thread_keys(self):
+        """] / [ the next / previous top comment, - folds the branch and shows it again
+        (common/postkeys: one rule with GTK, the terminal and the page) — by key presses."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QKeyEvent
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt.feed import ThreadWidget
+        self.world.add(status("8000", BOB, minute=1, text="корень"), home=True)
+        for i, parent in ((1, "8000"), (2, "8000"), (3, "8001"), (4, "8000")):
+            self.world.add(status(f"800{i}", NEWS, parent, "B", minute=1 + i,
+                                  text=f"ответ {i}"))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.open_thread("8000")
+        tabs = lambda: [self.win.tabs.widget(i) for i in range(self.win.tabs.count())]  # noqa: E731
+        self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                    for w in tabs()), timeout=15)
+        tab = next(w for w in tabs() if isinstance(w, ThreadWidget))
+        self.win.tabs.setCurrentWidget(tab)
+        self.pump(0.3)
+        view = tab.view
+
+        def key(k):
+            QApplication.sendEvent(view, QKeyEvent(QKeyEvent.Type.KeyPress, k,
+                                                   Qt.KeyboardModifier.NoModifier))
+
+        def at():
+            return view._spec(view.cursor_key).entry.id
+        key(Qt.Key.Key_BracketRight)
+        key(Qt.Key.Key_BracketRight)
+        self.assertEqual(at(), "8001")
+        key(Qt.Key.Key_BracketRight)
+        self.assertEqual(at(), "8002")  # 8003 (under 8001) stepped over
+        key(Qt.Key.Key_BracketLeft)
+        self.assertEqual(at(), "8001")
+        deep = next(s.key for s in view.model if s.entry is not None and s.entry.id == "8003")
+        key(Qt.Key.Key_Minus)
+        self.assertIn(deep, view._hidden)
+        key(Qt.Key.Key_Minus)
+        self.assertNotIn(deep, view._hidden)
+
     def test_thread_says_how_fetching_goes(self):
         from fedtail.frontends.qt.feed import ThreadWidget
         self.win.start()

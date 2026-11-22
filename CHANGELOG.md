@@ -18,6 +18,13 @@
   GTK kept them in names; with `feed.custom_emoji = false` the page and the phone still
   drew the pictures in names. One rule now (`common/cardtext.emoji_look`), in posts,
   names, the boost's and the reply's lines and Activity.
+- **A video from a slow server plays the first time.** The Qt player gave up on the
+  server's stream after some 5 s ("Can't play it: Could not open file") and played only
+  on the second or third try, from the copy fetched to disk meanwhile. Now it says it's
+  fetching the video whole and plays it from disk once it's there; the one being watched
+  is fetched at once, not behind the videos fetched ahead, and a fetch that failed is
+  tried again. The same in GTK's player and for gifs looping in the cards (they stood
+  still for good).
 
 ## 0.23.8 — 2026-11-22
 

@@ -216,6 +216,10 @@ class Cache:
         self.video_dir = self.cache_dir / "video"
         self.video_dir.mkdir(parents=True, exist_ok=True)
         self._video_seen = set()
+        self._video_futs = {}  # url -> Future of its path on disk (None: didn't come)
+        # the one being watched: fetched now, not behind the ones fetched ahead
+        self.video_now_pool = ThreadPoolExecutor(max_workers=1,
+                                                 thread_name_prefix="fedtail-vidnow")
         self._pre_seen = set()
         self._since_prune = 0
         self.big_pool.submit(self.prune_disk)
@@ -252,7 +256,7 @@ class Cache:
 
     def shutdown(self):
         self.closed = True
-        for pool in (self.pool, self.big_pool):
+        for pool in (self.pool, self.big_pool, self.video_pool, self.video_now_pool):
             pool.shutdown(wait=False, cancel_futures=True)
 
     def _next(self, big):
@@ -460,12 +464,32 @@ class Cache:
         for url in urls:
             if url and url not in self._video_seen:
                 self._video_seen.add(url)
-                self.video_pool.submit(self._fetch_video, url)
+                self._video_futs[url] = self.video_pool.submit(self._fetch_video, url)
+
+    def video_fetch(self, url):
+        """The disk copy of a video being watched: a Future of its path (None if it
+        didn't come), fetched now — ahead of the ones queued to be fetched ahead, and
+        again if an earlier try failed. None: the disk keeps no videos (ui.video_disk_mb
+        = 0). The players wait for it when the server's stream doesn't open: the Qt
+        player gave up after some 5 s on a slow server, the disk copy came later (23.11)."""
+        if not url or int(self.core.cfg["ui"].get("video_disk_mb", 10000)) <= 0:
+            return None
+        fut = self._video_futs.get(url)
+        if fut is not None and fut.running():
+            return fut
+        if fut is not None and fut.done() and fut.result() is not None:
+            return fut
+        if fut is not None:
+            fut.cancel()  # queued behind others: fetched now instead
+        self._video_seen.add(url)
+        fut = self._video_futs[url] = self.video_now_pool.submit(self._fetch_video, url)
+        return fut
 
     def _fetch_video(self, url):
+        """url to disk, whole or not at all → its path, or None."""
         p = self._video_path(url)
         if p.exists():
-            return
+            return str(p)
         part = p.with_suffix(p.suffix + ".part")
         t = time.monotonic()
         size = 0
@@ -484,12 +508,14 @@ class Cache:
             part.replace(p)  # whole or not at all: the player never gets half a file
         except (requests.RequestException, OSError) as e:
             part.unlink(missing_ok=True)
-            log.debug("video %s: %s", url, e.__class__.__name__)
-            return
+            log.info("video %s: %s", url, e.__class__.__name__)
+            self._video_seen.discard(url)  # asked again next time (it stayed failed)
+            return None
         log.info("video to disk: %.1f MB in %.1f s", size / 2**20, time.monotonic() - t)
         self._videos_written = getattr(self, "_videos_written", 0) + 1
         if self._videos_written % 10 == 0:
             self.prune_videos()
+        return str(p)
 
     def prune_videos(self):
         """The video cache within ui.video_disk_mb (10 GB): the ones not played the

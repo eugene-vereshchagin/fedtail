@@ -21,3 +21,52 @@ def step(posts, at, delta, first_on_screen=None):
 def link(action, post_id):
     """What the card's own link for it says: fedtail:<action>/<id> (common/links.py)."""
     return f"fedtail:{action}/{post_id}"
+
+
+# a thread's own keys (help/keys.md): ] / [ the next / previous top comment, - its branch
+THREAD_KEYS = {"bracketright": 1, "bracketleft": -1}
+FOLD = "minus"
+
+
+def top_comment(posts, at, delta, depth_of):
+    """] / [ in a thread: the next (delta > 0) or previous comment at the top of the tree
+    (depth 1, the post itself 0) from `at`; None when there is no other. One rule for
+    Qt, GTK, the terminal and the page (the terminal skipped the post itself)."""
+    tops = [k for k in posts if depth_of(k) <= 1]
+    if len(tops) < 2:
+        return None
+    i = posts.index(at) if at in posts else -1
+    if delta > 0:
+        return next((k for k in tops if posts.index(k) > i), tops[-1])
+    return next((k for k in reversed(tops) if posts.index(k) < i), tops[0])
+
+
+def branch(every, at, depth_of):
+    """- in a thread: (head, below) — the branch the key folds: from however deep a reply
+    it is pressed, its top comment's; below: the keys under the head, deeper than it.
+    every: all the thread's keys in order (folded ones too)."""
+    i = every.index(at)
+    depth = depth_of(at)
+    if depth > 1:
+        i = next((j for j in range(i, -1, -1) if depth_of(every[j]) <= 1), i)
+        depth = depth_of(every[i])
+    below = []
+    for k in every[i + 1:]:
+        if depth_of(k) <= depth:
+            break
+        below.append(k)
+    return every[i], below
+
+
+def fold(folded, hidden, head, below):
+    """The branch under head folded away, or shown again: folded (heads) and hidden (the
+    keys not drawn) changed in place. → whether anything changed."""
+    if not below:
+        return False
+    if head in folded:
+        folded.discard(head)
+        hidden.difference_update(below)
+    else:
+        folded.add(head)
+        hidden.update(below)
+    return True

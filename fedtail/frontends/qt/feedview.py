@@ -625,15 +625,12 @@ class FeedView(QScrollArea):
                                           first))
             return True
         if key in (Qt.Key.Key_BracketRight, Qt.Key.Key_BracketLeft):
-            # a thread: the next / previous comment at the top of the tree (depth 1)
-            tops = [k for k in posts if getattr(self._spec(k), "depth", 0) <= 1]
-            if len(tops) < 2:
+            # a thread: the next / previous comment at the top of the tree (common/postkeys)
+            nxt = postkeys.top_comment(posts, self.cursor_key,
+                                       1 if key == Qt.Key.Key_BracketRight else -1,
+                                       self._depth_of)
+            if nxt is None:
                 return False
-            at = posts.index(self.cursor_key) if self.cursor_key in posts else -1
-            if key == Qt.Key.Key_BracketRight:
-                nxt = next((k for k in tops if posts.index(k) > at), tops[-1])
-            else:
-                nxt = next((k for k in reversed(tops) if posts.index(k) < at), tops[0])
             self.put_cursor(nxt)
             return True
         if key == Qt.Key.Key_Minus and self.cursor_key in posts:
@@ -645,30 +642,20 @@ class FeedView(QScrollArea):
         self.ctx.on_link(postkeys.link(action, p.id))
         return True
 
+    def _depth_of(self, k):
+        return getattr(self._spec(k), "depth", 0)
+
     def _fold_branch(self, posts):
         """"-" in a thread: the branch under the post at the cursor folded away, or shown
-        again — from however deep a reply it is pressed, its whole top comment's branch."""
-        def depth_of(k):
-            return getattr(self._spec(k), "depth", 0)
-        at = posts.index(self.cursor_key)
-        depth = depth_of(self.cursor_key)
-        if depth > 1:  # from a deep reply: its top comment's branch
-            at = next((i for i in range(at, -1, -1) if depth_of(posts[i]) <= 1), at)
-            depth = depth_of(posts[at])
-            self.put_cursor(posts[at])
-        below = []
+        again — from however deep a reply it is pressed, its whole top comment's branch
+        (common/postkeys: the same in every interface)."""
         every = [s.key for s in self.model if s.entry is not None]
-        for k in every[every.index(posts[at]) + 1:]:
-            if depth_of(k) <= depth:
-                break
-            below.append(k)
-        if not below:
+        head, below = postkeys.branch(every, self.cursor_key, self._depth_of)
+        if head != self.cursor_key:
+            self.put_cursor(head)
+        self._folded = getattr(self, "_folded", set())
+        if not postkeys.fold(self._folded, self._hidden, head, below):
             return False
-        folded = getattr(self, "_folded", set())
-        hide = posts[at] not in folded
-        (folded.add if hide else folded.discard)(posts[at])
-        self._folded = folded
-        (self._hidden.update if hide else self._hidden.difference_update)(below)
         self._lay_out()
         return True
 

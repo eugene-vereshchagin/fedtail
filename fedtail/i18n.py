@@ -1553,6 +1553,8 @@ _STRINGS = {
         "player_missing": "Видео открывается в браузере: в этом Qt нет QtMultimedia. Для "
                           "плеера в окне: {how}",
         "player_failed": "Не играется: {err}. O — открыть в браузере",
+        "video_fetching": "Сервер не отдал видео потоком — загружаю его целиком, "
+                          "заиграет, как только придёт…",
         "browse_empty": "Сервер отдаёт эту ленту пустой: похоже, живые ленты у него "
                         "выключены (так на mastodon.social)",
         "activity_clear": "Очистить",
@@ -3498,6 +3500,8 @@ _STRINGS = {
         "player_missing": "Video opens in the browser: this Qt has no QtMultimedia. For the "
                           "player in the window: {how}",
         "player_failed": "Can't play it: {err}. O opens it in the browser",
+        "video_fetching": "The server didn't stream the video — fetching it whole, it "
+                          "plays as soon as it's here…",
         "browse_empty": "The server gives this feed empty: its live feeds seem to be off "
                         "(as on mastodon.social)",
         "activity_clear": "Clear",
