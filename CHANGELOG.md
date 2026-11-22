@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.23.9 — 2026-11-23
 
 **In short: a slow server no longer breaks things.** The phone started to "The core
