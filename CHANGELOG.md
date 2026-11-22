@@ -5,7 +5,12 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.23.9 — 2026-11-23
+
+**In short: a slow server no longer breaks things.** The phone started to "The core
+didn't start" on one late answer, and a video from a slow server played only on the
+second try; both wait and go on now. Also: "no emoji" works in every interface, and
+GTK's thread tab takes the keys.
 
 - **The phone starts when the server is slow.** One answer late at the start (a read
   timeout of 30 s) showed "The core didn't start" and stayed there; now the phone says
