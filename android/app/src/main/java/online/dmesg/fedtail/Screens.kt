@@ -143,7 +143,7 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
     SideEffect { model.browse = openBrowser; model.shareFile = share }
     AskDialogs(model)
     when (val s = model.screen) {
-        Screen.Starting -> Centered { Starting() }
+        Screen.Starting -> Centered { Starting(model.startingNote) }
         is Screen.Failed -> Problem(s.text)
         Screen.Login -> Scaffold(snackbarHost = { SnackbarHost(snack) }) { pad ->
             Login(model, openBrowser, Modifier.padding(pad))
@@ -260,11 +260,15 @@ private fun Centered(content: @Composable () -> Unit) {
 /** The start, as the windows' curtain: the opossum swinging from the first frame, the
  *  words under it — before Python, the core and the lanes are up. */
 @Composable
-private fun Starting() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally,
+private fun Starting(note: String = "") {
+    Column(Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Possum(swinging = true)
         Text(stringResource(R.string.starting), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (note.isNotEmpty())  // the server not answering: tried again (common/connecting)
+            Text(note, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall)
     }
 }
 

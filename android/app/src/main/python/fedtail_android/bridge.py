@@ -409,7 +409,14 @@ def open():  # noqa: A001 — what Kotlin calls it
     def go():
         core = _core()
         if core.me is None:
-            core.connect().result(120)
+            try:
+                core.connect().result(120)
+            except Exception as e:  # noqa: BLE001 — one slow answer isn't "didn't start"
+                from fedtail.frontends.common.connecting import trouble
+                t = trouble(f"{e.__class__.__name__}: {e}")
+                if t["relogin"]:  # as the windows: the login from scratch, not revoked
+                    core.logout(revoke=False)
+                return {"error": t["text"], "relogin": t["relogin"], "again": t["again"]}
         if getattr(core, "_poller", None) is None:  # a background round made it: no poller
             # the poller's first round before the first screen: it opens filled, not
             # empty (and not racing a round of its own)

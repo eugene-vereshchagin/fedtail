@@ -150,3 +150,50 @@ class AppIconTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConnectTroubleTest(unittest.TestCase):
+    """A connect that failed means one thing everywhere (common/connecting): the phone
+    showed "the core didn't start" for one slow answer and stayed there (23.11)."""
+
+    def test_slow_and_refused(self):
+        from fedtail.frontends.common.connecting import trouble
+        i18n.setup("en")
+        slow = trouble("ReadTimeout: Read timed out. (read timeout=30)")
+        self.assertFalse(slow["relogin"])
+        self.assertEqual(slow["again"], 20)
+        self.assertIn("Read timed out", slow["text"])
+        refused = trouble("HTTP 401: The access token is invalid")
+        self.assertTrue(refused["relogin"])
+        self.assertEqual(refused["text"], i18n._("auth_failed"))
+
+
+class WebSlowServerTest(Base):
+    """The page asks /api/me while the server doesn't answer: said and asked again —
+    not an error; a refused token: the login place, with the words."""
+
+    def test_me_while_the_server_is_down(self):
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from fedtail.frontends.web.server import Web
+        i18n.setup("en")
+        core, _w = self.make()
+        core.me = None  # not connected yet: the server is slow
+        web = Web.__new__(Web)
+        web.core = core
+
+        def failing(text):
+            f = Future()
+            f.set_exception(OSError(text))
+            return f
+        with mock.patch.object(core, "connect", return_value=failing("timed out")):
+            got = web.me()
+        self.assertEqual(got["again"], 20)
+        self.assertIn("timed out", got["down"])
+        with mock.patch.object(core, "connect", return_value=failing("HTTP 401: no")), \
+                mock.patch.object(core, "logout", wraps=core.logout) as out:
+            got = web.me()
+        out.assert_called_once_with(revoke=False)
+        self.assertEqual(got["said"], i18n._("auth_failed"))
+        self.assertIn("login", got)

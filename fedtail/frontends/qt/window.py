@@ -1270,15 +1270,17 @@ class MainWindow(QMainWindow):
         self.select_lane(name)
 
     def _connect_failed(self, err):
-        if "HTTP 401" in err:  # the core asked again and again (Core.token_refused)
-            QMessageBox.warning(self, _("auth_failed_title"), _("auth_failed"))
+        from ..common.connecting import trouble
+        t = trouble(err)  # the same in every interface
+        if t["relogin"]:  # the core asked again and again (Core.token_refused)
+            QMessageBox.warning(self, _("auth_failed_title"), t["text"])
             # the login window, from scratch; the token not revoked by us: if the server
             # was wrong after all, it still works
             self.core.logout(revoke=False)
             self.start()
             return
-        self.statusBar().showMessage(_("server_down", err=err))
-        QTimer.singleShot(20_000, self.start)
+        self.statusBar().showMessage(t["text"])
+        QTimer.singleShot(t["again"] * 1000, self.start)
 
     def relogin(self):
         """Log in to this same account anew (new permissions, a token revoked on the

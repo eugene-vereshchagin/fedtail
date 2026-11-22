@@ -873,7 +873,15 @@ class Web:
                     "words": dict({k: _(k) for k in WORDS},
                               short_id_tip=actions.short_id_tip(c))}
         if self.core.me is None:  # just logged in from the page: connected, then polling
-            self.core.connect().result(timeout=120)
+            try:
+                self.core.connect().result(timeout=120)
+            except Exception as e:  # noqa: BLE001 — said as the windows say it
+                from ..common.connecting import trouble
+                t = trouble(f"{type(e).__name__}: {e}")
+                if not t["relogin"]:  # the page says it and asks again in a while
+                    return {"down": t["text"], "again": t["again"]}
+                self.core.logout(revoke=False)  # the login place, from scratch
+                return dict(self.me(), said=t["text"])
         self.core.start_polling()
         me = self.core.me
         return {"me": account_json(me), "handle": me.handle if me else "",

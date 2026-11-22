@@ -1069,8 +1069,19 @@ class FedtailApp(App, PostsMixin):
 
     def begin(self):
         self._main("#title", Static).update(_("tui_connecting"))
-        self.later(self.core.connect(), ok=self.connected,
-                   fail=lambda e: self.show_error(_("tui_connect_failed", err=e)))
+        self.later(self.core.connect(), ok=self.connected, fail=self.connect_failed)
+
+    def connect_failed(self, err):
+        """As the windows: a refused token — said, Accounts opened; anything else (a
+        server slow to answer) — said, and connected again in 20 s (it only said it)."""
+        from ..common.connecting import trouble
+        t = trouble(err)
+        if t["relogin"]:
+            self.auth_lost()
+            return
+        self._main("#title", Static).update(_("tui_connect_failed", err=err))
+        self.show_error(t["text"])
+        self.set_timer(t["again"], self.begin)
 
     async def connected(self, _me):
         self._slow_title()

@@ -3743,11 +3743,19 @@ function spellLang() {
 
 async function start() {
   const me = await api("/api/me");
+  if (me.down) {  // the server not answering: said, asked again (common/connecting)
+    let box = $("#starting-note");
+    if (!box) { box = el("p", "starting-note"); box.id = "starting-note"; document.body.prepend(box); }
+    box.textContent = me.down;
+    setTimeout(start, (me.again || 20) * 1000);
+    return;
+  }
+  $("#starting-note")?.remove();
   state.me = me;
   $("#cmdline").hidden = !me.command_line;  // window.command_line: off — ":" brings it
   document.body.classList.toggle("lit", !!me.highlight);  // ui.additional_highlight
   state.words = me.words;
-  if (me.login) return loginOnly(me);
+  if (me.login) { if (me.said) toast(me.said); return loginOnly(me); }  // a token refused
   try { me.places = await api("/api/places"); } catch (e) { me.places = []; }
   // dates and times as fedtail's language writes them, not the browser's (a Russian
   // window said "10:25 PM")

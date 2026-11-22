@@ -34,6 +34,26 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 return True
         self.fail("condition not reached")
 
+    async def test_a_slow_server_is_tried_again(self):
+        """The server not answering at the start: the windows say it and connect again
+        in 20 s; the terminal only said it (23.11)."""
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        core, _w = self.make()
+        core.me = None
+        real = core.connect
+        slow = Future()
+        slow.set_exception(TimeoutError("Read timed out"))
+        app = FedtailApp(core)
+        with mock.patch("fedtail.frontends.common.connecting.AGAIN_SECONDS", 0.2), \
+                mock.patch.object(core, "connect", side_effect=[slow, real()]) as conn:
+            async with app.run_test(size=(120, 40)) as pilot:
+                await self.wait(pilot, lambda: conn.call_count == 2)
+                await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                                   for i in app.query_one("#lanes").children))
+
     async def test_a_lane_is_read_as_it_opens(self):
         """read.mark_read = "on_open": the windows, the page and the phone read a lane as
         it opens; the terminal read only while scrolling (21.11)."""

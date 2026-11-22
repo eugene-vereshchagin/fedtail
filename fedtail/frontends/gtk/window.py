@@ -1509,18 +1509,19 @@ class MainWindow(Gtk.ApplicationWindow):
     def _connect_failed(self, err):
         """As Qt: a token no longer taken — said, and the login from scratch; the server
         not answering — said, and again in 20 s."""
-        err = str(err)
-        if "HTTP 401" in err:  # the core asked again and again (Core.token_refused)
-            self.alert(_("auth_failed_title"), _("auth_failed"))
+        from ..common.connecting import trouble
+        t = trouble(err)  # the same in every interface
+        if t["relogin"]:  # the core asked again and again (Core.token_refused)
+            self.alert(_("auth_failed_title"), t["text"])
             self.view.logout(revoke=False)  # not revoked by us: it may be fine after all
             self.start()
             return
-        self.status(_("server_down", err=err), seconds=0)
+        self.status(t["text"], seconds=0)
         def again():
             if not self.quitting and self.get_visible():  # (not a window closed since)
                 self._connect()
             return GLib.SOURCE_REMOVE
-        GLib.timeout_add_seconds(20, again)
+        GLib.timeout_add_seconds(t["again"], again)
 
     def alert(self, title, text):
         """A message with OK, as Qt's QMessageBox.warning (never blocks)."""

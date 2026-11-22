@@ -180,6 +180,7 @@ fedtail/
                      buttons, forms — the web page and the terminal draw them as they are
       profile.py     a profile's buttons and what each does (all four interfaces)
       sound.py       playing the theme's sounds (a player of the system, one at a time)
+      connecting.py  a connect that failed: log in anew, or said and tried again in 20 s
     gtk/             the GTK 4 frontend (PyGObject, libadwaita optional): docs/en/dev/gtk.md
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics

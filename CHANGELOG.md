@@ -7,6 +7,13 @@
 
 ## What's next
 
+- **The phone starts when the server is slow.** One answer late at the start (a read
+  timeout of 30 s) showed "The core didn't start" and stayed there; now the phone says
+  "Server is not answering… Retrying in 20 seconds" under the opossum and connects again,
+  as the windows do. The terminal and the web page try again too (the terminal only said
+  it; `fedtail --web` ended); a token the server refuses leads to the login everywhere.
+  One rule for all: `frontends/common/connecting.py`.
+
 ## 0.23.8 — 2026-11-22
 
 **In short: every setting does the same in all five interfaces.** A sweep of each of

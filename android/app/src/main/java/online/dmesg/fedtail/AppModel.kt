@@ -318,6 +318,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title
     var pulling by mutableStateOf(false)    // asked by pulling the list down
     var message by mutableStateOf<String?>(null)
+    /** Said under the opossum while starting: the server not answering, tried again. */
+    var startingNote by mutableStateOf("")
 
     var places by mutableStateOf(listOf<Place>())
     val place: Place? get() = places.lastOrNull()
@@ -624,7 +626,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private suspend fun openMain() {
         loadTheme()
         val got = Core.open()
-        Core.failed(got)?.let { screen = Screen.Failed(it); return }
+        Core.failed(got)?.let {
+            val again = got.optInt("again")
+            when {
+                // the token refused: the core logged out (common/connecting) — the login
+                got.optBoolean("relogin") -> { message = it; afterStart() }
+                // a server slow to answer is no "the core didn't start" (23.11): said under
+                // the opossum, and connected again in a while, as the windows do
+                again > 0 -> {
+                    startingNote = it
+                    delay(again * 1000L)
+                    startingNote = ""
+                    openMain()
+                }
+                else -> screen = Screen.Failed(it)
+            }
+            return
+        }
+        startingNote = ""
         val me = got.optJSONObject("me") ?: JSONObject()
         handle = me.optString("handle")
         myId = me.optJSONObject("me")?.optString("id").orEmpty()

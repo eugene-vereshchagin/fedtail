@@ -845,6 +845,13 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(opener.open_link("file://attacker.example/share/x.png"))
         self.win.open_url("file:///etc/passwd")
         self.assertEqual(self.win.statusBar().currentMessage(), i18n._("link_refused"))
+        # the server not answering: said (common/connecting, as every interface), and
+        # connected again in 20 s
+        from unittest import mock
+        with mock.patch("fedtail.frontends.qt.window.QTimer.singleShot") as later:
+            self.win._connect_failed("ReadTimeout: Read timed out")
+        self.assertIn("Read timed out", self.win.statusBar().currentMessage())
+        self.assertEqual(later.call_args[0][0], 20_000)
 
         # conversations view: one card per thread, the line about the rest
         self.win.select_lane("replies")

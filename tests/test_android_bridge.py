@@ -796,6 +796,33 @@ class BridgeNotesTest(_Base):
         self.assertIsNotNone(core._poller)
 
 
+class BridgeSlowServerTest(_Base):
+    """23.11: one slow answer at the start showed "The core didn't start" and stayed;
+    now open() says it, and the app connects again (as the windows), or logs in anew."""
+
+    def test_open_while_the_server_is_slow(self):
+        from concurrent.futures import Future
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", True))
+        self.assertNotIn("error", got)
+        core = self.bridge._s["core"]
+
+        def failing(text):
+            f = Future()
+            f.set_exception(TimeoutError(text))
+            return f
+        with mock.patch.object(core, "connect", return_value=failing("Read timed out")):
+            got = json.loads(self.bridge.open())
+        self.assertIn("Read timed out", got["error"])
+        self.assertEqual(got["again"], 20)
+        self.assertFalse(got["relogin"])
+        with mock.patch.object(core, "connect", return_value=failing("HTTP 401: x")), \
+                mock.patch.object(core, "logout") as out:
+            got = json.loads(self.bridge.open())
+        self.assertTrue(got["relogin"])
+        out.assert_called_once_with(revoke=False)
+        self.assertTrue(self.call("open")["lanes"])  # the server back: it comes up
+
+
 class BridgeAccountsTest(_Base):
     """Another account on the phone: the windows' place "accounts" — switching makes
     that profile's core the bridge's, the screens start again on it."""

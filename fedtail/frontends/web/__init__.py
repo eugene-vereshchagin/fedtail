@@ -21,7 +21,11 @@ def run(core, instance, argv):
     # a profile not logged in yet: the page itself asks for the server and the code (the
     # "login" place), then goes on as any — polling starts once it is in (Web.me)
     if core.logged_in:
-        core.connect().result()
+        try:
+            core.connect().result()
+        except Exception as e:  # noqa: BLE001 — a slow server mustn't end the page's server
+            # the page connects again when it asks for /api/me (common/connecting)
+            log.warning("connect: %s: %s — the page tries again", type(e).__name__, e)
     else:
         print("fedtail: " + _("web_login_here"), file=sys.stderr)
     key = load_key(core.paths.data_dir)
