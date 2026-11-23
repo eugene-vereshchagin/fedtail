@@ -276,6 +276,8 @@ def with_playwright(base, key, out, core):
                 ERRORS.append("editor: Discard kept the draft")
             page.click("#compose-close")
             by_hand(page, out)
+            if label == "desktop":
+                keys_and_title(page, core)
             img = page.locator("#posts article.post img[src*='img.example'], "
                                 "#posts article.post .media img").first
             if img.count():
@@ -365,6 +367,82 @@ def by_hand(page, out):
     page.evaluate("$('#text').value = ''")
     page.click("#compose-close")
     page.wait_for_timeout(300)
+
+
+def keys_and_title(page, core):
+    """What came on 23.11, done as a person does, in the real browser: the posts' keys
+    are the config's ([keys] — the server says what a key means) and the page's own are
+    set by name (web.keys); ↑ / ↓ in the command line walk the lines run before; the
+    tab's title carries the unread number; ≡ → Debug has the snapshot and the sound
+    test, "Try a theme" the two file items."""
+    page.keyboard.press("Escape")
+    page.locator("#posts").focus()
+    page.evaluate("() => setCursor(0)")
+    page.keyboard.press("j")
+    page.keyboard.press("j")
+    at = page.evaluate("() => state.cursor")
+    if at != 2:
+        ERRORS.append(f"keys: j twice from the first post stands at {at}, not 2")
+    page.keyboard.press("k")
+    if page.evaluate("() => state.cursor") != 1:
+        ERRORS.append("keys: k didn't go one post back")
+    # another's own letter does it, the old doesn't (the page asks /api/me anew)
+    core.cfg["keys"]["next_post"] = "n"
+    core.cfg["web"]["keys"] = ["new = c"]
+    page.evaluate("async () => { state.me = await api('/api/me'); }")
+    page.evaluate("() => setCursor(0)")
+    page.keyboard.press("j")
+    if page.evaluate("() => state.cursor") != 0:
+        ERRORS.append("keys: j still moves after [keys] next_post = \"n\"")
+    page.keyboard.press("n")
+    if page.evaluate("() => state.cursor") != 1:
+        ERRORS.append("keys: the config's own key (n) for the next post does nothing")
+    page.keyboard.press("c")  # web.keys: new = c — the editor
+    page.wait_for_timeout(300)
+    if not page.evaluate("() => document.querySelector('#compose').open"):
+        ERRORS.append("keys: web.keys \"new = c\" didn't open the editor")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if page.evaluate("() => document.querySelector('#compose').open"):
+        page.evaluate("() => document.querySelector('#compose').close()")
+    core.cfg["keys"]["next_post"] = "j"
+    core.cfg["web"]["keys"] = []
+    page.evaluate("async () => { state.me = await api('/api/me'); }")
+    # the command line: two lines run, then ↑ ↑ ↓
+    for line in ("#zzz1 one", "#zzz2 two"):
+        page.evaluate("() => cmdInput().focus()")
+        page.keyboard.type(line)
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(500)
+        page.evaluate("() => { const c = cmdInput(); c.disabled = false; c.value = ''; }")
+    page.evaluate("() => cmdInput().focus()")
+    page.keyboard.press("ArrowUp")
+    page.wait_for_timeout(400)
+    got = [page.evaluate("() => document.querySelector('#cmd').value")]
+    page.keyboard.press("ArrowUp")
+    page.wait_for_timeout(200)
+    got.append(page.evaluate("() => document.querySelector('#cmd').value"))
+    page.keyboard.press("ArrowDown")
+    page.wait_for_timeout(200)
+    got.append(page.evaluate("() => document.querySelector('#cmd').value"))
+    if got != ["#zzz2 two", "#zzz1 one", "#zzz2 two"]:
+        ERRORS.append(f"command line: ↑ ↑ ↓ gave {got}")
+    page.keyboard.press("Escape")
+    # the tab's title: "(N) …" for the lanes window.icon_count chose
+    core.cfg["ui"]["icon_count"] = ["all"]
+    page.evaluate("async () => { await loadLanes(); }")
+    title = page.title()
+    n = page.evaluate("() => state.lanes.reduce((s, l) => s + (l.unread || 0), 0)")
+    if n and not title.startswith(f"({n}) "):
+        ERRORS.append(f"title: {n} unread, the tab says {title!r}")
+    NOTES.append(f"title with {n} unread: {title}")
+    items = page.evaluate("() => Object.keys(menuItems())")
+    for want in ("report", "sound_test"):
+        if want not in items:
+            ERRORS.append(f"≡ → Debug: no {want}")
+    themes = page.evaluate("async () => await api('/api/themes')")
+    if not (themes.get("save") and themes.get("add")):
+        ERRORS.append("Try a theme: no file items")
 
 
 def columns(page, out):

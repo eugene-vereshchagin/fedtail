@@ -101,7 +101,8 @@ async def walk(out):
                     else "in half blocks" if sample is not None else "not at all"))
     app = FedtailApp(core)
 
-    def fake_bytes(url):  # the pictures: made here, no network
+    def fake_bytes(url, **_kw):  # the pictures: made here, no network (elsewhere=…: the
+        # author's copy, asked since 12.11 — the walk died on it ever since)
         f = Future()
         f.set_result(png(80, 50, (40 + len(url) * 3 % 200, 120, 160)))
         return f
