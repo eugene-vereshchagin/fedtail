@@ -224,6 +224,87 @@ def check(reg=None, have=None):
     return problems
 
 
+# ---- the editor, wherever it is drawn -----------------------------------------------------
+# One editor in seven places: the Qt window and the GTK panel, the input line of the split
+# layout in each, the terminal's screen, the page's dialog, the phone's screen. The check
+# by words (check) takes a toolkit whole — a part the Compose window has and the split
+# layout's line lacks is "there" for it (the line had no formatting buttons, the window
+# had: nothing noticed). So each part of the editor is looked for in each place by what
+# makes it in the code; a place that lacks one says so, and why, in parity.toml
+# ([[editor]]). A new part added to one editor only stops here.
+EDITOR_PLACES = {
+    "qt": ["fedtail/frontends/qt/compose.py"],
+    "qt-line": ["fedtail/frontends/qt/dock.py"],
+    "gtk": ["fedtail/frontends/gtk/compose.py"],
+    "gtk-line": ["fedtail/frontends/gtk/split.py"],
+    "tui": ["fedtail/frontends/tui/screens.py"],
+    "web": ["fedtail/data/web/app.js", "fedtail/data/web/index.html"],
+    "android": ["android/app/src/main/java/online/dmesg/fedtail/Screens.kt",
+                "android/app/src/main/java/online/dmesg/fedtail/AppModel.kt"],
+}
+# part → what makes it, as a pattern over the place's code (one for all, or by place)
+EDITOR_PARTS = {
+    "format": r"format_bar|_format_buttons|formatBar|format_place",
+    "emoji": r"emoji_pick|EmojiScreen|emojiPick|emojiOpen|EmojiPick|emoji-body",
+    "complete": r"Completer|_complete\b|completeKeys|suggestions\(|\bcomplete\(",
+    "warning": r"cw_add|dock_cw|c-cw|composeCw|cw_placeholder|#cw\b",
+    "visibility": r"vis_btn_|web_visibility|composeVis|VISIBILITIES|#vis\b",
+    "language": r"lang_tip|dock_language|lang_other|LanguagePick|composeLang|#lang\b",
+    "attach": r"dock_attach|media_files|_attached\(|/api/upload|PickVisualMedia",
+    "alt": r"alt_describe|alt_prompt|alt_title|alt_label|\.alt = ",
+    "sensitive": r"sensitive_mark|composeSensitive|#sensitive\b|c-sensitive",
+    "focus": r"focus_tip|focus_point|put\(\"focus\"|focus: \[",
+    "cover": r"media_cover",
+    "poll": r"poll_add|PollEditor|state\.poll\b|tui_poll|poll_option",
+    "schedule": r"schedule_when|tui_when|composeWhen|schedule_tip|#when\b",
+    "drafts": r"drafts_waiting|draft_shelve|draftsWaiting|openDrafts",
+    "preview": r"preview_tip|preview_md|/api/preview|PreviewScreen|model\.preview\(\)",
+    "from": r"post_from|fromAccounts|post_accounts",
+    "spell": r"spell",
+    "counter": r"\.counter\b|counter\(|compose_check|composeCount|c-count|_count\(\)",
+}
+
+
+def editors():
+    """{place: the editor's parts found in its code}."""
+    out = {}
+    for place, paths in EDITOR_PLACES.items():
+        text = "\n".join((ROOT / p).read_text("utf-8", errors="replace") for p in paths)
+        out[place] = {part for part, rx in EDITOR_PARTS.items() if re.search(rx, text)}
+    return out
+
+
+def check_editors(reg=None, have=None):
+    """What parity.toml's [[editor]] entries and the code disagree on: a part of the
+    editor one place lacks and doesn't say; one said lacking that is there (done: take
+    it out); a place or a part nobody knows; a gap without its reason. [] — they agree."""
+    reg = registry() if reg is None else reg
+    have = editors() if have is None else have
+    problems, said = [], {}
+    for e in reg.get("editor", []):
+        place = e.get("place", "?")
+        if place not in EDITOR_PLACES:
+            problems.append(f"editor {place}: no such place; there are "
+                            + ", ".join(EDITOR_PLACES))
+            continue
+        for part in e.get("lacks", []):
+            if part not in EDITOR_PARTS:
+                problems.append(f"editor {place}: no such part {part!r}")
+        for lang in ("ru", "en"):
+            if not (e.get("note") or {}).get(lang):
+                problems.append(f"editor {place}: note.{lang} — say why")
+        said.setdefault(place, set()).update(e.get("lacks", []))
+    for place, parts in have.items():
+        lacks = said.get(place, set())
+        for part in sorted(set(EDITOR_PARTS) - parts - lacks):
+            problems.append(f"editor {place}: no {part} — add it, or say why in "
+                            "docs/src/parity.toml ([[editor]])")
+        for part in sorted(lacks & parts):
+            problems.append(f"editor {place}: said to lack {part}, but has it — done? "
+                            "take it out of lacks")
+    return problems
+
+
 def menus_side_by_side(folder):
     """The post's ⋯ menu as the Qt walk and the web walk saw it."""
     qt = folder / "qt-tour" / "menus.txt"

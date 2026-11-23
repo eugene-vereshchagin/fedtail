@@ -29,6 +29,33 @@ class ParityTest(unittest.TestCase):
         problems = parity.check()
         self.assertEqual(problems, [], "\n" + "\n".join(problems))
 
+    def test_the_editor_is_whole_wherever_it_is_drawn(self):
+        """One editor in seven places (the Qt window, the GTK panel, the split layout's
+        input line in each, the terminal, the page, the phone): a part one of them lacks
+        is said in parity.toml ([[editor]]) with its reason, or it is a gap nobody chose
+        — the split line had no formatting buttons while the window had, and the check
+        by words, taking a toolkit whole, saw nothing (24.11)."""
+        problems = parity.check_editors()
+        self.assertEqual(problems, [], "\n" + "\n".join(problems))
+
+    def test_the_editors_check_itself(self):
+        have = {p: set(parity.EDITOR_PARTS) for p in parity.EDITOR_PLACES}
+        have["qt-line"] = set(parity.EDITOR_PARTS) - {"spell"}
+        said = {"editor": []}
+        self.assertEqual(parity.check_editors(said, have),
+                         ["editor qt-line: no spell — add it, or say why in "
+                          "docs/src/parity.toml ([[editor]])"])
+        said = {"editor": [{"place": "qt-line", "lacks": ["spell", "poll"],
+                            "note": {"ru": "почему", "en": "why"}}]}
+        self.assertEqual(parity.check_editors(said, have),
+                         ["editor qt-line: said to lack poll, but has it — done? take it "
+                          "out of lacks"])
+        bad = {"editor": [{"place": "nowhere", "lacks": []},
+                          {"place": "tui", "lacks": ["wings"], "note": {"ru": "x"}}]}
+        got = parity.check_editors(bad, {p: set(parity.EDITOR_PARTS)
+                                         for p in parity.EDITOR_PLACES})
+        self.assertEqual(len(got), 3)  # no such place, no such part, no English reason
+
     def test_every_area_is_known_to_the_docs(self):
         sys.path.insert(0, str(ROOT / "tools"))
         import docs_build

@@ -83,6 +83,11 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: the editor is checked part by part in each of its seven places (the
+  Qt window, the GTK panel, the split layout's input line in each, the terminal, the page,
+  the phone): what one lacks is said with its reason in `docs/src/parity.toml`
+  (`[[editor]]`), a part added to one editor only fails a test. The check by words took a
+  toolkit whole and never saw the split line lacking what the window had.
 - Behind the scenes: logging out, sending a bug report on and acting as another account
   are written once (`frontends/common/window.py`) — the Qt window, the GTK window, the
   terminal, the page and the accounts place each had a copy.

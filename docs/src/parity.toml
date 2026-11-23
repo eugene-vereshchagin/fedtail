@@ -1021,3 +1021,36 @@ tui = "partly"
 note.ru = "В терминале язык — поле: пишется код (`en`, `ka`); пусто — `post.language`."
 note.en = "In the terminal the language is a field: a code is typed (`en`, `ka`); empty — `post.language`."
 keys = []
+
+# ---- the editor, place by place ------------------------------------------------------------
+# One editor drawn in seven places (tools/parity.py EDITOR_PLACES: the Qt window, the GTK
+# panel, the split layout's input line in each, the terminal, the web page, the phone) and
+# its parts (EDITOR_PARTS). The check by words above takes a toolkit whole, so a part the
+# window has and the split layout's line lacks went unnoticed; here each place says which
+# parts it lacks, and why. tests/test_parity.py holds it against the code.
+
+[[editor]]
+place = "qt-line"
+lacks = ["emoji", "alt", "sensitive", "focus", "cover", "poll", "schedule", "drafts",
+         "preview", "from", "spell"]
+note.ru = "Строка ввода раскладки split — для быстрого слова: текст, кнопки разметки, дополнение @ # :, предупреждение, язык, кому видно, вложение, счётчик. Остальное — в полном редакторе, куда ведёт ⤢ с уже набранным текстом. Проверка орфографии, выбор эмодзи и «от кого» в общем окне здесь были бы к месту и ничем не заняты — кандидаты на добавление."
+note.en = "The split layout's input line is for a quick word: the text, the formatting buttons, @ # : completion, the warning, the language, who sees it, an attachment, the counter. The rest is in the full editor, where ⤢ leads with what was typed. The spellcheck, the emoji picker and \"From\" in the merged window would fit here and nothing stands in their way — candidates to add."
+
+[[editor]]
+place = "gtk-line"
+lacks = ["emoji", "alt", "sensitive", "focus", "cover", "poll", "schedule", "drafts",
+         "preview", "from", "spell"]
+note.ru = "То же, что строка ввода в Qt: быстрое слово, остальное — в полном редакторе по ⤢."
+note.en = "As Qt's input line: a quick word, the rest in the full editor by ⤢."
+
+[[editor]]
+place = "tui"
+lacks = ["focus"]
+note.ru = "Точку фокуса картинки ставят мышью по самой картинке; в терминале её не показать с нужной точностью."
+note.en = "A picture's focus point is set with the mouse on the picture itself; a terminal can't show it precisely enough."
+
+[[editor]]
+place = "android"
+lacks = ["cover", "spell"]
+note.ru = "Орфографию на телефоне проверяет клавиатура системы — своя проверка не нужна. Обложки для видео и звука в редакторе телефона пока нет."
+note.en = "On the phone the system's keyboard checks the spelling — one of our own isn't needed. A cover for a video or a sound isn't in the phone's editor yet."
