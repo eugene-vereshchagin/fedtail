@@ -3897,8 +3897,26 @@ class QtSmokeTest(unittest.TestCase):
             dock.editor.sent = True
             dock.editor._leave()
             self.assertEqual(dock.media, [])
-            # post.cw_field: the warning's field from the start, and after a send
+            # post.drafts_autosave: the line's words are kept (a moment after the last
+            # key) and found again; gone once the line is empty
+            from fedtail.frontends.common import compose as crules
             from fedtail.frontends.common import split as line_rules
+            key = crules.draft_key(self.core, dock.target)
+            self.core.delete_draft(key)
+            dock.text.setPlainText("words to keep")
+            self.assertTrue(dock._keeper.isActive())  # typing winds it
+            dock.keep_draft()
+            self.assertEqual(self.core.get_draft(key)["text"], "words to keep")
+            dock.text.blockSignals(True)
+            dock.text.clear()
+            dock.text.blockSignals(False)
+            dock._restore_draft(dock.target)  # (a restart)
+            self.assertEqual(dock.text.toPlainText(), "words to keep")
+            dock.text.clear()
+            dock.keep_draft()
+            self.assertIsNone(self.core.get_draft(key))
+            dock._keeper.stop()
+            # post.cw_field: the warning's field from the start, and after a send
             self.assertFalse(line_rules.line_warning_shown(self.core.cfg))
             self.core.cfg["post"]["cw_field"] = True
             self.addCleanup(self.core.cfg["post"].__setitem__, "cw_field", False)

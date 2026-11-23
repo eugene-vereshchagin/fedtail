@@ -48,6 +48,25 @@ class ParityTest(unittest.TestCase):
                 problems = parity.check_things(thing)
                 self.assertEqual(problems, [], "\n" + "\n".join(problems))
 
+    def test_one_list_for_every_interface(self):
+        """A profile's buttons, a post's ⋯ menu and the places of the ≡ menu are lists
+        made once (common/profile.actions, common/actions.menu, common/places.Places):
+        every interface draws those, none keeps one of its own — the phone through the
+        page's own calls (its bridge). So what one offers there, all offer."""
+        front = ROOT / "fedtail" / "frontends"
+        lists = {"a profile's buttons": r"prof(ile)?\.actions\(",
+                 "a post's menu": r"actions\.menu\(",
+                 "the places": r"\bPlaces\("}
+        for ui in ("qt", "gtk", "tui", "web"):
+            text = "\n".join(p.read_text("utf-8") for p in sorted((front / ui).rglob("*.py")))
+            for what, rx in lists.items():
+                with self.subTest(ui=ui, what=what):
+                    self.assertRegex(text, rx, f"{ui} doesn't take {what} from the shared list")
+        bridge = (ROOT / "android/app/src/main/python/fedtail_android/bridge.py").read_text(
+            "utf-8")
+        for call in ("post_menu(", ".profile_act(", ".page("):
+            self.assertIn('_s["web"]' + call if call.startswith(".") else call, bridge)
+
     def test_the_editors_check_itself(self):
         have = {p: set(parity.EDITOR_PARTS) for p in parity.EDITOR_PLACES}
         have["qt-line"] = set(parity.EDITOR_PARTS) - {"spell"}

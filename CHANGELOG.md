@@ -36,6 +36,10 @@
   drafts, the preview and the files' descriptions — in the full editor, which opens with
   what the line already holds and that tool at once. Qt and GTK, one list. Before, the
   line had none of it, and no way to the editor either.
+- **The input line keeps its words** (`post.drafts_autosave`): what is typed in the split
+  layout's line is saved a moment after the last key and is there again after a crash or
+  a restart — as the same draft the full editor opens for that post. A draft written in
+  the full editor is never shown in the line nor written over by it.
 - **The input line listens to the editor's settings.** `post.alt_reminder` and
   `post.lang_check`: a file without a description, or a text in another language than
   marked, takes the post to the full editor, which asks (the line sent it as it was);

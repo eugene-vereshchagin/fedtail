@@ -1079,6 +1079,8 @@ class MainWindow(QMainWindow):
         """The other account in its own window, with its own theme and config; this
         one closes (ui.switch_closes) — its unread stays counted for next time."""
         from ...core import profiles
+        if name == self.core.paths.profile:  # this very one: nothing to switch to (as GTK)
+            return
         log.info("switching to profile %s", name)
         profiles.launch(name)
         if self.cfg["ui"]["switch_closes"]:
@@ -2951,6 +2953,8 @@ class MainWindow(QMainWindow):
             self.hide()
             e.ignore()
             return
+        if getattr(self, "dock", None) is not None:
+            self.dock.leave()  # its words kept now, not a moment later
         super().closeEvent(e)
         log.info("main window closed, leaving")
         if self.roster is not None:  # a window of its own: it goes with this one (the

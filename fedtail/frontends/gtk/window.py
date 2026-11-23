@@ -2541,6 +2541,8 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.roster is not None and not self.quitting and self.roster.get_visible():
             self.set_visible(False)  # the messages window goes; the roster stays (QIP)
             return True
+        if self.dock is not None:
+            self.dock.leave()  # its words kept now, not a moment later
         w, h = self.get_default_size()
         if w > 0 and h > 0:
             self.view.set_state("gtk_window", f"{w}x{h}")

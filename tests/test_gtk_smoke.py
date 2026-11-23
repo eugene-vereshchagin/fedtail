@@ -2613,6 +2613,22 @@ class GtkSplitTest(_GtkBase):
         self.assertEqual(len(self.world.posted), sent)
         self.assertEqual(dock._text(), "")
         dock.editor.close()
+        # post.drafts_autosave: the line's words are kept (a moment after the last key)
+        # and found again; gone once the line is empty
+        from fedtail.frontends.common import compose as crules
+        key = crules.draft_key(self.win.view, dock.target)
+        self.win.view.delete_draft(key)
+        dock._prefill = ""
+        dock._set_text("words to keep")
+        self.assertTrue(dock._keeper)  # typing winds it
+        dock.keep_draft()
+        self.assertEqual(self.win.view.get_draft(key)["text"], "words to keep")
+        dock._set_text("")
+        dock._restore_draft(dock.target)  # (a restart)
+        self.assertEqual(dock._text(), "words to keep")
+        dock._set_text("")
+        dock.keep_draft()
+        self.assertIsNone(self.win.view.get_draft(key))
         self.assertFalse(rules.line_warning_shown(cfg))
         cfg["post"]["cw_field"] = True
         self.addCleanup(cfg["post"].__setitem__, "cw_field", False)

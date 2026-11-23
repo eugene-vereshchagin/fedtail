@@ -149,6 +149,13 @@ class InputDock(QWidget):
         self._count()
         if split.line_warning_shown(win.cfg):  # post.cw_field: its field from the start
             self.cw_btn.setChecked(True)
+        # post.drafts_autosave: what is typed here is kept a moment after the last key,
+        # as the editor keeps its own (common/split.line_keep) — and found again
+        self._draft_key = None
+        self._keeper = QTimer(self, singleShot=True, interval=rules.autosave_ms(win.cfg))
+        self._keeper.timeout.connect(self.keep_draft)
+        self.text.textChanged.connect(self._keeper.start)
+        self._restore_draft(None)  # a new post's words from last time
         # spelling, as in the Compose window (post.spellcheck), in the post's language —
         # made last: its marks are a change of the text, counted as one
         from .spellcheck import Spell
@@ -251,6 +258,9 @@ class InputDock(QWidget):
             return None
         from .compose import Compose
         text = self.text.toPlainText()
+        # the words go to the editor, which keeps its own draft: the line's goes first
+        self._keeper.stop()
+        self._draft_key = split.line_keep(self.win.ctx.view, self.target, False)
         dlg = Compose(self.win, reply_to=self.target,
                       attach=[p for p, _d in self.media], text=text)
         if text.strip() and text.strip() != self._prefill.strip():
@@ -315,6 +325,38 @@ class InputDock(QWidget):
     def _typed(self):
         return self.text.toPlainText().strip() != self._prefill.strip()
 
+    def leave(self):
+        """The window goes: the line's words are kept now, its timer with it."""
+        if self._keeper.isActive():
+            self._keeper.stop()
+            self.keep_draft()
+
+    def keep_draft(self):
+        """The line's words kept as a draft (post.drafts_autosave), or its draft dropped
+        once they are gone — never one the full editor wrote."""
+        if self.command() is not None:
+            return
+        warning = self.cw.text().strip() if self.cw_btn.isChecked() else ""
+        self._draft_key = split.line_keep(
+            self.win.ctx.view, self.target, self._typed(), self.text.toPlainText(),
+            warning, self.visibility, self.language)
+
+    def _restore_draft(self, post):
+        """The words the line left for this post last time (a crash, a restart)."""
+        d = split.line_draft(self.win.ctx.view, post)
+        if not d or not str(d.get("text") or "").strip():
+            return
+        self.text.setPlainText(d["text"])
+        self.text.moveCursor(QTextCursor.MoveOperation.End)
+        if d.get("cw"):
+            self.cw_btn.setChecked(True)
+            self.cw.setText(d["cw"])
+        if d.get("visibility"):
+            self.visibility = d["visibility"]
+            self._show_visibility()
+        if d.get("language"):
+            self._set_language(d["language"])
+
     def reply_to(self, post):
         """Reply (the card's button, R): this post answered here, not in a window."""
         self.target = None
@@ -324,7 +366,7 @@ class InputDock(QWidget):
     def write_to(self, account, focus=True):
         """A private message to someone (a person in the roster): "@them ", direct."""
         self.target = None
-        self.set_target(None, fresh=True)
+        self.set_target(None, fresh=True, restore=False)
         start = split.private_start(account)
         self._prefill = start.prefill
         self.text.setPlainText(self._prefill)
@@ -339,12 +381,12 @@ class InputDock(QWidget):
     def start_with(self, text):
         """A new post beginning with these words ("Mention" on a profile)."""
         self.target = None
-        self.set_target(None, fresh=True)
+        self.set_target(None, fresh=True, restore=False)
         self.text.setPlainText(text)
         self.text.moveCursor(QTextCursor.MoveOperation.End)
         self.text.setFocus()
 
-    def set_target(self, post, fresh=None):
+    def set_target(self, post, fresh=None, restore=True):
         if post is not None and self.target is not None and post.id == self.target.id:
             return
         self.target = post
@@ -358,6 +400,8 @@ class InputDock(QWidget):
             self.text.moveCursor(QTextCursor.MoveOperation.End)
             self.visibility = start.visibility
             self._show_visibility()
+            if restore:  # (not for words put in from outside: a mention, a talk)
+                self._restore_draft(post)
         self.show_whom(start.whom)
         self._about = start.about
         self._say()
@@ -539,6 +583,10 @@ class InputDock(QWidget):
             self.win.error(err)
 
         kw = {"language": self.language} if self.language else {}
+        self._keeper.stop()
+        self.keep_draft()  # (and its key: the core drops the draft once the post is out)
+        if self._draft_key:
+            kw["draft_key"] = self._draft_key
         if self.media:
             # made to fit the server first (post.resize_images), as the editor sends them
             from .compose import _QtImages

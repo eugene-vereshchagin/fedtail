@@ -569,6 +569,12 @@ class InputDock(Gtk.Box):
         self._count()
         if split.line_warning_shown(win.cfg):  # post.cw_field: its field from the start
             self.cw_btn.set_active(True)
+        # post.drafts_autosave: what is typed here is kept a moment after the last key,
+        # as the editor keeps its own (common/split.line_keep) — and found again
+        self._draft_key = None
+        self._keeper = 0
+        self.buffer.connect("changed", lambda _b: self._keep_soon())
+        self._restore_draft(None)  # a new post's words from last time
         # spelling, as in the editor (post.spellcheck), in the post's language
         from .spellcheck import Spell
         self.spell = Spell(self, self.text)
@@ -581,6 +587,47 @@ class InputDock(Gtk.Box):
     def _set_text(self, text):
         self.buffer.set_text(text)
         self.buffer.place_cursor(self.buffer.get_end_iter())
+
+    def _keep_soon(self):
+        if self._keeper:
+            GLib.source_remove(self._keeper)
+        self._keeper = GLib.timeout_add(rules.autosave_ms(self.win.cfg), self._keep_due)
+
+    def _keep_due(self):
+        self._keeper = 0
+        self.keep_draft()
+        return GLib.SOURCE_REMOVE
+
+    def leave(self):
+        """The window goes: the line's words are kept now, its timer with it."""
+        if self._keeper:
+            GLib.source_remove(self._keeper)
+            self._keeper = 0
+            self.keep_draft()
+
+    def keep_draft(self):
+        """The line's words kept as a draft (post.drafts_autosave), or its draft dropped
+        once they are gone — never one the full editor wrote."""
+        if self.command() is not None:
+            return
+        warning = self.cw.get_text().strip() if self.cw_btn.get_active() else ""
+        self._draft_key = split.line_keep(self.win.view, self.target, self._typed(),
+                                          self._text(), warning, self.visibility,
+                                          self.lang_code)
+
+    def _restore_draft(self, post):
+        """The words the line left for this post last time (a crash, a restart)."""
+        d = split.line_draft(self.win.view, post)
+        if not d or not str(d.get("text") or "").strip():
+            return
+        self._set_text(d["text"])
+        if d.get("cw"):
+            self.cw_btn.set_active(True)
+            self.cw.set_text(d["cw"])
+        if d.get("visibility"):
+            self.set_visibility(d["visibility"])
+        if d.get("language"):
+            self._set_language(d["language"])
 
     def _typed(self):
         return self._text().strip() != self._prefill.strip()
@@ -610,7 +657,7 @@ class InputDock(Gtk.Box):
     def write_to(self, account, focus=True):
         """A private message to someone: "@them ", direct."""
         self.target = None
-        self.set_target(None, fresh=True)
+        self.set_target(None, fresh=True, restore=False)
         start = split.private_start(account)
         self._prefill = start.prefill
         self._set_text(self._prefill)
@@ -623,11 +670,11 @@ class InputDock(Gtk.Box):
 
     def start_with(self, text):
         self.target = None
-        self.set_target(None, fresh=True)
+        self.set_target(None, fresh=True, restore=False)
         self._set_text(text)
         self.text.grab_focus()
 
-    def set_target(self, post, fresh=None):
+    def set_target(self, post, fresh=None, restore=True):
         if post is not None and self.target is not None and post.id == self.target.id:
             return
         self.target = post
@@ -639,6 +686,8 @@ class InputDock(Gtk.Box):
             self._set_text(self._prefill)
             self.visibility = start.visibility
             self._show_visibility()
+            if restore:  # (not for words put in from outside: a mention, a talk)
+                self._restore_draft(post)
         self.show_whom(start.whom)
         self._about = start.about
         self._say()
@@ -785,6 +834,11 @@ class InputDock(Gtk.Box):
             win.open_place("drafts")
             return None
         text = self._text()
+        # the words go to the editor, which keeps its own draft: the line's goes first
+        if self._keeper:
+            GLib.source_remove(self._keeper)
+            self._keeper = 0
+        self._draft_key = split.line_keep(win.view, self.target, False)
         panel = win.compose_panel(reply_to=self.target)
         if panel is None:
             return None
@@ -937,6 +991,12 @@ class InputDock(Gtk.Box):
         self.send_btn.set_sensitive(False)
         log.info("dock: %s", "reply to " + target.id if target else "new post")
         kw = {"language": self.lang_code} if self.lang_code else {}
+        if self._keeper:
+            GLib.source_remove(self._keeper)
+            self._keeper = 0
+        self.keep_draft()  # (and its key: the core drops the draft once the post is out)
+        if self._draft_key:
+            kw["draft_key"] = self._draft_key
         if self.media:
             # made to fit the server first (post.resize_images), as the editor sends them
             from .compose import _PixbufImages

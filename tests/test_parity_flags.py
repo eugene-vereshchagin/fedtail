@@ -206,8 +206,6 @@ LINE_THROUGH = {"post.resize_images": "fit_media"}
 LINE_EXEMPT = {
     "ui.compose": "where the full editor stands (a window, a panel): not the line's",
     "ui.compose_size": "the full editor's own size",
-    "post.drafts_autosave": "the line keeps no draft of its own; the full editor, a "
-                            "click away with the words (⋯), does",
     "post.camelcase_hint": "the hint under the editor's text; the line has no room for it",
     "post.send_in_background": "the line never stands in the way of the lanes",
     "post.chain": "the core splits a long text into a chain; the editor only counts "

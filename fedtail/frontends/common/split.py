@@ -187,3 +187,43 @@ def line_before_send(cfg, text, media, language):
 def line_warning_shown(cfg):
     """post.cw_field: the warning's field shown from the start, as in the editor."""
     return bool((cfg.get("post") or {}).get("cw_field", False))
+
+
+# ---- the line's words kept (post.drafts_autosave) -------------------------------------------
+
+LINE = "line"  # a draft's mark: the input line wrote it, not the full editor
+
+
+def line_draft(view, target):
+    """The draft the line itself left for this post (target: the Post answered, None —
+    a new one), or None: with post.drafts_autosave off, with no draft, or with one the
+    full editor wrote — that one is the editor's (it may hold a poll, files with their
+    words…), the line neither shows it nor writes over it."""
+    if not (view.cfg.get("post") or {}).get("drafts_autosave", True):
+        return None
+    from .compose import draft_key
+    d = view.get_draft(draft_key(view, target))
+    return d if isinstance(d, dict) and d.get(LINE) else None
+
+
+def line_keep(view, target, typed, text="", cw="", visibility="", language=None):
+    """What the line holds, kept as the draft the full editor would open for the same
+    post — words typed survive a crash, as the editor's do (the line kept nothing,
+    24.11). typed: are there words of the reader's (not only the mentions put in)?
+    Nothing typed — the line's own draft goes. A draft the editor wrote is left alone.
+    → the draft's key when the line's draft stands (sent with the post, the core drops
+    it then), else None."""
+    if not (view.cfg.get("post") or {}).get("drafts_autosave", True):
+        return None
+    from .compose import draft_key, snapshot
+    key = draft_key(view, target)
+    had = view.get_draft(key)
+    if had and not (isinstance(had, dict) and had.get(LINE)):
+        return None  # the editor's own
+    if not typed:
+        if had:
+            view.delete_draft(key)
+        return None
+    view.save_draft(key, dict(snapshot(text, cw, visibility, [], language, False, None),
+                              **{LINE: True}))
+    return key

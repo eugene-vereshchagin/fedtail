@@ -68,6 +68,39 @@ class CommonTest(TmpDir):
         self.core.poll_once()
         self.view = View(self.core)
 
+    # ---- the input line's own draft ---------------------------------------------------
+    def test_the_input_line_keeps_its_words(self):
+        """post.drafts_autosave in the split layout's line (it kept nothing, 24.11):
+        words typed are the draft the full editor would open for the same post; none
+        typed — the line's draft goes; a draft the editor wrote is never touched."""
+        from fedtail.frontends.common import split
+        v = self.view
+        post = to_post(self.w.statuses["001"])
+        self.assertIsNone(split.line_draft(v, post))
+        key = split.line_keep(v, post, True, "@bob words", "cw", "unlisted", "en")
+        self.assertEqual(key, rules.draft_key(v, post))
+        d = split.line_draft(v, post)
+        self.assertEqual((d["text"], d["cw"], d["visibility"], d["language"]),
+                         ("@bob words", "cw", "unlisted", "en"))
+        self.assertTrue(rules.start(v, key, post).restored)  # the editor opens it too
+        self.assertIsNone(split.line_draft(v, None))  # a new post's is another
+        self.assertIsNone(split.line_keep(v, post, False))  # emptied: gone
+        self.assertIsNone(v.get_draft(key))
+        # the editor's own draft: not shown in the line, not written over, not dropped
+        mine = rules.snapshot("long", "", "public", [("/a.png", "a cat")], None, False, None)
+        v.save_draft(key, mine)
+        self.assertIsNone(split.line_draft(v, post))
+        self.assertIsNone(split.line_keep(v, post, True, "short"))
+        self.assertIsNone(split.line_keep(v, post, False))
+        self.assertEqual(v.get_draft(key)["text"], "long")
+        v.delete_draft(key)
+        # the switch off: nothing kept, nothing restored
+        split.line_keep(v, None, True, "new post")
+        self.core.cfg["post"]["drafts_autosave"] = False
+        self.assertIsNone(split.line_draft(v, None))
+        self.assertIsNone(split.line_keep(v, post, True, "words"))
+        self.assertIsNone(v.get_draft(key))
+
     # ---- links ---------------------------------------------------------------------
     def test_link_kinds(self):
         self.assertIsNone(links.parse("https://x.test/"))
