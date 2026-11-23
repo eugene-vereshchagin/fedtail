@@ -61,7 +61,9 @@ target-version = "py311"
 extend-exclude = ["fedtail/_vendor/*/"]  # carried as PyPI has it (tools/vendor.py)
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "B", "I", "UP"]
+# BLE: a broad `except Exception` says why beside its `noqa` (what is caught on purpose
+# and what happens then) — 258 of them, each a decision (the audit of 23.11)
+select = ["E", "F", "W", "B", "I", "UP", "BLE"]
 ignore = ["E731"]
 
 [tool.ruff.lint.per-file-ignores]

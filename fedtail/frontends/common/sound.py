@@ -121,7 +121,7 @@ class Player:
         def go():
             try:
                 self._run(argv)
-            except Exception as e:  # a sound is never worth an error on screen
+            except Exception as e:  # noqa: BLE001 — a sound is never worth an error on screen
                 self._say_once(f"{argv[0]}: {e}")
             finally:
                 self._busy.release()

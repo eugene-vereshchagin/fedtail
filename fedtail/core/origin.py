@@ -36,7 +36,7 @@ class OriginMixin:
             self._honest_checked[sid] = now
             try:
                 origin = self._origin_get(url)
-            except Exception as e:  # their server, their problems
+            except Exception as e:  # noqa: BLE001 — their server, their problems
                 log.debug("honest counters %s: %s", url, e)
                 origin = None
             if origin is None and self.cfg["feed"].get("counters_via_accounts", True):

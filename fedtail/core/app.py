@@ -722,7 +722,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             try:
                 caps = self.proto.capabilities(api.instance(), v2)
                 self._caps_unsure = False
-            except Exception as e:  # instance info is a nicety, not a must
+            except Exception as e:  # noqa: BLE001 — instance info is a nicety, not a must
                 log.warning("instance: %s: %s — the server's limits as last heard; asked "
                             "again with the next rounds", type(e).__name__, e)
                 caps = self._remembered_caps()
@@ -749,7 +749,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 try:
                     self._refresh_lists()
                     done = True
-                except Exception as e:  # lists are a nicety; the rest must start
+                except Exception as e:  # noqa: BLE001 — lists are a nicety; the rest must start
                     log.warning("lists: %s", e)
             if not done and (self.cfg["lanes"].get("tag_groups") or
                              self.store.kv_get("tag_groups")):
@@ -2072,7 +2072,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                     if mine:
                         found.append(sid)
                 self.store.kv_set(f"replies_checked:{sid}", n)
-            except Exception:
+            except Exception:  # noqa: BLE001 — try again next time (said in the line below)
                 pass  # try again next time
             finally:
                 self._replies_inflight.discard(sid)

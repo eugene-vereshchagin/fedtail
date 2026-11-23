@@ -174,7 +174,7 @@ def by_words(text):
         return None
     try:
         found = detect(text)
-    except Exception:  # its LangDetectException: no features in the text
+    except Exception:  # noqa: BLE001 — its LangDetectException: no features in the text
         return None
     if found and found[0].prob >= MIN_PROBABILITY:
         return base(found[0].lang)

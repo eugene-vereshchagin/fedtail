@@ -552,7 +552,7 @@ class PollMixin:
             if self.cfg["lists"]["enabled"] and _due(self._lists_checked, every):
                 try:
                     self._refresh_lists()
-                except Exception as e:  # try again next round, not every poll
+                except Exception as e:  # noqa: BLE001 — try again next round, not every poll
                     self._lists_checked = time.monotonic()
                     self._round_error("lists", e)
             # not in the first rounds (a start asks enough); the time kept in the store,
@@ -576,7 +576,8 @@ class PollMixin:
                     new_by_source["subs"] = _join(subs.check(
                         self.store, self.api, self.me["id"], sc["interval_minutes"],
                         sc["active_days"], sc["max_threads"]), new_by_source.get("subs"))
-                except Exception as e:
+                # a source's failure is said and the round goes on (_round_error)
+                except Exception as e:  # noqa: BLE001
                     self._round_error("subs", e)
                 self._step("subs")
             if self._opened_threads:  # feed.thread_recheck_minutes: open threads grow
@@ -630,7 +631,8 @@ class PollMixin:
                         if empty != (name in self.browse_empty):
                             (self.browse_empty.add if empty else self.browse_empty.discard)(name)
                             browse_changed.add(name)  # its lane says so (see below)
-                    except Exception as e:
+                    # a source's failure is said and the round goes on (_round_error)
+                    except Exception as e:  # noqa: BLE001
                         self._round_error(name, e)
                     if name in self._browse_waiting:  # answered (or failed): drawn anew
                         self._browse_waiting.discard(name)
@@ -659,7 +661,7 @@ class PollMixin:
                         self.emit("auth_failed", str(e))
                         return
                     self._round_error(name, e)
-                except Exception as e:  # network down etc.
+                except Exception as e:  # noqa: BLE001 — network down etc.
                     self._round_error(name, e)
 
             since = self.store.kv_get("people.reply_watch_since", {}) or {}
@@ -694,7 +696,7 @@ class PollMixin:
                                      if c.wants_event("follow_request")}
                         if events_in:
                             self.emit("lanes_updated", events_in)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — said and the round goes on (_round_error)
                     self._round_error("requests", e)
 
             new_activity = []
@@ -707,7 +709,7 @@ class PollMixin:
                         events_in = {c.name: [] for c in self._event_lanes()}
                         if events_in:  # lanes showing likes, follows…: they look again
                             self.emit("lanes_updated", events_in)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — said and the round goes on (_round_error)
                     self._round_error("activity", e)
 
             if self.derived.due():  # a snapshot of my followers, in the background

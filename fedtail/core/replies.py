@@ -58,14 +58,14 @@ def reply_uris(get_json, root_uri, limit=40, depth=3):
         uri, level = queue.pop(0)
         try:
             obj = get_json(uri)
-        except Exception as e:  # someone else's server: anything may happen
+        except Exception as e:  # noqa: BLE001 — someone else's server: anything may happen
             log.debug("replies of %s: %s", uri, e)
             continue
         if not isinstance(obj, dict) or not obj.get("replies"):
             continue
         try:
             items = collection_items(get_json, obj["replies"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — someone else's server: anything may happen
             log.debug("replies collection of %s: %s", uri, e)
             continue
         for item in items:

@@ -823,7 +823,7 @@ def stats():
         try:
             for k, v in (fn() or {}).items():
                 out[f"{name}.{k}"] = v
-        except Exception as e:  # a broken provider must not break the stats
+        except Exception as e:  # noqa: BLE001 — a broken provider must not break the stats
             out[f"{name}.error"] = str(e)[:80]
     return out
 
@@ -1379,7 +1379,8 @@ def _system_summary(paths, cfg=None):
         try:
             m = __import__(mod)
             lines.append(f"{mod} {getattr(m, '__version__', '?')}")
-        except Exception as e:
+        # a module that fails to import is what this line reports
+        except Exception as e:  # noqa: BLE001
             lines.append(f"{mod} missing ({e.__class__.__name__})")
     lines += _toolkits()
     try:

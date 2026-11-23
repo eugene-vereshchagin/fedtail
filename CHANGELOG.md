@@ -58,6 +58,8 @@
 - **The web page's tab says the unread number** — "(3) Home — FedTail", and the installed
   page's icon carries it: what the windows put on the tray and the taskbar icon, for the
   lanes `window.icon_count` chose.
+- Behind the scenes: the linter now holds every broad `except Exception` to a stated
+  reason (ruff's BLE; the last twenty got theirs).
 - Behind the scenes: `docs/*/dev/protocols.md` says where "no protocol field outside
   `protocols/`" really stands (true for the interfaces; the core still reads Mastodon's
   names — stage 7) and a test keeps the core's count from growing; `gtk.md`, `roadmap.md`

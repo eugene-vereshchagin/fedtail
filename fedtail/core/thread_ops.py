@@ -181,7 +181,8 @@ class ThreadsMixin:
             try:
                 if subs.subscribe(self.store, self.api, st, auto=True):
                     self.emit("subs_changed", None)
-            except Exception as e:
+            # following a thread by itself is never worth a failed send
+            except Exception as e:  # noqa: BLE001
                 log.warning("auto-subscribe %s: %s", st.get("id"), e)
 
     def _follow_for(self, action, status):
@@ -267,7 +268,7 @@ class ThreadsMixin:
                 if e.status in (403, 404, 410):
                     self.store.mark_missing(pid)
                     got = True
-            except Exception:
+            except Exception:  # noqa: BLE001 — a network hiccup: next time (said in the line below)
                 pass  # network hiccup: try again next time
             finally:
                 self._parent_inflight.discard(pid)
@@ -479,7 +480,7 @@ class ThreadsMixin:
         def resolve(uri):
             try:
                 found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
-            except Exception as e:  # not reachable, not public, gone: skip it
+            except Exception as e:  # noqa: BLE001 — not reachable, not public, gone: skip it
                 log.debug("resolve %s: %s", uri, e)
                 return []
             return (found or {}).get("statuses") or []

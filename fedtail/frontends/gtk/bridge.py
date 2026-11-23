@@ -26,7 +26,7 @@ class Bridge:
             try:
                 with diag.busy("event " + name):
                     self.on_event(name, payload)
-            except Exception as e:  # a bug in a handler: shown, not swallowed
+            except Exception as e:  # noqa: BLE001 — a bug in a handler: shown, not swallowed
                 self._report(e)
         return GLib.SOURCE_REMOVE
 
