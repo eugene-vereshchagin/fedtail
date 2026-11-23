@@ -394,8 +394,8 @@ android = "has"
 name.ru = "Старые посты человека с его сервера"
 name.en = "Someone's older posts from their own server"
 tui = "partly"
-note.ru = "Веб — как окна: адреса страницы сразу, посты по четыре, на кнопке живой счётчик «n из N». Терминал подтягивает страницу целиком по кнопке «ещё» и потом говорит, сколько пришло, — без живого счётчика."
-note.en = "The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count."
+note.ru = "Веб — как окна: адреса страницы сразу, посты по четыре, на кнопке живой счётчик «n из N». Терминал подтягивает страницу целиком по кнопке «ещё» и потом говорит, сколько пришло, — без живого счётчика. В самом профиле терминала — клавиша `M` («ещё»): сначала свой сервер, потом сервер человека."
+note.en = "The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. In the terminal's profile itself — the `M` key (“more”): my server first, then theirs."
 keys = ["older_from_origin", "older_from_origin_note", "older_from_origin_tip",
         "origin_asking", "origin_fetching", "origin_got", "older_down", "older_up"]
 
@@ -405,8 +405,8 @@ area = "reading"
 android = "has"
 name.ru = "Профиль: счётчики, «с нами с», общие подписки, избранное, переезд"
 name.en = "A profile: counts, “since”, people you both follow, featured, moved"
-note.ru = "Терминал показывает профиль строками, без этих подробностей шапки."
-note.en = "The terminal shows a profile as lines, without these details of the head."
+note.ru = "Терминал показывает всё это строками в шапке профиля (закрытый, «с нами с», сервер, общие подписки, избранное, переезд, закреплённые посты сверху); кнопок «открыть» и «подписаться там» у переезда нет — они в «подробностях»."
+note.en = "The terminal says all of it as lines in the profile's head (locked, “since”, the server, people you both follow, featured, a move, the pinned posts on top); a move's “open” and “follow there” buttons are in the “details” place."
 keys = ["card_counts", "card_since", "familiar", "featured_people", "featured_tags",
         "following_them", "moved_follow", "moved_open", "moved_to", "pinned",
         "profile_posts", "profile_title"]

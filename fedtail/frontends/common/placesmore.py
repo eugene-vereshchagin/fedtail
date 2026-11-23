@@ -153,12 +153,10 @@ class MorePlaces:
                                                     m.id, primary=True))))
         if (me is None or acc.id != me.id) and v.supports("familiar"):
             try:
-                known = _wait(v.familiar(acc.id)) or []
+                from . import profile as prof
+                known = prof.familiar_line(_wait(v.familiar(acc.id)))  # (the one wording)
                 if known:
-                    page.rows.append(Row("text", _("familiar", who=", ".join(
-                        "@" + a.handle for a in known[:5]) + (
-                        f" {_('and_more', n=len(known) - 5)}" if len(known) > 5 else "")),
-                        key="familiar"))
+                    page.rows.append(Row("text", known, key="familiar"))
             except Exception as e:  # noqa: BLE001
                 log.info("profile info: familiar: %s", e.__class__.__name__)
         try:
@@ -184,8 +182,10 @@ class MorePlaces:
         if pins:
             page.rows.append(Row("heading", "📌 " + _("pinned")))
             page.rows += [Row("post", data=p, key="pin:" + p.id) for p in pins]
+        from . import profile as prof
         host = _host(acc.url or acc.uri)
-        if "@" in acc.handle and host:
+        # (feed.remote_profiles off: not offered — this place offered it all the same)
+        if prof.origin_host(acc, v.cfg) and host:
             page.rows.append(Row("heading", _("profile_posts")))
             page.more = self._btn(_("older_from_origin", host=host), "profile_info",
                                   "origin", acc.id, tip=_("older_from_origin_tip",

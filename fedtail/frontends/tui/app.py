@@ -758,6 +758,7 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
                 Binding("s", "show_next", _("profile_show_posts") + " / " +
                         _("profile_show_media")),
+                Binding("M", "more", _("more")),
                 *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
                 Binding("0", "all_buttons", show=False),
                 Binding("colon", "command", ":", show=False)])
@@ -775,6 +776,11 @@ class ProfileScreen(Screen, PostsMixin):
         self.acc_id = acc_id
         self.acc, self.rel = None, None
         self.show = None  # which of their posts: common/timed.py PROFILE_SHOWS
+        # what the windows and the page add to a profile (the terminal had none, 24.11)
+        self.pinned, self.featured, self.familiar = [], None, []
+        self._page = None
+        self._older = ""  # where "more" goes on: "" my server, "origin" / a cursor — theirs
+        self._more_busy = False
 
     def compose(self) -> ComposeResult:
         yield Static(_("tui_profile") + " …", id="title")
@@ -797,6 +803,15 @@ class ProfileScreen(Screen, PostsMixin):
                        fail=lambda _e: None)
         self.show = timed.profile_show(core.cfg)
         self.load_posts()
+        feed = core.cfg["feed"]
+        if feed.get("profile_pinned", True):  # their pinned posts on top
+            self.later(core.pinned(self.acc_id), ok=self.got_pinned, fail=lambda _e: None)
+        if feed.get("profile_featured", True):  # the tags and people they put forward
+            self.later(core.featured(self.acc_id), ok=lambda got: self.got_more(featured=got),
+                       fail=lambda _e: None)
+        if (not me or self.acc_id != me.id) and core.supports("familiar"):
+            self.later(core.familiar(self.acc_id), ok=lambda got: self.got_more(familiar=got),
+                       fail=lambda _e: None)
 
     def posts_head(self):
         """"Posts: Posts · Posts and replies · Media (s)" — the one shown in brackets."""
@@ -810,16 +825,93 @@ class ProfileScreen(Screen, PostsMixin):
         head.tooltip = _("profile_show_tip")
         self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
 
+    def action_more(self):
+        """M: their older posts — my server's next page, then (feed.remote_profiles)
+        their own server's, each fetched into mine: the windows' and the page's "more"
+        and "further back — from their server" (the terminal showed one page, 24.11)."""
+        from ..common import profile as prof
+        core = self.app.core
+        if self._more_busy or not self.acc or self._page is None:
+            return
+        host = prof.origin_host(self.acc, core.cfg)
+        if self._older == "" and not self._page:
+            self._older = "origin"
+        if self._older == "end" or (self._older and not host):
+            self.app.notify(_("no_older"))
+            return
+        self._more_busy = True
+        fail = lambda e: (setattr(self, "_more_busy", False),  # noqa: E731
+                          self.app.notify(str(e), severity="error"))
+        if self._older == "":
+            self.later(core.account_posts(self.acc_id, core.next_page(self._page),
+                                          show=self.show), ok=self._more_mine, fail=fail)
+            return
+        self.app.notify(_("older_from_origin", host=host), timeout=3)
+        self.later(core.older_from_origin(self.acc, None if self._older == "origin"
+                                          else self._older, (), resolve=True),
+                   ok=self._more_theirs, fail=fail)
+
+    async def _more_mine(self, page):
+        self._more_busy = False
+        if not page:  # my server has no more: theirs next, when they live elsewhere
+            self._older = "origin"
+            self.action_more()
+            return
+        await self._append(page)
+
+    async def _more_theirs(self, answer):
+        from ..common import profile as prof
+        self._more_busy = False
+        got, nxt = answer
+        self._older = nxt or "end"
+        got = [e for e in got or () if timed.keeps(e, self.show, self.acc_id)]
+        if got:
+            host = prof.origin_host(self.acc, self.app.core.cfg)
+            self.app.notify(_("origin_got", n=len(got), host=host))
+            await self._append(got)
+        else:
+            self.app.notify(_("no_older"))
+
+    async def _append(self, more):
+        lv = self.query_one("#posts", ListView)
+        at = lv.index
+        have = {e.id for e in self._page}
+        await self.fill(list(self._page) + [e for e in more if e.id not in have], at=at)
+
     def action_show_next(self):
         """Posts → posts and replies → media → posts, from the top each time."""
         keys = [k for k, _label in timed.PROFILE_SHOWS]
         at = keys.index(self.show) if self.show in keys else -1
         self.show = keys[(at + 1) % len(keys)]
+        self._older = ""
         self.load_posts()
 
     def got_account(self, acc):
         self.acc = acc
         self.show_about()
+        if not hasattr(self, "software"):  # what their server runs, when it is known
+            from ..common import profile as prof
+            self.software = ""
+            host = prof.home_of(acc)
+            if host:
+                self.later(self.app.core.server_software(host), ok=self.got_software)
+
+    def got_more(self, featured=None, familiar=None):
+        if featured is not None:
+            self.featured = featured
+        if familiar is not None:
+            self.familiar = familiar
+        self.show_about()
+
+    async def got_pinned(self, posts):
+        self.pinned = list(posts or [])
+        if self.pinned and self._page is not None:
+            await self.fill(self._page)
+
+    def got_software(self, name):
+        if name:
+            self.software = name
+            self.show_about()
 
     def got_relation(self, rel):
         self.rel = rel
@@ -877,32 +969,64 @@ class ProfileScreen(Screen, PostsMixin):
         if self.rel and self.rel.following:
             bits.append("✓ " + _("tui_you_follow"))
         t.append(" · ".join(bits), style="dim")
+        # the line about the person, as the windows and the page say it (a bot, locked,
+        # here since, what their server runs, since when I follow them): the terminal
+        # said none of it (24.11). The @ is in the title, "follows you" just above.
+        from ..common import profile as prof
+        core = self.app.core
+        since = self.rel is not None and self.rel.following and \
+            core.followed_since(acc.id, self.rel)
+        more = [b for b in prof.meta(acc, self.rel, prof.day, since or None,
+                                     getattr(self, "software", ""))[1:]
+                if b != _("acc_follows_you")]
+        if more:
+            t.append("\n" + " · ".join(more), style="dim")
         note = html_to_text(acc.note).strip()
         if note:
             t.append("\n" + note)
         for f in acc.fields:
             t.append("\n" + f.name + ": ", style="bold")
             t.append(html_to_text(f.value))
-        from ..common import profile as prof
         line = prof.note_line(self.rel, self.own())
         if line:
             t.append("\n" + line, style="italic")
+        moved = prof.moved_line(acc, core.cfg)  # the account moved: where to
+        if moved:
+            t.append("\n" + moved, style="bold yellow")
+        known = prof.familiar_line(self.familiar)  # whom of mine follows them too
+        if known:
+            t.append("\n" + known, style="dim")
+        for title, text, _tags, _people in prof.featured_lines(self.featured):
+            t.append("\n" + title + ": ", style="bold")
+            t.append(text)
         self.query_one("#about", Static).update(t)
         from .screens import profile_line
         self.query_one("#buttons", Static).update(profile_line(self.buttons()))
 
-    async def fill(self, page):
+    async def fill(self, page, at=None):
         core = self.app.core
         lv = self.query_one("#posts", ListView)
         width = max(30, self.size.width - 6)
+        self._page = page
+        # their pinned posts on top, marked (feed.profile_pinned; which of them under
+        # "media" — common/timed.pinned_shown, the one rule), once each
+        top = timed.pinned_shown(self.pinned, self.show, self.acc_id)
+        marked = {e.id for e in top}
+        page = top + [e for e in page if e.id not in {e.id for e in self.pinned}]
         short = core.short_ids(page)
         parents = core.parents(page)
-        items = [PostItem(e, render(show_post(core, e, short.get(real(e).id), width=width,
-                                              parent=parents.get(e.id))), key=e.id)
-                 for e in page]
+        items = []
+        for e in page:
+            shown = show_post(core, e, short.get(real(e).id), width=width,
+                              parent=parents.get(e.id))
+            if e.id in marked:
+                shown.above.insert(0, ("notice", "📌 " + _("pinned")))
+            items.append(PostItem(e, render(shown), key=e.id))
         await lv.clear()
         await lv.extend(items)
-        if items:
+        if items and at is not None:  # more came: the reader stays where they were
+            lv.index = min(at, len(items) - 1)
+        elif items:
             lv.index = 0
             lv.scroll_home(animate=False)
         self.app.load_pictures(items)

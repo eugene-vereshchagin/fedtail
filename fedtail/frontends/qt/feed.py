@@ -30,6 +30,7 @@ from ...model import Relationship, only_private
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity, timed
+from ..common import profile as profile_rules
 from ..common.lane import MEDIA_KINDS, LaneModel, jumps_to_new
 from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
@@ -1116,10 +1117,7 @@ class AccountWidget(_PagedTab):
             self._offer_origin()
 
     def _remote_host(self):
-        handle = self.acc.handle if self.acc else ""
-        if "@" not in handle or not self.core.cfg["feed"].get("remote_profiles", True):
-            return ""
-        return handle.split("@", 1)[1]
+        return profile_rules.origin_host(self.acc, self.core.cfg)
 
     def _offer_origin(self):
         """My server has nothing older: the button now reads further back from their
@@ -1276,8 +1274,7 @@ class AccountWidget(_PagedTab):
         self._fill()
         self._from_origin()
         if not hasattr(self, "software"):  # what their server runs (feed.server_info)
-            from urllib.parse import urlparse
-            host = urlparse(acc.url or acc.uri).hostname or ""
+            host = profile_rules.home_of(acc)
             self.software = ""
             if host:
                 self.win.bridge.call(self.core.server_software(host), ok=self._software,
@@ -1337,20 +1334,13 @@ class AccountWidget(_PagedTab):
         top.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(6)
-        bits = [f"@{esc(acc.handle)}"]
-        if acc.bot:
-            bits.append(_("bot"))
-        if acc.locked:
-            bits.append("🔒 " + _("acc_locked"))
-        if acc.created:
-            bits.append(_("acc_since", date=acc.created.strftime("%d.%m.%Y")))
-        if rel.followed_by:
-            bits.append("<b>" + _("acc_follows_you") + "</b>")
-        if getattr(self, "software", ""):
-            bits.append("🖥 " + esc(self.software))
+        # the line about the person: the one every interface says (common/profile.meta);
+        # "follows you" in bold here
         since = rel.following and self.core.followed_since(acc.id, rel)
-        if since:
-            bits.append(esc(_("acc_followed_since", when=self.win.theme.date(since))))
+        follows = _("acc_follows_you")
+        bits = [f"<b>{esc(b)}</b>" if b == follows else esc(b)
+                for b in profile_rules.meta(acc, rel, self.win.theme.date, since or None,
+                                            getattr(self, "software", ""))]
         meta = QLabel(" · ".join(bits))
         meta.setObjectName("muted")
         meta.setTextFormat(Qt.TextFormat.RichText)

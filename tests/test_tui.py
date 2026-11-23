@@ -366,11 +366,16 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         )
         core, w = self.make(lanes={"enabled": ["home", "replies", "activity", "requests"]})
         mine = w.add(status("001", ME, minute=1, text="my post", vis="public"), home=True)
-        pic = status("003", BOB, minute=3, text="look", vis="public")
+        shy = dict(fakes.acct("L", "shy@social.example"), locked=True,
+                   created_at="2020-05-01T10:00:00.000Z")
+        pic = status("003", shy, minute=3, text="look", vis="public")
         pic["media_attachments"] = [{"id": "m1", "type": "image",
                                      "url": "https://example.test/m1.png",
                                      "preview_url": "https://example.test/m1s.png"}]
+        pic["pinned"] = True
         w.add(pic, home=True)
+        w.featured["L"] = {"tags": [{"name": "cats", "statuses_count": 7}]}
+        w.familiar["L"] = [BOB]
         w.act("a0", "follow", BOB, minute=1)  # history: the first fetch is seen
         app = FedtailApp(core)
 
@@ -380,6 +385,22 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             f.set_exception(OSError("no network in tests"))
             return f
         app.core.media_bytes = no_network
+
+        def software(host):  # what their server runs: asked for the profile's own host
+            from concurrent.futures import Future
+            f = Future()
+            f.set_result("GoToSocial 0.17" if host == "example.test" else "")
+            return f
+        app.core.server_software = software
+        asked = []
+
+        def from_origin(acc, cursor, have, resolve=False):  # their own server's posts
+            from concurrent.futures import Future
+            asked.append((acc.handle, cursor))
+            f = Future()
+            f.set_result(([], None))  # (nothing further back there either)
+            return f
+        app.core.older_from_origin = from_origin
         async with app.run_test(size=(120, 40)) as pilot:
             core.poll_once()
             w.act("a1", "favourite", BOB, st=mine, minute=5)
@@ -436,6 +457,35 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             title = app.screen.query_one("#title", Static)
             self.assertEqual(title.region.y, 0)  # the header is still at the top
             self.assertGreater(title.region.height, 0)
+            # the line about the person, the windows' and the page's (common/profile
+            # .meta): locked, here since, what their server runs — the terminal said
+            # only the counts (24.11)
+            await self.wait(pilot, lambda: getattr(app.screen, "software", ""))
+            about = str(app.screen.query_one("#about", Static).render())
+            self.assertIn(i18n._("acc_locked"), about)
+            self.assertIn("01.05.2020", about)
+            self.assertIn("GoToSocial 0.17", about)
+            # and what else a profile says there: whom of mine follows them, the tags
+            # they put forward; their pinned post on top, marked, once
+            await self.wait(pilot, lambda: "#cats" in str(
+                app.screen.query_one("#about", Static).render()))
+            about = str(app.screen.query_one("#about", Static).render())
+            self.assertIn("@bob@social.example", about)
+            rows = app.screen.query_one("#posts").children
+            await self.wait(pilot, lambda: app.screen.pinned)
+            await pilot.pause(0.2)
+            rows = list(app.screen.query_one("#posts").children)
+            self.assertEqual([r.entry.id for r in rows].count("003"), 1)
+            self.assertEqual(rows[0].entry.id, "003")
+            self.assertIn(i18n._("pinned"), str(rows[0].query_one(Static).render()))
+            # M — more: my server has no older page, so their own server is asked
+            # (feed.remote_profiles), once; then there is nothing further back
+            await pilot.press("M")
+            await self.wait(pilot, lambda: app.screen._older == "end")
+            self.assertEqual(asked, [("shy@social.example", None)])
+            await pilot.press("M")
+            await pilot.pause(0.2)
+            self.assertEqual(len(asked), 1)
             await pilot.press("escape")
             await self.wait(pilot, lambda: not isinstance(app.screen, ProfileScreen))
             await pilot.press("v")

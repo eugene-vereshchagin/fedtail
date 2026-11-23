@@ -310,8 +310,33 @@ THREAD_PARTS = {
     "fold_branch": r"fold_branch|postkeys\.branch|postkeys\.fold|foldBranch|foldButton",
     "reload": r"\breload\b|reloadThread|action_refresh|openThread\(",
 }
+# A profile's head: the line about the person, my note, the buttons, which posts, the
+# fields, who of mine follows them, what they put forward, the pinned posts, a move,
+# their older posts — my server's and their own server's.
+PROFILE_PLACES = {
+    "qt": [_F + "qt/feed.py"],
+    "gtk": [_F + "gtk/window.py", _F + "gtk/profileposts.py"],
+    "tui": [_F + "tui/app.py"],
+    "web": ["fedtail/data/web/app.js"],
+    "android": [_K + "Screens.kt", _K + "AppModel.kt", _K + "Cards.kt"],
+}
+PROFILE_PARTS = {
+    "about": r"\.meta\(|\bmeta\b",
+    "note": r"note_line|noteLine|note_text\(rel",
+    "buttons": r"\.actions\(|\.actions\b|\"actions\"",
+    "shows": r"profile_shows|PROFILE_SHOWS|\.shows\b|\"shows\"",
+    "fields": r"\.fields\b|\"fields\"",
+    "familiar": r"familiar",
+    "featured": r"featured",
+    "pinned": r"pinned",
+    "moved": r"moved",
+    "older": r"account_more|action_more|older_btn|_older\b|load_older|\.older\b|accountMore",
+    "origin": r"origin_host|_remote_host|from_origin|origin_list|originList|\"origin\"|"
+              r"older_from_origin|OlderOffer",  # (the phone: the page's offer, its cursor)
+}
 # thing → (its places, its parts, its table in parity.toml)
 THINGS = {
+    "profile_head": (PROFILE_PLACES, PROFILE_PARTS),
     "editor": (EDITOR_PLACES, EDITOR_PARTS),
     "lane_head": (LANE_PLACES, LANE_PARTS),
     "thread_head": (THREAD_PLACES, THREAD_PARTS),

@@ -382,7 +382,6 @@ def web_date(when):
     """A time as the cards say it: today's hour, else the day too (the windows' way)."""
     if not when:
         return ""
-    from datetime import datetime
     local = when.astimezone()
     if local.date() == datetime.now().astimezone().date():
         return local.strftime("%H:%M")
@@ -1744,14 +1743,14 @@ class Web:
         """What the windows add to a profile, asked at once: the pinned posts on top
         (feed.profile_pinned), what they put forward (feed.profile_featured), whom of
         mine they follow, their server's software (feed.server_info), a move."""
-        from urllib.parse import urlparse
+        from ..common import profile as prof
         core, cfg = self.core, self.core.cfg["feed"]
         futs = {}
         if cfg.get("profile_pinned", True):
             futs["pinned"] = core.pinned(acc.id)
         if cfg.get("profile_featured", True):
             futs["featured"] = core.featured(acc.id)
-        host = urlparse(acc.url or acc.uri or "").hostname or ""
+        host = prof.home_of(acc)
         if host and not own:
             futs["software"] = core.server_software(host)
         if not own and core.supports("familiar"):
@@ -1763,37 +1762,28 @@ class Web:
             except Exception as e:  # noqa: BLE001 — the profile shows without it
                 log.debug("profile %s: %s", key, e)
         out = {"pinned": list(got.get("pinned") or []), "software": got.get("software") or ""}
-        feat = got.get("featured") or {}
         lines = []
-        tags = ["#" + t.name + (f" ({int(t.posts)})" if t.posts else "")
-                for t in feat.get("tags") or [] if t.name]
-        people = [a for a in feat.get("people") or [] if a.id]
-        if tags:
-            lines.append({"title": _("featured_tags"), "text": ", ".join(tags),
-                          "tags": [t.name for t in feat["tags"] if t.name]})
-        if people:
-            lines.append({"title": _("featured_people"),
-                          "people": [account_json(a, self.core.cfg) for a in people],
-                          "text": ", ".join("@" + a.handle for a in people)})
+        for title, text, tags, people in prof.featured_lines(got.get("featured")):
+            line = {"title": title, "text": text}
+            if tags:
+                line["tags"] = [t.name for t in tags]
+            if people:
+                line["people"] = [account_json(a, self.core.cfg) for a in people]
+            lines.append(line)
         out["featured"] = lines
-        known = [a for a in got.get("familiar") or [] if a.id]
+        known = prof.familiar_line(got.get("familiar"))
         if known:
-            more = len(known) - 5
-            out["familiar"] = _("familiar", who=", ".join("@" + a.handle for a in known[:5]) +
-                                (" " + _("act_more", n=more) if more > 0 else ""))
-        if acc.moved and cfg.get("show_moved", True):
-            from html import unescape
-            words = unescape(re.sub(r"<[^>]+>", "", _("moved_to", acct="@" + acc.moved.handle)))
+            out["familiar"] = known
+        words = prof.moved_line(acc, self.core.cfg)
+        if words:
             out["moved"] = {"text": words,
                             "account": account_json(acc.moved, self.core.cfg),
                             "open": _("moved_open")}
         return out
 
     def _remote_host(self, acc):
-        handle = acc.handle if acc else ""
-        if "@" not in handle or not self.core.cfg["feed"].get("remote_profiles", True):
-            return ""
-        return handle.split("@", 1)[1]
+        from ..common import profile as prof
+        return prof.origin_host(acc, self.core.cfg)
 
     def _older_offer(self, acc, page, cursor=""):
         """The "more" under a profile's posts: {label, cursor} — my server's next page
@@ -1870,16 +1860,8 @@ class Web:
         """A day as the page writes it: an aware datetime (the model's) or ISO text — the
         date I follow someone since is text (core.followed_since), and every profile I
         followed through fedtail failed with "'str' has no astimezone" (31.10)."""
-        if not when:
-            return ""
-        if isinstance(when, str):
-            try:
-                when = datetime.fromisoformat(when.replace("Z", "+00:00"))
-            except ValueError:
-                return when[:10]
-            if when.tzinfo is None:
-                return when.strftime("%d.%m.%Y")
-        return when.astimezone().strftime("%d.%m.%Y")
+        from ..common import profile as prof
+        return prof.day(when)
 
     def profile_act(self, acc_id, key, answer=None, confirmed=False, chosen=None):
         """A profile's button (common/profile.py), done as the windows do it; what's

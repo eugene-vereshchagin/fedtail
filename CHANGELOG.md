@@ -36,6 +36,12 @@
   drafts, the preview and the files' descriptions — in the full editor, which opens with
   what the line already holds and that tool at once. Qt and GTK, one list. Before, the
   line had none of it, and no way to the editor either.
+- **The terminal's profile says what the windows' does**: a bot, a locked account, here
+  since, what their server runs, since when you follow them, who of yours follows them,
+  the tags and people they put forward, a move — and their pinned posts on top, marked.
+  `M` — more: older posts from your server, then (`people.remote_profiles`) from their own.
+- The "details" place of a profile offered posts from the person's own server even with
+  `people.remote_profiles` off.
 - **The input line keeps its words** (`post.drafts_autosave`): what is typed in the split
   layout's line is saved a moment after the last key and is there again after a crash or
   a restart — as the same draft the full editor opens for that post. A draft written in
@@ -100,6 +106,10 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: a profile's head is checked part by part in every interface, the ≡
+  menu of the two windows item by item, and the lists every interface draws (a profile's
+  buttons, a post's menu, the places) are checked to be the shared ones; the line about
+  a person is written once (`common/profile.py`) — Qt kept a copy.
 - Behind the scenes: every setting the full editor reads, the input line of the same
   toolkit reads too, or says why not (`tests/test_parity_flags.py`).
 - Behind the scenes: what stands over a lane and over a thread is checked part by part in

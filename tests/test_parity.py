@@ -42,8 +42,9 @@ class ParityTest(unittest.TestCase):
         """What stands over a lane and over a thread, part by part, in the Qt window,
         the GTK window, the terminal, the page and the phone — each words them its own
         way, so the check by words can't follow; a part one lacks is said in
-        parity.toml ([[lane_head]], [[thread_head]]) or stops here."""
-        for thing in ("lane_head", "thread_head"):
+        parity.toml ([[lane_head]], [[thread_head]], [[profile_head]]) or stops here.
+        A profile's head the same: the terminal's said the counts only (24.11)."""
+        for thing in ("lane_head", "thread_head", "profile_head"):
             with self.subTest(thing=thing):
                 problems = parity.check_things(thing)
                 self.assertEqual(problems, [], "\n" + "\n".join(problems))
@@ -66,6 +67,32 @@ class ParityTest(unittest.TestCase):
             "utf-8")
         for call in ("post_menu(", ".profile_act(", ".page("):
             self.assertIn('_s["web"]' + call if call.startswith(".") else call, bridge)
+
+    def test_the_two_windows_main_menu_is_one(self):
+        """The ≡ menu of the Qt window and of the GTK one, item for item: each is built
+        by hand in its toolkit (a QMenu, a Gio.Menu), so nothing but this keeps them the
+        same. The words they show are compared — an item added to one only fails here.
+        (The terminal's, the page's and the phone's come from common/places.menu.)"""
+        import re
+
+        def words(path, names):
+            text = (ROOT / path).read_text("utf-8")
+            out = set()
+            for name in names:
+                i = text.index(f"    def {name}(")
+                j = re.compile(r"\n    def |\nclass |\ndef ").search(text, i + 10).start()
+                out |= set(re.findall(r'_\("([a-z_0-9]+)"', text[i:j]))
+                out |= set(re.findall(r'"((?:silence|tender|debug)_[a-z_]+)"', text[i:j]))
+            return out
+
+        qt = words("fedtail/frontends/qt/window.py",
+                   ["_app_menu", "_tender_menu", "_try_theme_menu"])
+        gtk = words("fedtail/frontends/gtk/menu.py", ["model", "_themes"])
+        self.assertGreater(len(qt), 25)
+        # what one says where the other draws it elsewhere
+        qt -= {"debug_notify_sent"}  # the answer to "test a notification", said in place
+        gtk -= {"accounts"}          # the accounts' submenu's title (Qt's: accounts_menu)
+        self.assertEqual(qt ^ gtk, set(), "the ≡ menu differs between Qt and GTK")
 
     def test_the_editors_check_itself(self):
         have = {p: set(parity.EDITOR_PARTS) for p in parity.EDITOR_PLACES}

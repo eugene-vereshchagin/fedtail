@@ -1,6 +1,6 @@
 """What a profile offers — the line about the person and the buttons under it — and
-what each button does, once for every toolkit (the Qt window has its own still; GTK
-and the web take it from here, so they offer the same).
+what each button does, once for every interface: all of them take both from here, so
+they say and offer the same.
 
 `actions()` says which buttons, in which order, with which words, from who they are to
 me (Relationship) and what my server can do. `do()` carries one out through a `host`
@@ -119,6 +119,77 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
     if details:
         out.append(Act("details", "ℹ " + _("profile_title") + "…"))
     return out
+
+
+def day(when):
+    """A day in words for meta(): an aware datetime (the model's) or ISO text — the date
+    I follow someone since is text (core.followed_since). For an interface with no
+    theme's date of its own (the page, the terminal)."""
+    from datetime import datetime
+    if not when:
+        return ""
+    if isinstance(when, str):
+        try:
+            when = datetime.fromisoformat(when.replace("Z", "+00:00"))
+        except ValueError:
+            return when[:10]
+        if when.tzinfo is None:
+            return when.strftime("%d.%m.%Y")
+    return when.astimezone().strftime("%d.%m.%Y")
+
+
+def home_of(acc):
+    """The server a person lives on (for "what it runs", core.server_software), or ""."""
+    from urllib.parse import urlparse
+    return urlparse(acc.url or acc.uri or "").hostname or ""
+
+
+def origin_host(acc, cfg):
+    """The server whose own list of their posts goes further back than mine
+    (feed.remote_profiles): a person of another server — else ""."""
+    handle = acc.handle if acc else ""
+    if "@" not in handle or not (cfg.get("feed") or {}).get("remote_profiles", True):
+        return ""
+    return handle.split("@", 1)[1]
+
+
+FAMILIAR_SHOWN = 5
+
+
+def familiar_line(known):
+    """"Followed by @a, @b and 3 more" — whom of mine follows them too; "" for none."""
+    known = [a for a in known or () if a.id]
+    if not known:
+        return ""
+    more = len(known) - FAMILIAR_SHOWN
+    return _("familiar", who=", ".join("@" + a.handle for a in known[:FAMILIAR_SHOWN]) +
+             (" " + _("act_more", n=more) if more > 0 else ""))
+
+
+def featured_lines(feat):
+    """What they put forward (feed.profile_featured), in words: [(title, text, tags,
+    people)] — their featured tags with how many posts, the people they recommend."""
+    feat = feat or {}
+    out = []
+    tags = [t for t in feat.get("tags") or [] if t.name]
+    people = [a for a in feat.get("people") or [] if a.id]
+    if tags:
+        out.append((_("featured_tags"),
+                    ", ".join("#" + t.name + (f" ({int(t.posts)})" if t.posts else "")
+                              for t in tags), tags, []))
+    if people:
+        out.append((_("featured_people"), ", ".join("@" + a.handle for a in people),
+                    [], people))
+    return out
+
+
+def moved_line(acc, cfg):
+    """"This account moved to @new" as plain words (feed.show_moved), or ""."""
+    import re
+    from html import unescape
+    if not getattr(acc, "moved", None) or not (cfg.get("feed") or {}).get("show_moved", True):
+        return ""
+    return unescape(re.sub(r"<[^>]+>", "", _("moved_to", acct="@" + acc.moved.handle)))
 
 
 def note_line(rel, mine):
