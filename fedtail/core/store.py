@@ -15,6 +15,8 @@ import time
 import weakref
 from datetime import UTC, datetime
 
+from .proto import raw
+
 log = logging.getLogger(__name__)
 # the ids of the events fedtail writes into Activity itself (what I did: "I followed…"),
 # never the server's: no fetch goes on from them, they count as nothing new
@@ -297,8 +299,8 @@ class Store:
             self.db.execute("ALTER TABLE statuses ADD COLUMN reply_to TEXT")
             self.db.execute("ALTER TABLE statuses ADD COLUMN author TEXT")
             self.db.execute(
-                "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
-                "author = json_extract(data, '$.account.id')")
+                f"UPDATE statuses SET reply_to = json_extract(data, '{raw.SQL_REPLY_TO}'), "
+                f"author = json_extract(data, '{raw.SQL_AUTHOR_ID}')")
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
         # my own posts, found fast: my direct messages go into "Direct" (app._carry_my_direct)
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_author ON statuses (author)")
@@ -322,7 +324,8 @@ class Store:
         is its first coming (inserted oldest first: OR IGNORE keeps that one)."""
         self.db.execute(
             "INSERT OR IGNORE INTO first_seen (source, real_id, item_id) "
-            "SELECT i.source, COALESCE(json_extract(s.data, '$.reblog.id'), s.id), i.item_id "
+            f"SELECT i.source, COALESCE(json_extract(s.data, '{raw.SQL_BOOSTED_ID}'), s.id), "
+            "i.item_id "
             "FROM items i JOIN statuses s ON s.id = i.status_id ORDER BY i.sort ASC")
 
     def _rename_lanes(self):
@@ -478,8 +481,8 @@ class Store:
             db.execute("CREATE TEMP TABLE IF NOT EXISTS gc_front (id TEXT PRIMARY KEY)")
             db.execute("DELETE FROM gc_front")
             db.execute("INSERT INTO gc_front SELECT id FROM gc_keep")
-            leads = ("WITH f AS MATERIALIZED (SELECT json_extract(s.data, '$.reblog.id', "
-                     "'$.quote.quoted_status_id', '$.quote.quoted_status.id', '$.quote_id') "
+            paths = ", ".join(f"'{p}'" for p in raw.SQL_LEADS)  # the boosted, the quoted
+            leads = (f"WITH f AS MATERIALIZED (SELECT json_extract(s.data, {paths}) "
                      "AS j, s.reply_to AS r FROM statuses s JOIN gc_front g ON g.id = s.id) "
                      "SELECT DISTINCT v FROM (SELECT r AS v FROM f UNION ALL "
                      "SELECT e.value FROM f, json_each(f.j) AS e) "
@@ -563,9 +566,9 @@ class Store:
         rows = []
         touched = now_iso()
         for st in statuses:
-            for s in ([st["reblog"]] if st.get("reblog") else []) + [st]:
+            for s in ([raw.boosted(st)] if raw.boosted(st) else []) + [st]:
                 rows.append((s["id"], json.dumps(s), s.get("created_at", ""),
-                             s.get("in_reply_to_id"), (s.get("account") or {}).get("id"),
+                             raw.reply_to(s), (s.get("account") or {}).get("id"),
                              touched))
         # a post of mine is read: I wrote it — from this client or any other, come by a
         # lane, a thread, a catch-up after a restart
@@ -592,11 +595,11 @@ class Store:
                 self.status_version += 1
             if self._tags is not None:
                 for st in statuses:
-                    for t in (st.get("reblog") or st).get("tags") or ():
+                    for t in raw.real(st).get("tags") or ():
                         self._count_tag(t.get("name"))
             if self._people is not None:
                 for st in statuses:
-                    self._count_people(st.get("reblog") or st)
+                    self._count_people(raw.real(st))
 
     def _count_tag(self, name):
         if not name:
@@ -608,9 +611,9 @@ class Store:
 
     def _count_people(self, s):
         acc = s.get("account") or {}
-        self._count_person(acc.get("acct"), acc.get("display_name"))
+        self._count_person(raw.handle(acc) or None, raw.name(acc) or None)
         for m in s.get("mentions") or ():
-            self._count_person(m.get("acct"), None)
+            self._count_person(raw.handle(m) or None, None)
 
     def _count_person(self, acct, name):
         if not acct:
@@ -626,13 +629,13 @@ class Store:
         with self.lock:
             if self._people is None and compute:
                 self._people = {}
-                q = ("SELECT json_extract(data, '$.account.acct'), "
-                     "json_extract(data, '$.account.display_name'), "
+                q = (f"SELECT json_extract(data, '{raw.SQL_HANDLE}'), "
+                     f"json_extract(data, '{raw.SQL_NAME}'), "
                      "json_extract(data, '$.mentions') FROM statuses")
                 for acct, name, mentions in self.db.execute(q):
                     self._count_person(acct, name)
                     for m in json.loads(mentions or "[]") or ():
-                        self._count_person(m.get("acct"), None)
+                        self._count_person(raw.handle(m) or None, None)
             return self._people
 
     def tag_counts(self, compute=True):
@@ -690,7 +693,8 @@ class Store:
             # and the boosts of it: each holds the whole post (its text stayed in the
             # lanes after the post was deleted, 21.11)
             boosts = [r[0] for r in db.execute(
-                "SELECT id FROM statuses WHERE json_extract(data, '$.reblog.id') = ?", (sid,))]
+                "SELECT id FROM statuses WHERE "
+                f"json_extract(data, '{raw.SQL_BOOSTED_ID}') = ?", (sid,))]
             for x in [sid, *boosts]:
                 db.execute("DELETE FROM statuses WHERE id=?", (x,))
                 db.execute("DELETE FROM items WHERE status_id=?", (x,))
@@ -860,13 +864,12 @@ class Store:
     @staticmethod
     def light_status(st):
         """As much of a status as link_items needs: its id and its boost's."""
-        boost = st.get("reblog")
-        return {"id": st["id"], "reblog": {"id": boost["id"]}} if boost else {"id": st["id"]}
+        return raw.light(st)
 
     @staticmethod
     def _first_seen(db, source, item_id, st):
-        real_id = (st.get("reblog") or st)["id"]
-        if st.get("reblog") and db.execute("SELECT 1 FROM read WHERE status_id=?",
+        real_id = raw.real(st)["id"]
+        if raw.boosted(st) and db.execute("SELECT 1 FROM read WHERE status_id=?",
                                            (real_id,)).fetchone():
             item_id = ""  # read already (in a thread, another lane): a boost brings it again
         db.execute("INSERT OR IGNORE INTO first_seen VALUES (?, ?, ?)",
@@ -1507,10 +1510,11 @@ class Store:
                 "WHERE i.source = ? AND i.sort >= ? GROUP BY who ORDER BY n DESC LIMIT ?",
                 (source, since, top)).fetchall()
             links = db.execute(
-                "SELECT COALESCE(json_extract(s.data, '$.reblog.card.url'), "
-                "json_extract(s.data, '$.card.url')) AS link, "
-                "COALESCE(json_extract(s.data, '$.reblog.card.title'), "
-                "json_extract(s.data, '$.card.title')) AS title, COUNT(*) AS n "
+                "SELECT COALESCE(" + ", ".join(
+                    f"json_extract(s.data, '{p}')" for p in raw.SQL_CARD_URL) + ") AS link, "
+                "COALESCE(" + ", ".join(
+                    f"json_extract(s.data, '{p}')" for p in raw.SQL_CARD_TITLE) + ") AS title, "
+                "COUNT(*) AS n "
                 "FROM items i JOIN statuses s ON s.id = i.status_id "
                 "WHERE i.source = ? AND i.sort >= ? AND link IS NOT NULL "
                 "GROUP BY link ORDER BY n DESC, link LIMIT ?",

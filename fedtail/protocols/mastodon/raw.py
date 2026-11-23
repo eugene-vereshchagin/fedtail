@@ -112,9 +112,34 @@ COUNTED = ("replies_count", "reblogs_count", "favourites_count", "quotes_count",
 # …and the two of them another server's own copy says better
 SHARED_AND_LIKED = ("favourites_count", "reblogs_count")
 
+# a status's fields that hold another object's id, besides its own, its account's and
+# its mentions' (the window of several accounts marks every id with whose it is)
+ID_FIELDS = ("in_reply_to_id", "in_reply_to_account_id")
+
+
+def light(st):
+    """As little of a status as tells which post it is and which it boosts."""
+    inner = st.get("reblog")
+    return {"id": st["id"], "reblog": {"id": inner["id"]}} if inner else {"id": st["id"]}
+
+
+def is_account(obj):
+    """Is this object an account (not a status, not a relationship)?"""
+    return isinstance(obj, dict) and "acct" in obj and "id" in obj
+
+
 # the same things as SQLite's JSON paths, for the store's own questions
 SQL_BOOSTED_ID = "$.reblog.id"
 SQL_REPLY_TO = "$.in_reply_to_id"
+SQL_AUTHOR_ID = "$.account.id"
+SQL_HANDLE = "$.account.acct"
+SQL_NAME = "$.account.display_name"
+# the posts a post leads to besides its parent: the one it boosts, the one it quotes
+SQL_LEADS = ("$.reblog.id", "$.quote.quoted_status_id", "$.quote.quoted_status.id",
+             "$.quote_id")
+# a link card's address and title: the boosted post's first, else its own
+SQL_CARD_URL = ("$.reblog.card.url", "$.card.url")
+SQL_CARD_TITLE = ("$.reblog.card.title", "$.card.title")
 
 # ---- an account ----------------------------------------------------------------------
 

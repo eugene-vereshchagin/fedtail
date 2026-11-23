@@ -17,6 +17,7 @@ from concurrent.futures import Future
 from . import lanes as lanes_module
 from .events import Events
 from .model import real
+from .proto import raw
 from .threads import Node
 
 log = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def full_handle(core):
     me = getattr(core, "me", None)
     if not me:
         return ""
-    acct = me.get("acct") or me.get("username") or ""
+    acct = raw.handle(me) or me.get("username") or ""
     if "@" not in acct:
         from urllib.parse import urlsplit
         server = (getattr(core, "auth", None) or {}).get("server") or me.get("url") or ""
@@ -107,15 +108,15 @@ class MergedCore:
             return st
         s = dict(st)
         s["id"] = self._p(tag, st.get("id"))
-        for k in ("in_reply_to_id", "in_reply_to_account_id"):
+        for k in raw.ID_FIELDS:
             if s.get(k):
                 s[k] = self._p(tag, s[k])
         if isinstance(s.get("account"), dict):
             s["account"] = dict(s["account"], id=self._p(tag, s["account"].get("id")))
         if s.get("mentions"):
             s["mentions"] = [dict(m, id=self._p(tag, m.get("id"))) for m in s["mentions"]]
-        if isinstance(s.get("reblog"), dict):
-            s["reblog"] = self.wrap(tag, s["reblog"])
+        if isinstance(raw.boosted(s), dict):
+            s = raw.with_boosted(s, self.wrap(tag, raw.boosted(s)))
         s["_via"] = self.via(tag)
         s["_profile"] = tag
         return s
@@ -133,14 +134,14 @@ class MergedCore:
             return st
         s = {k: v for k, v in st.items() if k not in ("_via", "_profile")}
         cut = len(tag) + len(SEP)
-        for k in ("id", "in_reply_to_id", "in_reply_to_account_id"):
+        for k in ("id", *raw.ID_FIELDS):
             if isinstance(s.get(k), str) and s[k].startswith(tag + SEP):
                 s[k] = s[k][cut:]
         if isinstance(s.get("account"), dict):
             a = s["account"].get("id", "")
             s["account"] = dict(s["account"], id=a[cut:] if a.startswith(tag + SEP) else a)
-        if isinstance(s.get("reblog"), dict):
-            s["reblog"] = self._unwrap(tag, s["reblog"])
+        if isinstance(raw.boosted(s), dict):
+            s = raw.with_boosted(s, self._unwrap(tag, raw.boosted(s)))
         return s
 
     def _then(self, fut, fn):
@@ -393,7 +394,7 @@ class MergedCore:
         """The Thread button's number (threadsize.py), from the account that has it."""
         if not isinstance(st, dict):
             return None
-        inner = st.get("reblog") if isinstance(st.get("reblog"), dict) else st
+        inner = raw.boosted(st) if isinstance(raw.boosted(st), dict) else st
         core, tag, sid = self.split(str(inner.get("id") or ""))
         if tag is None:
             return self.primary.thread_sized(st)
@@ -613,9 +614,9 @@ class MergedCore:
 
         def job():
             st = self._lookup(status, target, who)
-            if action == "fav" and not real(st).get("favourited"):
+            if action == "fav" and not raw.liked(real(st)):
                 st = target.favourite(st).result()
-            elif action == "boost" and not real(st).get("reblogged"):
+            elif action == "boost" and not raw.shared(real(st)):
                 st = target.boost(st).result()
             return self.wrap(tag, st)
         return self.primary.bg.submit(job)
@@ -632,7 +633,7 @@ class MergedCore:
         if isinstance(r, list):
             return [self.wrap(tag, x) if isinstance(x, dict) and "content" in x else x
                     for x in r]
-        if isinstance(r, dict) and "acct" in r and "id" in r:
+        if raw.is_account(r):
             return dict(r, id=self._p(tag, r["id"]))
         return r
 

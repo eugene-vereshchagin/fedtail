@@ -29,8 +29,6 @@ FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
 CORE_RAW = {
     "app.py": 39,
     "atoms.py": 24,
-    "merged.py": 16,
-    "store.py": 13,
     "view.py": 21,
 }
 
