@@ -409,8 +409,8 @@ private fun ThreadPlace(
             LaunchedEffect(model.threadOpening) {
                 if (model.threadOpening == model.threadAimed) return@LaunchedEffect
                 val want = model.threadAimAt ?: focus
-                val i = model.threadPosts.indexOfFirst { it.sid == want || it.id == want }
-                    .takeIf { it >= 0 } ?: model.threadPosts.indexOfFirst { it.sid == focus }
+                val i = model.threadShown.indexOfFirst { it.sid == want || it.id == want }
+                    .takeIf { it >= 0 } ?: model.threadShown.indexOfFirst { it.sid == focus }
                 // the head is the list's first item: every post one further
                 if (i >= 0) state.scrollToItem(i + if (model.threadHead != null) 1 else 0)
                 model.threadAimed = model.threadOpening
@@ -425,14 +425,14 @@ private fun ThreadPlace(
                         modifier = Modifier.padding(top = 12.dp))
                 }
             }
-            else PostList(model.threadPosts, state, null, act, model.hideSensitive,
+            else PostList(model.threadShown, state, null, act, model.hideSensitive,
                 thread = true, focus = focus,
                 header = head?.let { h -> @Composable {
                     ThreadHead(h, model.threadProgress, onNext = {
                         // "to the next new one" (NOTES/15): the core named the next new
                         // comment after every post; here only the card on top is found
                         val map = h.optJSONObject("next_new") ?: return@ThreadHead
-                        val posts = model.threadPosts
+                        val posts = model.threadShown
                         val top = (state.firstVisibleItemIndex - 1).coerceAtLeast(0)
                         val idx = { id: String? -> posts.indexOfFirst { it.id == id } }
                         var from = posts.getOrNull(top)?.id

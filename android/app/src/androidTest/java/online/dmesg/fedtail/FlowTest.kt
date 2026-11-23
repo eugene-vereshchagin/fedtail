@@ -164,7 +164,10 @@ class FlowTest {
         // the card's own action, not a tap at its middle: that lands on a picture when
         // the first unread has one, and opens the viewer, not the thread
         compose.onAllNodes(card)[whole].performSemanticsAction(SemanticsActions.OnClick)
-        waitText("/1")                                  // the thread, numbered as a tree
+        // the thread, numbered as a tree: its first post is /0 — whichever card it was
+        // (a second run on the same device opens the lane elsewhere, at a post nobody
+        // answered: "/1" was waited for in vain, 24.11)
+        waitText("/0")
         waitText("Thread")
         back()
         waitDescription("open now", substring = true)                 // back in the lane…
@@ -220,6 +223,23 @@ class FlowTest {
         val words = "an answer from elsewhere " + System.currentTimeMillis()
         kotlinx.coroutines.runBlocking { Core.demoHappen("answer", "101", words) }
         waitText(words, 40_000)
+    }
+
+    @Test
+    fun aThreadsBranchFoldsAndUnfolds() {
+        // the windows' and the terminal's "-", the page's "− N": a top comment's branch
+        // away on a tap and back on the next (the phone had no such thing, 24.11)
+        launch("thread" to "101")
+        waitText("/1")
+        waitText("/2")
+        fun second() = compose.onAllNodesWithText("/2").fetchSemanticsNodes()
+        val fold = "Fold or unfold this comment's branch"
+        waitDescription(fold)
+        compose.onAllNodesWithContentDescription(fold).onFirst().performClick()
+        waitFor("the branch folded away", 10_000) { second().isEmpty() }
+        waitText("+ 2")
+        compose.onAllNodesWithContentDescription(fold).onFirst().performClick()
+        waitFor("the branch back", 10_000) { second().isNotEmpty() }
     }
 
     @Test

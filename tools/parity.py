@@ -307,7 +307,7 @@ THREAD_PARTS = {
     "all_warnings": r"cw_all_show|all_cw|cw_show|open_warnings",
     "next_new": r"thread_next_new|next_new|next_unread|nextNew",
     "progress": r"thread_progress|threadProgress|thread_step",
-    "fold_branch": r"fold_branch|postkeys\.branch|postkeys\.fold|foldBranch|foldButton",
+    "fold_branch": r"fold_branch|postkeys\.branch|postkeys\.fold|foldBranch|foldButton|toggleFold",
     "reload": r"\breload\b|reloadThread|action_refresh|openThread\(",
 }
 # A profile's head: the line about the person, my note, the buttons, which posts, the

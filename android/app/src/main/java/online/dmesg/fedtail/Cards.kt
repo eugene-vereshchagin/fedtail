@@ -176,9 +176,14 @@ class CardActions(
     val directMark: String = "none",
     val directColor: Color? = null,
     val onDirect: Color? = null,
+    // in a thread: a top comment's branch folded away and shown again (the windows' and
+    // the terminal's "-", the page's "− N"); folded — the comments whose branch is away
+    val fold: (PostItem) -> Unit = {},
+    val folded: Set<String> = emptySet(),
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
+    fold = { toggleFold(it.id) }, folded = threadFolded,
     open = { openThread(it.sid, it.openAt) }, reply = { compose(it) }, like = { act(it, "like") },
     media = { list, i ->  // ui.image_viewer = "browser": a picture opens there
         if (mediaLook.viewerOutside && list[i].kind == "image") openBrowser(list[i].url)
@@ -743,6 +748,18 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
                 Text(shownTime(p.created), fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
+                // a top comment with answers under it: its branch folded by a tap
+                if (p.branch.isNotEmpty()) {
+                    val away = p.id in act.folded
+                    val words = stringResource(R.string.fold_branch)
+                    Text((if (away) "+ " else "− ") + p.branch.size, fontSize = 13.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .clickable { act.fold(p) }
+                            .semantics { contentDescription = words }
+                            .padding(horizontal = 8.dp, vertical = 2.dp))
+                }
                 p.number?.let {
                     Text("/$it", fontSize = 13.sp, fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)

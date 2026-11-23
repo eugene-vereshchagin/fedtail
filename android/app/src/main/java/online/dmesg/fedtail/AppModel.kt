@@ -142,6 +142,7 @@ data class PostItem(
     val unread: Boolean, val sharedBy: String, val contextHandle: String,
     val contextText: String, val replies: Int, val shares: Int, val likes: Int,
     val liked: Boolean, val number: Int?, val depth: Int,
+    val branch: List<String> = emptyList(),      // a top comment's branch in a thread: the ids under it
     val indent: Int = 0,                         // how far in it is drawn: the model's, as everywhere
     val accountId: String = "",
     val pollOptions: List<String> = emptyList(), // a poll's options, to vote on
@@ -989,6 +990,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     var threadCwOpen by mutableStateOf(false) // ⚠ over a thread: every warning open
+    /** The top comments whose branch is folded away (the windows' "-"), and the thread as
+     *  it is shown then: what the core named as each one's branch is left out. */
+    var threadFolded by mutableStateOf(setOf<String>())
+    val threadShown: List<PostItem>
+        get() {
+            if (threadFolded.isEmpty()) return threadPosts
+            val away = threadPosts.filter { it.id in threadFolded }.flatMap { it.branch }.toSet()
+            return threadPosts.filter { it.id !in away }
+        }
+    fun toggleFold(id: String) {
+        threadFolded = if (id in threadFolded) threadFolded - id else threadFolded + id
+    }
 
     var laneOlder by mutableStateOf(false)   // "earlier" can bring older posts
     var loadingOlder by mutableStateOf(false)
@@ -1335,6 +1348,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
         places = keep + Place.Thread(postId)
         threadPosts = emptyList()
+        threadFolded = emptySet()
         threadHead = null
         watchThreadProgress(postId)
         viewModelScope.launch {
@@ -2616,6 +2630,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             likes = counts.optInt("likes"), liked = mine.optBoolean("liked"),
             number = if (o.has("number") && !o.isNull("number")) o.optInt("number") else null,
             depth = o.optInt("depth"),
+            branch = o.optJSONArray("branch")?.let { a -> (0 until a.length()).map { a.optString(it) } }
+                ?: emptyList(),
             indent = o.optInt("indent"),
             accountId = str(acc, "id"),
             pollOptions = poll?.optJSONArray("options")?.let { a ->

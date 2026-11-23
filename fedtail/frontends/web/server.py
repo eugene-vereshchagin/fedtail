@@ -1622,6 +1622,11 @@ class Web:
         unread = core.unread(posts)
         out = [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
                          number=n.number, depth=n.depth) for n in items]
+        # inside a thread a post's number is its own answers: the whole thread's size
+        # (counts.thread, for a lane's card) stood at every comment's reply button on
+        # the phone — "4" at each of four (24.11)
+        for p in out:
+            p["counts"]["thread"] = p["counts"]["replies"]
         # a top comment's branch — the comments under it, as the windows' "-" folds them
         # (common/postkeys.branch, the one rule): the page folds and unfolds on a click
         from ..common import postkeys

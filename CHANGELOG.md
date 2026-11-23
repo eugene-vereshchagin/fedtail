@@ -51,8 +51,11 @@
   marked, takes the post to the full editor, which asks (the line sent it as it was);
   `post.resize_images`: pictures are made to fit the server before they go;
   `post.cw_field`: the warning's field is there from the start.
-- **A thread's branch folds on the web page**: a "− N" button on a top-level comment
-  hides the answers under it, again — shows them (the windows' and the terminal's `-`).
+- **A thread's branch folds on the web page and on the phone**: a "− N" button on a
+  top-level comment hides the answers under it, again — shows them (the windows' and the
+  terminal's `-`).
+- Android: inside a thread every comment's reply button showed the whole thread's size
+  ("4" at each of four comments) — now its own answers.
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
   (or copied in a file manager and pasted) comes as its path: the editor attaches it
   instead of typing the path into the post; several at once too. Any other paste is
@@ -114,7 +117,7 @@
   toolkit reads too, or says why not (`tests/test_parity_flags.py`).
 - Behind the scenes: what stands over a lane and over a thread is checked part by part in
   every interface too (`[[lane_head]]`, `[[thread_head]]` in `parity.toml`): the lanes'
-  heads are the same in all five; a thread's branch can't be folded on the phone yet.
+  heads are the same in all five.
 - Behind the scenes: the editor is checked part by part in each of its seven places (the
   Qt window, the GTK panel, the split layout's input line in each, the terminal, the page,
   the phone): what one lacks is said with its reason in `docs/src/parity.toml`

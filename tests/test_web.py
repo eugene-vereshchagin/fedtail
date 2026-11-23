@@ -498,6 +498,9 @@ class WebTest(TmpDir):
         posts = json.loads(self.req("/api/thread?id=300")[2])["posts"]
         by = {p["id"]: p for p in posts}
         self.assertEqual(by["301"]["branch"], ["302", "303"])  # what is under it
+        # a card's number inside a thread is its own answers, not the thread's size
+        for p in posts:
+            self.assertEqual(p["counts"]["thread"], p["counts"]["replies"])
         self.assertNotIn("branch", by["304"])  # a top comment alone: nothing to fold
         self.assertNotIn("branch", by["300"])
         self.assertNotIn("branch", by["302"])  # (its top comment's is the one folded)
