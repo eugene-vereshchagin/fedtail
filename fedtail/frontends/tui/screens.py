@@ -799,6 +799,22 @@ class EmojiScreen(ModalScreen):
             app.push_screen(PlaceScreen("settings", "emoji"))  # its search at the emoji
 
 
+class PostText(TextArea):
+    """The editor's text. A paste that is files — their paths, as a terminal gives a
+    file dropped on it — attaches them (common/compose.pasted_files: Qt and GTK take a
+    pasted or dropped file; here it went into the text as its path, 23.11); any other
+    paste is text, as ever."""
+
+    async def _on_paste(self, event):
+        from ..common.compose import pasted_files
+        files = pasted_files(event.text)
+        attach = getattr(self.screen, "attach_files", None)
+        if files and attach is not None and not self.read_only:
+            event.stop()
+            event.prevent_default()  # (TextArea's own handler, run after this one)
+            attach(files)
+
+
 class ComposeScreen(Screen):
     """A whole post: the text (several lines), the warning, who sees it, the language.
     What it starts with and how drafts are kept are the windows' (common/compose.py).
@@ -932,13 +948,13 @@ class ComposeScreen(Screen):
             with Horizontal(id="c-side"):
                 if where == "left":
                     yield from self._format_buttons(Vertical, markup)
-                yield TextArea("", id="c-text")
+                yield PostText("", id="c-text")
                 if where == "right":
                     yield from self._format_buttons(Vertical, markup)
         else:
             if where == "top":
                 yield from self._format_buttons(Horizontal, markup)
-            yield TextArea("", id="c-text")
+            yield PostText("", id="c-text")
             if where == "bottom":
                 yield from self._format_buttons(Horizontal, markup)
         yield Static("", id="c-suggest")
@@ -1290,6 +1306,15 @@ class ComposeScreen(Screen):
                 return
             self.show_extras()
         self.app.push_screen(MenuScreen("📎 " + _("tui_extras"), items), chosen)
+
+    def attach_files(self, paths):
+        """Files given at once (pasted as paths): one — asked for its description, as
+        📎 does; several — attached as they are, described from 📎 after."""
+        if len(paths) == 1:
+            self._attached(paths[0])
+            return
+        self.media += [(str(p), "") for p in paths]
+        self.show_extras()
 
     def _attached(self, path):
         from pathlib import Path

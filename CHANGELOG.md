@@ -30,6 +30,10 @@
 - **The terminal: the post's menu in submenus** — "Author ▸", "Thread ▸", "More ▸" open
   as a menu over the menu (`card.menu_groups`), as in the windows, on the page and the
   phone; it was one long list.
+- **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
+  (or copied in a file manager and pasted) comes as its path: the editor attaches it
+  instead of typing the path into the post; several at once too. Any other paste is
+  text, as before.
 - **The terminal: ★ ♻ ↩ from another account.** With all accounts in one window the ⋯
   menu has "From another account", as the windows, the page and the phone have.
 - **The command line remembers** in the terminal and on the web page too: `↑` / `↓` walk

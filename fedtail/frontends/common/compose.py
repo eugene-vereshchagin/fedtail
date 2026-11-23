@@ -161,6 +161,33 @@ def _me_parts(me):
     return username.casefold(), (urlsplit(me.url or "").hostname or "").casefold()
 
 
+def pasted_files(text):
+    """Files pasted as their paths — what a terminal gets when a file is dropped on it,
+    or a file manager's "copy" pasted: every line a path (quoted or not, "file://…" too)
+    of a file that is there → [paths]; anything else (words, a link, a path that isn't
+    a file) → [] — it is text. For an editor without a clipboard of pictures."""
+    from pathlib import Path
+    from urllib.parse import unquote, urlsplit
+    lines = [x.strip() for x in str(text or "").splitlines() if x.strip()]
+    if not lines or len(lines) > 20:
+        return []
+    out = []
+    for line in lines:
+        line = line.strip("'\"")
+        if line.startswith("file://"):
+            line = unquote(urlsplit(line).path)
+        else:
+            line = line.replace("\\ ", " ")  # a shell's escaped spaces
+        try:
+            p = Path(line).expanduser()
+            if not (p.is_absolute() and p.is_file()):
+                return []
+        except (OSError, ValueError):
+            return []
+        out.append(str(p))
+    return out
+
+
 def newcomers(text, reply_to, visibility, me=None):
     """Who a private answer being written brings into the talk: the @people in the text
     that the private post answered neither came from nor named (cardtext.newcomers for

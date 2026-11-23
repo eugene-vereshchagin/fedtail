@@ -571,6 +571,48 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: (core.get_draft(key) or {}).get(
                 "text", "").endswith("half a thought"))
 
+    async def test_files_pasted_as_paths_are_attached(self):
+        """A file dropped on a terminal comes as a paste of its path: the editor attaches
+        it (Qt and GTK take a pasted or dropped file; here it went into the text, 23.11).
+        Words pasted stay words. The paste comes as the terminal sends it — an event."""
+        from textual import events
+        from textual.widgets import TextArea
+
+        from fedtail.frontends.common.compose import pasted_files
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.screens import ComposeScreen
+        one, two = self.tmp / "кот 1.png", self.tmp / "b.png"
+        for f in (one, two):
+            f.write_bytes(b"png")
+        self.assertEqual(pasted_files(f"'{one}'\nfile://{two}\n"), [str(one), str(two)])
+        self.assertEqual(pasted_files(str(one).replace(" ", "\\ ")), [str(one)])
+        for words in ("just words", "/no/such/file.png", f"{one} and more", "b.png", ""):
+            self.assertEqual(pasted_files(words), [], words)
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            app.query_one("#posts").focus()
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            editor = app.screen
+            text = editor.query_one("#c-text", TextArea)
+            text.focus()
+            await pilot.pause(0.1)
+            before = text.text  # (a reply: its "@bob " is there)
+            app.post_message(events.Paste("pasted words"))  # as the terminal's driver does
+            await self.wait(pilot, lambda: text.text.endswith("pasted words"))
+            await pilot.pause(0.2)
+            self.assertEqual(text.text, before + "pasted words")  # once
+            self.assertEqual(editor.media, [])
+            app.post_message(events.Paste(f"{one}\n{two}\n"))
+            await self.wait(pilot, lambda: len(editor.media) == 2)
+            self.assertEqual([m[0] for m in editor.media], [str(one), str(two)])
+            self.assertEqual(text.text, before + "pasted words")  # the paths: not text
+
     async def test_the_editor_follows_its_switches(self):
         """post.cw_field, post.preview, post.schedule: the terminal's editor showed the
         warning's field, Ctrl+R and "Schedule" whatever they said (21.11). Driven by keys."""
