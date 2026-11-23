@@ -56,16 +56,18 @@ class CountsMixin:
         """The round's step: the posts seen on screen lately asked again, if the time
         has come (or force). → the posts that changed (their raw statuses)."""
         every = int(self.cfg["feed"].get("counts_minutes", 5) or 0) * 60
+        now = time.monotonic()
+        with self._screen_lock():  # forgotten every round, counts asked or not: with
+            # counts_minutes = 0 and the threads' sizes on, the list only grew
+            seen = self.__dict__.get("_on_screen", {})
+            for i in [i for i, t in seen.items() if now - t > SEEN_FOR]:
+                del seen[i]
         if self.api is None or (every <= 0 and not force):
             return []
-        now = time.monotonic()
         if not force and now - self.__dict__.get("_counts_at", -1e9) < every:
             return []
         self._counts_at = now
         with self._screen_lock():
-            seen = self.__dict__.get("_on_screen", {})
-            for i in [i for i, t in seen.items() if now - t > SEEN_FOR]:
-                del seen[i]
             ids = sorted(seen, key=seen.get, reverse=True)[:BATCH * 3]
         if not ids:
             return []

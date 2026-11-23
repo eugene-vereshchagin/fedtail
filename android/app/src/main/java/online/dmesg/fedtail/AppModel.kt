@@ -343,6 +343,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var cmdHint by mutableStateOf("")
     var cmdConfirm by mutableStateOf<String?>(null) // "delete this?" — asked before doing
     var cmdBusy by mutableStateOf(false)
+    var cmdHistory by mutableStateOf(listOf<String>()) // the lines run before, newest first
 
     var settings by mutableStateOf(listOf<SettingsChapter>())
 
@@ -1619,6 +1620,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         cmdText = text
     }
 
+    /** The lines run before (the windows' ↑ ↓; here a list under the ↑ button). */
+    suspend fun loadCmdHistory() {
+        val got = Core.commandHistory()
+        if (Core.failed(got) != null) return
+        val arr = got.optJSONArray("lines") ?: return
+        cmdHistory = (0 until arr.length()).map { arr.getString(it) }.reversed().take(20)
+    }
+
     suspend fun cmdPreview(text: String) {
         val got = Core.commandPreview(text)
         cmdHint = if (Core.failed(got) == null) got.optString("text") else ""
@@ -1645,10 +1654,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 cmdHint = ""
             }
             got.optString("message").takeIf { it.isNotBlank() }?.let { message = it }
-            got.optJSONObject("open")?.let { o ->
-                o.optString("thread").takeIf { it.isNotBlank() }
-                    ?.let { openThread(it, o.optString("at").ifBlank { "post" }) }
-            }
+            // a thread, and a profile too ("@name" opened nothing here: only a thread was
+            // looked for, 23.11) — whatever the command says to open, as a link's answer
+            got.optJSONObject("open")?.let { openThing(it) }
+            loadCmdHistory()
             Core.refresh()
         }
     }

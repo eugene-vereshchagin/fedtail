@@ -46,7 +46,7 @@ from ..common.cardtext import (
     link_card,
     shown_text,
 )
-from ..common.commands import Commands
+from ..common.commands import Commands, History
 from ..richtext import clean
 from ..richtext import link_chars as richtext_link_chars
 
@@ -629,6 +629,7 @@ class Web:
         self.core = core if isinstance(core, View) else View(core)
         self.key = key
         self.cmds = Commands(self.core)
+        self.cmd_history = History()  # the lines run before: the page's ↑ ↓, the phone's list
         self.models = {}  # lane -> LaneModel (common/lane.py)
         self._saver = None  # common/images.Cache for "Save", made when first asked
         try:  # attachments of posts never sent last time: gone
@@ -788,7 +789,8 @@ class Web:
             return
         try:
             notes = notifytext.build(self.core.model_of(list(items)), cfg["privacy"],
-                                     self.core.lane_title, cfg.get("max_lines", 3))
+                                     self.core.lane_title, cfg.get("max_lines", 3),
+                                     getattr(self.core, "lane_rank", None))
         except Exception:  # noqa: BLE001 — a note is never worth a failed poll
             log.exception("web notify")
             return
@@ -1237,13 +1239,12 @@ class Web:
                 title = sidebar.group_title(group)
             for i, name in enumerate(names):
                 label, n = sidebar.lane_label(core, name, 60)
-                tip = _("tip_" + name)
                 fresh = sidebar.fresh(core, name) if n else 0
                 out.append({"name": name, "title": label, "unread": n,
                             "badge": sidebar.badge_kind(core, name),
                             "fresh": min(fresh, n), "fresh_words": sidebar.fresh_words(
                                 min(fresh, n)),
-                            "tip": "" if tip == "tip_" + name else tip,
+                            "tip": sidebar.lane_tip(name),  # (no number keys here)
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})
         first = sidebar.start_lane(core, [x["name"] for x in out])  # None: the curtain
@@ -1910,8 +1911,7 @@ class Web:
                           translates=getattr(core, "translation_languages", None),
                           quote_reply=bool(cfg["post"].get("quote_prefix", "> ")),
                           # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as)
-                          act_as=(lambda e: self.merged_core().act_accounts(core.raw(e)))
-                          if self.merged_core() and cfg["ui"].get("act_as", True) else None)
+                          act_as=actions.act_as_of(core, cfg))
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])
 
@@ -1996,16 +1996,6 @@ class Web:
             core.mute_thread(p, action == "mute").result()
             return {"message": _("thread_muted" if action == "mute" else "thread_unmuted")}
         raise ValueError(action)
-
-    def delete(self, sid):
-        """My own post, after the page asked "sure?"."""
-        core = self.core
-        p = self._post_by_id(sid)
-        me = core.me
-        if not (me and real(p).author.id == me.id):
-            raise ValueError("not mine")
-        core.delete(p).result()
-        return {"message": _("deleted")}
 
     def vote(self, sid, choices):
         core = self.core
@@ -2344,6 +2334,7 @@ class Web:
         """confirmed: D #id deletes only when asked twice — the page asks "sure?" in
         between; a typo or a stray request alone deletes nothing."""
         fut, message = self.cmds.run(line)
+        self.cmd_history.add(line)  # as the windows: what was run, to take up again
         if fut is None:
             return {"ok": False, "message": message}
         result = fut.result()
@@ -2359,6 +2350,11 @@ class Web:
                 self.core.delete(what).result()
                 return {"ok": True, "message": _("deleted")}
         return {"ok": True, "message": result if isinstance(result, str) else message}
+
+    def command_history(self):
+        """The lines run before, the oldest first (common/commands.History, the windows'
+        own): the page walks them with ↑ ↓, the phone lists them."""
+        return {"lines": list(self.cmd_history.lines[-50:])}
 
     # ---- places (common/places.py) ------------------------------------------------
     def places(self):
@@ -2676,6 +2672,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/push": lambda: self.web.push_state(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
                   "/api/emoji": lambda: self.web.emoji_list(q.get("q", "")),
+                  "/api/cmd_history": lambda: self.web.command_history(),
                   "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
                                                                    q.get("q", "")),
                   "/api/find_everywhere": lambda: self.web.find_everywhere(q.get("q", "")),
@@ -2764,7 +2761,6 @@ class Handler(BaseHTTPRequestHandler):
             "/api/act_as": lambda: web.act_as(str(body.get("id")), body.get("tag"),
                                               str(body.get("action") or "")),
             "/api/place": lambda: web.place_act(body),
-            "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/theme": lambda: web.try_theme(body.get("name")),
             "/api/merge": lambda: web.toggle_merge(),
             "/api/push_on": lambda: web.push_on(body),

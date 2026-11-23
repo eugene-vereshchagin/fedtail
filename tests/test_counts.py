@@ -135,3 +135,81 @@ class ThreadSizeTest(TmpDir):
         self.w.add(status("014", BOB, reply_to="013", minute=7, vis="public"))
         self.core.thread("012").result()
         self.assertEqual(self.core.thread_size(self.w.statuses["012"]), 4)
+
+
+class ThreadSizeCareTest(ThreadSizeTest):
+    """What the first cut of the thread's size left out (the audit of 23.11): a thread the
+    server didn't give was asked again at every scroll, the server's own limit wasn't
+    looked at, two posts of one thread cost two rounds of requests, nothing was ever
+    forgotten."""
+
+    def test_a_thread_not_given_is_left_alone_for_a_while(self):
+        def down(sid):
+            self.asked.append(sid)
+            raise OSError("no answer")
+        self.core.api.context = down
+        self.core.on_screen(["020"])
+        self.assertEqual(len(self.asked), 1)
+        for _ in range(5):  # still on screen, scrolled by again and again
+            self.core.on_screen(["020"])
+        self.assertEqual(len(self.asked), 1)
+        from fedtail.core import threadsize
+        with self.core._ts():  # the quiet time over: asked again
+            for k in self.core._ts_failed:
+                self.core._ts_failed[k] -= threadsize.FAILED_S + 1
+        self.core.on_screen(["020"])
+        self.assertEqual(len(self.asked), 2)
+
+    def test_the_servers_limit_nearly_spent_asks_nothing(self):
+        import time
+
+        from fedtail.protocols.base import Budget
+        self.core.api.budget = Budget(300, 3, time.time() + 120)  # a quarter of 3: none
+        self.core.on_screen(["020"])
+        self.assertEqual(self.asked, [])
+        self.core.api.budget = Budget(300, 200, time.time() + 120)
+        self.core.on_screen(["020"])
+        self.assertTrue(self.asked)
+
+    def test_two_posts_of_one_thread_are_asked_once(self):
+        self.w.add(dict(status("021", BOB, minute=6, vis="public"),
+                        reblog=self.w.statuses["013"]), home=True)
+        self.core.poll_once()
+        self.core.on_screen(["020", "021"])
+        self.assertEqual(self.asked.count("010"), 1)  # the root's context: once
+        self.assertLessEqual(len(self.asked), 2)  # (and one post's, to find the root)
+        self.assertEqual(self.core.thread_size(self.w.statuses["013"]), 3)
+
+    def test_the_window_thread_reads_nothing(self):
+        """on_screen comes from a window's own thread while it scrolls: the store is
+        asked in the background only."""
+        ran = []
+        self.core.bg.submit = lambda fn, *a, **kw: ran.append(fn)
+        read = self.core.store.get_statuses
+        self.core.store.get_statuses = lambda ids: self.fail("read in the caller's thread")
+        self.core.on_screen(["020"])
+        self.core.on_screen(["020"])
+        self.assertEqual(len(ran), 1)  # one look, the second only noted
+        self.core.store.get_statuses = read
+        ran[0]()
+        self.assertEqual(self.core.thread_size(self.w.statuses["012"]), 3)
+
+    def test_what_left_the_screen_is_forgotten_with_counts_off(self):
+        from fedtail.core import counts
+        self.core.cfg["feed"]["counts_minutes"] = 0
+        self.core.on_screen(["020"])
+        with self.core._screen_lock():
+            self.core._on_screen["020"] -= counts.SEEN_FOR + 1
+        self.core.refresh_counts()
+        self.assertEqual(self.core._on_screen, {})
+
+    def test_threads_remembered_have_a_ceiling(self):
+        from fedtail.core import threadsize
+        old = threadsize.KEEP
+        threadsize.KEEP = 10
+        self.addCleanup(setattr, threadsize, "KEEP", old)
+        for n in range(30):
+            self.core.learn_thread_size(f"r{n}", [f"m{n}"], 1)
+        self.assertLessEqual(len(self.core._ts_root), 12)
+        self.assertLessEqual(len(self.core._ts_size), 12)
+        self.assertEqual(self.core.thread_size({"id": "m29"}), 1)

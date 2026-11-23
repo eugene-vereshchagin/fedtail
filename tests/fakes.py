@@ -672,9 +672,6 @@ class FakeApi:
         self.w.answered.append((req_id, approve))
         return {"id": req_id}
 
-    def notifications_unread(self):
-        return {"count": len(self.w.activity)}
-
     def remove_from_followers(self, acc_id):
         self._need("remove_follower")
         self.w.followers.discard(acc_id)

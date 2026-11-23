@@ -1,7 +1,8 @@
 # fedtail: protocols and a normalized model
 
-Status: **agreed on 20 Oct 2026**. Stages 0–4 are done (0.17.0); the rest come in turn;
-as each is ready, its description moves to architecture.md.
+Status: **agreed on 20 Oct 2026**. Stages 0–6 are done (0–4 in 0.17.0); stage 7 — the
+core's own logic off the protocol's fields — is not started; as each is ready, its
+description moves to architecture.md.
 
 ## Why
 
@@ -41,9 +42,15 @@ protocols: protocols/mastodon (api.py + adapter)   [later: misskey, lemmy, blues
 ```
 
 The rule, like today's "the core doesn't import Qt": **outside `protocols/` there isn't a
-single protocol field**. A test checks it (a grep for `"reblog"`, `"spoiler_text"`, `/api/v1`
-and the like outside `protocols/`). Frontends don't see raw data at all: the exchange goes
+single protocol field**. Where it stands: for the frontends it holds and a test checks it
+(`tests/test_layering.py`: a grep for `"reblog"`, `"spoiler_text"`, `/api/v1` and the like in
+`frontends/` and the phone's Python) — they don't see raw data at all: the exchange goes
 only over the model's bus, and the debugging "show the JSON" gets the data through the core.
+For the core it does **not** hold yet: the store keeps the server's raw JSON (the decision
+below) and the core's own logic — the rules' atoms, the threads, writing, the merged
+window — still reads those fields by Mastodon's names (about 250 places in 29 modules,
+23.11). That is stage 7 below; until then the same test keeps a ceiling for every module
+of the core, so the number only goes down and a new module starts at none.
 
 ## The normalized model (`fedtail/model/`)
 
@@ -169,6 +176,7 @@ the roster is the model's data, the same for all.
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — one place: what the server said about itself, the probe's answers, "no such thing" refusals and what's known of the software (`KNOWN`); `Core.supports` asks it, the answers survive a reconnect, the last probe counts from the start; the `capabilities_changed` event — frontends hide buttons at once | `tests/test_protocols.py`, `test_social.py`, smoke: "Clear" goes as soon as the server refused |
 | 5 ✓ | the roster (`View.roster()` → `RosterGroup` / `RosterItem`) and `window.layout = "split"` on Qt: a roster window, a messages window with its own tabs, an input line, faces — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + screenshots by `tools/screenshots.py` |
 | 6 ✓ | themes in the spirit of QIP, Psi+ and Agent; a theme sets the layout's look too (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, screenshots |
+| 7 | the core's logic off the protocol's fields: the adapter normalizes at the door (what a round brings, what the store gives back), the atoms, the threads, writing and the merged window read the model; the store may keep the raw JSON beside it | `tests/test_layering.py`: the ceilings of `CORE_RAW` all at 0, then the core listed with the frontends |
 
 The user shouldn't notice stages 0–4 at all: the behaviour is the same, the CHANGELOG says
 "an internal rewrite". Each stage ships separately as a dev build, which you run with

@@ -11,6 +11,7 @@ Every shortcut in one table.
 | `Ctrl+K` | find people, tags, posts |
 | `Ctrl+F`, `F3`, `Shift+F3` | find in a lane, thread or profile |
 | `Ctrl+L` | the command line |
+| `↑` / `↓` | in the command line: the lines run before (the windows, the terminal, the web page; on the phone — the ↑ button beside it) |
 | `F5` | refresh |
 | `Alt+1…9` | a lane by its number (`window.number_keys`: Ctrl+1…9 too) |
 | `Ctrl+W` | close a tab |

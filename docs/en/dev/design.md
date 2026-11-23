@@ -104,6 +104,8 @@ find. Next, roughly in order:
 
 12. **Protocols and a data model of our own.** The Mastodon API is the first protocol, not the
    shape of the program; frontends see only our own model. The plan and the stages — [protocols.md](protocols.md).
+   Stages 0–6 are done (the frontends on the model, the core through one door); what is left
+   is stage 7 — the core's own logic off the protocol's fields.
 
 Taken out of the queue (not needed for now): an XMPP gateway, following old threads in bulk.
 

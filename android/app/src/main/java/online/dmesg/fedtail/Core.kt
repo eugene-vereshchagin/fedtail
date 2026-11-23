@@ -126,6 +126,7 @@ object Core {
     suspend fun pin(names: List<String>) = obj("pin", JSONArray(names).toString())
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)
+    suspend fun commandHistory() = obj("command_history")
     suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
     /** Which cards are read now, by the windows' rule (common/lane.seen). */
     suspend fun seen(cards: JSONArray, vtop: Int, vbottom: Int, atEnd: Boolean,

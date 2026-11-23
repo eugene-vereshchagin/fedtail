@@ -1009,8 +1009,7 @@ class Card(Gtk.Box):
                            quote_reply=self._can_quote(),
                            # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as),
                            # as Qt's and the page's — GTK had no such item (21.11)
-                           act_as=(lambda e: c.view.act_accounts(e))
-                           if _merged(c.view) and c.cfg["ui"].get("act_as", True) else None)
+                           act_as=actions.act_as_of(c.view, c.cfg))
 
     def _fill_actions(self):
         if not hasattr(self, "actions"):
@@ -1268,9 +1267,3 @@ def _around_focus(texture, focus):
         return Gdk.Texture.new_for_pixbuf(part)
     except Exception:  # noqa: BLE001 — a picture never worth an error: as it is
         return texture
-
-
-def _merged(view):
-    """All accounts in one window: the merged core behind the view (act_as, others)."""
-    inner = getattr(view, "_core", view)
-    return hasattr(inner, "act_as") and bool(getattr(inner, "others", None))

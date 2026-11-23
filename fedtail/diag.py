@@ -1194,10 +1194,10 @@ def _toolkits():
     """The toolkits loaded in this process, with their versions (only those already
     imported: asking must not load one)."""
     out = []
-    if "PySide6.QtCore" in sys.modules:
+    qt = sys.modules.get("PySide6.QtCore")  # asked of what is loaded: no import here
+    if qt is not None:
         try:
-            from PySide6.QtCore import qVersion
-            out.append(f"Qt {qVersion()}")
+            out.append(f"Qt {qt.qVersion()}")
         except Exception:  # noqa: BLE001
             pass
     gi = sys.modules.get("gi.repository.Gtk")

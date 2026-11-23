@@ -630,6 +630,8 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
  *  of core/commands.py; what Enter will do is said above it while typing. */
 @Composable
 private fun CommandBar(model: AppModel) {
+    val historyWord = stringResource(R.string.cmd_history)
+    LaunchedEffect(Unit) { model.loadCmdHistory() }
     LaunchedEffect(model.cmdText) {
         delay(250)
         model.cmdPreview(model.cmdText)
@@ -660,6 +662,23 @@ private fun CommandBar(model: AppModel) {
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { model.runCommand() }),
                         modifier = Modifier.fillMaxWidth())
+                }
+                if (model.cmdHistory.isNotEmpty()) {  // the windows' ↑ ↓: a list to pick from
+                    Box {
+                        var open by remember { mutableStateOf(false) }
+                        TextButton(onClick = { open = true },
+                            modifier = Modifier.semantics {
+                                contentDescription = historyWord }) { Text("↑") }
+                        DropdownMenu(open, { open = false }) {
+                            for (line in model.cmdHistory) {
+                                DropdownMenuItem(
+                                    text = { Text(line, maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontFamily = FontFamily.Monospace, fontSize = 14.sp) },
+                                    onClick = { open = false; model.cmdChanged(line) })
+                            }
+                        }
+                    }
                 }
                 IconButton(onClick = { model.runCommand() },
                     enabled = model.cmdText.isNotBlank() && !model.cmdBusy) {

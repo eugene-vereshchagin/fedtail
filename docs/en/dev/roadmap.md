@@ -1,5 +1,10 @@
 # fedtail: the plan for 0.22
 
+Status: **0.22.0 came out on 30 Oct 2026** — everything under "Doing" is done, and 0.23 has
+gone on since without a page like this one: what was done is CHANGELOG.md's, what is
+planned for users is the feature list's. A plan for the next version is written here when
+the author decides one; until then this page is 0.22's, as it was.
+
 What we do in 0.22 (decided on 28 Oct 2026, the day 0.21.0 came out): **anything into any
 lane by its rules** — from activity and follow requests to posts, the sets of lanes only
 presets; **the lane editor on the phone**; **sync's last pieces** (the key by a QR code, a

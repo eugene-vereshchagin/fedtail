@@ -485,6 +485,37 @@ class MergedRoutingTest(TmpDir):
         self.assertEqual(len(self.m.followed_tags().result(timeout=T)), 1)
 
     # ---- the web page (and the phone, through it) -----------------------------------
+    def test_the_terminal_acts_as_the_other_account_too(self):
+        """The terminal's ⋯ menu left "As…" out ("one account a terminal"), though it
+        merges accounts as the windows do (23.11): the item is there, and does it."""
+        from fedtail.frontends.tui.app import FedtailApp
+        app = FedtailApp(self.m)
+        st = self.m.store.get_status("work~500")
+        entry = app.core.entry(st)
+        items = [it for _label, it in (x for x in app.post_menu_items(entry) if x != "-")
+                 if getattr(it, "kind", "") == "act_as"]
+        self.assertEqual(len(items), 1)
+        by_action = {action: (e, tag, action) for _l, e, tag, action in items[0].data}
+        self.assertEqual(set(by_action), {"fav", "boost", "reply"})
+        said, composed = [], []
+        app.notify = lambda text, **_kw: said.append(text)
+        app.later = lambda fut, ok=None, fail=None: ok(fut.result(timeout=T))
+        app.host.compose = lambda reply_to=None, **_kw: composed.append(reply_to)
+        self.home.remote[st["uri"]] = dict(status("701", NEWS, minute=11), uri=st["uri"])
+        app.act_as(*by_action["fav"])
+        self.assertTrue(self.home.statuses["701"]["favourited"])
+        self.assertIn("@mira", said[-1])
+        app.act_as(*by_action["reply"])
+        self.assertEqual(composed[-1].id, "701")
+
+    def test_one_account_alone_has_nobody_to_act_as(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common import actions
+        self.assertIsNone(actions.act_as_of(View(self.p), self.p.cfg))
+        self.assertIsNotNone(actions.act_as_of(View(self.m), self.m.cfg))
+        off = {**self.m.cfg, "ui": {**self.m.cfg["ui"], "act_as": False}}
+        self.assertIsNone(actions.act_as_of(View(self.m), off))
+
     def test_web_act_as_from_the_menu(self):
         """A post's ⋯ on the page offers ★ ♻ ↩ from the other account, as the windows'
         menu does; the other account's ids ("work~500") are ids there too."""
@@ -523,8 +554,8 @@ class MergedRoutingTest(TmpDir):
         from fedtail.core.view import View
         from fedtail.frontends.common import actions
         view = View(self.m)
-        self.assertTrue(cards._merged(view))
-        self.assertFalse(cards._merged(View(self.p)))
+        self.assertIsNotNone(actions.act_as_of(view, self.m.cfg))  # the one rule (23.11)
+        self.assertIsNone(actions.act_as_of(View(self.p), self.p.cfg))
         ctx = NS(cfg=self.m.cfg, me_id="ME", supports=lambda _w: True, subscribed=None,
                  thread_quiet=None, in_thread=False, view=view)
         actx = cards.Card._actx(NS(ctx=ctx, _can_quote=lambda: False))

@@ -1119,10 +1119,6 @@ class Api:
         """Every notification gone, on the server (for every app)."""
         return self.post("/api/v1/notifications/clear")
 
-    def notifications_unread(self):
-        """{"count": n} — what the server counts as unread (since the marker)."""
-        return self.get("/api/v1/notifications/unread_count") or {}
-
     def remove_from_followers(self, acc_id):
         """They no longer follow me — without blocking them."""
         return self.post(f"/api/v1/accounts/{seg(acc_id)}/remove_from_followers")

@@ -18,6 +18,36 @@
   quote posts, and an author may not allow them: such a public post now has "Quote as a
   link" in its ⋯ menu (the quote tool over it) — a new post with its address, the cursor
   a line below for your words. Every interface and the phone; `post.quote_link`.
+- **The thread's size, more careful** (the first item above, not out yet): a thread the
+  server didn't give is left alone for ten minutes instead of being asked again at every
+  scroll; of what the server's limit still allows, at most a quarter goes there; two posts
+  of one thread on screen cost one round of requests; the database is asked in the
+  background, not in the window's own thread; what was learned is forgotten past 5000
+  posts.
+- **The terminal: every button of a profile.** The line showed nine, by their digits — a
+  followed person has some twenty, and the note, the alias, the nick's colour, the
+  collections had no key at all. `0` lists all of them.
+- **The terminal: ★ ♻ ↩ from another account.** With all accounts in one window the ⋯
+  menu has "From another account", as the windows, the page and the phone have.
+- **The command line remembers** in the terminal and on the web page too: `↑` / `↓` walk
+  the lines run before (Qt and GTK had it); on the phone — a ↑ button with the list.
+- **The phone: `@name` in the command line opens the profile.** It opened nothing: the
+  screen only looked for a thread in the command's answer.
+- **A scheduled post goes with its key.** An answer lost and "Send" pressed again left two
+  posts waiting on the server; now the second is the first (an Idempotency-Key, and the
+  patience of `post.send_timeout`, as a post going out now).
+- **A lane's tooltip in the sidebar is one for Qt, GTK and the page**: what the lane is,
+  its key — `Ctrl+N` when `window.number_keys` says so (Qt always said Alt), and its word
+  in the config (GTK said neither).
+- **A notification's words follow the lane's rule, not its name**: a lane of your own with
+  the replies' rule says "Reply from …" as the built-in one does.
+- Behind the scenes: `docs/*/dev/protocols.md` says where "no protocol field outside
+  `protocols/`" really stands (true for the interfaces; the core still reads Mastodon's
+  names — stage 7) and a test keeps the core's count from growing; `gtk.md`, `roadmap.md`
+  and `design.md` say today's state; `diag.py` asks the loaded Qt for its version without
+  importing it; four unused strings, an unused API call and the page's unused
+  `/api/delete` route are gone; the phone's ⋯ submenus are in the feature list (it said
+  "flat").
 
 ## 0.23.9 — 2026-11-23
 

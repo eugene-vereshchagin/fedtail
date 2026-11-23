@@ -76,6 +76,28 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class LaneTipTest(unittest.TestCase):
+    """A lane row's tooltip, one for every window: Qt said "Alt+N" whatever
+    ui.number_keys was, GTK named neither the key nor the config's word (23.11)."""
+
+    def test_the_keys_follow_number_keys(self):
+        tip = sidebar.lane_tip("home", 2, {"ui": {"number_keys": "ctrl"}})
+        self.assertIn("(Ctrl+2)", tip)
+        self.assertNotIn("Alt", tip)
+        both = sidebar.lane_tip("home", 2, {"ui": {"number_keys": "both"}})
+        self.assertIn("(Alt+2, Ctrl+2)", both)
+        self.assertIn("(Alt+2)", sidebar.lane_tip("home", 2, {}))
+
+    def test_no_key_past_nine_or_without_a_number(self):
+        self.assertNotIn("+", sidebar.lane_tip("home", 10, {}))
+        self.assertNotIn("+", sidebar.lane_tip("home"))
+
+    def test_a_built_in_lane_says_its_config_word_a_list_does_not(self):
+        self.assertIn("home", sidebar.lane_tip("home").splitlines()[-1])
+        self.assertEqual(sidebar.lane_tip("list:7"), "")
+        self.assertEqual(sidebar.lane_tip("list:7", 3, {}), "(Alt+3)")
+
+
 class SectionsByRuleTest(unittest.TestCase):
     def test_a_lane_in_its_rules_section_once(self):
         """The section is the rule's `group`, never the lane's name: a lane called

@@ -1558,11 +1558,18 @@ class ComposeScreen(Screen):
 # ---- a profile's buttons -----------------------------------------------------------------
 
 def profile_line(acts):
-    """The profile's buttons (common/profile.py) as a line: 1 Follow  2 Mention …"""
+    """The profile's buttons (common/profile.py) as a line: 1 Follow  2 Mention … —
+    nine by their digits, and "0 ⋯ +N" when there are more: 0 lists all of them (a
+    followed person has some twenty; the ones past the ninth could not be reached at
+    all, 23.11)."""
     t = Text()
     for i, a in enumerate(acts[:9], 1):
         if i > 1:
             t.append("  ")
         t.append(str(i), style="bold cyan")
         t.append(" " + a.label, style="bold" if a.primary else "")
+    if len(acts) > 9:
+        t.append("  ")
+        t.append("0", style="bold cyan")
+        t.append(f" ⋯ +{len(acts) - 9}")
     return t

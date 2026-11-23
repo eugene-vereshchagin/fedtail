@@ -110,6 +110,23 @@ def char_count(entry, cfg):
     return _("char_count", n=n) if n else ""
 
 
+def act_as_of(view, cfg):
+    """What Ctx.act_as takes — fn(entry) → [(tag, "@acct")], the accounts that could
+    act on a post — or None: only with all accounts in one window (the merged core says
+    who else is there) and ui.act_as on. The one rule of every interface: each had its
+    own copy of it, the terminal none ("one account a terminal", though it merges them
+    too — 23.11)."""
+    if not (cfg.get("ui") or {}).get("act_as", True):
+        return None
+    try:
+        if not view.others:
+            return None
+        fn = view.act_accounts
+    except AttributeError:  # one account: nobody else to act as
+        return None
+    return lambda entry: fn(entry)
+
+
 def thread_count(entry):
     """The Thread button's number: the whole thread's comments when the core learned
     them (feed.thread_size_minutes, core/threadsize.py), else the post's direct replies

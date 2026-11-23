@@ -109,7 +109,7 @@ class ImagesTest(unittest.TestCase):
         self.core = types.SimpleNamespace(
             paths=types.SimpleNamespace(cache_dir=tmp / "cache"),
             cfg={"ui": {"image_cache_mb": 1, "image_disk_mb": 1000, "video_disk_mb": 1000}},
-            _own_hosts=lambda: ())
+            own_hosts=lambda: ())
         self.net = {}
         self.c = Cache(self.core, self.net)
         self.addCleanup(self.close)

@@ -125,17 +125,13 @@ def list_open(rel, inside):
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
-    def __init__(self, name, theme, number, title=None, icon=None, kind="normal"):
+    def __init__(self, name, theme, number, title=None, icon=None, kind="normal",
+                 cfg=None):
         super().__init__()
         self.name, self.theme = name, theme
         self.title = title or _("lane_" + name)
         self.current = False
-        tip = _("tip_" + name) if not name.startswith("list:") else ""
-        tip = "" if tip == "tip_" + name else tip
-        tip = " ".join(x for x in (tip, f"(Alt+{number})" if number <= 9 else "") if x)
-        if name in lanes_module.LANES:  # the word to find it by in the config
-            tip = "\n".join(x for x in (tip, _("lane_codeword", name=name)) if x)
-        self.setToolTip(tip)
+        self.setToolTip(sidebar.lane_tip(name, number, cfg))
         h = QHBoxLayout(self)
         h.setContentsMargins(10, 8, 10, 8)
         h.setSpacing(10)
@@ -382,8 +378,10 @@ class MainWindow(QMainWindow):
             else None
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
-        if hasattr(core, "act_as") and self.cfg["ui"].get("act_as", True):
-            self.ctx.act_as = lambda e: core.act_accounts(self.ctx.view.raw(e))
+        from ..common import actions as post_actions
+        others = post_actions.act_as_of(self.ctx.view, self.cfg)  # all accounts in one
+        if others is not None:
+            self.ctx.act_as = others
             self.ctx.do_act_as = self.act_as
         self.ctx.long_form = self.read_whole \
             if self.cfg["feed"].get("long_form", True) else None
@@ -1388,7 +1386,7 @@ class MainWindow(QMainWindow):
                 title = lst.title if lst else self.core.lane_title(name)
                 w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title,
                              icon=self.core.lane_icon(name),
-                             kind=sidebar.badge_kind(self.core, name))
+                             kind=sidebar.badge_kind(self.core, name), cfg=self.cfg)
                 if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())

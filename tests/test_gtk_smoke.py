@@ -2843,7 +2843,7 @@ class GtkImagesTest(unittest.TestCase):
                 return future
 
         with tempfile.TemporaryDirectory() as tmp:
-            core = type("C", (), {"cfg": {"ui": {}}, "_own_hosts": lambda self: set(),
+            core = type("C", (), {"cfg": {"ui": {}}, "own_hosts": lambda self: set(),
                                   "paths": type("P", (), {"cache_dir": Path(tmp)})()})()
             imgs = images.Images(core, Bridge())
             imgs.http.get = lambda url, timeout, **_kw: Resp()

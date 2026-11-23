@@ -68,6 +68,20 @@ class BridgeTest(_Base):
                                                    "start": 3, "end": 5}))
         self.assertEqual(got, {"text": "😀 *hi*", "start": 4, "end": 6})
 
+    def test_the_command_line_remembers_and_opens_a_profile(self):
+        """The phone's command line: the lines run before come back as a list (the
+        windows' ↑ ↓), and what a command opens is told whole — "@name" opened nothing,
+        the screen looked only for a thread (23.11)."""
+        self.demo()
+        self.assertEqual(self.call("command_history"), {"lines": []})
+        self.call("command", "#zzz9 hi")
+        self.assertEqual(self.call("command_history")["lines"], ["#zzz9 hi"])
+        root = Path(self.bridge.__file__).resolve().parents[2] / "java/online/dmesg/fedtail"
+        model = (root / "AppModel.kt").read_text(encoding="utf-8")
+        run = model[model.index("fun runCommand"):model.index("fun openConfig")]
+        self.assertIn('optJSONObject("open")?.let { openThing(it) }', run)
+        self.assertIn("loadCmdHistory()", run)
+
     def test_the_phone_says_itself(self):
         """The phone's facts given to start(): the issue's draft and the report say the
         phone, its Android and "interface android" — not the config's "qt"."""

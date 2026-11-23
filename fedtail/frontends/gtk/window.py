@@ -76,7 +76,8 @@ class Ctx:
 
 
 class LaneRow(Gtk.ListBoxRow):
-    def __init__(self, name, title, theme=None, icon=None, kind="normal"):
+    def __init__(self, name, title, theme=None, icon=None, kind="normal", number=0,
+                 cfg=None):
         super().__init__()
         self.name = name
         box = Gtk.Box(spacing=6)
@@ -96,8 +97,8 @@ class LaneRow(Gtk.ListBoxRow):
         lab.set_hexpand(True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)
         box.append(lab)
-        what = _("tip_" + name) if not name.startswith("list:") else ""
-        if what and what != "tip_" + name:  # what the lane is, as Qt's sidebar says
+        what = sidebar.lane_tip(name, number, cfg)  # what it is, its keys, its word
+        if what:
             tip(self, what)
         self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
@@ -1581,7 +1582,8 @@ class MainWindow(Gtk.ApplicationWindow):
             for name in names:
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
                 row = LaneRow(name, title, self.theme, self.view.lane_icon(name),
-                              sidebar.badge_kind(self.view, name))
+                              sidebar.badge_kind(self.view, name),
+                              number=len(self.lane_rows) + 1, cfg=self.cfg)
                 row.set_visible(group not in folded)
                 right = Gtk.GestureClick(button=3)  # a list's menu, as Qt's sidebar
                 right.connect("pressed", lambda *_a, r=row: self.lane_menu(r))

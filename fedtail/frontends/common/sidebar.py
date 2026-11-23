@@ -120,6 +120,28 @@ def curtain(view, names, tiles=False):
     return _("curtain_title"), info, _("curtain_hint")
 
 
+NUMBER_KEYS = {"alt": ("Alt",), "ctrl": ("Ctrl",), "both": ("Alt", "Ctrl")}
+
+
+def lane_tip(name, number=0, cfg=None):
+    """What a lane's row says when asked (a tooltip): what the lane is, the keys that
+    open it — its number in the sidebar with ui.number_keys' modifier, for the first
+    nine, where the interface has such keys (number 0: it has none) — and, for a
+    built-in lane, the word to find it by in the config. One text for every window:
+    Qt named Alt whatever the key was, GTK said neither key nor word (23.11)."""
+    what = "" if name.startswith("list:") else _("tip_" + name)
+    if what == "tip_" + name:
+        what = ""
+    keys = ""
+    if 0 < number <= 9:
+        mods = NUMBER_KEYS.get(((cfg or {}).get("ui") or {}).get("number_keys", "alt"),
+                               NUMBER_KEYS["alt"])
+        keys = "(" + ", ".join(f"{m}+{number}" for m in mods) + ")"
+    tip = " ".join(x for x in (what, keys) if x)
+    word = _("lane_codeword", name=name) if name in lanes_mod.LANES else ""
+    return "\n".join(x for x in (tip, word) if x)
+
+
 def lane_label(view, name, width=22):
     """(title, number) of a lane's row, cut to width: the terminal's and the web page's
     sidebar. The number is the core's for every lane alike (count)."""

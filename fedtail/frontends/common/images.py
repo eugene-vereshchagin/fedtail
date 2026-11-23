@@ -420,7 +420,7 @@ class Cache:
         """A streamed answer for a picture or video (see core.remote): no token, public
         addresses only (my own server excepted), redirects checked one by one."""
         return remote.open_url(self.http, url, timeout=timeout, schemes=MEDIA_SCHEMES,
-                               own_hosts=self.core._own_hosts())
+                               own_hosts=self.core.own_hosts())
 
     # ---- the disk cache: fetched ahead, kept within a size ----------------------------
     def prefetch(self, urls):

@@ -73,6 +73,7 @@
     <string name="next_lane">next</string>
     <string name="find_lane">lane, list or #tag</string>
     <string name="cmd_hint">#abc text, or a command</string>
+    <string name="cmd_history">The lines run before</string>
     <string name="yes_do">Yes</string>
     <string name="cancel">Cancel</string>
     <string name="cw_show">show</string>

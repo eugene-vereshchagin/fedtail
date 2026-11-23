@@ -72,6 +72,7 @@
     <string name="next_lane">дальше</string>
     <string name="find_lane">лента, список или #тег</string>
     <string name="cmd_hint">#abc текст или команда</string>
+    <string name="cmd_history">Прежние строки</string>
     <string name="yes_do">Да</string>
     <string name="cancel">Отмена</string>
     <string name="cw_show">показать</string>

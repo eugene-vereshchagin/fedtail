@@ -420,7 +420,6 @@ CALLS = [
     (lambda a: a.read_conversation("C"), "POST", "/api/v1/conversations/C/read", {}),
     (lambda a: a.dismiss_notification("N"), "POST", "/api/v1/notifications/N/dismiss", {}),
     (lambda a: a.clear_notifications(), "POST", "/api/v1/notifications/clear", {}),
-    (lambda a: a.notifications_unread(), "GET", "/api/v1/notifications/unread_count", {}),
     (lambda a: a.remove_from_followers("7"), "POST",
      "/api/v1/accounts/7/remove_from_followers", {}),
     (lambda a: a.endorse("7"), "POST", "/api/v1/accounts/7/endorse", {}),
@@ -734,7 +733,7 @@ class WritingTest(unittest.TestCase):
             a, _s = make(Resp(body=None))
             self.assertEqual(getattr(a, name)(*args), [], name)
         for name, args in (("markers", ()), ("search", ("x",)), ("preferences", ()),
-                           ("notifications_unread", ()), ("instance_page", ("rules",))):
+                           ("instance_page", ("rules",))):
             a, _s = make(Resp(body=None))
             self.assertEqual(getattr(a, name)(*args), {}, name)
 

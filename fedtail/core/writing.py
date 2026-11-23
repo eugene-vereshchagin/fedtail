@@ -335,9 +335,19 @@ class WritingMixin:
             if policy and self.caps.software == "gotosocial":
                 extra["interaction_policy"] = policy
             if scheduled_at:
+                # with its key and the send's patience, as a post going out now: an
+                # answer lost made a second one waiting on the server at the retry
                 extra["scheduled_at"] = scheduled_at
-                st = self.api.post_status(text, visibility, reply_to, spoiler, ids,
-                                          self.markdown, **extra)
+                wait = max(10, int(self.cfg["post"].get("send_timeout", 90)))
+                key = self._send_key(text, reply_to, visibility, spoiler,
+                                     _post_print(media, sensitive, poll, extra))
+                try:
+                    st = self.api.post_status(text, visibility, reply_to, spoiler, ids,
+                                              self.markdown, idempotency_key=key,
+                                              timeout=(10, wait), **extra)
+                except (requests.Timeout, requests.ConnectionError) as e:
+                    raise MaybeSent(e) from e  # sent again, the key gives the same one
+                self._note_send_key(f"scheduled:{(st or {}).get('id')}", key)
                 if draft_key:
                     self.delete_draft(draft_key)
                 log.info("scheduled for %s", scheduled_at)

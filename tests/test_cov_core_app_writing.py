@@ -45,6 +45,26 @@ class PostTest(CoreCase):
         self.assertTrue(st["scheduled"])
         self.assertIsNone(c.store.get_draft("new"))
 
+    def test_a_scheduled_post_goes_with_its_key(self):
+        """An answer lost and the post scheduled again made two waiting on the server:
+        it goes with an Idempotency-Key, the same at the retry — and a new one once the
+        first was cancelled."""
+        c = self.connect()
+        when = "2030-01-01T00:00:00Z"
+        self.w.send_timeouts = 1
+        with self.assertRaises(Exception) as e:
+            c.post("позже", "public", scheduled_at=when).result(timeout=T)
+        self.assertTrue(getattr(e.exception, "maybe_sent", False))
+        st = c.post("позже", "public", scheduled_at=when).result(timeout=T)
+        again = c.post("позже", "public", scheduled_at=when).result(timeout=T)
+        keys = self.w.send_keys[-2:]
+        self.assertTrue(keys[0])
+        self.assertEqual(keys[0], keys[1])
+        c.cancel_scheduled(st["id"]).result(timeout=T)
+        c.post("позже", "public", scheduled_at=when).result(timeout=T)
+        self.assertNotEqual(self.w.send_keys[-1], keys[0])
+        self.assertTrue(again["scheduled"])
+
     def test_bookkeeping_failing_never_fails_the_post(self):
         c = self.connect()
         with mock.patch.object(c, "mark_read", boom()), \

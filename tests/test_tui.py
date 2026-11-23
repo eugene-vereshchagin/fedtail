@@ -483,6 +483,38 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: "001" not in w.statuses)
             await self.wait(pilot, lambda: "001" not in shown())
 
+    async def test_up_and_down_walk_the_lines_run_before(self):
+        """↑ ↓ in the command line, the windows' (Qt and GTK alone had it, 23.11): typed
+        and run by the keys, as a person does."""
+        from textual.widgets import Input
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            cmd = app.query_one("#cmd", Input)
+            for line in ("#zzz1 one", "#zzz2 two"):
+                cmd.focus()
+                cmd.value = ""
+                await pilot.press(*line.replace(" ", "\x00").split("\x00")[0], "space",
+                                  *line.split(" ")[1])
+                await pilot.press("enter")
+                await self.wait(pilot, lambda: not cmd.disabled)
+                cmd.value = ""
+            cmd.focus()
+            await pilot.press("up")
+            self.assertEqual(cmd.value, "#zzz2 two")
+            await pilot.press("up")
+            self.assertEqual(cmd.value, "#zzz1 one")
+            await pilot.press("down")
+            self.assertEqual(cmd.value, "#zzz2 two")
+            await pilot.press("down")
+            self.assertEqual(cmd.value, "")  # past the last: an empty line again
+
     async def test_the_editor_keeps_its_draft_while_typing(self):
         """post.drafts_autosave: what is typed is kept a moment after the last key, not
         only on Esc — an SSH dropped lost it (21.11)."""

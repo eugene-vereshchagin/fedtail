@@ -14,7 +14,7 @@ from ..i18n import _
 from ..model import Account, Activity, real
 from ..model.text import snippet
 
-ORDER = ["to_me", "replies", "mentions", "requests"]  # the rest come after, by name
+WORDS = {1: "replies", 2: "mentions"}  # Core.lane_rank → the note's words (notify_<…>_n)
 ACTIVITY_ORDER = ["follow", "like", "share"]
 # the words for a kind of activity: notify_act_<…>_n
 ACT_WORDS = {"follow": "notify_act_follow_n", "like": "notify_act_favourite_n",
@@ -54,6 +54,14 @@ def _who(obj):
 
 _titles = None
 _lines = MAX_LINES  # build()'s, for the note it makes
+_rank = None
+
+
+def _ranked(lane):
+    try:
+        return int(_rank(lane)) if _rank else 4
+    except Exception:  # noqa: BLE001 — a lane gone meanwhile: the plain words
+        return 4
 
 
 def desktop_argv(base, note, seconds=0):
@@ -70,19 +78,24 @@ def _lane_title(lane):
     return (_titles and _titles(lane)) or _("lane_" + lane)
 
 
-def build(items, privacy="full", titles=None, lines=MAX_LINES):
+def build(items, privacy="full", titles=None, lines=MAX_LINES, rank=None):
     """items: [(lane, Post, Share, Account or Activity)] → one Note per lane.
     titles(lane) names lanes that aren't built in (lists); lines — the posts a note
-    lists at most (notify.max_lines)."""
-    global _titles, _lines
-    _titles, _lines = titles, lines
+    lists at most (notify.max_lines); rank(lane) — how personal the lane's rule is
+    (Core.lane_rank: 1 replies to me, 2 mentions): the notes' words and order come from
+    it, never from a lane's name — a lane of one's own with the replies' rule says
+    "a reply", a lane merely called "replies" doesn't."""
+    global _titles, _lines, _rank
+    _titles, _lines, _rank = titles, lines, rank
     groups, acts = {}, {}
     for lane, obj in items:
         if isinstance(obj, Activity) and not _is_request(obj):  # a like, a follow…
             acts.setdefault(obj.kind, []).append((lane, obj))
         else:
             groups.setdefault(lane, []).append(obj)
-    lanes = [x for x in ORDER if x in groups] + sorted(x for x in groups if x not in ORDER)
+    # the most personal first, follow requests before the rest, then by name
+    lanes = sorted(groups, key=lambda x: (_ranked(x),
+                                          not all(_is_request(o) for o in groups[x]), x))
     notes = [_note(lane, groups[lane], privacy) for lane in lanes]
     kinds = [k for k in ACTIVITY_ORDER if k in acts] + sorted(k for k in acts
                                                               if k not in ACTIVITY_ORDER)
@@ -109,7 +122,7 @@ def due(view, items, cfg, on_screen, titles=None):
         return []
     notes = []
     for note in build(view.model_of(list(items)), cfg["privacy"], titles,
-                      cfg.get("max_lines", MAX_LINES)):
+                      cfg.get("max_lines", MAX_LINES), getattr(view, "lane_rank", None)):
         if quiet(cfg, on_screen(note.lane)):
             log.info("notify: %s skipped, that lane is on screen (notify.when_focused)",
                      note.lane)
@@ -137,7 +150,7 @@ def _activity_note(kind, notifs, privacy, lane="activity"):
 def _note(lane, objs, privacy):
     n = len(objs)
     requests = all(_is_request(o) for o in objs)  # in "requests" or any lane of events
-    kind = "requests" if requests else lane if lane in ("replies", "mentions") else "lane"
+    kind = "requests" if requests else WORDS.get(_ranked(lane), "lane")
     count_title = _(f"notify_{kind}_n", n=n, lane=_lane_title(lane))
     if privacy == "count":
         return Note("fedtail", count_title, lane)

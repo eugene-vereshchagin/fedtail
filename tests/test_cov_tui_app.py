@@ -737,6 +737,20 @@ class ThreadProfileTest(Base):
                 changed = do.call_args[0][5]
                 changed(None)
                 changed(p.rel)
+            # 0: every button as a list — those past the ninth had no key at all (23.11);
+            # pressed as a person does: 0, j down to the last, Enter
+            from fedtail.frontends.tui.screens import MenuScreen, profile_line
+            self.assertGreater(len(acts), 9)
+            self.assertIn(f"0 ⋯ +{len(acts) - 9}", profile_line(acts).plain)
+            p.query_one("#posts", ListView).focus()
+            await pilot.press("0")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            self.assertEqual(app.screen.labels(), [a.label for a in acts])
+            with mock.patch("fedtail.frontends.common.profile.do") as do:
+                await pilot.press(*["j"] * (len(acts) - 1), "enter")
+                await self.wait(pilot, lambda: app.screen is p)
+                await self.wait(pilot, lambda: do.called)
+                self.assertEqual(do.call_args[0][0], acts[-1].key)
             p.status_changed(None)
             # Enter on a post of the profile: its thread
             plv = p.query_one("#posts", ListView)

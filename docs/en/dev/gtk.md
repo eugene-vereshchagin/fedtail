@@ -1,14 +1,16 @@
 # fedtail: the GTK frontend
 
-Status: **a draft plan, 21 Oct 2026**. Stage 0 started (`palette.py`, `pango.py`), the skeleton (stage 1)
-is ready; the rest in turn. As things get ready, their description moves to architecture.md (§14 — Qt, there will be §14a — GTK).
+Status: **the plan of 21 Oct 2026, carried out**: stages 0–3, 6 and 7 are done, 4 and 5 but
+for what the order table below still names; the GTK window ships since 0.18. What follows is
+the plan as it was written, kept for its reasons; how the window is built is in
+architecture.md, what it still lacks next to Qt — in `docs/src/parity.toml`.
 
 ## Why and for whom
 
 Qt is a native KDE application. GTK is for the "GNOME folk": GNOME, Cinnamon, MATE, XFCE, Budgie,
 so that fedtail looks at home there and not like a guest from KDE. The principles are the same:
-nothing jumps, every reply shows its parent, all behaviour is config flags, there's no settings
-window. The frontend is picked with `window.frontend = "gtk"` or `fedtail --ui gtk`.
+nothing jumps, every reply shows its parent, all behaviour is config flags (the settings
+window, here as in Qt, is a face of the same config). The frontend is picked with `window.frontend = "gtk"` or `fedtail --ui gtk`.
 
 ## The stack
 

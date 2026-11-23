@@ -412,6 +412,20 @@ class WebTest(TmpDir):
         posts = json.loads(self.req("/api/thread?id=062")[2])["posts"]
         self.assertFalse(any(p.get("lane_private") for p in posts))
 
+    def test_the_command_line_remembers_its_lines(self):
+        """↑ ↓ in the page's command line, the windows' (23.11: Qt and GTK alone had it):
+        the server keeps the lines run, the page asks for them."""
+        self.assertEqual(json.loads(self.req("/api/cmd_history")[2]), {"lines": []})
+        self.req("/api/command", {"line": "#zzz9 hi"})  # no such post: run all the same
+        self.req("/api/command", {"line": "#zzz9 hi"})  # the same twice: kept once
+        self.req("/api/command", {"line": "? "})
+        lines = json.loads(self.req("/api/cmd_history")[2])["lines"]
+        self.assertEqual(lines[0], "#zzz9 hi")
+        self.assertEqual(len(lines), len(set(lines)))
+        js = web.static_text("app.js")
+        self.assertIn("/api/cmd_history", js)
+        self.assertIn('cmdHistory(e.key === "ArrowUp" ? -1 : 1)', js)
+
     def test_read_act_post_command(self):
         code, _h, _b = self.req("/api/read", {"ids": ["002"]})
         self.assertEqual(code, 200)
@@ -536,11 +550,11 @@ class WebTest(TmpDir):
         self.assertTrue(got["muted"])
         self.assertFalse(got["subscribed"])  # muting leaves the thread
         self.assertEqual(self.req("/api/thread_act", {"action": "boom", "id": "002"})[0], 400)
-        self.assertEqual(self.req("/api/delete", {"id": "002"})[0], 400)  # not mine
-        self.assertIn("002", self.w.statuses)
         self.assertTrue(json.loads(self.req("/api/post_menu?id=001")[2])["own"])
-        self.assertEqual(self.req("/api/delete", {"id": "001"})[0], 200)
-        self.assertNotIn("001", self.w.statuses)
+        # (deleting goes by the menu's link, /api/link — the route of its own nobody
+        # called is gone, 23.11)
+        self.assertEqual(self.req("/api/delete", {"id": "001"})[0], 404)
+        self.assertIn("001", self.w.statuses)
 
     def test_the_lane_says_where_reading_starts(self):
         """The lane's own start (LaneModel.start: feed.start_at, "new below"): the page

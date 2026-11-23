@@ -13,7 +13,32 @@ def build(items, privacy="full"):
         if lane == "activity":
             return adapter.activity(obj)
         return adapter.account(obj) if "acct" in obj else adapter.post(obj)
-    return notifytext.build([(lane, model(lane, obj)) for lane, obj in items], privacy)
+    return notifytext.build([(lane, model(lane, obj)) for lane, obj in items], privacy,
+                            rank=RANKS.get)
+
+
+# the lanes' rules as the core ranks them (Core.lane_rank): the built-in set's
+RANKS = {"to_me": 0, "replies": 1, "mentions": 2}
+
+
+class ByTheRuleTest(unittest.TestCase):
+    """A note's words come from the lane's rule, not its name (principles: a lane is its
+    rule): "replies" and "mentions" were asked by name (23.11)."""
+
+    def test_a_lane_of_ones_own_with_the_replies_rule_says_a_reply(self):
+        st = {"id": "1", "content": "<p>hi</p>", "created_at": "2026-01-01T00:00:00Z",
+              "account": {"id": "2", "acct": "bob", "display_name": "Bob", "username": "bob"}}
+        mine = notifytext.build([("answers", adapter.post(st))], rank={"answers": 1}.get)
+        named = notifytext.build([("replies", adapter.post(st))], rank={"replies": 4}.get)
+        self.assertEqual(mine[0].title, notifytext._("notify_replies_one", name="Bob"))
+        self.assertNotEqual(named[0].title, mine[0].title)  # a name alone says nothing
+
+    def test_the_most_personal_lane_comes_first(self):
+        st = {"id": "1", "content": "<p>hi</p>", "created_at": "2026-01-01T00:00:00Z",
+              "account": {"id": "2", "acct": "bob", "display_name": "Bob", "username": "bob"}}
+        notes = notifytext.build([("aaa", adapter.post(st)), ("zzz", adapter.post(st))],
+                                 rank={"zzz": 1}.get)
+        self.assertEqual([n.lane for n in notes], ["zzz", "aaa"])
 
 
 class NotifyTextTest(unittest.TestCase):

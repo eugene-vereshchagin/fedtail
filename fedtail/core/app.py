@@ -1332,6 +1332,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         return self.call_api("scheduled")
 
     def cancel_scheduled(self, sid):
+        # its send key is spent: the same post scheduled anew is a new one (writing.py)
+        self._burn_send_key(f"scheduled:{sid}")
         return self.call_api("cancel_scheduled", sid)
 
     def set_note(self, acc_id, text, old=""):

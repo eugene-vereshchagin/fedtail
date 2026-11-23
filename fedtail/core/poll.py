@@ -319,6 +319,12 @@ class PollMixin:
         (Offline); anything else is said and the round goes on."""
         if self._cut_off(e):
             raise Offline(str(e)) from e
+        if isinstance(e, RateLimited):
+            # the server asks to wait: said once by rate_limited (_pace), not lane by
+            # lane — told by what it is, here; Core.emit's look at the words is only the
+            # net under whoever else says an error
+            log.info("rate limited at %s: %s", where, str(e)[:200])
+            return
         self.emit("error", f"{where}: {e}")
 
     def _went_offline(self, e):

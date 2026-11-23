@@ -17,7 +17,43 @@ RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'
                  r'replies_count|display_name|acct|statuses_count|followers_count|'
                  r'following_count|preview_url|remote_url)"|/api/v\d|\.lane_entries\(|'
                  r'\.unread_ids\(|\.parent_of\(|\.account_statuses\(|core\.model import|'
-                 r'\.store\.|\bstore\.get_status\(')
+                 r'\.store\.|\bstore\.get_status\(|\bcore\._(?!core\b)[a-z]')
+
+# the fields alone (RAW's first part): what the core's own logic still reads by Mastodon's
+# names
+FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
+
+# Stage 7 of docs/en/dev/protocols.md isn't done: the core still reads the protocol's
+# fields. How many times each of its modules does, as of 23.11 — a ceiling: the number
+# only goes down (lower it here when it does), a module not listed has none.
+CORE_RAW = {
+    "app.py": 39, "atoms.py": 24, "config.py": 2, "counts.py": 7, "derived.py": 11,
+    "langs.py": 1, "lists.py": 3, "merged.py": 16, "model.py": 10, "origin.py": 7,
+    "people.py": 4, "poll.py": 4, "profiles.py": 12, "push.py": 1, "rss.py": 11,
+    "search.py": 4, "silence.py": 1, "social.py": 7, "sources.py": 1, "store.py": 13,
+    "subs.py": 5, "sync/engine.py": 2, "thread_ops.py": 9, "threads.py": 6,
+    "threadsize.py": 5, "translate.py": 11, "updates.py": 2, "view.py": 23,
+    "writing.py": 12,
+}
+
+
+class CoreRawTest(unittest.TestCase):
+    def test_the_core_reads_no_more_protocol_fields_than_it_did(self):
+        core = ROOT / "core"
+        over, under = [], []
+        for path in sorted(core.rglob("*.py")):
+            rel = str(path.relative_to(core))
+            n = sum(len(FIELDS.findall(line))
+                    for line in path.read_text(encoding="utf-8").splitlines())
+            most = CORE_RAW.get(rel, 0)
+            if n > most:
+                over.append(f"{rel}: {n} (the ceiling is {most})")
+            elif n < most:
+                under.append(f"{rel}: {n} now — lower CORE_RAW from {most}")
+        self.assertEqual(over, [], "the core reads more of the protocol's fields "
+                         "(protocols.md, stage 7): through the model instead\n" +
+                         "\n".join(over))
+        self.assertEqual(under, [], "\n".join(under))
 
 
 class LayeringTest(unittest.TestCase):
@@ -30,6 +66,13 @@ class LayeringTest(unittest.TestCase):
                     for n, line in enumerate(text.splitlines(), 1)
                     if RAW.search(line) and "# ours:" not in line]
             self.assertEqual(hits, [], "\n".join(hits))
+
+    def test_diag_imports_no_toolkit(self):
+        """fedtail/diag.py is the core's side (AGENTS.md): what it says of a toolkit it
+        reads from sys.modules — it imported PySide6 inside a function (23.11)."""
+        text = (ROOT / "diag.py").read_text(encoding="utf-8")
+        self.assertIsNone(re.search(r"^\s*(from|import)\s+(PySide6|gi\b|textual|shiboken)",
+                                    text, re.M))
 
     def test_shared_frontend_code_imports_no_toolkit(self):
         """frontends/common, palette.py, pango.py and the other shared modules are for

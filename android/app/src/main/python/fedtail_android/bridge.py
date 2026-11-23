@@ -1363,6 +1363,11 @@ def command(line, confirmed=False):
     return _answer(lambda: _s["web"].command(line or "", bool(confirmed)))
 
 
+def command_history():
+    """{"lines": [...]} — the lines run before, the oldest first (the windows' ↑ ↓)."""
+    return _answer(lambda: _s["web"].command_history())
+
+
 # ---- a card's ⋯ menu, links in posts ---------------------------------------------------
 
 def menu(post_id):

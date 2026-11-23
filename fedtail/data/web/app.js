@@ -3375,6 +3375,22 @@ function drawPoll() {
 }
 
 // ---- the command line (Point) ----------------------------------------------------------
+// ↑ ↓ in the command line: the lines run before, as the windows' (the server keeps
+// them — common/commands.History; here only where in them the line stands)
+const cmdHist = { lines: null, at: 0 };
+async function cmdHistory(step) {
+  if (!cmdHist.lines) {
+    try { cmdHist.lines = (await api("/api/cmd_history")).lines || []; }
+    catch (err) { cmdHist.lines = []; }
+    cmdHist.at = cmdHist.lines.length;
+  }
+  if (!cmdHist.lines.length) return;
+  cmdHist.at = Math.max(0, Math.min(cmdHist.lines.length, cmdHist.at + step));
+  const c = $("#cmd");
+  c.value = cmdHist.at < cmdHist.lines.length ? cmdHist.lines[cmdHist.at] : "";
+  c.setSelectionRange(c.value.length, c.value.length);
+}
+
 async function runCommand(e) {
   e.preventDefault();
   const c = $("#cmd");
@@ -3387,6 +3403,7 @@ async function runCommand(e) {
       if (!window.confirm(r.confirm)) return;
       r = await api("/api/command", { line, confirm: true });
     }
+    cmdHist.lines = null;  // one more line there: asked anew at the next ↑
     if (r.message) toast(r.message);
     if (!r.ok) return;
     c.value = "";
@@ -3481,6 +3498,11 @@ document.addEventListener("keydown", (e) => {
   if (!$("#menuwin").hidden && e.key === "Escape") { e.preventDefault(); closeMenu(); return; }
   if (!$("#menuwin").hidden) { menuKeys(e); return; }
   if (e.target.closest("textarea, input, select")) {
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && e.target.id === "cmd") {
+      e.preventDefault();
+      cmdHistory(e.key === "ArrowUp" ? -1 : 1);
+      return;
+    }
     if (e.key === "Escape" && e.target.id === "cmd") {
       e.target.value = "";
       if (state.me && !state.me.command_line) $("#cmdline").hidden = true;  // back away

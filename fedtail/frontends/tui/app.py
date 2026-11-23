@@ -37,6 +37,7 @@ from ...model.text import html_to_text, snippet
 from ...version import NAME
 from ..common import sidebar, timed
 from ..common.cardtext import direct_mark, indent_of
+from ..common.commands import History
 from ..common.strip import nearest_staying
 from ..richtext import openable
 from . import pictures, termcaps
@@ -59,13 +60,32 @@ STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "event_post": "italic dim"}
 
 
+class CmdInput(Input):
+    """The command line's field: ↑ and ↓ walk the lines run before (the windows' own
+    common/commands.History, kept by the app — one for the lanes, a thread, a profile)."""
+
+    def on_key(self, event):
+        if event.key not in ("up", "down"):
+            return
+        history = getattr(self.app, "cmd_history", None)
+        if history is None:
+            return
+        line = history.up() if event.key == "up" else history.down()
+        if line is None:
+            return
+        event.stop()
+        event.prevent_default()
+        self.value = line
+        self.cursor_position = len(line)
+
+
 def _cmd_line():
     """The command line. Focusing it must not select what "r" put there (Textual
     selects on focus by default): what's typed goes after "#a3f ", not over it."""
     try:
-        return Input(placeholder=_("tui_cmd_hint"), id="cmd", select_on_focus=False)
+        return CmdInput(placeholder=_("tui_cmd_hint"), id="cmd", select_on_focus=False)
     except TypeError:  # an older Textual, which doesn't select anyway
-        return Input(placeholder=_("tui_cmd_hint"), id="cmd")
+        return CmdInput(placeholder=_("tui_cmd_hint"), id="cmd")
 
 
 def render(shown):
@@ -738,6 +758,7 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("s", "show_next", _("profile_show_posts") + " / " +
                         _("profile_show_media")),
                 *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
+                Binding("0", "all_buttons", show=False),
                 Binding("colon", "command", ":", show=False)]
     CSS = """
     ProfileScreen { overflow: hidden hidden; layout: vertical; }
@@ -815,6 +836,17 @@ class ProfileScreen(Screen, PostsMixin):
         core = self.app.core
         return prof.actions(self.acc, self.rel, self.own(), core.cfg, core.supports,
                             lists=True, details=True, collections=True)
+
+    def action_all_buttons(self):
+        """0: every button of the profile as a list — the line shows nine."""
+        from .screens import MenuScreen
+        acts = self.buttons()
+        if not acts or not self.acc:
+            return
+        items = [(a.label, i, a.tip) if getattr(a, "tip", "") else (a.label, i)
+                 for i, a in enumerate(acts, 1)]
+        self.app.push_screen(MenuScreen("@" + self.acc.handle, items),
+                             lambda n: n and self.action_button(n))
 
     def action_button(self, n):
         from ..common import profile as prof
@@ -957,6 +989,7 @@ class FedtailApp(App, PostsMixin):
         self.links = Links(core, self.host)
         self._instance = instance
         self.cmds = Commands(core)
+        self.cmd_history = History()  # ↑ ↓ in the command line (CmdInput)
         self.delete_guard = DeleteGuard()
         self.lane = None
         self._ui_thread = None
@@ -1964,6 +1997,7 @@ class FedtailApp(App, PostsMixin):
             where.query_one("#posts", ListView).focus()
             return
         fut, message = self.cmds.run(line)
+        self.cmd_history.add(line)
         if fut is None:
             self.notify(message, severity="warning" if message != _("cmd_help") else
                         "information", timeout=12)
@@ -2090,7 +2124,9 @@ class FedtailApp(App, PostsMixin):
                            lists=True, long_form=bool(core.cfg["feed"].get("long_form", True)),
                            translate=bool(getattr(core.caps, "translation", False)),
                            translates=getattr(core, "translation_languages", None),
-                           quote_reply=True, in_thread=in_thread)
+                           quote_reply=True, in_thread=in_thread,
+                           # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as)
+                           act_as=actions.act_as_of(core, core.cfg))
 
     def post_menu_items(self, st, in_thread=False):
         """A post's ⋯ menu, the windows' own (common/actions.py): [(label, item)]."""
@@ -2103,9 +2139,10 @@ class FedtailApp(App, PostsMixin):
             if it.kind == "separator":
                 if out and out[-1] != "-":
                     out.append("-")
-            elif it.kind != "act_as":  # one account a terminal
+            else:
                 out.append((it.label + (" …" if it.kind in ("lists", "long_form",
-                                                             "translate") else ""), it))
+                                                             "translate", "act_as") else ""),
+                            it))
         while out and out[-1] == "-":
             out.pop()
         if real(st).poll is not None:  # the windows vote on the card; here: its screen
@@ -2143,12 +2180,34 @@ class FedtailApp(App, PostsMixin):
             self.host.open_lists(it.data)
         elif it.kind in ("long_form", "translate"):
             self.open_thing({"page": it.kind, "arg": real(st).id})
+        elif it.kind == "act_as":  # a choice of its own: which account, which action
+            from .screens import MenuScreen
+            picks = [(label, (entry, tag, action)) for label, entry, tag, action in it.data]
+            self.push_screen(MenuScreen(it.label, picks),
+                             lambda pick: pick and self.act_as(*pick))
         elif it.kind == "quote_reply":
             from ...model.text import quote_lines, without_quote_fallback
             # the words, as the windows quote them: not the post's HTML
             self.host.compose(reply_to=st, text=quote_lines(
                 html_to_text(without_quote_fallback(real(st).text)),
                 self.core.cfg["post"].get("quote_prefix", "> "), strip_mentions=True))
+
+    def act_as(self, st, tag, action):
+        """★ / ♻ / ↩ from another account of the window (all in one): the post found on
+        that account's server, the action done there; a reply opens the editor on it —
+        the windows' own (Qt's and GTK's act_as)."""
+        self.notify(_("act_as_wait"))
+        core = self.core
+
+        def done(got):
+            if action == "reply":
+                if got is not None:
+                    self.host.compose(reply_to=got)
+                return
+            via = core.via(got) if got is not None else ""
+            self.notify(_("act_as_done",
+                          acct=via or "@" + (core.me.handle if core.me else "")))
+        self.later(core.act_as(st, tag, "find" if action == "reply" else action), ok=done)
 
     def send_report(self, out):
         """Into debug.report_repo too, if one is set (fedtail/reportsend.py)."""
