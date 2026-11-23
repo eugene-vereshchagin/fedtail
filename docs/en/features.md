@@ -543,6 +543,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Reply with quotes, piece by piece | has | 0.17.0 | `post.quote_prefix` | own (the reply's text) | Thunderbird and mail clients — for mail; no fediverse client |
 | Copy the handle @user@server | has | 0.16.0 | — | own | Mastodon web (Copy handle) |
 | Quoting a post; who may quote mine | has | 0.8.0 | `post.quote_action`, `post.quote_policy` | `quoted_status_id`, `quote_approval_policy` | Mastodon 4.5+, Ivory, Phanpy |
+| Quote as a link — where quoting isn't | has | next | `post.quote_link` | — | only in fedtail |
 | Who may reply, boost, like (GoToSocial) | has | 0.8.0 | `post.who_can_reply`, `post.who_can_boost`, `post.who_can_like` | `interaction_policy` | GoToSocial clients |
 | A scheduled post | has | 0.8.0 | `post.schedule` | `scheduled_at`, `scheduled_statuses` | Mastodon web, Ivory, Phanpy, Megalodon |
 | Edit, delete, pin your own post | has | 0.3.0 | — | `PUT statuses/:id`, `statuses/:id/source`, `statuses/:id/pin` | everyone |
@@ -591,6 +592,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Copy the handle @user@server.** The “Copy handle” button on a profile, the “Copy handle @…” item in a post's ⋯ menu (the author and, for a boost, the booster) and in the menu of the “♻ boosted by” line. Always the full `@user@server`: people from your server come as just `user`, your server's name is added — any client can find and mention a person by such a handle.
 
 **Quoting a post; who may quote mine.** “Quote” in the ⋯ menu of a post its author lets quote. Who may quote my new posts: `"public"`, `"followers"`, `"nobody"` or `""` — as on the server.
+
+**Quote as a link — where quoting isn't.** A public post that can't really be quoted (a server without quotes — GoToSocial, Mastodon before 4.5 — or an author who didn't allow it) has "Quote as a link" in its ⋯ menu (or as a tool over it): a new post opens with that post's address, the cursor a line below for your words. Every interface and the phone.
 
 **Who may reply, boost, like (GoToSocial).** `"everyone"`, `"followers"` (and the mentioned), `"following"` (and the mentioned), `"mentioned"`, `"me"` or `""` — as in the account's settings. Not sent to other servers.
 

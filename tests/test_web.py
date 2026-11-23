@@ -554,6 +554,17 @@ class WebTest(TmpDir):
         self.core.cfg["feed"]["start_at"] = "newest"
         self.assertIsNone(web.lane("home")["start"])  # the newest end
 
+    def test_quote_as_a_link_where_quoting_is_not(self):
+        """A server without quotes (GoToSocial, 23.11): the post's menu (the phone's
+        too) has "Quote as a link"; it opens the editor with the post's address."""
+        self.w.add(status("003", BOB, minute=3, text="news", vis="public"), home=True)
+        self.core.poll_once()
+        menu = self.srv.web.post_menu("003")  # the phone's: no hover, the menu whole
+        item = next(i for i in menu["items"] if i["url"] == "fedtail:quotelink/003")
+        self.assertEqual(item["label"], i18n._("quote_link"))
+        got = json.loads(self.req("/api/link", {"url": item["url"]})[2])
+        self.assertEqual(got["compose"], {"text": "https://example.test/s/003\n\n"})
+
     def test_read_up_to_here_is_the_cores_count(self):
         """⋯ → "Read up to here": counted on the server over the cards the page shows,
         by time (common/lane.read_up_to) — the page had its own count by place; what was

@@ -171,6 +171,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Reply with quotes, piece by piece | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Copy the handle @user@server | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Quoting a post; who may quote mine | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Quote as a link — where quoting isn't | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A scheduled post | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |   |
 | Edit, delete, pin your own post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Delete and redraft | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |
@@ -271,4 +272,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **73** features of the 207 compared.
+Only in fedtail — **74** features of the 208 compared.

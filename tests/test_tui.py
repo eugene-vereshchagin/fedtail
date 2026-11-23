@@ -534,6 +534,31 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             app.screen.dismiss("cw")  # "⚠ Warning": the field comes
             await self.wait(pilot, lambda: ed.query_one("#c-cw", Input).display)
 
+    async def test_quote_as_a_link_where_quoting_is_not(self):
+        """A server without quotes (GoToSocial, 23.11): . → "Quote as a link" — the
+        editor with the post's address, the cursor on the line below it."""
+        from textual.widgets import TextArea
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.screens import ComposeScreen, MenuScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            app.query_one("#posts").focus()
+            await pilot.press("full_stop")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            it = next(x[1] for x in app.screen.items
+                      if isinstance(x, tuple) and x[0] == i18n._("quote_link"))
+            app.screen.dismiss(it)
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            ta = app.screen.query_one(TextArea)
+            self.assertEqual(ta.text, "https://example.test/s/001\n\n")
+            self.assertEqual(ta.cursor_location, (2, 0))
+
     async def test_tab_completes_a_tag_in_the_editor(self):
         """Typed by keys as a person types: "#geo", the line under the text offers
         #georgia, Tab puts it in. The terminal's editor completed nothing (20.11); with

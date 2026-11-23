@@ -207,6 +207,29 @@ class QtSmokeTest(unittest.TestCase):
         lane.view._emit_seen()  # 030 on screen (the window is tall)
         self.pump(until=lambda: thread_button() == i18n._("thread") + " · 3", timeout=10)
 
+    def test_quote_as_a_link_where_quoting_is_not(self):
+        """A server without quotes (GoToSocial, 23.11): ⋯ → "Quote as a link" opens a new
+        post with the post's address, the cursor on the line below it for my words."""
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.frontends.qt.compose import Compose
+        st = self.world.add(status("040", BOB, minute=40, vis="public", text="новость"))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        from PySide6.QtWidgets import QToolButton
+        row = PostRow(CardSpec(key="040", entry=E(st)), self.win.ctx)
+        row._own_tools()  # the tools over the post, as the mouse comes onto it
+        tool = next(b for b in row.findChildren(QToolButton) if b.property("tool") == "quote")
+        self.assertEqual(tool.accessibleName(), i18n._("quote_link"))  # no real quote here
+        self.core.store.put_statuses([st])  # (a card's post is in the store)
+        tool.click()  # as the hand picks it
+        self.pump(until=lambda: any(c.isVisible() for c in self.win.findChildren(Compose)))
+        ed = next(c for c in self.win.findChildren(Compose) if c.isVisible())
+        self.assertEqual(ed.text.toPlainText(), "https://example.test/s/040\n\n")
+        self.assertIsNone(ed.reply_to)  # a post of my own, not a reply
+        self.assertEqual(ed.text.textCursor().position(), len(ed.text.toPlainText()))
+        ed.text.textCursor().insertText("вот это да")
+        ed.reject()
+
     def test_editor_with_two_accounts_opens(self):
         """All accounts in one window: the editor's "From" counted against the server's
         limit before the counter was made — Send and Reply did nothing (issue #3)."""

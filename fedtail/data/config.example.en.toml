@@ -1178,6 +1178,11 @@ quote_policy = ""
 # "Quote" in the ⋯ menu of a post its author allowed to quote (Mastodon 4.5+).
 quote_action = true
 
+# "Quote as a link" in the ⋯ menu of a public post that can't be quoted — the author didn't
+# allow it, or a server without quotes (GoToSocial, Mastodon before 4.5): a new post with
+# the post's address and your words under it (readers open it by the link).
+quote_link = true
+
 # "Reply with quote" in a post's ⋯ menu and "Quote in reply" on selected text: the reply
 # gets a quote, every line starting with this (a Markdown quote). With the reply already
 # open, the quote goes where the cursor is: select a sentence, quote, answer, select the

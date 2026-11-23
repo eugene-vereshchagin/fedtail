@@ -174,6 +174,31 @@ class GtkFirstFrameTest(_GtkBase):
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkSmokeTest(_GtkBase):
 
+    def test_quote_as_a_link_where_quoting_is_not(self):
+        """A server without quotes (GoToSocial, 23.11): the quote tool over a public post
+        says "Quote as a link" and opens a new post with the post's address, the cursor
+        on the line below it for my words."""
+        self.world.add(status("040", BOB, minute=40, vis="public", text="новость"),
+                       home=True)
+        self.core.poll_once()
+        lane = self._lane("home")
+        self.assertTrue(pump(lambda: "040" in lane.rows, 5))
+        card = lane.rows["040"]
+        card._show_tools(True)  # the mouse comes onto it
+        tool = next(b for b in _walk(card.own_tools) if getattr(b, "tool", "") == "quote")
+        self.assertEqual(tool._ft_tip, i18n._("quote_link"))  # its tooltip
+        tool.emit("clicked")
+        self.assertTrue(pump(lambda: self.win.composer is not None, 5))
+        c = self.win.composer
+        buf = c.buffer
+        text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)
+        self.assertEqual(text, "https://example.test/s/040\n\n")
+        at = buf.get_iter_at_mark(buf.get_insert()).get_offset()
+        self.assertEqual(at, len(text))  # my words go under the address
+        self.assertIsNone(c.reply_to)
+        buf.set_text("")
+        c.close()
+
     def test_a_boosted_comment_counts_its_whole_thread(self):
         """A boost of a comment deep in a thread: its Thread button said the comment's
         own direct replies — none (23.11); once on screen, the whole thread's comments

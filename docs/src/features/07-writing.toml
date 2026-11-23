@@ -286,6 +286,21 @@ details.ru = "«Цитировать» в меню ⋯ у поста, котор
 details.en = "“Quote” in the ⋯ menu of a post its author lets quote. Who may quote my new posts: `\"public\"`, `\"followers\"`, `\"nobody\"` or `\"\"` — as on the server."
 
 [[feature]]
+id = "quote-link"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Цитировать ссылкой — где цитат нет"
+name.en = "Quote as a link — where quoting isn't"
+config = "`post.quote_link`"
+api = "—"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "У публичного поста, который нельзя процитировать по-настоящему (сервер без цитат — GoToSocial, Mastodon до 4.5 — или автор не разрешил), в меню ⋯ (или значком над постом) стоит «Цитировать ссылкой»: открывается новый пост с адресом этого поста, курсор — строкой ниже, для твоих слов. Во всех интерфейсах и на телефоне."
+details.en = "A public post that can't really be quoted (a server without quotes — GoToSocial, Mastodon before 4.5 — or an author who didn't allow it) has \"Quote as a link\" in its ⋯ menu (or as a tool over it): a new post opens with that post's address, the cursor a line below for your words. Every interface and the phone."
+
+[[feature]]
 id = "interaction-policy"
 status = "has"
 android = "has"

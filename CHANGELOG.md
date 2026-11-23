@@ -14,6 +14,10 @@
   terminal (⤷ N), the web page (the number moved there from Reply, as in the windows) and
   the phone (on Reply: it has no Thread button). `card.thread_size_minutes` (60); 0 —
   the direct replies, no requests.
+- **Quote as a link, where quoting isn't.** GoToSocial (and Mastodon before 4.5) has no
+  quote posts, and an author may not allow them: such a public post now has "Quote as a
+  link" in its ⋯ menu (the quote tool over it) — a new post with its address, the cursor
+  a line below for your words. Every interface and the phone; `post.quote_link`.
 
 ## 0.23.9 — 2026-11-23
 

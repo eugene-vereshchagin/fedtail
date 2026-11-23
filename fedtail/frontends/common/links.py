@@ -54,6 +54,15 @@ def parse(url):
     return Link(action, arg)
 
 
+def quote_link_text(post):
+    """The editor's text for "Quote as a link": the post's address, then a line for my
+    words — every editor puts the cursor at the end of a text it starts with (a boost's
+    own post's address)."""
+    from ...model import real
+    p = real(post)
+    return (p.url or p.uri) + "\n\n"
+
+
 def make(action, arg):
     return f"{PREFIX}{action}/{arg}"
 
@@ -284,6 +293,8 @@ class Links:
                                          fail=h.error))
         elif action == "quote":
             h.compose(quote=st)
+        elif action == "quotelink":  # no quoting there: my words above its address
+            h.compose(text=quote_link_text(st))
         elif action == "readone":
             v.mark_read([arg])
         elif action == "readupto":

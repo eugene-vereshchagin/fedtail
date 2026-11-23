@@ -239,6 +239,7 @@ DEFAULTS = {
         "report_forward": True,
         "quote_policy": '',
         "quote_action": True,
+        "quote_link": True,  # no quoting there: "Quote as a link" (the post's address)
         "invite": True,
         "who_can_reply": '',
         "who_can_boost": '',
@@ -650,7 +651,8 @@ FILE_LAYOUT = (
                            "languages spellcheck "
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "emoji_standard "
-                           "report_forward quote_policy quote_action quote_prefix invite "
+                           "report_forward quote_policy quote_action quote_link quote_prefix "
+                           "invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
                            "redraft resize_images check_media_types focus_point chain preview "
                            "format_bar lang_check "

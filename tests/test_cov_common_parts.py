@@ -103,6 +103,25 @@ class ActionsTest(unittest.TestCase):
         got = [b.action for b in actions.buttons(post(), ctx, unread=True)]
         self.assertEqual(got[-1], "readone")
 
+    def test_quote_as_a_link_where_quoting_is_not(self):
+        """GoToSocial, Mastodon before 4.5, an author who didn't allow it: no "Quote" —
+        "Quote as a link" instead, an editor with the post's address under my words."""
+        from fedtail.frontends.common import links
+
+        def urls(p, cfg=CFG):
+            return [i.url for i in actions.menu(p, actions.Ctx(cfg=cfg, me_id="ME"))]
+        plain = post("1")  # no policy said: a server without quotes
+        self.assertIn("fedtail:quotelink/1", urls(plain))
+        allowed = post("1", policy=Policy(can_quote="automatic"))
+        self.assertIn("fedtail:quote/1", urls(allowed))
+        self.assertNotIn("fedtail:quotelink/1", urls(allowed))
+        self.assertIn("fedtail:quotelink/1", urls(post("1", policy=Policy(can_quote="denied"))))
+        self.assertNotIn("fedtail:quotelink/1", urls(post("1", visibility="private")))
+        off = dict(CFG, post=dict(CFG["post"], quote_link=False))
+        self.assertNotIn("fedtail:quotelink/1", urls(plain, off))
+        boost = Share(Ref("m", "", "b1"), acc("R", "relay@x.test"), plain, None, "1")
+        self.assertEqual(links.quote_link_text(boost), "https://example.test/s/1\n\n")
+
     def test_a_rare_menu(self):
         me = to_post(status("9", ME)).author
         mine_quoted = post("9", ME)

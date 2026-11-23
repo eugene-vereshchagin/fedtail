@@ -315,6 +315,11 @@ def _menu(entry, ctx, short_id=None, unread=False):
     if ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
         out.append(Item("link", _("quote") if approval == "automatic" else _("quote_ask"),
                         url=make("quote", p.id), tool="quote"))
+    elif ctx.cfg["post"].get("quote_link", True) and p.visibility in ("public", "unlisted") \
+            and (p.url or p.uri):
+        # no quoting here (the author, or a server without it: GoToSocial, before 4.5):
+        # a post of mine with its address under my words
+        out.append(Item("link", _("quote_link"), url=make("quotelink", p.id), tool="quote"))
     if ctx.act_as is not None:
         others = ctx.act_as(entry)
         if others:

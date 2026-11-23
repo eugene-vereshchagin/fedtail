@@ -1573,6 +1573,7 @@ _STRINGS = {
         "directory_title": "Каталог профилей",
         "directory_local": "Каталог профилей моего сервера",
         "quote": "Цитировать", "quote_ask": "Цитировать (автор одобрит)",
+        "quote_link": "Цитировать ссылкой",
         "compose_quote": "Цитата",
         "block_domain": "Заблокировать сервер {domain}…",
         "block_domain_q": "Скрыть всех с {domain}: их посты не будут видны нигде, подписки "
@@ -3520,6 +3521,7 @@ _STRINGS = {
         "directory_title": "Profile directory",
         "directory_local": "Profile directory of my server",
         "quote": "Quote", "quote_ask": "Quote (the author approves)",
+        "quote_link": "Quote as a link",
         "compose_quote": "Quote",
         "block_domain": "Block the server {domain}…",
         "block_domain_q": "Hide everyone from {domain}: their posts won't show anywhere, "
