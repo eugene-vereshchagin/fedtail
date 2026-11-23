@@ -2233,33 +2233,21 @@ class FedtailApp(App, PostsMixin):
 
     def act_as(self, st, tag, action):
         """★ / ♻ / ↩ from another account of the window (all in one): the post found on
-        that account's server, the action done there; a reply opens the editor on it —
-        the windows' own (Qt's and GTK's act_as)."""
-        self.notify(_("act_as_wait"))
-        core = self.core
-
-        def done(got):
-            if action == "reply":
-                if got is not None:
-                    self.host.compose(reply_to=got)
-                return
-            via = core.via(got) if got is not None else ""
-            self.notify(_("act_as_done",
-                          acct=via or "@" + (core.me.handle if core.me else "")))
-        self.later(core.act_as(st, tag, "find" if action == "reply" else action), ok=done)
+        that account's server, the action done there; a reply opens the editor on it
+        (common/window.act_as, every interface's)."""
+        from ..common import window as flows
+        flows.act_as(self.core, st, tag, action, self.later,
+                     lambda text, _s: self.notify(text),
+                     lambda got: self.host.compose(reply_to=got))
 
     def send_report(self, out):
-        """Into debug.report_repo too, if one is set (fedtail/reportsend.py)."""
-        from ... import reportsend
-        repo = self.core.cfg["debug"].get("report_repo", "")
-        if not repo:
-            return
-        self.notify(_("bugreport_sending", repo=repo))
-        self.later(self.core.submit(reportsend.send_report, out, self.core.cfg,
-                                    self.core.paths.data_dir),
-                   ok=lambda where: self.notify(_("bugreport_sent", where=where), timeout=20),
-                   fail=lambda err: self.notify(_("bugreport_send_failed", repo=repo, err=err),
-                                                severity="error", timeout=30))
+        """Into debug.report_repo too, if one is set (common/window.send_report, every
+        interface's)."""
+        from ..common import window as flows
+        flows.send_report(self.core, out, self.later,
+                          lambda text, s: self.notify(
+                              text, **({"timeout": s} if s else {}),
+                              **({"severity": "error"} if s >= 30 else {})))
 
     def main_menu_items(self):
         """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""

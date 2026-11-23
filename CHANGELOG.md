@@ -83,6 +83,9 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: logging out, sending a bug report on and acting as another account
+  are written once (`frontends/common/window.py`) — the Qt window, the GTK window, the
+  terminal, the page and the accounts place each had a copy.
 - Behind the scenes: types are checked (mypy, lenient) over the model, the core and the
   protocol — clean; a CI job warns when that changes. On the way: a function defined
   twice in the merged window's code and a weak reference looked at twice are gone.

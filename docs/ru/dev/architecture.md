@@ -185,6 +185,7 @@ fedtail/
       profile.py     кнопки профиля и что делает каждая (все четыре интерфейса)
       sound.py       проигрывание звуков темы (системным плеером, по одному)
       connecting.py  неудачное подключение: войти заново или сказать и повторить через 20 с
+      window.py      потоки, одинаковые у всех интерфейсов: выход, отправка отчёта, «от имени»
     gtk/             фронтенд на GTK 4 (PyGObject, libadwaita по желанию): docs/ru/dev/gtk.md
     qt/              фронтенд на Qt Widgets (PySide6)
       __init__.py    run(): QApplication, тема, Bridge, MainWindow, диагностика

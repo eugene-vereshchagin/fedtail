@@ -307,31 +307,19 @@ class AccountPlaces:
         return Out(open={"page": "login", "arg": core.paths.profile})
 
     def _a_accounts_logout(self, _d, _v, confirmed, _ans):
-        """As the windows: the token gone (here and on the server), ★ handed on; then
-        the next account logged in — or the login, none left."""
-        from ...core import paths, profiles
+        """As the windows (common/window.py: one plan, one doing): the token gone (here
+        and on the server), ★ handed on; then the next account logged in — or the
+        login, none left."""
+        from . import window as flows
         from .places import Out
         core, _merged = self._cores()
-        me = core.paths.profile
-        acct = "@" + (self._handle(core) or me)
-        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
-        main = paths.main_profile()
-        target = next((p for p in others if p["name"] == main), others[0]) if others else None
+        plan = flows.logout_plan(core.paths.profile, self._handle(core))
         if not confirmed:
-            text = [_("logout_q", acct=acct)]
-            if target is not None:
-                if me == main:
-                    text.append(_("logout_main_moves", to=profiles.label(target)))
-                text.append(_("logout_switch", to=profiles.label(target)))
-            else:
-                text.append(_("logout_last"))
-            return Out(confirm=_plain("<br><br>".join(text)))
-        log.info("logout: profile %s", me)
-        core.logout()
-        profiles.hand_over_main(me)
+            return Out(confirm=_plain(plan.words("<br><br>")))
+        target = flows.logout(core, plan)
         if target is not None:
-            return Out(open={"profile": target["name"]})
-        return Out(open={"page": "login", "arg": me})
+            return Out(open={"profile": target})
+        return Out(open={"page": "login", "arg": plan.profile})
 
     # ---- logging in: the server, its page in the browser, the code pasted --------------
     def _login_core(self, name):

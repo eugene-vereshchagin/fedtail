@@ -1158,18 +1158,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.send_report(out)
 
     def send_report(self, out):
-        """Into debug.report_repo too, if one is set (fedtail/reportsend.py), in the
-        background — as Qt's."""
-        from ... import reportsend
-        repo = self.cfg["debug"].get("report_repo", "")
-        if not repo:
-            return
-        self.status(_("bugreport_sending", repo=repo))
-        self.bridge.call(
-            self.core.submit(reportsend.send_report, out, self.cfg, self.view.paths.data_dir),
-            ok=lambda where: self.status(_("bugreport_sent", where=where), seconds=15),
-            fail=lambda err: self.status(_("bugreport_send_failed", repo=repo, err=err),
-                                         seconds=30))
+        """Into debug.report_repo too, if one is set, in the background
+        (common/window.send_report, every interface's)."""
+        from ..common import window as flows
+        flows.send_report(self.core, out, self.bridge.call,
+                          lambda text, s: self.status(text, seconds=s or 10))
 
     def report_issue(self):
         """"Report a bug on GitHub…" (gtk/issue.py), as Qt's."""
@@ -1192,19 +1185,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def act_as(self, post, tag, action):
         """★ / ♻ / ↩ from another account of the window (all in one): the post found on
-        its server, the action done there; a reply opens the editor on it (Qt's)."""
-        self.status(_("act_as_wait"), seconds=4)
-        v = self.view
-
-        def done(got):
-            if action == "reply":
-                if got is not None:
-                    self.compose(got)
-                return
-            via = v.via(got) if got is not None else ""
-            self.status(_("act_as_done", acct=via or "@" + (v.me.handle if v.me else "")),
-                        seconds=5)
-        self.call(v.act_as(post, tag, "find" if action == "reply" else action), done)
+        its server, the action done there; a reply opens the editor on it
+        (common/window.act_as, every interface's)."""
+        from ..common import window as flows
+        flows.act_as(self.view, post, tag, action, self.call,
+                     lambda text, s: self.status(text, seconds=s), self.compose)
 
     def _sidebar_dragged(self, bar):
         """The sidebar's edge dragged: kept a moment after it stops (common/sidebar)."""
@@ -1407,34 +1392,22 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def log_out(self):
         """Forget this profile's token; the window goes over to another account logged
-        in (the ★ moves with it), or, none left, to the login."""
+        in (the ★ moves with it), or, none left, to the login — the plan and the doing
+        are every interface's (common/window.py)."""
         from ...core import profiles
-        me = self.view.paths.profile
+        from ..common import window as flows
         mine = self.view.me
-        acct = "@" + (mine.handle if mine else self.view.auth_handle or me)
-        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
-        main = profiles.paths.main_profile()
-        text = [_("logout_q", acct=acct)]
-        target = None
-        if others:
-            target = next((p for p in others if p["name"] == main), others[0])
-            if me == main:
-                text.append(_("logout_main_moves", to=profiles.label(target)))
-            text.append(_("logout_switch", to=profiles.label(target)))
-        else:
-            text.append(_("logout_last"))
+        plan = flows.logout_plan(self.view.paths.profile,
+                                 mine.handle if mine else self.view.auth_handle)
 
         def go():
-            log.info("logout: profile %s", me)
-            self.core.logout()
-            profiles.hand_over_main(me)
+            target = flows.logout(self.core, plan)
             if target:
-                profiles.launch(target["name"])
+                profiles.launch(target)
                 GLib.timeout_add(300, lambda: (self.close(), False)[1])
             else:
                 self.start()
-        self.confirm(_("logout_title"), "\n\n".join(text).replace("<br>", "\n"), go,
-                     yes=_("logout_yes"))
+        self.confirm(plan.title, plan.words(), go, yes=plan.yes)
 
     def about(self):
         """About fedtail: the same cards as Qt's (gtk/about.py, common/about.py)."""

@@ -84,6 +84,43 @@ class AccountsTest(TmpDir):
         self.assertEqual(row.buttons[0].act, ("accounts", "switch", "work"))
         self.assertEqual(self.pl.act("accounts", "switch", "work").open, {"profile": "work"})
 
+    def test_the_windows_flows_are_one(self):
+        """common/window.py: logging out, a report sent on, acting as another account —
+        each interface had its copy (three of the logout, three of the report, four of
+        act-as: 24.11). One plan, one doing; the interface only asks, says and waits."""
+        from concurrent.futures import Future
+
+        from fedtail.frontends.common import window as flows
+        # logging out: none else logged in — the login; another — over to it, ★ with it
+        alone = flows.logout_plan("default", "mira")
+        self.assertIsNone(alone.target)
+        self.assertEqual(alone.text, (i18n._("logout_q", acct="@mira"), i18n._("logout_last")))
+        other = paths.resolve("work")
+        other.ensure()
+        auth.save(other.auth_file, {"server": "https://example.test", "token": "t2"})
+        plan = flows.logout_plan("default", "")
+        self.assertEqual(plan.target, "work")
+        self.assertIn("@default", plan.text[0])  # no handle known: the profile's name
+        self.assertEqual(len(plan.text), 3)  # asked, ★ moves (default is main), goes over
+        self.assertEqual(plan.words("<br><br>").count("<br><br>"), 2)
+        self.assertEqual(flows.logout(self.core, plan), "work")
+        self.assertEqual(paths.main_profile(), "work")
+        self.assertFalse((auth.load(paths.resolve("default").auth_file) or {}).get("token"))
+        # a report: nowhere to send — nothing said; a repo — said, sent, said again
+        said, calls = [], []
+        self.assertFalse(flows.send_report(self.core, "/tmp/r.tar.gz", calls.append, said.append))
+        self.assertEqual((said, calls), ([], []))
+        self.core.cfg["debug"]["report_repo"] = "git@example.test:reports"
+        fut = Future()
+        self.core.submit = lambda fn, *a: fut
+        flows.send_report(self.core, "/tmp/r.tar.gz",
+                          lambda f, ok, fail: calls.append((f, ok, fail)),
+                          lambda text, s: said.append((text, s)))
+        self.assertIn("git@example.test:reports", said[0][0])
+        calls[0][1]("there")
+        calls[0][2]("no route")
+        self.assertEqual([s for _t, s in said], [0, 15, 30])
+
     def test_main_relogin_logout(self):
         other = paths.resolve("work")
         other.ensure()

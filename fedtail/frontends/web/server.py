@@ -2052,9 +2052,8 @@ class Web:
                 raise ValueError(_("act_as_wait"))
             post = post_json(self.core, got, None)
             return {"compose": {"reply_to": got.id}, "post": post}
-        via = self.core.via(got) if got is not None else ""
-        me = self.core.me
-        return {"message": _("act_as_done", acct=via or "@" + (me.handle if me else ""))}
+        from ..common import window as flows
+        return {"message": flows.act_as_done(self.core, got)}
 
     def thread_act(self, action, sid):
         """Subscribe to, leave, mute or unmute the thread a post is in."""

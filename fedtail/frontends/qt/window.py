@@ -1286,34 +1286,23 @@ class MainWindow(QMainWindow):
 
     def log_out(self):
         """Forget this profile's token. The main profile hands its ★ to another one
-        logged in; the window goes over to that one, or (none left) to the login."""
+        logged in; the window goes over to that one, or (none left) to the login —
+        the plan and the doing are every interface's (common/window.py)."""
         from ...core import profiles
-        me = self.core.paths.profile
+        from ..common import window as flows
         mine = self.ctx.view.me
-        acct = "@" + (mine.handle if mine else self.ctx.view.auth_handle or me)
-        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
-        main = profiles.paths.main_profile()
-        text = [_("logout_q", acct=acct)]
-        if others:
-            target = next((p for p in others if p["name"] == main), others[0])
-            if me == main:
-                text.append(_("logout_main_moves", to=profiles.label(target)))
-            text.append(_("logout_switch", to=profiles.label(target)))
-        else:
-            target = None
-            text.append(_("logout_last"))
-        box = QMessageBox(QMessageBox.Icon.Warning, _("logout_title"), "<br><br>".join(text),
+        plan = flows.logout_plan(self.core.paths.profile,
+                                 mine.handle if mine else self.ctx.view.auth_handle)
+        box = QMessageBox(QMessageBox.Icon.Warning, plan.title, plan.words("<br><br>"),
                           QMessageBox.StandardButton.Cancel, self)
-        go = box.addButton(_("logout_yes"), QMessageBox.ButtonRole.DestructiveRole)
+        go = box.addButton(plan.yes, QMessageBox.ButtonRole.DestructiveRole)
         box.setDefaultButton(QMessageBox.StandardButton.Cancel)
         box.exec()
         if box.clickedButton() is not go:
             return
-        log.info("logout: profile %s", me)
-        self.core.logout()
-        profiles.hand_over_main(me)
+        target = flows.logout(self.core, plan)
         if target:
-            profiles.launch(target["name"])
+            profiles.launch(target)
             QTimer.singleShot(300, self.quit)
         else:
             self._set_title()
@@ -2318,19 +2307,13 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(_("redraft_media", n=d.media), 8000)
 
     def act_as(self, st, tag, action):
-        """★ / ♻ / ↩ from another account of the window: the post found on its server."""
-        self.statusBar().showMessage(_("act_as_wait"), 4000)
-        v = self.ctx.view
-
-        def done(got):
-            if action == "reply":
-                self.compose(got)
-            else:
-                via = v.via(got) if got is not None else ""
-                self.statusBar().showMessage(
-                    _("act_as_done", acct=via or "@" + (v.me.handle if v.me else "")), 5000)
-        self.bridge.call(v.act_as(self._post(st), tag, "find" if action == "reply" else action),
-                         ok=done, fail=self.error)
+        """★ / ♻ / ↩ from another account of the window: the post found on its server
+        (common/window.act_as, every interface's)."""
+        from ..common import window as flows
+        flows.act_as(self.ctx.view, self._post(st), tag, action,
+                     lambda fut, ok, fail: self.bridge.call(fut, ok=ok, fail=fail),
+                     lambda text, s: self.statusBar().showMessage(text, int(s * 1000)),
+                     self.compose, fail=self.error)
 
     def read_whole(self, st):
         """📄 The whole text from the author's server: an article your server cut to a
@@ -2662,18 +2645,12 @@ class MainWindow(QMainWindow):
         self.send_report(out)
 
     def send_report(self, out):
-        """Into debug.report_repo too, if one is set (fedtail/reportsend.py): git and
-        ssh take a while — in the background, the result on the status bar."""
-        from ... import reportsend
-        repo = self.cfg["debug"].get("report_repo", "")
-        if not repo:
-            return
-        self.statusBar().showMessage(_("bugreport_sending", repo=repo))
-        self.bridge.call(
-            self.core.submit(reportsend.send_report, out, self.cfg, self.core.paths.data_dir),
-            ok=lambda where: self.statusBar().showMessage(_("bugreport_sent", where=where), 15000),
-            fail=lambda err: self.statusBar().showMessage(
-                _("bugreport_send_failed", repo=repo, err=err), 30000))
+        """Into debug.report_repo too, if one is set: in the background, the result on
+        the status bar (common/window.send_report, every interface's)."""
+        from ..common import window as flows
+        flows.send_report(self.core, out,
+                          lambda fut, ok, fail: self.bridge.call(fut, ok=ok, fail=fail),
+                          lambda text, s: self.statusBar().showMessage(text, int(s * 1000)))
 
     def report_issue(self):
         """"Report a bug on GitHub…": the scrubbed draft to read first (qt/issue.py)."""
