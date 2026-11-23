@@ -2228,6 +2228,7 @@ async function openThread(id, at, show) {
       // show: my answer just sent, the screen on it; else the post it opened at
       const here = show ? p.sid === show || p.id === show : p.sid === t.focus || p.id === t.focus;
       if (here) { card.classList.add("cursor"); focus = card; }
+      if (p.branch && p.branch.length) card.append(foldButton(card, p.branch));
       body.append(card);
     }
     if (t.posts.length) $("#side-title").textContent = w("web_thread") + " · @" + t.posts[0].account.handle;
@@ -2239,6 +2240,25 @@ async function openThread(id, at, show) {
         if (ids.includes(card.dataset.id)) read(card);
     }
   } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+}
+
+// A top comment's branch folded away and shown again — the windows' and the terminal's
+// "-" (which comments are its branch, the server says: common/postkeys.branch). Here a
+// click: a thread on the page has no cursor of keys.
+function foldButton(card, branch) {
+  const b = el("button", "tool fold", "− " + branch.length);
+  b.type = "button";
+  b.title = w("web_thread_fold_tip");
+  let folded = false;
+  b.onclick = (e) => {
+    e.stopPropagation();
+    folded = !folded;
+    b.textContent = (folded ? "+ " : "− ") + branch.length;
+    card.classList.toggle("folded", folded);
+    for (const c of $("#side-body").querySelectorAll(".post[data-id]"))
+      if (branch.includes(c.dataset.id)) c.hidden = folded;
+  };
+  return b;
 }
 
 // a thread's head, as the windows': its first words, how many answers and #id (and why

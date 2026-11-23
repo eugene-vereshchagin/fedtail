@@ -487,6 +487,23 @@ class WebTest(TmpDir):
         self.assertIn('"/api/theme_add"', js)
         self.assertIn('a.href = "/api/theme_file"', js)
 
+    def test_a_threads_branch_folds_on_the_page(self):
+        """The windows' and the terminal's "-": a top comment's branch folded away. The
+        page had no such thing (no cursor of keys in its thread, 24.11) — the server
+        names each top comment's branch by the one rule, the page folds it on a click."""
+        self.w.add(status("300", BOB, minute=20, vis="public", text="root"), home=True)
+        for sid, parent in (("301", "300"), ("302", "301"), ("303", "302"), ("304", "300")):
+            self.w.add(status(sid, BOB, parent, "B", minute=21 + int(sid[-1]), vis="public"))
+        self.core.poll_once()
+        posts = json.loads(self.req("/api/thread?id=300")[2])["posts"]
+        by = {p["id"]: p for p in posts}
+        self.assertEqual(by["301"]["branch"], ["302", "303"])  # what is under it
+        self.assertNotIn("branch", by["304"])  # a top comment alone: nothing to fold
+        self.assertNotIn("branch", by["300"])
+        self.assertNotIn("branch", by["302"])  # (its top comment's is the one folded)
+        js = web.static_text("app.js")
+        self.assertIn("card.append(foldButton(card, p.branch))", js)
+
     def test_a_push_pressed_goes_to_its_lane(self):
         """A press on a window's note goes to its lane; the page's push opened "/"
         (23.11). The core says which lane a kind of event is read in — by the lanes'

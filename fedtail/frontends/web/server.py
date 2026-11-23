@@ -1623,6 +1623,16 @@ class Web:
         unread = core.unread(posts)
         out = [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
                          number=n.number, depth=n.depth) for n in items]
+        # a top comment's branch — the comments under it, as the windows' "-" folds them
+        # (common/postkeys.branch, the one rule): the page folds and unfolds on a click
+        from ..common import postkeys
+        keys_in_order = [n.post.id for n in items]
+        depth = {n.post.id: n.depth for n in items}
+        for n, p in zip(items, out, strict=True):
+            if n.depth == 1:
+                _head, below = postkeys.branch(keys_in_order, n.post.id, depth.get)
+                if below:
+                    p["branch"] = below
         if only_private(items):  # all private: none marked out (model.only_private)
             for p in out:
                 p["lane_private"] = True
@@ -2565,7 +2575,7 @@ WORDS = ("direct_badge", "direct_badge_tip", "mark_one_read", "gif_click_play",
          # ≡ as a window: its groups, as the windows' submenus
          "web_menu_lanes", "web_menu_look", "tender_menu", "menu_people", "accounts",
          "debug_menu", "debug_report", "debug_report_done", "debug_sound",
-         "web_downloads")
+         "web_downloads", "web_thread_fold_tip")
 
 
 class Server(ThreadingHTTPServer):

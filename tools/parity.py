@@ -271,56 +271,116 @@ EDITOR_VIA = {"alt": "alt", "focus": "alt", "cover": "alt", "poll": "poll",
               "schedule": "schedule", "drafts": "drafts", "preview": "preview"}
 
 
-def editors():
-    """{place: the editor's parts found in its code}."""
+# ---- a lane's head and a thread's, interface by interface ------------------------------
+# The same check for two more things each interface draws its own way (and words its own
+# way: the terminal's and the phone's are not the windows' i18n keys, so the check by
+# words can't follow them).
+_F, _K = "fedtail/frontends/", "android/app/src/main/java/online/dmesg/fedtail/"
+LANE_PLACES = {
+    "qt": [_F + "qt/feed.py", _F + "qt/window.py"],
+    "gtk": [_F + "gtk/lane.py", _F + "gtk/window.py"],
+    "tui": [_F + "tui/app.py"],
+    "web": ["fedtail/data/web/app.js"],
+    "android": [_K + "Lane.kt", _K + "AppModel.kt"],
+}
+LANE_PARTS = {
+    "media": r"MEDIA_KINDS|media\.boosts|m\.kinds|optJSONArray\(\"kinds\"\)",
+    "filters": r"\.filters\b|filter_seg|laneSwitches",
+    "conversations": r"conv_mode|convMode|conversations\b",
+    "to_new": r"to_new|toNew|first_unread|jump_first",
+    "all_read": r"mark_all_read|all_read|laneRead|markAllRead|lane_read",
+    "clear": r"activity_clear|lane_clear|laneClear",
+    "refresh": r"refresh_now|refresh_by_hand|action_refresh|/api/refresh|Core\.refresh",
+    "older": r"fetch_older|load_older|/api/older|loadOlder|older\(|\bolder\b",
+    "find": r"find_bar|FindBar|action_find|openFind|/api/find|findIn",
+}
+THREAD_PLACES = {
+    "qt": [_F + "qt/feed.py", _F + "qt/feedview.py"],
+    "gtk": [_F + "gtk/threadwindow.py", _F + "gtk/threadhead.py",
+            _F + "gtk/threadkeys.py", _F + "gtk/window.py"],
+    "tui": [_F + "tui/app.py"],
+    "web": ["fedtail/data/web/app.js"],
+    "android": [_K + "Screens.kt", _K + "AppModel.kt", _K + "Cards.kt"],
+}
+THREAD_PARTS = {
+    "follow": r"sub_thread|unsub_thread|thread_act|follow_thread|threadSub|subscribed",
+    "all_warnings": r"cw_all_show|all_cw|cw_show|open_warnings",
+    "next_new": r"thread_next_new|next_new|next_unread|nextNew",
+    "progress": r"thread_progress|threadProgress|thread_step",
+    "fold_branch": r"fold_branch|postkeys\.branch|postkeys\.fold|foldBranch|foldButton",
+    "reload": r"\breload\b|reloadThread|action_refresh|openThread\(",
+}
+# thing → (its places, its parts, its table in parity.toml)
+THINGS = {
+    "editor": (EDITOR_PLACES, EDITOR_PARTS),
+    "lane_head": (LANE_PLACES, LANE_PARTS),
+    "thread_head": (THREAD_PLACES, THREAD_PARTS),
+}
+
+
+def found(thing):
+    """{place: the thing's parts found in the place's code}."""
+    places, parts = THINGS[thing]
     out = {}
-    for place, paths in EDITOR_PLACES.items():
+    for place, paths in places.items():
         text = "\n".join((ROOT / p).read_text("utf-8", errors="replace") for p in paths)
-        out[place] = {part for part, rx in EDITOR_PARTS.items() if re.search(rx, text)}
+        out[place] = {part for part, rx in parts.items() if re.search(rx, text)}
     return out
 
 
+def editors():
+    """{place: the editor's parts found in its code}."""
+    return found("editor")
+
+
 def check_editors(reg=None, have=None):
-    """What parity.toml's [[editor]] entries and the code disagree on: a part of the
-    editor one place lacks and doesn't say; one said lacking that is there (done: take
-    it out); a place or a part nobody knows; a gap without its reason. [] — they agree."""
+    """check_things for the editor (its [[editor]] entries)."""
+    return check_things("editor", reg, have)
+
+
+def check_things(thing, reg=None, have=None):
+    """What parity.toml's entries for a thing ([[editor]], [[lane_head]],
+    [[thread_head]]) and the code disagree on: a part one place lacks and doesn't say;
+    one said lacking that is there (done: take it out); a place or a part nobody knows;
+    a gap without its reason. [] — they agree."""
     reg = registry() if reg is None else reg
-    have = editors() if have is None else have
+    have = found(thing) if have is None else have
+    places_of, parts_of = THINGS[thing]
     problems, said, handed = [], {}, {}
     menu = (ROOT / "fedtail/frontends/common/split.py").read_text("utf-8")
-    for e in reg.get("editor", []):
+    for e in reg.get(thing, []):
         place = e.get("place", "?")
-        if place not in EDITOR_PLACES:
-            problems.append(f"editor {place}: no such place; there are "
-                            + ", ".join(EDITOR_PLACES))
+        if place not in places_of:
+            problems.append(f"{thing} {place}: no such place; there are "
+                            + ", ".join(places_of))
             continue
         for part in list(e.get("lacks", [])) + list(e.get("via", [])):
-            if part not in EDITOR_PARTS:
-                problems.append(f"editor {place}: no such part {part!r}")
+            if part not in parts_of:
+                problems.append(f"{thing} {place}: no such part {part!r}")
         for lang in ("ru", "en"):
             if not (e.get("note") or {}).get(lang):
-                problems.append(f"editor {place}: note.{lang} — say why")
+                problems.append(f"{thing} {place}: note.{lang} — say why")
         said.setdefault(place, set()).update(e.get("lacks", []))
         handed.setdefault(place, set()).update(e.get("via", []))
         # "via": the place hands these to the full editor — it must have the hand-over,
         # and the shared ⋯ menu the item
         text = "\n".join((ROOT / p).read_text("utf-8", errors="replace")
-                         for p in EDITOR_PLACES[place])
+                         for p in places_of[place])
         for part in e.get("via", []):
             item = EDITOR_VIA.get(part)
             if item is None or "to_editor" not in text or f'More("{item}"' not in menu:
-                problems.append(f"editor {place}: {part} is said to go by the full "
+                problems.append(f"{thing} {place}: {part} is said to go by the full "
                                 "editor, but the line has no way there for it")
     for place, parts in have.items():
         lacks = said.get(place, set()) | handed.get(place, set())
         for part in sorted(handed.get(place, set()) & parts):
-            problems.append(f"editor {place}: {part} is said to go by the full editor, "
+            problems.append(f"{thing} {place}: {part} is said to go by the full editor, "
                             "but the place has it itself — take it out of via")
-        for part in sorted(set(EDITOR_PARTS) - parts - lacks):
-            problems.append(f"editor {place}: no {part} — add it, or say why in "
-                            "docs/src/parity.toml ([[editor]])")
+        for part in sorted(set(parts_of) - parts - lacks):
+            problems.append(f"{thing} {place}: no {part} — add it, or say why in "
+                            f"docs/src/parity.toml ([[{thing}]])")
         for part in sorted(said.get(place, set()) & parts):
-            problems.append(f"editor {place}: said to lack {part}, but has it — done? "
+            problems.append(f"{thing} {place}: said to lack {part}, but has it — done? "
                             "take it out of lacks")
     return problems
 

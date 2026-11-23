@@ -38,6 +38,16 @@ class ParityTest(unittest.TestCase):
         problems = parity.check_editors()
         self.assertEqual(problems, [], "\n" + "\n".join(problems))
 
+    def test_a_lanes_and_a_threads_head_in_every_interface(self):
+        """What stands over a lane and over a thread, part by part, in the Qt window,
+        the GTK window, the terminal, the page and the phone — each words them its own
+        way, so the check by words can't follow; a part one lacks is said in
+        parity.toml ([[lane_head]], [[thread_head]]) or stops here."""
+        for thing in ("lane_head", "thread_head"):
+            with self.subTest(thing=thing):
+                problems = parity.check_things(thing)
+                self.assertEqual(problems, [], "\n" + "\n".join(problems))
+
     def test_the_editors_check_itself(self):
         have = {p: set(parity.EDITOR_PARTS) for p in parity.EDITOR_PLACES}
         have["qt-line"] = set(parity.EDITOR_PARTS) - {"spell"}

@@ -51,6 +51,9 @@ def make_core():
     mine = w.add(status("001", ME, minute=1, text="мой <b>пост</b>", vis="public"), home=True)
     w.add(status("002", BOB, mine["id"], "ME", minute=2, text="ответ мне"), home=True,
           mention=True)
+    # a branch to fold: an answer to the answer, and one more under it
+    w.add(status("0021", ME, "002", "B", minute=3, text="и мой ответ на ответ", vis="public"))
+    w.add(status("0022", BOB, "0021", "ME", minute=4, text="и ещё глубже", vis="public"))
     for i in range(3, 25):
         st = status(f"{i:03d}", BOB, minute=i, vis="public",
                     text=f"пост номер {i} " + "текст " * (i % 9 + 3))
@@ -436,6 +439,22 @@ def keys_and_title(page, core):
     if n and not title.startswith(f"({n}) "):
         ERRORS.append(f"title: {n} unread, the tab says {title!r}")
     NOTES.append(f"title with {n} unread: {title}")
+    # a thread's branch folded by a click (the windows' "-") and shown again
+    page.evaluate("() => openThread('001')")
+    try:
+        page.wait_for_selector("#side-body .post .fold", timeout=8000)
+        shown = "() => [...document.querySelectorAll('#side-body .post')]" \
+                ".filter(c => !c.hidden).length"
+        before = page.evaluate(shown)
+        page.click("#side-body .post .fold")
+        folded = page.evaluate(shown)
+        page.click("#side-body .post .fold")
+        if not (folded < before and page.evaluate(shown) == before):
+            ERRORS.append(f"thread: folding a branch showed {before} → {folded} → "
+                          f"{page.evaluate(shown)} cards")
+    except Exception as e:  # noqa: BLE001 — said as a problem of the walk
+        ERRORS.append(f"thread: no branch to fold on the page ({type(e).__name__})")
+    page.evaluate("() => closeSide()")
     items = page.evaluate("() => Object.keys(menuItems())")
     for want in ("report", "sound_test"):
         if want not in items:

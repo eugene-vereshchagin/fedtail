@@ -593,3 +593,7 @@ dialog#emoji-dlg::backdrop { background: rgba(0, 0, 0, .4); }
                         line-height: 1; cursor: pointer; color: inherit; }
 #emoji-body button.em:hover, #emoji-body button.em:focus { background: var(--ctx); }
 #emoji-body button.em img { width: 28px; height: 28px; object-fit: contain; display: block; }
+
+/* a thread's branch folded (app.js foldButton): its head says how many are under it */
+.post .fold { float: right; margin-left: 6px; }
+.post.folded { border-style: dashed; }

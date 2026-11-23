@@ -476,6 +476,8 @@ _STRINGS = {
         "web_thread": "Тред", "web_cw": "Предупреждение", "web_show": "Показать",
         "web_load_error": "Не загрузилось: {err}", "web_empty": "Здесь пока пусто.",
         "web_reply_to": "Ответ на {who}", "web_cancel": "Отмена",
+        "web_thread_fold_tip": "Свернуть ветку этого комментария — ответы под ним; "
+                               "ещё раз — развернуть",
         "web_downloads": "папка загрузок браузера",
         "web_cmd": "#a3f текст — ответ · @ник — профиль · ? — помощь",
         "web_visibility": "Кому видно", "web_media": "вложение",
@@ -2442,6 +2444,7 @@ _STRINGS = {
         "web_thread": "Thread", "web_cw": "Content warning", "web_show": "Show",
         "web_load_error": "Didn't load: {err}", "web_empty": "Nothing here yet.",
         "web_reply_to": "Reply to {who}", "web_cancel": "Cancel",
+        "web_thread_fold_tip": "Fold this comment's branch — the answers under it; again — unfold",
         "web_downloads": "the browser's downloads folder",
         "web_cmd": "#a3f text — reply · @name — profile · ? — help",
         "web_visibility": "Who sees it", "web_media": "attachment",

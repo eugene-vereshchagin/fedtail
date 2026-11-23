@@ -36,6 +36,8 @@
   drafts, the preview and the files' descriptions — in the full editor, which opens with
   what the line already holds and that tool at once. Qt and GTK, one list. Before, the
   line had none of it, and no way to the editor either.
+- **A thread's branch folds on the web page**: a "− N" button on a top-level comment
+  hides the answers under it, again — shows them (the windows' and the terminal's `-`).
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
   (or copied in a file manager and pasted) comes as its path: the editor attaches it
   instead of typing the path into the post; several at once too. Any other paste is
@@ -89,6 +91,9 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: what stands over a lane and over a thread is checked part by part in
+  every interface too (`[[lane_head]]`, `[[thread_head]]` in `parity.toml`): the lanes'
+  heads are the same in all five; a thread's branch can't be folded on the phone yet.
 - Behind the scenes: the editor is checked part by part in each of its seven places (the
   Qt window, the GTK panel, the split layout's input line in each, the terminal, the page,
   the phone): what one lacks is said with its reason in `docs/src/parity.toml`
