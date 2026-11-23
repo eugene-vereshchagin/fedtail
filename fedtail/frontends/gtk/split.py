@@ -567,6 +567,8 @@ class InputDock(Gtk.Box):
         self.dress()
         self._say()
         self._count()
+        if split.line_warning_shown(win.cfg):  # post.cw_field: its field from the start
+            self.cw_btn.set_active(True)
         # spelling, as in the editor (post.spellcheck), in the post's language
         from .spellcheck import Spell
         self.spell = Spell(self, self.text)
@@ -924,13 +926,22 @@ class InputDock(Gtk.Box):
         text = self._text()
         if not text.strip() or not self.send_btn.get_sensitive():
             return
+        # the editor's own questions (a file without its words, another language than
+        # marked): the line has no room to ask — the full editor does, with these words
+        ask = split.line_before_send(win.cfg, text, self.media, self.lang_code)
+        if ask:
+            self.to_editor("editor")
+            return
         target = self.target
         warning = self.cw.get_text().strip() if self.cw_btn.get_active() else ""
         self.send_btn.set_sensitive(False)
         log.info("dock: %s", "reply to " + target.id if target else "new post")
         kw = {"language": self.lang_code} if self.lang_code else {}
         if self.media:
-            kw["media"] = list(self.media)
+            # made to fit the server first (post.resize_images), as the editor sends them
+            from .compose import _PixbufImages
+            kw["media"] = rules.fit_media(self.media, win.cfg, win.view.caps,
+                                          win.view.paths.cache_dir, _PixbufImages)
             if self.sensitive:
                 kw["sensitive"] = True
         if self.account is not None:  # "From": another account of the window
@@ -942,7 +953,7 @@ class InputDock(Gtk.Box):
             self._set_text("")
             self._prefill = ""
             self.cw.set_text("")
-            self.cw_btn.set_active(False)
+            self.cw_btn.set_active(split.line_warning_shown(win.cfg))
             self.target = None
             page = win.tabs.get_nth_page(win.tabs.get_current_page())
             if isinstance(page, TalkPage) and st is not None and not isinstance(st, Scheduled):

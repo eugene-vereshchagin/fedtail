@@ -3881,7 +3881,28 @@ class QtSmokeTest(unittest.TestCase):
             self.assertNotIn("poll", keys_now)  # a poll or pictures
             dock.do_more("sensitive")
             self.assertTrue(dock.sensitive)
-            dock.media = []
+            # Send with a file that has no words: post.alt_reminder asks — the line has
+            # no room to, so the post goes to the full editor at the file's words;
+            # nothing is sent from here
+            sent = len(self.world.posted)
+            dock.text.setPlainText("with a picture")
+            dock.editor = None
+            dock.send()
+            self.assertIsInstance(dock.editor, Compose)
+            self.assertEqual(dock.editor.media.count(), 1)
+            self.assertEqual(len(self.world.posted), sent)
+            focus = getattr(dock.editor, "focus_dialog", None)
+            if focus is not None:
+                focus.reject()
+            dock.editor.sent = True
+            dock.editor._leave()
+            self.assertEqual(dock.media, [])
+            # post.cw_field: the warning's field from the start, and after a send
+            from fedtail.frontends.common import split as line_rules
+            self.assertFalse(line_rules.line_warning_shown(self.core.cfg))
+            self.core.cfg["post"]["cw_field"] = True
+            self.addCleanup(self.core.cfg["post"].__setitem__, "cw_field", False)
+            self.assertTrue(line_rules.line_warning_shown(self.core.cfg))
         finally:
             win.quitting = True
             win.roster.close()

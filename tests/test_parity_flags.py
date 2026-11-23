@@ -194,6 +194,61 @@ class EverySettingTest(unittest.TestCase):
                                     "read there now: the exemption goes")
 
 
+# ---- a setting in every place of one toolkit (24.11) -------------------------------------
+# EverySettingTest takes an interface whole: a setting the Compose window honours and the
+# split layout's input line ignores is "read by Qt" for it. The editor is drawn twice in
+# each window toolkit — every setting its full editor reads, its input line reads too
+# (itself, or through the line's shared half, common/split.py), or says here why not.
+EDITOR_PAIRS = {"qt": ("qt/compose.py", "qt/dock.py"),
+                "gtk": ("gtk/compose.py", "gtk/split.py")}
+# read for the line by a shared function it calls (the function's name must be there)
+LINE_THROUGH = {"post.resize_images": "fit_media"}
+LINE_EXEMPT = {
+    "ui.compose": "where the full editor stands (a window, a panel): not the line's",
+    "ui.compose_size": "the full editor's own size",
+    "post.drafts_autosave": "the line keeps no draft of its own; the full editor, a "
+                            "click away with the words (⋯), does",
+    "post.camelcase_hint": "the hint under the editor's text; the line has no room for it",
+    "post.send_in_background": "the line never stands in the way of the lanes",
+    "post.chain": "the core splits a long text into a chain; the editor only counts "
+                  "the parts beforehand",
+    "post.focus_point": "a picture's focus point is set in the full editor (⋯ → the "
+                        "files' words)",
+    "post.quote_prefix": "quoting a post's words goes into the full editor",
+}
+
+
+class EditorPlacesTest(unittest.TestCase):
+    def _gaps(self):
+        shared = (FRONT / "common" / "split.py").read_text("utf-8")
+        out = {}
+        for tk, (full, line) in EDITOR_PAIRS.items():
+            a = (FRONT / full).read_text("utf-8")
+            b = (FRONT / line).read_text("utf-8")
+            for key in _keys():
+                word = re.compile(r"[\"']" + re.escape(key.split(".", 1)[1]) + r"[\"']")
+                if not word.search(a) or word.search(b) or word.search(shared):
+                    continue
+                if key in LINE_THROUGH and LINE_THROUGH[key] in b:
+                    continue
+                out.setdefault(key, []).append(tk)
+        return out
+
+    def test_the_input_line_reads_what_the_editor_reads(self):
+        missing = {k: v for k, v in self._gaps().items() if k not in LINE_EXEMPT}
+        self.assertEqual(missing, {}, "a setting the full editor honours and the split "
+                         "layout's input line ignores — honour it there, or say why in "
+                         "LINE_EXEMPT")
+
+    def test_the_lines_exemptions_still_hold(self):
+        gaps = self._gaps()
+        for key, why in LINE_EXEMPT.items():
+            with self.subTest(key=key):
+                self.assertTrue(why)
+                self.assertIn(key, gaps, "read by the line now (or by no editor): the "
+                                         "exemption goes")
+
+
 class DocKeysTest(unittest.TestCase):
     NOT_KEYS = {"activity.wav", "web.key", "account.bot", "account.moved"}  # files, API
 

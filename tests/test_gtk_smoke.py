@@ -2587,6 +2587,37 @@ class GtkSplitTest(_GtkBase):
         self.assertTrue(dock.sensitive)
         dock.media, dock.sensitive = [], False
 
+    def test_the_input_line_asks_what_the_editor_asks(self):
+        """Send from the line with a file that has no words (post.alt_reminder), or in
+        another language than marked (post.lang_check): the editor's questions — the
+        line hands the post to the full editor, which asks; nothing goes from the line.
+        post.cw_field: the warning's field shown from the start (the line read none of
+        these settings, the editor did: 24.11)."""
+        from fedtail.frontends.common import split as rules
+        from fedtail.frontends.gtk.compose import ComposeWindow
+        cfg = self.core.cfg
+        self.assertEqual(rules.line_before_send(cfg, "words", [("/a.png", "")], None), "alt")
+        self.assertEqual(rules.line_before_send(cfg, "words", [("/a.png", "a cat")], None), "")
+        self.assertEqual(rules.line_before_send(cfg, "words", [], None), "")
+        cfg["post"]["alt_reminder"] = False
+        self.assertEqual(rules.line_before_send(cfg, "words", [("/a.png", "")], None), "")
+        cfg["post"]["alt_reminder"] = True
+        dock = self.win.dock
+        sent = len(self.world.posted)
+        dock._set_text("with a picture")
+        dock.media = [("/nowhere/a.png", "")]
+        dock.editor = None
+        dock.send()
+        pump(timeout=0.3)
+        self.assertIsInstance(dock.editor, ComposeWindow)
+        self.assertEqual(len(self.world.posted), sent)
+        self.assertEqual(dock._text(), "")
+        dock.editor.close()
+        self.assertFalse(rules.line_warning_shown(cfg))
+        cfg["post"]["cw_field"] = True
+        self.addCleanup(cfg["post"].__setitem__, "cw_field", False)
+        self.assertTrue(rules.line_warning_shown(cfg))
+
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkPicturesTest(_GtkBase):

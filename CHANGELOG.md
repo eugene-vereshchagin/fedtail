@@ -36,6 +36,11 @@
   drafts, the preview and the files' descriptions — in the full editor, which opens with
   what the line already holds and that tool at once. Qt and GTK, one list. Before, the
   line had none of it, and no way to the editor either.
+- **The input line listens to the editor's settings.** `post.alt_reminder` and
+  `post.lang_check`: a file without a description, or a text in another language than
+  marked, takes the post to the full editor, which asks (the line sent it as it was);
+  `post.resize_images`: pictures are made to fit the server before they go;
+  `post.cw_field`: the warning's field is there from the start.
 - **A thread's branch folds on the web page**: a "− N" button on a top-level comment
   hides the answers under it, again — shows them (the windows' and the terminal's `-`).
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
@@ -91,6 +96,8 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: every setting the full editor reads, the input line of the same
+  toolkit reads too, or says why not (`tests/test_parity_flags.py`).
 - Behind the scenes: what stands over a lane and over a thread is checked part by part in
   every interface too (`[[lane_head]]`, `[[thread_head]]` in `parity.toml`): the lanes'
   heads are the same in all five; a thread's branch can't be folded on the phone yet.

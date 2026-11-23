@@ -147,6 +147,8 @@ class InputDock(QWidget):
         v.addLayout(row)
         self.dress()
         self._count()
+        if split.line_warning_shown(win.cfg):  # post.cw_field: its field from the start
+            self.cw_btn.setChecked(True)
         # spelling, as in the Compose window (post.spellcheck), in the post's language —
         # made last: its marks are a change of the text, counted as one
         from .spellcheck import Spell
@@ -504,6 +506,12 @@ class InputDock(QWidget):
         text = self.text.toPlainText()
         if not text.strip() or not self.send_btn.isEnabled():
             return
+        # the editor's own questions (a file without its words, another language than
+        # marked): the line has no room to ask — the full editor does, with these words
+        ask = split.line_before_send(self.win.cfg, text, self.media, self.language)
+        if ask:
+            self.to_editor("alt" if ask == "alt" else "editor")
+            return
         target = self.target
         warning = self.cw.text().strip() if self.cw_btn.isChecked() else ""
         self.send_btn.setEnabled(False)
@@ -515,7 +523,7 @@ class InputDock(QWidget):
             self.text.clear()
             self._prefill = ""
             self.cw.clear()
-            self.cw_btn.setChecked(False)
+            self.cw_btn.setChecked(split.line_warning_shown(self.win.cfg))
             self.target = None
             front = self.win.tabs.currentWidget()
             if isinstance(front, TalkWidget) and st is not None and \
@@ -532,7 +540,11 @@ class InputDock(QWidget):
 
         kw = {"language": self.language} if self.language else {}
         if self.media:
-            kw["media"] = list(self.media)
+            # made to fit the server first (post.resize_images), as the editor sends them
+            from .compose import _QtImages
+            view = self.win.ctx.view
+            kw["media"] = rules.fit_media(self.media, self.win.cfg, view.caps,
+                                          view.paths.cache_dir, _QtImages)
             if self.sensitive:
                 kw["sensitive"] = True
         if self.account is not None:  # "From": another account of the window

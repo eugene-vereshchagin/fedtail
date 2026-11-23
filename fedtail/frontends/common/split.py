@@ -167,3 +167,23 @@ def line_more(view, cfg, reply_to=None, media=0, sensitive=False, account=None):
         out.append(More("preview", _("preview")))
     out.append(More("editor", _("dock_editor")))
     return out
+
+
+def line_before_send(cfg, text, media, language):
+    """What stands between the input line and Send — the editor's own questions, which
+    the line has no room to ask: "alt" — a file goes without its words and
+    post.alt_reminder asks about that; "lang" — the text reads as another language than
+    the post is marked with (post.lang_check). Either hands the post to the full editor
+    (to_editor), which asks. "" — nothing: send."""
+    from .compose import lang_mismatch
+    post = cfg.get("post") or {}
+    if post.get("alt_reminder", True) and any(not (m[1] if len(m) > 1 else "") for m in media):
+        return "alt"
+    if lang_mismatch(cfg, text, language):
+        return "lang"
+    return ""
+
+
+def line_warning_shown(cfg):
+    """post.cw_field: the warning's field shown from the start, as in the editor."""
+    return bool((cfg.get("post") or {}).get("cw_field", False))
