@@ -107,14 +107,14 @@ android_note.en = "a phone has no keyboard"
 since = "next"
 name.ru = "Свои клавиши"
 name.en = "Keys of your own"
-config = "`[keys]`, `tui.keys`"
+config = "`[keys]`, `tui.keys`, `web.keys`"
 api.ru = "своё"
 api.en = "own"
 others.ru = "tut"
 others.en = "tut"
 clients = ["tut"]
-details.ru = "Какая клавиша что делает — в конфиге: `[keys]` — двадцать действий (новый пост, отправить, поиск, найти и дальше/назад, командная строка, обновить, закрыть вкладку, выйти; следующий/предыдущий пост, ответить, лайк, буст, закладка, открыть тред, комментарии треда, свернуть ветку). Клавиша пишется как `Ctrl+N`, `Shift+F3`, `j`; несколько — через пробел (`o Enter`); `\"\"` — без клавиши. Окна Qt и GTK берут все; терминал и веб-страница — клавиши постов (остальное у терминала и браузера своё). У терминала сверх того переназначается любая его клавиша по имени: `tui.keys = [\"quit = Ctrl+Q\"]`; имена и нынешние клавиши показывает `fedtail --keys`. F1 и Shift+F1 клавишами не бывают никогда (они рядом с Esc): такая отбрасывается, запуск об этом говорит."
-details.en = "Which key does what is in the config: `[keys]` — twenty actions (a new post, send, search, find and next/previous, the command line, refresh, close the tab, quit; the next/previous post, reply, like, boost, bookmark, open the thread, a thread's comments, fold a branch). A key is written as `Ctrl+N`, `Shift+F3`, `j`; several — by spaces (`o Enter`); `\"\"` — no key. The Qt and GTK windows take all of them; the terminal and the web page — the posts' keys (the rest is a terminal's and a browser's own). The terminal besides lets any of its keys be set by name: `tui.keys = [\"quit = Ctrl+Q\"]`; `fedtail --keys` lists the names and the keys of now. F1 and Shift+F1 are never keys (they sit next to Esc): such a one is dropped and the start says so."
+details.ru = "Какая клавиша что делает — в конфиге: `[keys]` — двадцать действий (новый пост, отправить, поиск, найти и дальше/назад, командная строка, обновить, закрыть вкладку, выйти; следующий/предыдущий пост, ответить, лайк, буст, закладка, открыть тред, комментарии треда, свернуть ветку). Клавиша пишется как `Ctrl+N`, `Shift+F3`, `j`; несколько — через пробел (`o Enter`); `\"\"` — без клавиши. Окна Qt и GTK берут все; терминал и веб-страница — клавиши постов (остальное у терминала и браузера своё). У терминала сверх того переназначается любая его клавиша по имени: `tui.keys = [\"quit = Ctrl+Q\"]`, у веб-страницы — её семь собственных (`web.keys = [\"new = c\"]`); имена и нынешние клавиши показывает `fedtail --keys`. F1 и Shift+F1 клавишами не бывают никогда (они рядом с Esc): такая отбрасывается, запуск об этом говорит."
+details.en = "Which key does what is in the config: `[keys]` — twenty actions (a new post, send, search, find and next/previous, the command line, refresh, close the tab, quit; the next/previous post, reply, like, boost, bookmark, open the thread, a thread's comments, fold a branch). A key is written as `Ctrl+N`, `Shift+F3`, `j`; several — by spaces (`o Enter`); `\"\"` — no key. The Qt and GTK windows take all of them; the terminal and the web page — the posts' keys (the rest is a terminal's and a browser's own). The terminal besides lets any of its keys be set by name: `tui.keys = [\"quit = Ctrl+Q\"]`, the web page — its seven own ones (`web.keys = [\"new = c\"]`); `fedtail --keys` lists the names and the keys of now. F1 and Shift+F1 are never keys (they sit next to Esc): such a one is dropped and the start says so."
 
 [[feature]]
 id = "links-inside"

@@ -91,7 +91,8 @@ def parse_args(argv):
                         "and exit")
     p.add_argument("--keys", action="store_true",
                    help="which key does what, as your config says ([keys]), and the "
-                        "terminal's own keys by the names tui.keys takes — and exit")
+                        "terminal's and the web page's own keys by the names tui.keys and "
+                        "web.keys take — and exit")
     p.add_argument("--profiles", action="store_true",
                    help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
@@ -374,6 +375,10 @@ def _keys(cfg):
     print("[keys]")
     for action in keys.ACTIONS:
         print(f"  {action:<18} {keys.words(cfg, action) or '—'}")
+    mine, _wrong = keys.own(cfg["web"].get("keys"), keys.PAGE)
+    print("\n[web] keys — the page's own, by name (name = keys)")
+    for name, got in mine.items():
+        print(f"  {name:<22} {' '.join(k.words() for k in got) or '—'}")
     try:
         from .frontends.tui import app as tui_app
         from .frontends.tui import keymap

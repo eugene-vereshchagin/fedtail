@@ -68,8 +68,8 @@ web = "partly"
 android = "na"
 name.ru = "Свои клавиши ([keys])"
 name.en = "Keys of your own ([keys])"
-note.ru = "`[keys]` в конфиге: окна Qt и GTK берут все двадцать действий. Терминал и веб-страница берут из него клавиши постов (следующий/предыдущий, ответить, лайк, буст, закладка, тред; терминал — и клавиши комментариев треда): Ctrl+N, Ctrl+W, F5 терминал и браузер держат для себя. У терминала взамен любая его клавиша ставится по имени (`tui.keys`, имена — `fedtail --keys`); собственные буквы страницы (n, p, x, R, q, /, :) пока зашиты."
-note.en = "`[keys]` in the config: the Qt and GTK windows take all twenty actions. The terminal and the web page take the posts' keys from it (next/previous, reply, like, boost, bookmark, the thread; the terminal — a thread's comment keys too): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for themselves. The terminal instead lets any of its keys be set by name (`tui.keys`, the names — `fedtail --keys`); the page's own letters (n, p, x, R, q, /, :) are written in for now."
+note.ru = "`[keys]` в конфиге: окна Qt и GTK берут все двадцать действий. Терминал и веб-страница берут из него клавиши постов (следующий/предыдущий, ответить, лайк, буст, закладка, тред; терминал — и клавиши комментариев треда): Ctrl+N, Ctrl+W, F5 терминал и браузер держат для себя. Взамен собственные клавиши ставятся по имени: у терминала — любая (`tui.keys`), у страницы — её семь (`web.keys`: new, profile, all_read, refresh, quote, search, command); имена показывает `fedtail --keys`."
+note.en = "`[keys]` in the config: the Qt and GTK windows take all twenty actions. The terminal and the web page take the posts' keys from it (next/previous, reply, like, boost, bookmark, the thread; the terminal — a thread's comment keys too): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for themselves. Instead their own keys are set by name: any of the terminal's (`tui.keys`), the page's seven (`web.keys`: new, profile, all_read, refresh, quote, search, command); `fedtail --keys` lists the names."
 android_note.ru = "На телефоне нет клавиатуры."
 android_note.en = "The phone has no keyboard."
 
@@ -109,12 +109,11 @@ note.en = "ui.hover_tools: in the Qt and GTK windows and on the web page the pos
 [[capability]]
 id = "menu-groups"
 area = "reading"
-tui = "partly"
 android = "has"
 name.ru = "Меню поста подменю"
 name.en = "A post's menu in submenus"
-note.ru = "ui.menu_groups: в окнах Qt и GTK, на веб-странице и на телефоне меню ⋯ — частое наверху и подменю «Автор @…», «Тред», «Ещё». В терминале меню поста одним списком (его слова в общем коде, подменю он пока не рисует)."
-note.en = "ui.menu_groups: in the Qt and GTK windows, on the web page and on the phone the ⋯ menu has the frequent items on top and the submenus \"Author @…\", \"Thread\", \"More\". The terminal's post menu is one list (the words are in the common code; it draws no submenus yet)."
+note.ru = "ui.menu_groups: в окнах Qt и GTK, на веб-странице и на телефоне меню ⋯ — частое наверху и подменю «Автор @…», «Тред», «Ещё». В терминале подменю — меню поверх меню (Enter открывает, Esc закрывает оба)."
+note.en = "ui.menu_groups: in the Qt and GTK windows, on the web page and on the phone the ⋯ menu has the frequent items on top and the submenus \"Author @…\", \"Thread\", \"More\". In the terminal a submenu is a menu over the menu (Enter opens it, Esc closes both)."
 keys = ["menu_author", "menu_thread", "menu_more"]
 
 [[capability]]

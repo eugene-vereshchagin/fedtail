@@ -944,8 +944,8 @@ class Web:
                 # windows show them (the page did one way whatever they said, 21.11)
                 "post_keys": bool(c["ui"].get("post_keys", True)),
                 # …and which keys they are: the config's [keys] (none when they're off)
-                "keys": keymap.web_table(c, keymap.POSTS)
-                if c["ui"].get("post_keys", True) else [],
+                # …and the page's own (n, p, x, R, q, /, : — web.keys sets them by name)
+                "keys": keymap.page_table(c),
                 "alt_text": c["ui"].get("alt_text", "tooltip"),
                 "media_grid": c["ui"].get("media_grid", "natural"),
                 "message_percent": int(c["ui"].get("message_percent", 100)),

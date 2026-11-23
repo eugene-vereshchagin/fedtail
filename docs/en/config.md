@@ -575,6 +575,7 @@ The interface in a terminal — `fedtail --ui tui` (or window.frontend = "tui"):
 | `web.port` | `8765` | The port. |
 | `web.open_browser` | `true` | Open the browser at start. |
 | `web.login_days` | `400` | How many days a browser stays logged in to the page (its cookie's age); after that the link with the key is needed again. |
+| `web.keys` | `[]` | The page's own keys by their names, beside the posts' keys of [keys]: new (a new post, n), profile (the author's, p), all_read (x), refresh (Shift+R), quote (q), search (/), command (the command line, :). A name, "=", the keys as in [keys]. For example:<br>keys = ["new = c", "refresh = g"] |
 
 ## 18. On a phone and a tablet
 

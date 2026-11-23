@@ -98,6 +98,19 @@ class MeaningTest(unittest.TestCase):
         c["ui"]["post_keys"] = False
         self.assertIsNone(postkeys.meaning(c, keys.parse("j")))
 
+    def test_the_pages_own_keys_by_name(self):
+        c, warnings = config.validate({"web": {"keys": ["new = c Ctrl+M", "bogus = x",
+                                                        "quote = F1", "nonsense"]}})
+        self.assertEqual(sum("web.keys" in w for w in warnings), 3)
+        rows = {(r["action"], r["key"], r["ctrl"]) for r in keys.page_table(c)}
+        self.assertIn(("new", "c", False), rows)
+        self.assertIn(("new", "m", True), rows)
+        self.assertNotIn("quote", {r[0] for r in rows})  # F1: never, so no key at all
+        self.assertIn(("refresh", "r", False), rows)  # (Shift+R: shift told apart)
+        # a key of the posts wins over the page's own on the same key
+        c2, _w = config.validate({"web": {"keys": ["new = j"]}})
+        self.assertNotIn("new", {r["action"] for r in keys.page_table(c2)})
+
     def test_the_pages_table(self):
         c = cfg(reply="Ctrl+R")
         table = keys.web_table(c, keys.POSTS)

@@ -2131,23 +2131,33 @@ class FedtailApp(App, PostsMixin):
                            # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as)
                            act_as=actions.act_as_of(core, core.cfg))
 
-    def post_menu_items(self, st, in_thread=False):
-        """A post's ⋯ menu, the windows' own (common/actions.py): [(label, item)]."""
-        from ..common import actions
-        core = self.core
-        short = core.short_ids([st]).get(real(st).id)
-        unread = st.id in core.unread([st])
+    @staticmethod
+    def menu_rows(items):
+        """common/actions Items as a MenuScreen's rows: [(label, item)], "-" between
+        groups; "…" — it asks more, "▸" — a submenu (Author, Thread, More)."""
         out = []
-        for it in actions.menu(st, self.menu_ctx(in_thread), short, unread):
+        for it in items:
             if it.kind == "separator":
                 if out and out[-1] != "-":
                     out.append("-")
             else:
-                out.append((it.label + (" …" if it.kind in ("lists", "long_form",
-                                                             "translate", "act_as") else ""),
-                            it))
+                mark = " ▸" if it.kind == "submenu" else " …" if it.kind in (
+                    "lists", "long_form", "translate", "act_as") else ""
+                out.append((it.label + mark, it))
         while out and out[-1] == "-":
             out.pop()
+        return out
+
+    def post_menu_items(self, st, in_thread=False):
+        """A post's ⋯ menu, the windows' own (common/actions.py): [(label, item)] — with
+        ui.menu_groups its submenus too (Author ▸, Thread ▸, More ▸), as the windows, the
+        page and the phone have them: the terminal's was one long list (23.11)."""
+        from ..common import actions
+        core = self.core
+        short = core.short_ids([st]).get(real(st).id)
+        unread = st.id in core.unread([st])
+        out = self.menu_rows(actions.menu(st, self.menu_ctx(in_thread), short, unread,
+                                          nested=True))
         if real(st).poll is not None:  # the windows vote on the card; here: its screen
             from types import SimpleNamespace
             out.insert(0, ("📊 " + _("poll_vote") + " …  (u)", SimpleNamespace(kind="poll")))
@@ -2183,6 +2193,10 @@ class FedtailApp(App, PostsMixin):
             self.host.open_lists(it.data)
         elif it.kind in ("long_form", "translate"):
             self.open_thing({"page": it.kind, "arg": real(st).id})
+        elif it.kind == "submenu":  # Author ▸, Thread ▸, More ▸: a menu of its own
+            from .screens import MenuScreen
+            self.push_screen(MenuScreen(it.label, self.menu_rows(it.data)),
+                             lambda sub: sub is not None and self.do_menu_item(st, sub))
         elif it.kind == "act_as":  # a choice of its own: which account, which action
             from .screens import MenuScreen
             picks = [(label, (entry, tag, action)) for label, entry, tag, action in it.data]

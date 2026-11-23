@@ -118,6 +118,29 @@ class AppKeysTest(Base):
             labels = [x[0] for x in app.post_menu_items(st) if x != "-"]
             self.assertTrue(labels)
             self.assertNotEqual(app.post_menu_items(st)[-1], "-")
+            # ui.menu_groups: Author ▸, Thread ▸, More ▸ are menus of their own here too
+            # (one long list before, 23.11) — opened by the keys: ⋯, down to it, Enter
+            from fedtail.frontends.tui.screens import MenuScreen
+            rows = [x for x in app.post_menu_items(st) if x != "-"]
+            at = next(i for i, (_l, it) in enumerate(rows) if it.kind == "submenu")
+            self.assertTrue(rows[at][0].endswith(" ▸"))
+            app.post_menu(st)
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            top = app.screen
+            menu = top.query_one("#menu", ListView)
+            for _ in range(40):  # down to the submenu's row, by the key
+                now = getattr(menu.highlighted_child, "value", None)
+                if getattr(now, "label", None) == rows[at][1].label:
+                    break
+                await pilot.press("j")
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen)
+                            and app.screen is not top)
+            self.assertEqual(app.screen.m_title, rows[at][1].label)
+            self.assertEqual(app.screen.labels(),
+                             [x[0] for x in app.menu_rows(rows[at][1].data) if x != "-"])
+            await pilot.press("escape")
+            await self.wait(pilot, lambda: not isinstance(app.screen, MenuScreen))
             item = types.SimpleNamespace
             app.do_menu_item(st, item(kind="open", url="https://example.test/x"))
             self.assertEqual(self.browser.call_count, 2)

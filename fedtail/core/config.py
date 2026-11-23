@@ -396,6 +396,7 @@ DEFAULTS = {
         "port": 8765,
         "open_browser": True,
         "login_days": 400,  # how long a browser stays logged in (its cookie's age)
+        "keys": [],  # the page's own keys by their names: ["new = c", "refresh = g"]
     },
     "phone": {
         "overview": "lanes",
@@ -719,7 +720,7 @@ FILE_LAYOUT = (
     ("cli", _keys("cli", "enabled color max_lines tail_lanes")),
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video keys")),
-    ("web", _keys("web", "host port open_browser login_days")),
+    ("web", _keys("web", "host port open_browser login_days keys")),
     ("phone", _keys("phone", "overview layout to_new hold_text free_memory lane_strip push "
                              "stream")),
 )
@@ -987,6 +988,7 @@ def validate(user):
     # action is left without that key
     from . import keys as keys_mod
     warnings += keys_mod.problems(cfg["keys"], DEFAULTS["keys"])
+    warnings += [f"web.keys: {w}" for w in keys_mod.own(cfg["web"]["keys"], keys_mod.PAGE)[1]]
     # lanes by their names before 0.15 ("people", "comments"…) are the same lanes now
     from .lanes import canonical
     for section, key in LANE_LISTS:

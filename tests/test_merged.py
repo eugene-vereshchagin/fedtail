@@ -492,7 +492,13 @@ class MergedRoutingTest(TmpDir):
         app = FedtailApp(self.m)
         st = self.m.store.get_status("work~500")
         entry = app.core.entry(st)
-        items = [it for _label, it in (x for x in app.post_menu_items(entry) if x != "-")
+        def every(rows):  # the menu and its submenus (Author ▸, Thread ▸, More ▸)
+            for row in rows:
+                if row != "-":
+                    yield row[1]
+                    if getattr(row[1], "kind", "") == "submenu":
+                        yield from every(app.menu_rows(row[1].data))
+        items = [it for it in every(app.post_menu_items(entry))
                  if getattr(it, "kind", "") == "act_as"]
         self.assertEqual(len(items), 1)
         by_action = {action: (e, tag, action) for _l, e, tag, action in items[0].data}

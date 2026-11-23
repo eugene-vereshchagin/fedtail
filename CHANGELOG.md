@@ -27,6 +27,9 @@
 - **The terminal: every button of a profile.** The line showed nine, by their digits — a
   followed person has some twenty, and the note, the alias, the nick's colour, the
   collections had no key at all. `0` lists all of them.
+- **The terminal: the post's menu in submenus** — "Author ▸", "Thread ▸", "More ▸" open
+  as a menu over the menu (`card.menu_groups`), as in the windows, on the page and the
+  phone; it was one long list.
 - **The terminal: ★ ♻ ↩ from another account.** With all accounts in one window the ⋯
   menu has "From another account", as the windows, the page and the phone have.
 - **The command line remembers** in the terminal and on the web page too: `↑` / `↓` walk
@@ -48,7 +51,9 @@
   several by spaces (`"o Enter"`); `""` — none. The Qt and GTK windows take all of them
   (tooltips say the key that is set); the terminal and the web page — the posts' keys. In
   the terminal any key of its own can be set by name besides: `tui.keys = ["quit =
-  Ctrl+Q"]`. `fedtail --keys` lists the actions, the names and the keys of now. F1 and
+  Ctrl+Q"]`, and the page's seven own ones (new, profile, all_read, refresh, quote,
+  search, command): `web.keys = ["new = c"]`. `fedtail --keys` lists the actions, the
+  names and the keys of now. F1 and
   Shift+F1 are never keys: such a one is dropped and the start says so.
 - **Four things that were nailed in are settings**: `reading.replied_is_read` (a post you
   answered counts as read; false — it doesn't), `server.retry_seconds` (a failed connect

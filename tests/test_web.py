@@ -446,11 +446,20 @@ class WebTest(TmpDir):
         row = next(k for k in json.loads(self.req("/api/me")[2])["keys"]
                    if k["action"] == "reply")
         self.assertEqual((row["key"], row["ctrl"]), ("r", True))
-        self.core.cfg["ui"]["post_keys"] = False
-        self.assertEqual(json.loads(self.req("/api/me")[2])["keys"], [])
+        # the page's own keys by name (web.keys): n, p, x, Shift+R, q, /, : were written in
+        self.assertEqual((by["new"], by["search"], by["command"]), ("n", "/", ":"))
+        self.core.cfg["web"]["keys"] = ["new = c", "refresh = g"]
+        rows = json.loads(self.req("/api/me")[2])["keys"]
+        self.assertEqual({k["action"]: k["key"] for k in rows if k["action"] in
+                          ("new", "refresh")}, {"new": "c", "refresh": "g"})
+        self.core.cfg["ui"]["post_keys"] = False  # the posts' keys off: its own stay
+        left = {k["action"] for k in json.loads(self.req("/api/me")[2])["keys"]}
+        self.assertNotIn("next_post", left)
+        self.assertIn("new", left)
         js = web.static_text("app.js")
         self.assertIn("const means = postKey(e);", js)
         self.assertNotRegex(js, r"\bj: \(\) => setCursor")
+        self.assertNotRegex(js, r"\bn: \(\) => compose\(null\)")
 
     def test_the_command_line_remembers_its_lines(self):
         """↑ ↓ in the page's command line, the windows' (23.11: Qt and GTK alone had it):

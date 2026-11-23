@@ -1923,6 +1923,12 @@ open_browser = true
 # link with the key is needed again.
 login_days = 400
 
+# The page's own keys by their names, beside the posts' keys of [keys]: new (a new post,
+# n), profile (the author's, p), all_read (x), refresh (Shift+R), quote (q), search (/),
+# command (the command line, :). A name, "=", the keys as in [keys]. For example:
+#   keys = ["new = c", "refresh = g"]
+keys = []
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  18. On a phone and a tablet

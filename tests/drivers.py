@@ -731,9 +731,31 @@ class Tui(Driver):
             return self.app.screen
         return self.run(go())
 
+    def _offered(self, screen):
+        """Everything the ⋯ menu on screen offers: its rows and, with ui.menu_groups,
+        the rows of its submenus (Author ▸, Thread ▸, More ▸) — in the order the menu
+        has without submenus, which is what the interfaces are compared by."""
+        def every(rows):
+            for x in rows:
+                if x == "-":
+                    continue
+                if x[1].kind == "submenu":
+                    yield from every(self.app.menu_rows(x[1].data))
+                else:
+                    yield x[1]
+        got = list(every(screen.items))
+        flat = [(it.kind, it.url) for it in self._flat]
+        return sorted(got, key=lambda v: flat.index((v.kind, v.url))
+                      if (v.kind, v.url) in flat else len(flat))
+
     def menu(self, sid):
+        from fedtail.frontends.common import actions
+        app = self.app
+        st = app.core.by_id(sid)
+        self._flat = actions.menu(st, app.menu_ctx(False),
+                                  app.core.short_ids([st]).get(sid), False)
         screen = self._menu(sid)
-        items = [(v.kind, v.url) for x in screen.items if x != "-" for v in [x[1]]]
+        items = [(v.kind, v.url) for v in self._offered(screen)]
         self.run(self._dismiss(screen, None))
         return menu_keys(items)
 
@@ -753,7 +775,8 @@ class Tui(Driver):
     def link(self, action, sid):
         from fedtail.frontends.common.links import parse
         screen = self._menu(sid)
-        found = [v for x in screen.items if x != "-" for v in [x[1]]
+        self._flat = ()
+        found = [v for v in self._offered(screen)
                  if v.kind == "link" and parse(v.url) and parse(v.url).action == action]
         if not found:
             self.run(self._dismiss(screen, None))
@@ -843,7 +866,8 @@ class Tui(Driver):
 
     def quote(self, sid, text):
         screen = self._menu(sid)
-        found = [v for x in screen.items if x != "-" for v in [x[1]]
+        self._flat = ()
+        found = [v for v in self._offered(screen)
                  if v.kind == "link" and v.url == f"fedtail:quote/{sid}"]
         if not found:
             self.run(self._dismiss(screen, None))

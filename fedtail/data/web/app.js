@@ -3543,15 +3543,16 @@ document.addEventListener("keydown", (e) => {
     reply: () => p && compose(p), like: () => p && act("like", p),
     boost: () => p && act("share", p), bookmark: () => p && act("bookmark", p),
     open_thread: () => p && openThread(p.sid, p.open_at),
+    // the page's own (core/keys.py PAGE; web.keys sets any of them by name)
+    new: () => compose(null), profile: () => p && openAccount(p.account.id),
+    all_read: markAllRead, refresh, quote: () => p && quoteReply(p),
+    search: () => openPlace("search"), command: () => cmdInput().focus(),
   };
   if (means && posts[means]) { e.preventDefault(); posts[means](); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const keys = {
     ArrowDown: () => setCursor(state.cursor + 1), ArrowUp: () => setCursor(state.cursor - 1),
-    n: () => compose(null),
-    p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
-    q: () => p && quoteReply(p), "/": () => openPlace("search"),
-    ":": () => cmdInput().focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
+    Escape: () => (isNavOpen() ? closeNav() : closeSide()),
   };
   if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
 });
@@ -3563,7 +3564,8 @@ function postKey(e) {
   for (const k of (state.me && state.me.keys) || []) {
     if (k.key !== key || !!k.ctrl !== (e.ctrlKey || e.metaKey) || !!k.alt !== e.altKey) continue;
     const typed = k.key.length === 1 && !k.ctrl && !k.alt;
-    if (typed ? (e.key === k.key || !e.shiftKey) : !!k.shift === e.shiftKey) return k.action;
+    // Shift+R is Shift and r; "?" or ":" is the character, however it is typed
+    if (k.shift ? e.shiftKey : typed ? (e.key === k.key || !e.shiftKey) : !e.shiftKey) return k.action;
   }
   return null;
 }

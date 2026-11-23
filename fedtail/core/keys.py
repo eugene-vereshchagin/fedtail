@@ -213,6 +213,49 @@ def table(cfg, actions=ACTIONS):
     return out
 
 
+# the web page's own keys (a browser keeps Ctrl+N, Ctrl+W, F5 for itself): what each does
+# → its key; web.keys sets any of them by name, as tui.keys does the terminal's
+PAGE = {"new": "n", "profile": "p", "all_read": "x", "refresh": "Shift+R", "quote": "q",
+        "search": "/", "command": ":"}
+
+
+def own(lines, defaults):
+    """Keys set by name — lines "name = keys" (tui.keys, web.keys) over defaults {name:
+    keys as written} → ({name: [Key]}, [what was wrong])."""
+    out, wrong = {}, []
+    for name, value in defaults.items():
+        out[name] = read(value)[0]
+    for line in lines or ():
+        name, sep, value = str(line).partition("=")
+        name = name.strip()
+        if not sep or not name:
+            wrong.append(f'"{line}" — written as "name = keys"')
+            continue
+        if name not in defaults:
+            wrong.append(f"no key is called {name}; there are: {', '.join(defaults)}")
+            continue
+        got, bad = read(value)
+        wrong += [f"{name}: {b}" for b in bad]
+        out[name] = got
+    return out, wrong
+
+
+def page_table(cfg):
+    """For the page: the posts' keys ([keys], none with window.post_keys off) and its
+    own (PAGE, web.keys) — [{"action", "key", "ctrl", "alt", "shift"}]; a key of the
+    posts wins over the page's own on the same key."""
+    rows = web_table(cfg, POSTS) if ((cfg or {}).get("ui") or {}).get(
+        "post_keys", True) else []
+    taken = {(r["key"], r["ctrl"], r["alt"], r["shift"]) for r in rows}
+    mine, _wrong = own(((cfg or {}).get("web") or {}).get("keys"), PAGE)
+    for name, got in mine.items():
+        for key in got:
+            row = dict(key.web(), action=name)
+            if (row["key"], row["ctrl"], row["alt"], row["shift"]) not in taken:
+                rows.append(row)
+    return rows
+
+
 def from_gdk(name, ctrl=False, alt=False, shift=False):
     """A GTK key event (Gdk.keyval_name of its keyval, its modifiers) → Key. A letter
     typed with Shift comes as its capital: the same key, shift told apart."""
