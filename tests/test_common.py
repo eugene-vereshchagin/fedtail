@@ -101,6 +101,15 @@ class CommonTest(TmpDir):
         self.assertIsNone(split.line_keep(v, post, True, "words"))
         self.assertIsNone(v.get_draft(key))
 
+    def test_the_debug_corner_fits_a_narrow_window(self):
+        from fedtail.frontends.common import corner
+        words = corner.text("terminal", "Qt 6.8.2", "QCommonStyle", "Mono 10pt", "xcb", 1)
+        self.assertEqual(corner.fitted(words, len, 1000), words)
+        short = corner.fitted(words, len, 30)
+        self.assertTrue(words.startswith(short))
+        self.assertLessEqual(len(short), 30)
+        self.assertEqual(len(corner.fitted(words, len, 1).split(" · ")), 2)  # never less
+
     # ---- links ---------------------------------------------------------------------
     def test_link_kinds(self):
         self.assertIsNone(links.parse("https://x.test/"))

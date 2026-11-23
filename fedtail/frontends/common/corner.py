@@ -27,3 +27,13 @@ def text(theme, toolkit, style, font, display, scale):
             f"{scale * 100:g}%" if scale else "",
             "onefile" if getattr(sys, "frozen", False) else "source"]
     return " · ".join(b for b in bits if b)
+
+
+def fitted(words, width_of, room):
+    """words with its last fields dropped until it fits room pixels (width_of(text) →
+    pixels): a narrow window with a wide font cut the corner mid-word (the terminal
+    theme at 1024 px, 24.11) — the whole of it stays in the tooltip. Two fields at least."""
+    bits = words.split(" · ")
+    while len(bits) > 2 and width_of(" · ".join(bits)) > room:
+        bits.pop()
+    return " · ".join(bits)

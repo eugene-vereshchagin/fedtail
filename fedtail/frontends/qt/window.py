@@ -2997,13 +2997,31 @@ class MainWindow(QMainWindow):
         style = app.style()
         # (name() is "" in some PySide6 builds: the corner showed "· ·")
         style_name = style.name() or style.objectName() or type(style).__name__
-        label = QLabel(corner.text(
+        words = corner.text(
             self.theme.id, "Qt " + QtCore.qVersion(), style_name,
             f"{f.family()} {f.pointSizeF():g}pt", app.platformName(),
-            screen.devicePixelRatio() if screen else 0))
+            screen.devicePixelRatio() if screen else 0)
+        label = QLabel(words)
         label.setObjectName("muted")
-        label.setToolTip(_("debug_corner_tip"))
+        label.setToolTip(_("debug_corner_tip") + "\n" + words)
         self.statusBar().addPermanentWidget(label)
+        self._corner = (label, words)
+        self._fit_corner()
+
+    def _fit_corner(self):
+        """The corner's last fields dropped while the window is too narrow for them
+        (half of it at most: the status line's own words need the rest)."""
+        corner_ = getattr(self, "_corner", None)
+        if corner_ is None:
+            return
+        from ..common import corner
+        label, words = corner_
+        measure = label.fontMetrics().horizontalAdvance
+        label.setText(corner.fitted(words, measure, max(120, self.width() // 2)))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._fit_corner()
 
     @staticmethod
     def _geometry_key():
