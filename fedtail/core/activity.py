@@ -123,6 +123,22 @@ class ActivityMixin:
         is asked for them only then."""
         return any(c.wants_event(word) for c in self._event_lanes())
 
+    def lane_for_event(self, word):
+        """The lane a notification of this kind is read in — the server's word for it
+        ("mention", "favourite", "follow"…): for one that comes without its post, a
+        push; "" — none shown takes it. By the lanes' rules, never their names: a mention
+        — the lane of mentions, else of replies to me, else of private messages
+        (lane_rank); anything else — the first lane shown whose rule takes that event."""
+        if word == "mention":
+            order = {2: 0, 1: 1, 0: 2}
+            ranked = sorted((order[self.lane_rank(x.name)], i, x.name)
+                            for i, x in enumerate(self.lanes)
+                            if self.lane_rank(x.name) in order)
+            return ranked[0][2] if ranked else ""
+        shown = [x.name for x in self.lanes]
+        took = [c.name for c in self._event_lanes() if c.wants_event(str(word))]
+        return min(took, key=shown.index) if took else ""
+
     def lane_events(self, name, limit=200, which=None):
         """[notification] newest first: the events (likes, boosts, follows…) a lane of
         rules shows among its posts (feeds.md §2.3) — from what Activity has stored."""

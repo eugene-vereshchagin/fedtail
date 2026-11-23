@@ -483,6 +483,34 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: "001" not in w.statuses)
             await self.wait(pilot, lambda: "001" not in shown())
 
+    async def test_the_terminals_title_says_the_unread_number(self):
+        """The windows put the unread number on the tray icon, the page into its tab;
+        the terminal showed it nowhere (23.11): its window's title says "(N) FedTail" for
+        the lanes window.icon_count chose, written by the terminal's own escape."""
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        core, w = self.make()
+        core.cfg["ui"]["icon_count"] = ["all"]  # (the default counts the personal lanes)
+        for i in range(1, 4):
+            w.add(status(f"00{i}", BOB, minute=i, vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            wrote = []
+            write = app._driver.write
+            app._driver.write = lambda data: (wrote.append(data), write(data))[1]
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            from fedtail.frontends.common import sidebar
+            names = [i.lane for i in app.query_one("#lanes").children
+                     if isinstance(i, LaneItem)]
+            want = sidebar.icon_total(app.core, core.cfg, sidebar.counts(app.core, names))
+            self.assertGreater(want, 0)
+            await self.wait(pilot, lambda: app.window_title == f"({want}) FedTail")
+            self.assertIn(f"\x1b]2;({want}) FedTail\x07", wrote)
+            core.cfg["ui"]["icon_count"] = []  # nothing chosen: no number
+            app.update_lane_counts()
+            self.assertEqual(app.window_title, "FedTail")
+
     async def test_the_keys_are_the_configs(self):
         """[keys] and tui.keys: reply on a key of one's own, the command line on another
         — pressed, not called; the letters written in the screens no longer do it."""

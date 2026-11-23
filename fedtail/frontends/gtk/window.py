@@ -1230,6 +1230,55 @@ class MainWindow(Gtk.ApplicationWindow):
         if display is not None:
             display.beep()
 
+    def theme_from_file(self):
+        """≡ → Try a theme → Add a theme from a file: a zip into the themes folder
+        (frontends/themepack.add: what it takes and leaves out), asked before one of the
+        same name is replaced — Qt's item; GTK had the folder only (23.11)."""
+        from .. import themepack
+        dlg = Gtk.FileDialog(title=_("theme_add"))
+        flt = Gtk.FileFilter()  # archives only, as Qt's dialog
+        flt.set_name(_("theme_file_kind"))
+        flt.add_pattern("*.zip")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(flt)
+        dlg.set_filters(filters)
+
+        def take(path, replace=False):
+            got = themepack.add(path, replace)
+            if "ask" in got:
+                self.confirm(_("theme_add"), got["ask"], lambda: take(path, True))
+                return
+            for w in got.get("warnings", ()):
+                log.warning("theme from a file: %s", w)
+            self.status(got.get("error") or got["message"], seconds=10)
+
+        def done(d, res):
+            try:
+                gfile = d.open_finish(res)
+            except GLib.Error:
+                return  # dismissed
+            if gfile is not None and gfile.get_path():
+                take(gfile.get_path())
+        dlg.open(self, None, done)
+
+    def theme_to_file(self):
+        """≡ → Try a theme → Save the theme to a file: the theme on screen as a zip, the
+        manual inside (frontends/themepack.save)."""
+        from .. import themepack
+        name = self.theme.id
+        dlg = Gtk.FileDialog(title=_("theme_save"))
+        dlg.set_initial_name(themepack.file_name(name))
+
+        def done(d, res):
+            try:
+                gfile = d.save_finish(res)
+            except GLib.Error:
+                return  # dismissed
+            if gfile is not None and gfile.get_path():
+                got = themepack.save(name, gfile.get_path())
+                self.status(got.get("error") or got["message"], seconds=10)
+        dlg.save(self, None, done)
+
     def try_theme(self, name):
         """Another theme for this run (the config stays): the window restyled, the
         lanes drawn anew in its words."""

@@ -86,6 +86,27 @@ class ThemePackTest(unittest.TestCase):
         self.assertIn("New", (self.themes / "mine.toml").read_text())
         self.assertFalse((self.themes / "mine" / "icons" / "gone.svg").exists())
 
+    def test_the_menus_two_items_in_words(self):
+        """themepack.add / save: what "Add a theme from a file" and "Save the theme to a
+        file" do and say, one for Qt, GTK, the page and the phone (each had a copy)."""
+        (self.themes / "mine.toml").write_text('[meta]\nname = "mine"\n', "utf-8")
+        out = self.tmp / themepack.file_name("mine")
+        got = themepack.save("mine", str(out), shown="the file")
+        self.assertIn("the file", got["message"])
+        self.assertTrue(out.exists())
+        self.assertIn("error", themepack.save("no-such-theme", str(self.tmp / "x.zip")))
+        asked = themepack.add(str(out))  # one of the same name is there: asked, not done
+        self.assertEqual(asked["have"], ["mine"])
+        self.assertIn("mine", asked["ask"])
+        done = themepack.add(str(out), replace=True)
+        self.assertEqual(done["themes"], ["mine"])
+        self.assertIn("mine", done["message"])
+        (self.themes / "mine.toml").unlink()
+        self.assertEqual(themepack.add(str(out))["themes"], ["mine"])  # not there: at once
+        bad = self.tmp / "bad.zip"
+        bad.write_bytes(b"not a zip")
+        self.assertIn("error", themepack.add(str(bad)))
+
     def test_zipped_with_its_folder(self):
         got = themepack.unpack(self.zip({"mine-theme/mine.toml": 'name = "M"\n',
                                          "mine-theme/mine/sounds/reply.wav": "RIFF"}))

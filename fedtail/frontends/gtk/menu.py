@@ -78,6 +78,8 @@ class MainMenu:
         a("quit", lambda: GLib.idle_add(lambda: (win.quit_app(), GLib.SOURCE_REMOVE)[1]))
         self._arg("switch", win.switch_profile)
         self._arg("theme", win.try_theme)
+        self._act("theme_add", win.theme_from_file)
+        self._act("theme_save", win.theme_to_file)
         self._toggle("merged", lambda: bool(getattr(win.core, "others", None)),
                      win.set_merged)
         self._toggle("whats_this", lambda: win.hints_on, win.set_hints)
@@ -239,6 +241,10 @@ class MainMenu:
             label = ("✓ " if name == win.theme.id else "") + name + \
                 ("  · " + _("theme_in_config") if name == configured else "")
             _item(m, label, "theme", target=name)
+        files = Gio.Menu()  # a theme as a zip: in, and out to change it (themepack)
+        _item(files, _("theme_add"), "theme_add")
+        _item(files, _("theme_save"), "theme_save")
+        m.append_section(None, files)
         return m
 
 

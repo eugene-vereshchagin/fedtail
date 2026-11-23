@@ -220,3 +220,42 @@ def unpack(path, replace=False, target=None):
         except themefile.ThemeError as e:
             warnings.append(f"{n}: {e}")
     return {"themes": names, "skipped": skipped, "warnings": warnings}
+
+
+# ---- what the menus' two items do, in words: one for every interface ---------------------
+
+def add(path, replace=False):
+    """≡ → Add a theme from a file, for any interface: the zip at `path` into the themes
+    folder. Returns {"themes", "warnings", "message"} when done; {"ask": the question,
+    "have": [names]} — one of the same name is there and `replace` is false: nothing
+    done, the interface asks and calls again with replace=True; {"error": words}."""
+    from ..i18n import _
+    try:
+        if not replace:
+            have = [n for n in themes_in(path)
+                    if (themefile.user_dir() / f"{n}.toml").exists()]
+            if have:
+                return {"ask": _("theme_replace_q", names=", ".join(have)), "have": have}
+        got = unpack(path, replace=bool(replace))
+    except (PackError, OSError, ValueError) as e:
+        return {"error": _("theme_file_failed", error=e)}
+    words = _("theme_added", names=", ".join(got["themes"]))
+    if got["skipped"]:
+        words += " · " + _("theme_left_out", names=", ".join(got["skipped"]))
+    return {"themes": got["themes"], "warnings": got["warnings"], "message": words}
+
+
+def save(name, path, shown=None):
+    """≡ → Save the theme to a file: theme `name` as a zip at `path` (the manual
+    inside) → {"message"} or {"error"}; shown: the path as the words say it."""
+    from ..i18n import _
+    try:
+        pack(name, path)
+    except (PackError, OSError) as e:
+        return {"error": _("theme_file_failed", error=e)}
+    return {"message": _("theme_saved", name=name, path=shown or path)}
+
+
+def file_name(name):
+    """What a saved theme's file is called."""
+    return f"fedtail-theme-{name}.zip"

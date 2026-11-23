@@ -1249,10 +1249,32 @@ class FedtailApp(App, PostsMixin):
         shown = self._curtain_shown()
         if shown is not None:  # what piles up behind the curtain, as it comes
             shown.query_one(Static).update(self._curtain_text())
+        numbers = {}
         for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
                 title, n = sidebar.lane_label(self.core, item.lane, self.lanes_width - 2)
                 item.update(title, n, sidebar.fresh(self.core, item.lane) if n else 0)
+                numbers[item.lane] = n
+        self._window_title(numbers)
+
+    def _window_title(self, numbers):
+        """The terminal window's (or tab's) title: "(3) FedTail" — the unread number of
+        the lanes window.icon_count chose, what the windows put on the tray and the
+        taskbar icon and the page into its tab (the terminal showed it nowhere, 23.11).
+        Said to the terminal by its own escape (OSC 2), only when it changes."""
+        cfg = self.core.cfg
+        n = sidebar.icon_total(self.core, cfg, numbers) if cfg["ui"].get("icon_count") \
+            else 0
+        title = (f"({n}) " if n else "") + NAME
+        if title == getattr(self, "window_title", None):
+            return
+        self.window_title = title
+        driver = getattr(self, "_driver", None)
+        if driver is not None:
+            try:
+                driver.write(f"\x1b]2;{title}\x07")
+            except Exception as e:  # noqa: BLE001 — a title is never worth an error
+                log.debug("terminal title: %s", e)
 
     async def select_lane(self, name):
         self._found = None

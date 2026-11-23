@@ -845,7 +845,7 @@ const MENU_GROUPS = [
   ["menu_people", ["trends", "suggestions", "directory", "collections", "remote"]],
   ["accounts", ["accounts", "sync", "profile_edit", "server", "probe", "announcements", "merge"]],
   ["web_menu_look", ["settings", "theme", "notify", "push"]],
-  ["debug_menu", ["log", "federation", "notify_test", "issue"]],
+  ["debug_menu", ["report", "log", "federation", "notify_test", "sound_test", "issue"]],
   ["help_title", ["help", "news", "keys", "about"]],
 ];
 
@@ -861,6 +861,27 @@ function menuItems() {  // every item of the menu by its key: [label, do, tip]
   if (canNotify() && Notification.permission !== "granted") items.notify = [w("web_notify"), askNotify];
   items.push = [w("web_push"), pushToggle, w("web_push_tip")];
   items.notify_test = [w("debug_notify"), testNotify];
+  // the windows' two: the full snapshot (the server packs it, the browser saves it) and
+  // the theme's sound played now, whatever is in front
+  items.report = [w("debug_report"), () => {
+    const a = el("a");
+    a.href = "/api/bug_report";
+    a.download = "";
+    document.body.append(a);
+    a.click();
+    a.remove();
+    toast(w("debug_report_done", { path: w("web_downloads") }));
+  }];
+  items.sound_test = [w("debug_sound"), async () => {
+    try {
+      const r = await api("/api/sound_test", {});
+      if (r.sound) {
+        if (r.sound.kind === "bell") beep();
+        else new Audio("/sound/" + encodeURIComponent(r.sound.event)).play().catch(() => {});
+      }
+      toast(r.message);
+    } catch (e) { toast(e.message); }
+  }];
   if (!state.me.merge_pinned)  // ui.merge in the config decides then (as Qt greys it)
     items.merge = [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge,
                    w("accounts_merge_tip")];
@@ -942,16 +963,57 @@ function menuKeys(e) {  // ↑ ↓ within a column of the menu, → into a group
 async function tryTheme() {
   let t;
   try { t = await api("/api/themes"); } catch (e) { toast(e.message); return; }
+  // the themes, then the windows' two items: a theme out as a file, and in from one
   const got = await chooseDlg({ title: t.title, text: t.tip,
                                 options: t.themes.map((x) => ({ key: x.name,
-                                  label: (x.on ? "● " : "") + x.label })) });
+                                  label: (x.on ? "● " : "") + x.label }))
+                                  .concat([{ key: "\u0000save", label: t.save },
+                                           { key: "\u0000add", label: t.add }]) });
   if (!got || got.key === t.current) return;
+  if (got.key === "\u0000save") { themeToFile(); return; }
+  if (got.key === "\u0000add") { themeFromFile(); return; }
   try {
     const r = await api("/api/theme", { name: got.key });
     const link = $("#theme-css");
     if (link) link.href = "/theme.css?v=" + encodeURIComponent(got.key) + "." + Date.now();
     toast(r.message);
   } catch (e) { toast(e.message); }
+}
+
+function themeToFile() {  // the server packs it; the browser saves it where it does
+  const a = el("a");
+  a.href = "/api/theme_file";
+  a.download = "";
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+function themeFromFile() {  // a zip picked here, sent, unpacked there (themepack.add)
+  const inp = el("input");
+  inp.type = "file";
+  inp.accept = ".zip,application/zip";
+  inp.onchange = async () => {
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    const send = async (replace) => {
+      const r = await fetch("/api/theme_add", { method: "POST", body: file, headers: {
+        "X-Fedtail": "1", "X-Replace": replace ? "1" : "0",
+        "Content-Type": "application/octet-stream" } });
+      const got = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(got.error || String(r.status));
+      return got;
+    };
+    try {
+      let got = await send(false);
+      if (got.ask) {  // one of the same name is there: asked first
+        if (!window.confirm(got.ask)) return;
+        got = await send(true);
+      }
+      toast(got.error || got.message);
+    } catch (e) { toast(e.message); }
+  };
+  inp.click();
 }
 
 async function textFile(p, i, m) {  // a text file attached: its words over the page
@@ -3996,6 +4058,13 @@ async function start() {
     const name = decodeURIComponent(location.hash.slice(1));
     if (name && name !== state.lane && names.includes(name)) goLane(name);
   });
+  // a push pressed while the page is open: its service worker says the lane (sw.js)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (e) => {
+      const name = e.data && e.data.lane;
+      if (name && name !== state.lane && names.includes(name)) goLane(name);
+    });
+  }
   document.addEventListener("visibilitychange", () => { if (document.hidden) flushRead(); });
 }
 

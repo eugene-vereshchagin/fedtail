@@ -131,6 +131,12 @@ android_note.en = "No tabs: screens stack, \"back\" is the one before."
 keys = ["tab_pin", "tab_unpin", "tab_pinned", "tab_unpinned", "tab_pinned_stays"]
 
 [[wording]]
+in = ["tui", "web"]
+why.ru = "«Архив темы (*.zip)» — имя фильтра в диалоге файла окон Qt и GTK. У терминала этих пунктов нет (theme-files), а веб-страница выбирает файл средствами браузера: фильтр там — список расширений, без слов."
+why.en = "\"Theme archive (*.zip)\" is the filter's name in the Qt and GTK windows' file dialog. The terminal has no such items (theme-files), and the web page picks a file by the browser's means: its filter is a list of extensions, no words."
+keys = ["theme_file_kind"]
+
+[[wording]]
 in = ["gtk", "tui", "web"]
 why.ru = "«Браузер не открылся» в отчёте об ошибке говорит только Qt: он один узнаёт, что открыть не удалось (`QDesktopServices`, затем `xdg-open`). GTK отдаёт адрес рабочему столу без ответа, терминал и веб открывают свой браузер; весь текст отчёта в буфере у всех."
 why.en = "Only Qt says \"the browser didn't open\" in the bug report: it alone learns that opening failed (`QDesktopServices`, then `xdg-open`). GTK hands the address to the desktop with no answer, the terminal and the web page open their own browser; the whole report is on the clipboard in all of them."
@@ -616,13 +622,10 @@ area = "app"
 android = "has"
 name.ru = "Тема одним файлом: выгрузить и загрузить"
 name.en = "A theme as one file: out and in"
-gtk = "no"
-tui = "no"
-web = "na"
-note.ru = "GTK пока без этих пунктов: папка тем там открыта, а архив делает и берёт командная строка (`--theme-export`, `--theme-import`) — она же для терминала. Веб — гость в браузере: класть файлы в папку тем ему не положено."
-note.en = "GTK has no such items yet: the themes folder is open there, and the command line makes and takes the archive (`--theme-export`, `--theme-import`) — the same for the terminal. The web page is a guest in the browser: putting files into the themes folder isn't its to do."
-keys = ["theme_add", "theme_save", "theme_file_kind", "theme_saved", "theme_added",
-        "theme_replace_q", "theme_left_out", "theme_file_failed"]
+tui = "na"
+note.ru = "В окнах Qt и GTK — два пункта в «Примерить тему» (диалог файла), на веб-странице — те же два: тема скачивается архивом и загружается из файла, на телефоне — через системный выбор файла; правило одно (frontends/themepack). Терминал рисуется темой Textual (`tui.theme`), а не файлом темы fedtail — ему эти пункты ни к чему; архив там делает и берёт командная строка (`--theme-export`, `--theme-import`)."
+note.en = "In the Qt and GTK windows — two items in \"Try a theme\" (a file dialog), on the web page the same two: the theme comes down as an archive and goes up from a file, on the phone — through the system's file picker; one rule (frontends/themepack). The terminal is drawn by a Textual theme (`tui.theme`), not by a fedtail theme file — the items have no use there; the command line makes and takes the archive (`--theme-export`, `--theme-import`)."
+keys = ["theme_add", "theme_save"]
 
 [[capability]]
 id = "help-browse"
@@ -674,9 +677,9 @@ android_note.ru = "Отчёт — ⋮ → «Отправить отчёт» (ж�
 android_note.en = "The report — ⋮ → \"Send a report\" (the log inside); the phone has no sound — nothing to test"
 name.ru = "Отладка: полный слепок в архив, журнал, звук"
 name.en = "Debugging: a full snapshot into an archive, the log, the sound"
-web = "na"
-note.ru = "Веб-страница — гость в браузере: отчёт собирают в окне, терминале или `fedtail --bug-report`."
-note.en = "The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`."
+web = "partly"
+note.ru = "На веб-странице слепок скачивается архивом (его собирает сервер), звук темы играет браузер; нет только угла отладки — как нарисовано окно, странице сказать нечего: её рисует браузер."
+note.en = "On the web page the snapshot comes down as an archive (the server packs it) and the browser plays the theme's sound; only the debugging corner is missing — how the window is drawn the page has nothing to say of: the browser draws it."
 keys = ["debug_report", "debug_report_done", "debug_sound", "debug_sound_played",
         "debug_sound_silent", "debug_corner_tip", "debug_theme",
         "bugreport_send_failed", "bugreport_sending", "bugreport_sent"]

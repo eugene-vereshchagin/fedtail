@@ -34,6 +34,16 @@
   (or copied in a file manager and pasted) comes as its path: the editor attaches it
   instead of typing the path into the post; several at once too. Any other paste is
   text, as before.
+- **A theme as a file in GTK and on the web page.** "Add a theme from a file" and "Save
+  the theme to a file" were Qt's and the phone's: GTK's "Try a theme" has them now (the
+  desktop's file dialog), and the page's — a download and an upload. One rule for all.
+- **The web page's ≡ → Debug** has the full snapshot (the server packs the archive, the
+  browser saves it — no token, no database inside) and "Test the sound".
+- **A press on the page's push notification goes to its lane** — the lane that kind of
+  event is read in, by the lanes' rules; it only opened the page.
+- **The terminal window's title says the unread number** — "(3) FedTail", for the lanes
+  `window.icon_count` chose: what the windows put on the tray icon and the page into
+  its tab.
 - **The terminal: ★ ♻ ↩ from another account.** With all accounts in one window the ⋯
   menu has "From another account", as the windows, the page and the phone have.
 - **The command line remembers** in the terminal and on the web page too: `↑` / `↓` walk

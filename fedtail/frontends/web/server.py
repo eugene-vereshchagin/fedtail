@@ -84,6 +84,7 @@ SOCKET_SECONDS = WAIT_SECONDS + 35  # a client that sends nothing this long is d
 GONE = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
 _UPLOAD = re.compile(r"[A-Za-z0-9_-]{16}(\.[a-z0-9]{1,6})?")
 MAX_UPLOAD = 40 * 1024 * 1024  # bytes a file of a post may have (servers take less)
+THEME_MAX = 64 * 1024 * 1024   # a theme's zip (themepack.MAX_BYTES: what it may unpack to)
 # "~": all accounts in one window — "work~123", a post or person of another account
 # (core/merged.py); still one path segment, no "/" and no ".." into the API
 _ID = re.compile(r"[A-Za-z0-9_.~-]{1,100}")
@@ -834,6 +835,32 @@ class Web:
             out.append({"event": e, "kind": kind})
         return out, last
 
+    def sound_test(self, event="reply"):
+        """≡ → Debug → Test the sound, the windows' item: the page plays the theme's
+        sound for the event whatever is in front, and says what it was (the words of
+        common/sound.Sounds.test); a theme silent about it — said so."""
+        scheme = self.scheme()
+        snd = scheme.find(event)
+        kind = "" if snd is None else "bell" if snd.kind == "bell" else "file"
+        if kind == "file" and not (snd.file if snd.kind == "desktop" else snd.value):
+            kind = ""
+        if not kind:
+            return {"message": _("debug_sound_silent", event=event, theme=scheme.theme)}
+        return {"sound": {"event": event, "kind": kind},
+                "message": _("debug_sound_played", event=event, theme=scheme.theme,
+                             how=snd.kind)}
+
+    def bug_report(self):
+        """≡ → Debug → A full snapshot into an archive, the windows' item: the logs, the
+        config and the system's summary — never the token or the database (diag.py) →
+        (file name, bytes); the browser saves it."""
+        import tempfile
+
+        from ... import diag
+        with tempfile.TemporaryDirectory() as tmp:
+            out = diag.bug_report(self.core.paths, dest_dir=tmp, cfg=self.core.cfg)
+            return Path(out).name, Path(out).read_bytes()
+
     def sound_file(self, event):
         """The bytes of an event's sound (a browser can't play the desktop's sound
         theme: fedtail's own quiet set stands in), or None."""
@@ -1117,7 +1144,41 @@ class Web:
                 "themes": [{"name": n, "label": n + ("  · " + _("theme_in_config")
                                                      if n == configured else ""),
                             "on": n == current} for n in names],
-                "title": _("try_theme"), "tip": _("try_theme_tip")}
+                "title": _("try_theme"), "tip": _("try_theme_tip"),
+                # a theme as a zip: out to change it, in from a file (themepack) — the
+                # windows' two items; the page's own way with files is a download and an
+                # upload
+                "save": _("theme_save"), "add": _("theme_add")}
+
+    def theme_file(self):
+        """The theme on screen as a zip, the manual inside → (file name, bytes)."""
+        import tempfile
+
+        from .. import themepack
+        name = self.theme_name()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / themepack.file_name(name)
+            got = themepack.save(name, str(out))
+            if "error" in got:
+                raise ValueError(got["error"])
+            return themepack.file_name(name), out.read_bytes()
+
+    def theme_add(self, data, replace=False):
+        """A theme's zip the page sent, into the themes folder (themepack.add, every
+        interface's): {"message", "themes"}, {"ask"} — one of the same name is there,
+        the page asks and sends again — or {"error"}."""
+        import tempfile
+
+        from .. import themepack
+        if not data:
+            raise ValueError("empty")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "theme.zip"
+            path.write_bytes(data)
+            got = themepack.add(str(path), replace)
+        for w in got.get("warnings", ()):
+            log.warning("theme from a file: %s", w)
+        return {k: v for k, v in got.items() if k != "warnings"}
 
     def try_theme(self, name):
         """Another theme for the page, until fedtail stops; the config stays."""
@@ -2504,7 +2565,8 @@ WORDS = ("direct_badge", "direct_badge_tip", "mark_one_read", "gif_click_play",
          "columns", "columns_tip", "full_width_tip", "column_left", "column_right", "column_close",
          # ≡ as a window: its groups, as the windows' submenus
          "web_menu_lanes", "web_menu_look", "tender_menu", "menu_people", "accounts",
-         "debug_menu")
+         "debug_menu", "debug_report", "debug_report_done", "debug_sound",
+         "web_downloads")
 
 
 class Server(ThreadingHTTPServer):
@@ -2653,6 +2715,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, data, POSSUM[u.path][1])
         if u.path == "/pic":
             return self._picture(q.get("u", ""))
+        if u.path == "/api/bug_report":  # "A full snapshot into an archive": a download
+            name, data = self.web.bug_report()
+            return self._send(HTTPStatus.OK, data, "application/gzip", extra=(
+                ("Content-Disposition", f'attachment; filename="{name}"'),))
+        if u.path == "/api/theme_file":  # "Save the theme to a file": a download
+            try:
+                name, data = self.web.theme_file()
+            except ValueError as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            return self._send(HTTPStatus.OK, data, "application/zip", extra=(
+                ("Content-Disposition", f'attachment; filename="{name}"'),))
         if u.path == "/theme.css":
             return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),
@@ -2684,6 +2757,9 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
                   "/api/emoji": lambda: self.web.emoji_list(q.get("q", "")),
                   "/api/cmd_history": lambda: self.web.command_history(),
+                  # a push pressed: the lane its kind of event is read in (the core's rule)
+                  "/api/push_lane": lambda: {"lane": self.web.core.lane_for_event(
+                      q.get("type", ""))},
                   "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
                                                                    q.get("q", "")),
                   "/api/find_everywhere": lambda: self.web.find_everywhere(q.get("q", "")),
@@ -2705,6 +2781,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         if not self._authorized() or self.headers.get("X-Fedtail") != "1":
             return self._forbidden()
+        if urlsplit(self.path).path == "/api/theme_add":  # a theme's zip, not JSON
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = -1
+            if n <= 0 or n > THEME_MAX:
+                return self._json({"error": "size"}, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            data = self.rfile.read(n)
+            replace = self.headers.get("X-Replace") == "1"
+            return self._run(lambda: self.web.theme_add(data, replace))
         if urlsplit(self.path).path == "/api/upload":  # a file, not JSON
             try:
                 n = int(self.headers.get("Content-Length") or 0)
@@ -2773,6 +2859,7 @@ class Handler(BaseHTTPRequestHandler):
                                               str(body.get("action") or "")),
             "/api/place": lambda: web.place_act(body),
             "/api/theme": lambda: web.try_theme(body.get("name")),
+            "/api/sound_test": lambda: web.sound_test(),
             "/api/merge": lambda: web.toggle_merge(),
             "/api/push_on": lambda: web.push_on(body),
             "/api/push_off": lambda: web.push_off(),

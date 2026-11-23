@@ -33,12 +33,22 @@ self.addEventListener("push", (event) => {
     }));
 });
 
+// A press on the note: the page, at the lane its kind of event is read in — as a press
+// on a window's note goes to its lane (it only opened "/", 23.11). Which lane, the
+// server says (/api/push_lane: the core's rule); it not answering — the page as it is.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true })
-    .then((pages) => {
-      const page = pages.find((p) => new URL(p.url).origin === self.location.origin);
-      if (page) return page.focus();
-      return self.clients.openWindow("/");
-    }));
+  const type = (event.notification.data && event.notification.data.type) || "";
+  const lane = fetch("/api/push_lane?type=" + encodeURIComponent(type), { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : {})).then((got) => String(got.lane || "")).catch(() => "");
+  event.waitUntil(Promise.all([
+    lane, self.clients.matchAll({ type: "window", includeUncontrolled: true }),
+  ]).then(([name, pages]) => {
+    const page = pages.find((p) => new URL(p.url).origin === self.location.origin);
+    if (page) {
+      if (name) page.postMessage({ lane: name });
+      return page.focus();
+    }
+    return self.clients.openWindow(name ? "/#" + encodeURIComponent(name) : "/");
+  }));
 });

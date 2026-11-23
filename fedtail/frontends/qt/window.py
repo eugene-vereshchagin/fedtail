@@ -863,23 +863,15 @@ class MainWindow(QMainWindow):
                                                _("theme_file_kind"))
         if not path:
             return
-        try:
-            have = [n for n in themepack.themes_in(path)
-                    if (themefile.user_dir() / f"{n}.toml").exists()]
-            if have and QMessageBox.question(
-                    self, _("theme_add"), _("theme_replace_q", names=", ".join(have))) \
+        got = themepack.add(path)  # the one rule of every interface
+        if "ask" in got:
+            if QMessageBox.question(self, _("theme_add"), got["ask"]) \
                     != QMessageBox.StandardButton.Yes:
                 return
-            got = themepack.unpack(path, replace=bool(have))
-        except (themepack.PackError, OSError, ValueError) as e:
-            self.statusBar().showMessage(_("theme_file_failed", error=e), 10000)
-            return
-        for w in got["warnings"]:
+            got = themepack.add(path, replace=True)
+        for w in got.get("warnings", ()):
             log.warning("theme from a file: %s", w)
-        words = _("theme_added", names=", ".join(got["themes"]))
-        if got["skipped"]:
-            words += " · " + _("theme_left_out", names=", ".join(got["skipped"]))
-        self.statusBar().showMessage(words, 10000)
+        self.statusBar().showMessage(got.get("error") or got["message"], 10000)
 
     def theme_to_file(self):
         """≡ → Try a theme → Save the theme to a file: the theme on screen as a zip, the
@@ -889,16 +881,12 @@ class MainWindow(QMainWindow):
         from .. import themepack
         name = self.theme.id
         path, _f = QFileDialog.getSaveFileName(self, _("theme_save"),
-                                               str(Path.home() / f"fedtail-theme-{name}.zip"),
+                                               str(Path.home() / themepack.file_name(name)),
                                                _("theme_file_kind"))
         if not path:
             return
-        try:
-            themepack.pack(name, path)
-        except (themepack.PackError, OSError) as e:
-            self.statusBar().showMessage(_("theme_file_failed", error=e), 10000)
-            return
-        self.statusBar().showMessage(_("theme_saved", name=name, path=path), 10000)
+        got = themepack.save(name, path)
+        self.statusBar().showMessage(got.get("error") or got["message"], 10000)
 
     def try_theme(self, name):
         """Restyle the running window in another theme; the config stays as it is."""

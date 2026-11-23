@@ -420,6 +420,92 @@ class WebTest(TmpDir):
         posts = json.loads(self.req("/api/thread?id=062")[2])["posts"]
         self.assertFalse(any(p.get("lane_private") for p in posts))
 
+    def test_the_debug_menus_report_and_sound(self):
+        """≡ → Debug on the page: the full snapshot as a download and the theme's sound
+        test, the windows' two items — "a guest in a browser" was no reason (23.11)."""
+        import io
+        import tarfile
+        r = urllib.request.Request(self.base + "/api/bug_report",
+                                   headers={"Cookie": f"{web.COOKIE}={self.key}"})
+        with urllib.request.urlopen(r, timeout=60) as resp:
+            self.assertIn("fedtail-report-", resp.headers["Content-Disposition"])
+            data = resp.read()
+        names = tarfile.open(fileobj=io.BytesIO(data)).getnames()
+        self.assertTrue(names)
+        self.assertFalse([n for n in names if "auth.json" in n or "state.db" in n])
+        got = json.loads(self.req("/api/sound_test", {})[2])
+        self.assertTrue(got["message"])
+        if "sound" in got:  # the theme has a sound for it: the page is told which
+            self.assertEqual(got["sound"]["event"], "reply")
+            if got["sound"]["kind"] == "file":  # …and its bytes are there to play
+                snd = urllib.request.Request(self.base + "/sound/reply", headers={
+                    "Cookie": f"{web.COOKIE}={self.key}"})
+                with urllib.request.urlopen(snd, timeout=30) as resp:
+                    self.assertTrue(resp.read())
+        js = web.static_text("app.js")
+        self.assertIn('"/api/bug_report"', js)
+        self.assertIn('"/api/sound_test"', js)
+
+    def test_a_theme_as_a_file_down_and_up(self):
+        """The windows' "Save the theme to a file" / "Add a theme from a file" on the
+        page: a download and an upload through the one rule (themepack) — it was "not
+        the page's to do" (23.11)."""
+        import io
+        import os
+        import zipfile
+        from unittest import mock
+        env = mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.tmp / "xdg-themes")})
+        env.start()  # the themes folder: this test's own, never the reader's
+        self.addCleanup(env.stop)
+        t = json.loads(self.req("/api/themes")[2])
+        self.assertTrue(t["save"] and t["add"])
+        r = urllib.request.Request(self.base + "/api/theme_file",
+                                   headers={"Cookie": f"{web.COOKIE}={self.key}"})
+        with urllib.request.urlopen(r, timeout=30) as resp:
+            self.assertIn("attachment", resp.headers["Content-Disposition"])
+            body = resp.read()
+        names = zipfile.ZipFile(io.BytesIO(body)).namelist()
+        self.assertTrue(any(n.endswith(".toml") for n in names))
+        made = io.BytesIO()
+        with zipfile.ZipFile(made, "w") as z:
+            z.writestr("pagetheme.toml", '[meta]\nname = "pagetheme"\n')
+
+        def up(replace):
+            r = urllib.request.Request(self.base + "/api/theme_add", data=made.getvalue(),
+                                       headers={"Cookie": f"{web.COOKIE}={self.key}",
+                                                "X-Fedtail": "1",
+                                                "X-Replace": "1" if replace else "0"})
+            with urllib.request.urlopen(r, timeout=30) as resp:
+                return json.loads(resp.read())
+        from fedtail.frontends import themefile
+        got = up(False)
+        self.assertEqual(got["themes"], ["pagetheme"])
+        self.assertTrue((themefile.user_dir() / "pagetheme.toml").exists())
+        self.assertIn("ask", up(False))  # there now: asked before replacing
+        self.assertEqual(up(True)["themes"], ["pagetheme"])
+        js = web.static_text("app.js")
+        self.assertIn('"/api/theme_add"', js)
+        self.assertIn('a.href = "/api/theme_file"', js)
+
+    def test_a_push_pressed_goes_to_its_lane(self):
+        """A press on a window's note goes to its lane; the page's push opened "/"
+        (23.11). The core says which lane a kind of event is read in — by the lanes'
+        rules — and the service worker asks it."""
+        core = self.core
+        got = json.loads(self.req("/api/push_lane?type=mention")[2])["lane"]
+        self.assertIn(core.lane_rank(got), (0, 1, 2))
+        self.assertEqual(got, core.lane_for_event("mention"))
+        fav = json.loads(self.req("/api/push_lane?type=favourite")[2])["lane"]
+        self.assertTrue(fav)
+        self.assertTrue(any(c.name == fav and c.wants_event("favourite")
+                            for c in core._event_lanes()))
+        self.assertEqual(json.loads(self.req("/api/push_lane?type=nonsense")[2]), {"lane": ""})
+        sw = web.static_text("sw.js")
+        self.assertIn("/api/push_lane?type=", sw)
+        self.assertIn("page.postMessage({ lane: name })", sw)
+        self.assertIn('navigator.serviceWorker.addEventListener("message"',
+                      web.static_text("app.js"))
+
     def test_the_tab_says_the_unread_number(self):
         """The windows put the unread number on the tray and the taskbar icon; the page
         had none (23.11): each lane says whether window.icon_count counts it, the page

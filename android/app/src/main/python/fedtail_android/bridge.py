@@ -1192,36 +1192,21 @@ def theme_save():
     where the reader chose (the system's file picker)."""
     def go():
         from fedtail.frontends import themepack
-        from fedtail.i18n import _
         name = _s["web"].theme_name()
-        out = os.path.join(_s["cache_dir"], "themes-out", f"fedtail-theme-{name}.zip")
-        themepack.pack(name, out)
-        return {"path": out, "name": name,
-                "message": _("theme_saved", name=name, path=f"fedtail-theme-{name}.zip")}
+        out = os.path.join(_s["cache_dir"], "themes-out", themepack.file_name(name))
+        got = themepack.save(name, out, shown=themepack.file_name(name))
+        return got if "error" in got else dict(got, path=out, name=name)
     return _answer(go)
 
 
 def theme_add(path, replace=False):
     """≡ → Add a theme from a file: the zip the reader picked (copied to `path`) into the
-    themes folder (frontends/themepack.unpack) → {"themes", "message"}; one of the same
-    name there and `replace` false: {"ask": the question, "have": [names]}, nothing done
-    (the phone asks, then calls again with replace)."""
+    themes folder (frontends/themepack.add, every interface's) → {"themes", "message"};
+    one of the same name there and `replace` false: {"ask": the question, "have":
+    [names]}, nothing done (the phone asks, then calls again with replace)."""
     def go():
-        from fedtail.frontends import themefile, themepack
-        from fedtail.i18n import _
-        try:
-            if not replace:
-                have = [n for n in themepack.themes_in(path)
-                        if (themefile.user_dir() / f"{n}.toml").exists()]
-                if have:
-                    return {"ask": _("theme_replace_q", names=", ".join(have)), "have": have}
-            got = themepack.unpack(path, replace=bool(replace))
-        except (themepack.PackError, ValueError) as e:
-            return {"error": _("theme_file_failed", error=e)}
-        words = _("theme_added", names=", ".join(got["themes"]))
-        if got["skipped"]:
-            words += " · " + _("theme_left_out", names=", ".join(got["skipped"]))
-        return {"themes": got["themes"], "warnings": got["warnings"], "message": words}
+        from fedtail.frontends import themepack
+        return themepack.add(path, replace)
     return _answer(go)
 
 
