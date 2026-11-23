@@ -193,8 +193,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
     ) { pad ->
         PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
             modifier = Modifier.padding(pad).fillMaxSize()) {
+            // big letters (the system's font size): a tile fewer in a row — at 150 % four
+            // tiles broke their names mid-word ("Bookma/rks", 24.11)
+            val big = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-                if (tiles) tileGrid(model, pane) else laneRows(model)
+                if (tiles) tileGrid(model, pane, big) else laneRows(model)
             }
         }
     }
@@ -202,9 +205,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
 
 /** The tiles (mockup "3"): phone.pinned in its order (or every counted lane) — yours tinted
  *  when there's news, the open one dark — four in a row; below, the rest as rows. */
-private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppModel, pane: Boolean) {
+private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(
+    model: AppModel, pane: Boolean, big: Boolean = false,
+) {
     val tiles = model.tileLanes()
-    val per = if (pane) 3 else 4
+    val per = (if (pane) 3 else 4) - (if (big) 1 else 0)
     val rows = tiles.chunked(per)
     item(key = "h-tiles") {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp),

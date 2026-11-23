@@ -108,6 +108,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -615,8 +616,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (!editing) {
-                Row(Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // wrapped, not scrolled sideways: with big letters "Direct" stood past the
+                // screen's edge and nothing said there was a fourth (24.11)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     VISIBILITIES.forEach { (word, label) ->
                         FilterChip(selected = model.composeVisibility == word,
                             onClick = { model.composeVisibility = word },
@@ -1058,7 +1060,8 @@ private fun ChipLabel(text: String) {
 @Composable
 private fun ChipGrid(chips: List<@Composable (Modifier) -> Unit>) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val cols = if (maxWidth < 340.dp) 2 else 3
+        // (big letters count as a narrower screen: at 150 % three in a row cut their words)
+        val cols = if (maxWidth / LocalDensity.current.fontScale < 340.dp) 2 else 3
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             chips.chunked(cols).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

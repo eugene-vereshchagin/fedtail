@@ -62,6 +62,9 @@
 - Android: turning the phone on its side with the editor (or a thread, a profile)
   opened straight from the overview closed it — the wide screen brought a lane in and
   swept away what was open. The words were kept as a draft, but nothing said so.
+- Android, big letters (the system's font size at 130 % and more): the overview puts a
+  tile fewer in a row (four broke the lanes' names mid-word), the editor's buttons go
+  two in a row, and "who sees it" wraps instead of running past the screen's edge.
 - Android: inside a thread every comment's reply button showed the whole thread's size
   ("4" at each of four comments) — now its own answers.
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
