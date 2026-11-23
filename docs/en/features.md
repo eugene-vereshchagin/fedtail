@@ -360,6 +360,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Tools over the post instead of a long menu | has | 0.22.4 | `card.hover_tools` | own | Mastodon web |
 | A post's menu in submenus | has | 0.22.4 | `card.menu_groups` | own | — |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
+| The Thread button counts the whole thread's comments | has | next | `card.thread_size_minutes` (60) | `GET /api/v1/statuses/:id/context` | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
@@ -412,6 +413,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A post's menu in submenus.** What's left in the ⋯ menu after the tools over the post — in submenus: "Author @…" (the address, a list, mute, their tags, block, the server, report), "Thread" (call someone in, follow, mute, read up to here — where they aren't over the post) and "More" (who liked and boosted, the link's posts, quotes, hide, why it's here, JSON); the frequent ones on top (open in the browser, copy the link and the post's text). No bookmark in the menu when it's a button under the post. Qt, GTK and the web page; the terminal and the phone keep the menu flat. `false` — one list.
 
 **The numbers under the posts on screen kept fresh.** A lane keeps each post as it came — with the numbers of that moment, mostly none. Every `counts_minutes` minutes the posts that were on screen are asked of your server again in one request, and replies, boosts and likes change in place (only the row of buttons is redrawn). With `honest_counters`, the authors' servers are asked too. A post with more replies in a thread you follow: that thread is checked at the very next round, and "Commented posts" learn of the new at once. Every interface and the phone.
+
+**The Thread button counts the whole thread's comments.** Mastodon counts only a post's direct replies, so a boosted comment from a busy thread showed none. For a post on screen in a thread (a reply, or a post with replies) fedtail asks your server for the thread once (one or two requests, 30 a minute at most) and the Thread button says all its comments; after `thread_size_minutes` minutes it asks again. An opened thread updates the number too. The phone has no Thread button: the number is on Reply. `0` — the direct replies only, no requests.
 
 **Who quoted my post.** The list of quotes of my post and “take my post out of this quote”.
 

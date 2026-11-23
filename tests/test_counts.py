@@ -63,3 +63,75 @@ class CountsTest(TmpDir):
         self.assertTrue(counts.changed({"replies_count": 0}, {"replies_count": 1}))
         self.assertFalse(counts.changed({"replies_count": 1, "content": "a"},
                                         {"replies_count": 1, "content": "b"}))
+
+
+class ThreadSizeTest(TmpDir):
+    """The Thread button's number (core/threadsize.py): a boosted comment deep in a busy
+    thread said its own direct replies — none (23.11); now the whole thread's comments."""
+    make = test_cli.CliTest.make
+
+    def setUp(self):
+        super().setUp()
+        self.core, self.w = self.make()
+        self.w.add(status("010", BOB, minute=1, text="the root", vis="public"))
+        self.w.add(status("011", BOB, reply_to="010", minute=2, vis="public"))
+        self.w.add(status("012", BOB, reply_to="011", minute=3, vis="public",
+                          text="the comment boosted"))
+        self.w.add(status("013", BOB, reply_to="010", minute=4, vis="public"))
+        self.w.statuses["010"]["replies_count"] = 2
+        self.w.statuses["011"]["replies_count"] = 1
+        boost = dict(status("020", BOB, minute=5, vis="public"),
+                     reblog=self.w.statuses["012"])
+        self.w.add(boost, home=True)
+        self.core.connect().result()
+        self.core.poll_once()
+        self.core.bg.submit = lambda fn, *a, **kw: fn(*a, **kw)  # at once, here
+        self.asked = []
+        context = self.core.api.context
+        self.core.api.context = lambda sid: (self.asked.append(sid), context(sid))[1]
+        self.said = []
+        self.core.events.on("status_updated", lambda _n, st: self.said.append(st["id"]))
+
+    def test_a_boosted_comment_says_its_threads_comments(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common import actions
+        view = View(self.core)
+        before = view.entry(self.core.store.get_status("020"))
+        self.assertEqual(actions.thread_count(before), 0)  # its own replies: none
+        self.core.on_screen(["020"])
+        self.assertEqual(self.said, ["020"])  # its card is drawn anew
+        after = view.entry(self.core.store.get_status("020"))
+        self.assertEqual(after.post.counts.thread, 3)  # 011, 012, 013
+        self.assertEqual(actions.thread_count(after), 3)
+        self.assertEqual(self.core.thread_size(self.w.statuses["013"]), 3)  # the same thread
+        n = len(self.asked)
+        self.core.on_screen(["020"])  # remembered: not asked again
+        self.assertEqual(len(self.asked), n)
+        ctx = actions.Ctx(cfg=self.core.cfg, me_id=None)
+        thread = [b for b in actions.buttons(after, ctx) if b.action == "thread"][0]
+        self.assertEqual(thread.count, " · 3")
+        from fedtail.frontends.web.server import post_json  # the web page and the phone
+        self.assertEqual(post_json(view, after)["counts"]["thread"], 3)
+
+    def test_the_root_known_here_costs_one_request(self):
+        for sid in ("010", "011"):  # the way up is in the store
+            self.core.store.put_statuses([self.w.statuses[sid]])
+        self.core.on_screen(["020"])
+        self.assertEqual(self.asked, ["010"])
+
+    def test_a_post_alone_is_not_asked_and_off_is_off(self):
+        self.w.add(status("030", BOB, minute=6, vis="public"), home=True)
+        self.core.poll_once()
+        self.core.on_screen(["030"])
+        self.assertEqual(self.asked, [])
+        self.core.cfg["feed"]["thread_size_minutes"] = 0
+        self.core.on_screen(["020"])
+        self.assertEqual(self.asked, [])
+        self.assertIsNone(self.core.thread_size(self.w.statuses["012"]))
+
+    def test_an_opened_thread_tells_its_size(self):
+        self.core.cfg["feed"]["complete_threads"] = False
+        self.core.on_screen(["020"])
+        self.w.add(status("014", BOB, reply_to="013", minute=7, vis="public"))
+        self.core.thread("012").result()
+        self.assertEqual(self.core.thread_size(self.w.statuses["012"]), 4)

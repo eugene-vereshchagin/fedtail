@@ -323,6 +323,8 @@ class ThreadsMixin:
         # (_answers_in_open_threads), whichever interface has it open
         roots.update((str(st["id"]), str(root["id"])) for st in everything)
         self.store.put_statuses(everything)
+        # the Thread button's number under its cards, now that it is counted (threadsize.py)
+        self.learn_thread_size(root["id"], [str(st["id"]) for st in everything], len(rest))
         if self.cfg["feed"]["honest_counters"]:
             self.bg.submit(self._honest_counts, everything)
         mode = self.cfg["feed"].get("thread_from", "mixed")

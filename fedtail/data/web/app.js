@@ -578,7 +578,7 @@ function renderActions(p, inThread) {
     c.title = w("char_count_tip");
     row.append(c);
   }
-  btn("↩", w("reply"), false, () => compose(p), p.counts.replies);
+  btn("↩", w("reply"), false, () => compose(p));
   btn(p.mine.liked ? "★" : "☆", p.mine.liked ? w("faved") : w("fav"),
       p.mine.liked, () => act("like", p), p.counts.likes);
   if (p.can_boost)  // the core's word (common/actions.can_boost)
@@ -587,7 +587,9 @@ function renderActions(p, inThread) {
   if (!state.me || state.me.bookmark_button !== false)  // ui.bookmark_button
     btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
         () => act("bookmark", p));
-  if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at));
+  // the whole thread's comments when known (common/actions.thread_count), as the windows'
+  if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at),
+                     p.counts.thread);
   if (p.unread && state.me && state.me.read_button)  // read.read_button: ✓ under the unread
     btn("✓", w("mark_one_read"), false, () => linkAct("fedtail:readone/" + p.sid, p));
   if (p.url) {

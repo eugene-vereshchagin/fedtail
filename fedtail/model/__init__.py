@@ -224,6 +224,7 @@ class Counts:
     shares: int = 0
     likes: int = 0
     quotes: int = 0
+    thread: int = 0    # the whole thread's comments (core/threadsize.py); 0 — not known
 
 
 @dataclass(frozen=True, slots=True)

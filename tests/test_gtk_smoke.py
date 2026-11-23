@@ -174,6 +174,28 @@ class GtkFirstFrameTest(_GtkBase):
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkSmokeTest(_GtkBase):
 
+    def test_a_boosted_comment_counts_its_whole_thread(self):
+        """A boost of a comment deep in a thread: its Thread button said the comment's
+        own direct replies — none (23.11); once on screen, the whole thread's comments
+        (021 022 023), the card redrawn in place."""
+        w = self.world
+        for sid, up, minute in (("020", None, 20), ("021", "020", 21), ("022", "021", 22),
+                                ("023", "020", 23)):
+            w.add(status(sid, BOB, up, "B" if up else None, minute=minute, vis="public"))
+        w.add(dict(status("030", BOB, minute=30, vis="public"), reblog=w.statuses["022"]),
+              home=True)
+        self.core.poll_once()
+        lane = self._lane("home")
+        self.assertTrue(pump(lambda: "030" in lane.rows, 5))
+
+        def thread_label():
+            return next((x.get_label() for x in _walk(lane.rows["030"])
+                         if isinstance(x, Gtk.Label) and
+                         (x.get_label() or "").startswith(i18n._("thread"))), None)
+        self.view.on_screen(["030"])  # what the lane says of a card in sight
+        self.assertTrue(pump(lambda: thread_label() == i18n._("thread") + " · 3", 5),
+                        thread_label())
+
     def test_lanes_and_cards(self):
         self.assertIn("home", self.win.lane_rows)
         lane = self._lane("home")

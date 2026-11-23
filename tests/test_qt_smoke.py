@@ -181,6 +181,32 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=fut.done)
         return fut.result()
 
+    def test_a_boosted_comment_counts_its_whole_thread(self):
+        """A boost of a comment deep in a thread: its Thread button said the comment's
+        own direct replies — none (23.11); once on screen, the whole thread's comments."""
+        from PySide6.QtWidgets import QToolButton
+        w = self.world
+        for sid, up, minute in (("020", None, 20), ("021", "020", 21), ("022", "021", 22),
+                                ("023", "020", 23)):
+            w.add(status(sid, BOB, up, "B" if up else None, minute=minute, vis="public"))
+        w.add(dict(status("030", BOB, minute=30, vis="public"), reblog=w.statuses["022"]),
+              home=True)
+        self.win.resize(1000, 2400)  # every card on screen at once
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
+        self.core.poll_once()
+        lane = self.win.lane_widgets["home"]
+        self.pump(until=lambda: "030" in lane.view.rows)
+        self.pump(0.5)
+
+        def thread_button():
+            return next((b.text() for b in lane.view.rows["030"].findChildren(QToolButton)
+                         if b.text().startswith(i18n._("thread"))), None)
+        # its own direct replies: none — the number is the thread's (021 022 023)
+        lane.view._window_active = lambda: True  # read: the window in front (offscreen)
+        lane.view._emit_seen()  # 030 on screen (the window is tall)
+        self.pump(until=lambda: thread_button() == i18n._("thread") + " · 3", timeout=10)
+
     def test_editor_with_two_accounts_opens(self):
         """All accounts in one window: the editor's "From" counted against the server's
         limit before the counter was made — Send and Reply did nothing (issue #3)."""

@@ -1063,7 +1063,7 @@ class PostRow(QWidget):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(2)
         if self.theme.shape.get("short_id") == "footer":  # point.im: #a3f | 4, left
-            self._short_id(h, replies=p.counts.replies, where="footer")
+            self._short_id(h, replies=actions.thread_count(p), where="footer")
         chars = actions.char_count(self.spec.entry, self.ctx.cfg)
         if chars:  # card.char_count: on the left, before Reply
             lab = QLabel(chars)

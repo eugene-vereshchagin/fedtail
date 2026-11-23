@@ -112,6 +112,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Private messages stand out in a lane | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Tools over the post instead of a long menu | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | The numbers under the posts on screen kept fresh | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The Thread button counts the whole thread's comments | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
 | Labels on the card | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |   |
@@ -270,4 +271,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **72** features of the 206 compared.
+Only in fedtail — **73** features of the 207 compared.

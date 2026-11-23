@@ -416,7 +416,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
                                                     markup), p.emojis),
                  "label": folded[1]} if folded else None,
         "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
-        "counts": {"replies": p.counts.replies, "shares": p.counts.shares,
+        # thread: the Thread button's number (the whole thread's comments when known)
+        "counts": {"replies": p.counts.replies, "thread": actions.thread_count(p),
+                   "shares": p.counts.shares,
                    "likes": p.counts.likes},
         "mine": {"liked": p.mine.liked, "shared": p.mine.shared,
                  "bookmarked": p.mine.bookmarked},

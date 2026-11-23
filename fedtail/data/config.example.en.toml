@@ -774,6 +774,12 @@ honest_counters = false
 # numbers of that moment; with honest_counters, of the authors' servers too. 0 — never.
 counts_minutes = 5
 
+# The number on a post's Thread button: the whole thread's comments, not only the post's
+# direct replies (all Mastodon says — a boosted comment in a busy thread showed none).
+# For a post on screen in a thread, its context is asked of your server once (one or two
+# requests), and asked again after so many minutes. 0 — never: the direct replies.
+thread_size_minutes = 60
+
 # A click on a tag in a post: "menu" — the tag's menu (that author's posts with it,
 # everywhere, follow, into the lanes, mute — each as it stands now); "author" — that
 # author's posts with the tag at once (as on Point, where each blog has its own tags;

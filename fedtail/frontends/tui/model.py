@@ -150,7 +150,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
             foot.append(", ".join(files) + " — v")
     if p.poll:
         foot.append("📊 " + _("tui_poll") + ": " + poll_line(p.poll))
-    for n, mark in ((p.counts.replies, "↩"), (p.counts.shares, "♻"),
+    from ..common.actions import thread_count
+    for n, mark in ((thread_count(p), "⤷"), (p.counts.shares, "♻"),
                     (p.counts.likes, "★" if p.mine.liked else "☆")):
         if n:
             foot.append(f"{mark} {n}")

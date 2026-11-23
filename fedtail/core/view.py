@@ -281,6 +281,9 @@ class View:
         auto = getattr(self._core, "auto_translation", None)
         if auto is not None and isinstance(raw, dict):
             raw = auto(raw) or raw
+        sized = getattr(self._core, "thread_sized", None)  # the Thread button's number
+        if sized is not None and isinstance(raw, dict):
+            raw = sized(raw) or raw
         people = self._people() if people is None else people
         shared = getattr(raw, "_text_hash", None) is not None  # a Stored: the store's own
         if shared:

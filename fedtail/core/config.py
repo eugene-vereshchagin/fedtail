@@ -131,6 +131,7 @@ DEFAULTS = {
         "first_run_mark_read": True,
         "honest_counters": False,
         "counts_minutes": 5,
+        "thread_size_minutes": 60,  # the Thread button: the whole thread's comments
         "tag_click": "menu",
         "counters_via_accounts": True,
         "remember_choices": False,
@@ -524,6 +525,7 @@ MINIMUM = {
     ("feed", "thread_recheck_for_minutes"): 1,
     ("feed", "thread_recheck_minutes"): 0,
     ("feed", "counts_minutes"): 0,
+    ("feed", "thread_size_minutes"): 0,
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
     ("sync", "interval_seconds"): 15,
@@ -621,7 +623,7 @@ FILE_LAYOUT = (
                            "around_post why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button char_count additional_highlight "
              "direct_highlight hover_tools menu_groups code_click links_in_app")
-     + _keys("feed", "show_moved honest_counters counts_minutes tag_click "
+     + _keys("feed", "show_moved honest_counters counts_minutes thread_size_minutes tag_click "
              "counters_via_accounts "
              "translate "
                      "translate_all translate_auto translate_backend translate_url "

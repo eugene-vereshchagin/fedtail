@@ -61,6 +61,7 @@ from .sounds import Chime
 from .store import Store, now_iso
 from .syncing import SyncMixin
 from .thread_ops import ThreadsMixin
+from .threadsize import ThreadSizeMixin
 from .translate import TranslateMixin
 from .updates import UpdatesMixin
 from .writing import WritingMixin
@@ -216,7 +217,7 @@ def _counted(before, got, flag, count, on):
     return got
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
-           CountsMixin,
+           CountsMixin, ThreadSizeMixin,
            OriginMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
            TranslateMixin, SocialMixin):
     """The core the frontends talk to: one account, its store, its rounds. Its parts

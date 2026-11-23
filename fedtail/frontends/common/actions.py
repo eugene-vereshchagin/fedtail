@@ -110,6 +110,14 @@ def char_count(entry, cfg):
     return _("char_count", n=n) if n else ""
 
 
+def thread_count(entry):
+    """The Thread button's number: the whole thread's comments when the core learned
+    them (feed.thread_size_minutes, core/threadsize.py), else the post's direct replies
+    — all Mastodon says (a boosted comment in a busy thread showed none, 23.11)."""
+    c = real(entry).counts
+    return max(c.thread, c.replies)
+
+
 def buttons(entry, ctx, unread=False, open_at="post"):
     """The buttons under a post, in order. open_at: where its thread opens (the card's
     CardSpec.open_at)."""
@@ -127,7 +135,7 @@ def buttons(entry, ctx, unread=False, open_at="post"):
                           boosted))
     if not ctx.in_thread:
         out.append(Button("thread", ("view-list-tree", "format-indent-more"), "⤷",
-                          _("thread"), n(p.counts.replies)))
+                          _("thread"), n(thread_count(p))))
     if ctx.cfg["ui"].get("bookmark_button", True):
         marked = p.mine.bookmarked
         out.append(Button("bookmark", ("bookmark-new", "bookmarks"), "🔖",

@@ -7,6 +7,14 @@
 
 ## What's next
 
+- **The Thread button counts the whole thread.** Mastodon says only a post's direct
+  replies, so a boosted comment from a busy thread showed no number at all. Now, for a
+  post on screen in a thread, fedtail asks your server for the thread once (one or two
+  requests, again in an hour) and the Thread button says all its comments — Qt, GTK, the
+  terminal (⤷ N), the web page (the number moved there from Reply, as in the windows) and
+  the phone (on Reply: it has no Thread button). `card.thread_size_minutes` (60); 0 —
+  the direct replies, no requests.
+
 ## 0.23.9 — 2026-11-23
 
 **In short: a slow server no longer breaks things.** The phone started to "The core

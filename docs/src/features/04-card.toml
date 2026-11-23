@@ -348,6 +348,22 @@ details.ru = "Лента хранит пост, каким он пришёл, �
 details.en = "A lane keeps each post as it came — with the numbers of that moment, mostly none. Every `counts_minutes` minutes the posts that were on screen are asked of your server again in one request, and replies, boosts and likes change in place (only the row of buttons is redrawn). With `honest_counters`, the authors' servers are asked too. A post with more replies in a thread you follow: that thread is checked at the very next round, and \"Commented posts\" learn of the new at once. Every interface and the phone."
 
 [[feature]]
+id = "thread-size"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Число на кнопке «Тред» — все комментарии треда"
+name.en = "The Thread button counts the whole thread's comments"
+config.ru = "`card.thread_size_minutes` (60)"
+config.en = "`card.thread_size_minutes` (60)"
+api = "`GET /api/v1/statuses/:id/context`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Mastodon сообщает только прямые ответы на сам пост, поэтому у забущенного комментария из большого треда число было пустым. Для поста на экране, что в треде (ответ или пост с ответами), fedtail один раз спрашивает у твоего сервера тред (один-два запроса, не больше 30 в минуту) и пишет на кнопке «Тред» число всех комментариев; через `thread_size_minutes` минут спрашивает снова. Открытый тред тоже обновляет число. На телефоне кнопки «Тред» нет — число у «Ответить». `0` — только прямые ответы, без запросов."
+details.en = "Mastodon counts only a post's direct replies, so a boosted comment from a busy thread showed none. For a post on screen in a thread (a reply, or a post with replies) fedtail asks your server for the thread once (one or two requests, 30 a minute at most) and the Thread button says all its comments; after `thread_size_minutes` minutes it asks again. An opened thread updates the number too. The phone has no Thread button: the number is on Reply. `0` — the direct replies only, no requests."
+
+[[feature]]
 id = "quoted-by"
 status = "has"
 android = "has"

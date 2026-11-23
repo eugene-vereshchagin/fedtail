@@ -37,11 +37,14 @@ class CountsMixin:
         """These posts (ids, a boost's or its post's) are on screen now: their counts
         are asked again at the next round that is due (feed.counts_minutes)."""
         now = time.monotonic()
+        ids = [str(i) for i in ids or () if i and not str(i).startswith(("event:", "__"))]
         with self._screen_lock():
             seen = self.__dict__.setdefault("_on_screen", {})
-            for i in ids or ():
-                if i and not str(i).startswith(("event:", "__")):
-                    seen[str(i)] = now
+            for i in ids:
+                seen[i] = now
+        sizing = getattr(self, "size_threads", None)  # the Thread button's number
+        if sizing is not None:
+            sizing(ids)
 
     def _screen_lock(self):
         lock = self.__dict__.get("_counts_lock")

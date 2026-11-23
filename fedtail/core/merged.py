@@ -389,6 +389,22 @@ class MergedCore:
         for _tag, (core, own) in groups.items():
             core.on_screen(own)
 
+    def thread_sized(self, st):
+        """The Thread button's number (threadsize.py), from the account that has it."""
+        if not isinstance(st, dict):
+            return None
+        inner = st.get("reblog") if isinstance(st.get("reblog"), dict) else st
+        core, tag, sid = self.split(str(inner.get("id") or ""))
+        if tag is None:
+            return self.primary.thread_sized(st)
+        n = core.thread_size({"id": sid})
+        if n is None:
+            return None
+        from .threadsize import KEY
+        if inner is not st:
+            return dict(st, reblog=dict(inner, **{KEY: n}))
+        return dict(st, **{KEY: n})
+
     def set_active_lane(self, name):
         for core, _tag, own in self._own_lane(name) if name else []:
             core.set_active_lane(own)

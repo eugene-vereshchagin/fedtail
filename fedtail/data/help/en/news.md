@@ -5,7 +5,9 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**What's next:**
+
+- The Thread button counts the whole thread's comments
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

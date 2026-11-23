@@ -2602,7 +2602,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             sharedBy = by?.let { str(it, "name").ifBlank { str(it, "handle") } } ?: "",
             contextHandle = str(ctx, "handle"),
             contextText = str(ctx, "text"),
-            replies = counts.optInt("replies"), shares = counts.optInt("shares"),
+            // the whole thread's comments when known (common/actions.thread_count)
+            replies = counts.optInt("thread", counts.optInt("replies")), shares = counts.optInt("shares"),
             likes = counts.optInt("likes"), liked = mine.optBoolean("liked"),
             number = if (o.has("number") && !o.isNull("number")) o.optInt("number") else null,
             depth = o.optInt("depth"),
