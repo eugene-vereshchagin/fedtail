@@ -72,30 +72,35 @@ class ThreadKeys:
 
     # ---- the keys ---------------------------------------------------------------------
     def _key(self, _ctl, keyval, _code, state):
-        mods = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | \
-            Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.SUPER_MASK
-        if state & mods or not self.win.cfg["ui"].get("post_keys", True) or \
-                not self._shown():
+        from .keys import key_of
+        if state & Gdk.ModifierType.SUPER_MASK or not self._shown():
+            return False
+        key = key_of(keyval, state)
+        if postkeys.meaning(self.win.cfg, key) is None:
             return False
         focus = self.win.get_focus()
         if isinstance(focus, (Gtk.Text, Gtk.TextView, Gtk.Entry)):
             return False  # typing somewhere: its letters
-        return self.press((Gdk.keyval_name(keyval) or "").lower())
+        return self.press(key)
 
-    def press(self, name):
-        """A key by its GDK name (lower case) → whether it was the thread's."""
+    def press(self, key):
+        """A key (core.keys.Key, or as written: "j", "]") → whether it was the thread's:
+        what it means is the config's ([keys], common/postkeys.meaning)."""
+        if isinstance(key, str):
+            from ...core import keys as keymap
+            key = keymap.parse(key)
+        what = postkeys.meaning(self.win.cfg, key)
         every = self._ids()
         posts = [k for k in every if k not in self.hidden]
-        if not posts:
+        if what is None or not posts:
             return False
-        if name in postkeys.WALK:
+        kind, value = what
+        if kind == "walk":
             from .window import _thread_on_top
-            sid = postkeys.step(posts, self.cursor, postkeys.WALK[name],
-                                _thread_on_top(self.page))
-        elif name in postkeys.THREAD_KEYS:
-            sid = postkeys.top_comment(posts, self.cursor, postkeys.THREAD_KEYS[name],
-                                       self._depth_of)
-        elif name == postkeys.FOLD:
+            sid = postkeys.step(posts, self.cursor, value, _thread_on_top(self.page))
+        elif kind == "top":
+            sid = postkeys.top_comment(posts, self.cursor, value, self._depth_of)
+        elif kind == "fold":
             if self.cursor not in posts:
                 return False
             head, below = postkeys.branch(every, self.cursor, self._depth_of)
@@ -113,8 +118,8 @@ class ThreadKeys:
                 window.soon()
             sid = head
         else:
-            action = postkeys.ACTIONS.get(name)
-            if action is None or self.cursor not in posts:
+            action = value
+            if self.cursor not in posts:
                 return False
             self.win.on_link(postkeys.link(action, self.cursor))
             return True

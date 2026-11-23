@@ -53,6 +53,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import diag, version
+from ...core import keys
 from ...core import lanes as lanes_module
 from ...i18n import _
 from ...model import Account, Post, Relationship, Share
@@ -582,22 +583,19 @@ class MainWindow(QMainWindow):
         self._slow_timer.timeout.connect(self._slow_text)
         self._slow_timer.start(30_000)
 
-        for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
-                        ("Ctrl+Q", self.quit),
-                        ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex())),
-                        (QKeySequence.StandardKey.Find, self.find_bar.open),
-                        ("Ctrl+K", lambda: (self.search_box.setFocus(),
-                                            self.search_box.selectAll())),
-                        ("Ctrl+L", lambda: (self.cmdline.show(), self.cmdline.focus())),
-                        (QKeySequence.StandardKey.FindNext, lambda: self.find_bar.step(1)),
-                        (QKeySequence.StandardKey.FindPrevious,
-                         lambda: self.find_bar.step(-1))):
-            sc = QShortcut(QKeySequence(seq), self)
-            sc.activated.connect(fn)
-            # two owners of one key make Qt run neither; say so and run ours anyway
-            key = sc.key().toString()
-            sc.activatedAmbiguously.connect(
-                lambda f=fn, k=key: (log.warning("ambiguous shortcut %s", k), f()))
+        # the window's keys, the config's ([keys], core/keys.py): none written here
+        from .keys import bind
+        for action, fn in (("new_post", lambda: self.compose()), ("refresh", self.refresh),
+                           ("quit", self.quit),
+                           ("close_tab", lambda: self.close_tab(self.tabs.currentIndex())),
+                           ("find", self.find_bar.open),
+                           ("search", lambda: (self.search_box.setFocus(),
+                                               self.search_box.selectAll())),
+                           ("command_line", lambda: (self.cmdline.show(),
+                                                     self.cmdline.focus())),
+                           ("find_next", lambda: self.find_bar.step(1)),
+                           ("find_previous", lambda: self.find_bar.step(-1))):
+            bind(self, self.cfg, action, fn)
         mods = {"alt": ("Alt",), "ctrl": ("Ctrl",), "both": ("Alt", "Ctrl")}.get(
             self.cfg["ui"].get("number_keys", "alt"), ("Alt",))
         for mod in mods:  # Alt+N (ui.number_keys): the N-th lane as the sidebar shows them
@@ -690,7 +688,7 @@ class MainWindow(QMainWindow):
         compose = QPushButton(t.word("compose", _("write")))
         compose.setObjectName("compose")
         compose.setCursor(Qt.CursorShape.PointingHandCursor)
-        compose.setToolTip(_("write") + " (Ctrl+N)")
+        compose.setToolTip(_("write") + keys.hint(self.cfg, "new_post"))
         compose.clicked.connect(lambda: self.compose())
         v.addWidget(compose)
         # finding new people and tags: Enter opens the Search tab (Ctrl+K gets here)
@@ -1186,7 +1184,8 @@ class MainWindow(QMainWindow):
         m.setToolTipsVisible(True)
         m.addAction(_("about"), self.about)
         m.addSeparator()
-        m.addAction(_("quit") + "\tCtrl+Q", self.quit)
+        quit_key = keys.words(self.cfg, "quit").split(", ")[0]
+        m.addAction(_("quit") + ("\t" + quit_key if quit_key else ""), self.quit)
         return m
 
     # ---- startup --------------------------------------------------------------------
@@ -1269,7 +1268,7 @@ class MainWindow(QMainWindow):
 
     def _connect_failed(self, err):
         from ..common.connecting import trouble
-        t = trouble(err)  # the same in every interface
+        t = trouble(err, self.cfg)  # the same in every interface
         if t["relogin"]:  # the core asked again and again (Core.token_refused)
             QMessageBox.warning(self, _("auth_failed_title"), t["text"])
             # the login window, from scratch; the token not revoked by us: if the server

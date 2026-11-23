@@ -418,7 +418,10 @@ class WritingMixin:
             if not out.done():
                 out.set_result(made)
             try:
-                self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
+                # mine are read; the post answered too (reading.replied_is_read)
+                answered = [reply_to] if reply_to and self.cfg["read"].get(
+                    "replied_is_read", True) else []
+                self.mark_read([x["id"] for x in chain] + answered)
                 if self._carry_my_direct(chain):  # the dialogue: mine at once
                     self.emit("lanes_updated", {n: [] for n in self.private_lanes()})
                 self._auto_subscribe([st])

@@ -61,6 +61,19 @@ android_note.ru = "На телефоне нет клавиатуры."
 android_note.en = "The phone has no keyboard."
 
 [[capability]]
+id = "keys-own"
+area = "window"
+tui = "partly"
+web = "partly"
+android = "na"
+name.ru = "Свои клавиши ([keys])"
+name.en = "Keys of your own ([keys])"
+note.ru = "`[keys]` в конфиге: окна Qt и GTK берут все двадцать действий. Терминал и веб-страница берут из него клавиши постов (следующий/предыдущий, ответить, лайк, буст, закладка, тред; терминал — и клавиши комментариев треда): Ctrl+N, Ctrl+W, F5 терминал и браузер держат для себя. У терминала взамен любая его клавиша ставится по имени (`tui.keys`, имена — `fedtail --keys`); собственные буквы страницы (n, p, x, R, q, /, :) пока зашиты."
+note.en = "`[keys]` in the config: the Qt and GTK windows take all twenty actions. The terminal and the web page take the posts' keys from it (next/previous, reply, like, boost, bookmark, the thread; the terminal — a thread's comment keys too): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for themselves. The terminal instead lets any of its keys be set by name (`tui.keys`, the names — `fedtail --keys`); the page's own letters (n, p, x, R, q, /, :) are written in for now."
+android_note.ru = "На телефоне нет клавиатуры."
+android_note.en = "The phone has no keyboard."
+
+[[capability]]
 id = "char-count-tip"
 area = "reading"
 tui = "na"
@@ -226,8 +239,8 @@ name.ru = "Значок в трее"
 name.en = "The tray icon"
 tui = "na"
 web = "na"
-note.ru = "У терминала и вкладки браузера трея нет."
-note.en = "A terminal and a browser tab have no tray."
+note.ru = "У терминала и вкладки браузера трея нет. Число непрочитанного, которое окна ставят на значок, веб-страница пишет в заголовок вкладки («(3) Дом») и на значок установленной страницы; у телефона оно на значке приложения; терминал его нигде не показывает."
+note.en = "A terminal and a browser tab have no tray. The unread number the windows put on the icon the web page writes into the tab's title (\"(3) Home\") and on the installed page's icon; the phone has it on the app's icon; the terminal shows it nowhere."
 keys = ["tray_new"]
 
 [[capability]]

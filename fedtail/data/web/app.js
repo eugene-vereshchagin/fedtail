@@ -1035,10 +1035,24 @@ async function loadSlow() {  // slow mode: when the next batch comes, by the tit
   } catch (e) { /* an old server: no slow mode */ }
 }
 
+// The tab's title with the unread number in front — "(3) Home — FedTail" — and the same
+// number on the installed page's icon: what the windows put on the tray and the taskbar
+// (window.icon_count chooses the lanes; the server says which count).
+const titled = { text: "FedTail", n: 0 };
+function setTitle(text) {
+  if (text !== undefined) titled.text = text;
+  document.title = (titled.n ? "(" + titled.n + ") " : "") + titled.text;
+  if (navigator.setAppBadge) {
+    (titled.n ? navigator.setAppBadge(titled.n) : navigator.clearAppBadge()).catch(() => {});
+  }
+}
+
 async function loadLanes() {
   loadSlow();
   const lanes = await api("/api/lanes");
   state.lanes = lanes;
+  titled.n = lanes.reduce((sum, l) => sum + (l.counted ? l.unread || 0 : 0), 0);
+  setTitle();
   const nav = $("#lanes");
   nav.textContent = "";
   let head = null;  // the section the lanes below belong to: its heading folds them
@@ -1177,7 +1191,7 @@ async function selectLane(name, keep) {
   state.posts = data.posts;
   state.older = data.older;
   $("#title").textContent = data.title;
-  document.title = data.title + " — FedTail";
+  setTitle(data.title + " — FedTail");
   box.textContent = "";
   const more = olderButton();
   if (data.waiting) box.append(loadingBox(w("loading")));  // a browse lane: its server asked
@@ -1638,7 +1652,7 @@ async function showCurtain() {
   state.curtainLast = c.last;
   state.posts = [];
   $("#title").textContent = c.title;
-  document.title = "FedTail";
+  setTitle("FedTail");
   $("#lanebar").textContent = "";
   const box = $("#posts");
   box.textContent = "";
@@ -3516,25 +3530,43 @@ document.addEventListener("keydown", (e) => {
     openFind();
     return;
   }
-  if ($("#compose").open || e.ctrlKey || e.metaKey || e.altKey) return;
-  // window.post_keys off: the posts' letters (common/postkeys.py) aren't keys
-  if (state.me && state.me.post_keys === false && /^[jkrfbmo]$|^Enter$/.test(e.key)) return;
+  if ($("#compose").open) return;
   // Enter or Space on a button, a link: they press it (the thread under the cursor
   // opened instead)
   if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("button, a")) return;
   const p = current();
+  // the posts' keys are the config's ([keys], core/keys.py): the server says what a key
+  // means (none with window.post_keys off) — no letter of them is written here
+  const means = postKey(e);
+  const posts = {
+    next_post: () => setCursor(state.cursor + 1), previous_post: () => setCursor(state.cursor - 1),
+    reply: () => p && compose(p), like: () => p && act("like", p),
+    boost: () => p && act("share", p), bookmark: () => p && act("bookmark", p),
+    open_thread: () => p && openThread(p.sid, p.open_at),
+  };
+  if (means && posts[means]) { e.preventDefault(); posts[means](); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   const keys = {
-    j: () => setCursor(state.cursor + 1), k: () => setCursor(state.cursor - 1),
     ArrowDown: () => setCursor(state.cursor + 1), ArrowUp: () => setCursor(state.cursor - 1),
-    r: () => p && compose(p), f: () => p && act("like", p), b: () => p && act("share", p),
-    m: () => p && act("bookmark", p), o: () => p && openThread(p.sid, p.open_at),
-    Enter: () => p && openThread(p.sid, p.open_at), n: () => compose(null),
+    n: () => compose(null),
     p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
     q: () => p && quoteReply(p), "/": () => openPlace("search"),
     ":": () => cmdInput().focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
   };
   if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
 });
+
+// What a key pressed means among posts, by the server's table (/api/me "keys": [{action,
+// key, ctrl, alt, shift}]); a character is itself whatever Shift did to get it.
+function postKey(e) {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  for (const k of (state.me && state.me.keys) || []) {
+    if (k.key !== key || !!k.ctrl !== (e.ctrlKey || e.metaKey) || !!k.alt !== e.altKey) continue;
+    const typed = k.key.length === 1 && !k.ctrl && !k.alt;
+    if (typed ? (e.key === k.key || !e.shiftKey) : !!k.shift === e.shiftKey) return k.action;
+  }
+  return null;
+}
 
 // ---- navigation on a phone -------------------------------------------------------------
 function isNavOpen() { return $("#nav").classList.contains("open"); }

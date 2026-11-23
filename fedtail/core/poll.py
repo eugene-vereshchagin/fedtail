@@ -733,7 +733,7 @@ class PollMixin:
             # a post I replied to (from any client) counts as read
             answered = [st["in_reply_to_id"] for st in new_statuses
                         if st["account"]["id"] == self.me["id"] and st.get("in_reply_to_id")]
-            if answered and not first_run:
+            if answered and not first_run and self.cfg["read"].get("replied_is_read", True):
                 self.mark_read(answered)
             if first_run:
                 self.store.kv_set("initialized", True)

@@ -9,6 +9,7 @@ What's new in the latest versions, and the plans.
 
 - The Thread button counts the whole thread's comments
 - Quote as a link — where quoting isn't
+- Keys of your own
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

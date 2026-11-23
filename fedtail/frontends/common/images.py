@@ -497,14 +497,16 @@ class Cache:
             with self._host_slot(urlsplit(url).hostname or ""), self._open(url, (6, 60)) as r:
                 r.raise_for_status()
                 said = r.headers.get("Content-Length") or ""
-                if said.isdigit() and int(said) > VIDEO_MAX:
-                    raise remote.Refused(f"video over {VIDEO_MAX >> 20} MB")
+                # media.video_max_mb: the most one video or sound file may be
+                most = max(1, int(self.core.cfg["ui"].get("video_max_mb", VIDEO_MAX >> 20))) << 20
+                if said.isdigit() and int(said) > most:
+                    raise remote.Refused(f"video over {most >> 20} MB")
                 with open(part, "wb") as f:
                     for chunk in r.iter_content(1 << 16):
                         f.write(chunk)
                         size += len(chunk)
-                        if size > VIDEO_MAX:
-                            raise remote.Refused(f"video over {VIDEO_MAX >> 20} MB")
+                        if size > most:
+                            raise remote.Refused(f"video over {most >> 20} MB")
             part.replace(p)  # whole or not at all: the player never gets half a file
         except (requests.RequestException, OSError) as e:
             part.unlink(missing_ok=True)

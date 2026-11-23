@@ -111,14 +111,14 @@ android = "has"
 since = "0.13.0"
 name.ru = "Картинки и видео заранее, кэш на диске"
 name.en = "Pictures and video ahead of time, a disk cache"
-config = "`media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb`"
+config = "`media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb`, `media.video_max_mb`"
 api.ru = "своё"
 api.en = "own"
 others.ru = "только в fedtail"
 others.en = "only in fedtail"
 clients = []
-details.ru = "Как только опрос принёс новые посты, их картинки скачиваются на диск своими фоновыми потоками — открываешь ленту, а всё уже есть. `\"previews\"` (по умолчанию) — превью (и у видео), аватарки и картинки ссылок; `\"all\"` — ещё оригиналы, сами видео и гифки (видео по одному, до 300 МБ каждое); `\"off\"` — только когда пост на экране. Кэш картинок держится в `image_disk_mb` (1 ГБ), видео — в своей папке, `video_disk_mb` (10 ГБ); сверх лимита уходит то, что дольше всего не открывали. Видео, открытое раз, в следующий раз играет с диска."
-details.en = "As soon as a poll brings new posts, their pictures are fetched to disk by background workers of their own — open a lane and everything is there. `\"previews\"` (the default) — previews (of videos too), avatars and link pictures; `\"all\"` — also originals, the videos themselves and gifs (videos one at a time, up to 300 MB each); `\"off\"` — only when a post is on screen. The picture cache keeps within `image_disk_mb` (1 GB), videos — in their own folder, `video_disk_mb` (10 GB); over the limit go the ones not opened the longest. A video opened once plays from disk the next time."
+details.ru = "Как только опрос принёс новые посты, их картинки скачиваются на диск своими фоновыми потоками — открываешь ленту, а всё уже есть. `\"previews\"` (по умолчанию) — превью (и у видео), аватарки и картинки ссылок; `\"all\"` — ещё оригиналы, сами видео и гифки (видео по одному, до 300 МБ каждое); `\"off\"` — только когда пост на экране. Кэш картинок держится в `image_disk_mb` (1 ГБ), видео — в своей папке, `video_disk_mb` (10 ГБ); сверх лимита уходит то, что дольше всего не открывали. Видео, открытое раз, в следующий раз играет с диска. Видео- или аудиофайл больше `video_max_mb` (300 МБ) не скачивается: его открывают в браузере."
+details.en = "As soon as a poll brings new posts, their pictures are fetched to disk by background workers of their own — open a lane and everything is there. `\"previews\"` (the default) — previews (of videos too), avatars and link pictures; `\"all\"` — also originals, the videos themselves and gifs (videos one at a time, up to 300 MB each); `\"off\"` — only when a post is on screen. The picture cache keeps within `image_disk_mb` (1 GB), videos — in their own folder, `video_disk_mb` (10 GB); over the limit go the ones not opened the longest. A video opened once plays from disk the next time. A video or sound file bigger than `video_max_mb` (300 MB) isn't fetched: it opens in the browser."
 
 [[feature]]
 id = "image-memory"

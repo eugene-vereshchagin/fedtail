@@ -12,7 +12,6 @@ from PySide6.QtGui import (
     QIcon,
     QImage,
     QKeySequence,
-    QShortcut,
     QTextCursor,
 )
 from PySide6.QtWidgets import (
@@ -439,8 +438,8 @@ class Compose(QDialog):
         row.addWidget(self.send_btn)
         lay.addWidget(_Bar(tools_w, acts_w))
 
-        for seq in ("Ctrl+Return", "Ctrl+Enter"):
-            QShortcut(QKeySequence(seq), self).activated.connect(self.send)
+        from .keys import bind
+        bind(self, win.cfg, "send", self.send)  # the config's key ([keys]): Ctrl+Enter
 
         from ..common.compose import autosave_ms
         self._autosave = QTimer(self, singleShot=True, interval=autosave_ms(win.cfg))

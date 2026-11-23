@@ -94,6 +94,7 @@ DEFAULTS = {
         "image_decode": 'box',
         "image_disk_mb": 1000,
         "video_disk_mb": 10000,
+        "video_max_mb": 300,  # one video or sound file fetched to play: bigger — refused
         "unload_hidden_minutes": 10,
         "keep_hidden_lanes": 3,
         "app_icon": "possum",
@@ -192,6 +193,7 @@ DEFAULTS = {
         "unfocused_seconds": 5,
         "sync_markers": True,
         "mentions_by_marker": False,
+        "replied_is_read": True,  # a post I answered (from any client) counts as read
     },
     "lanes": {
         "preset": "fedtail",
@@ -348,6 +350,7 @@ DEFAULTS = {
     "net": {
         "proxy": "",               # http://host:port, socks5h://host:port; "" — none (or env)
         "proxy_at_login": False,   # a proxy field in the login window
+        "retry_seconds": 20,       # a connect that failed: tried again after so long
         "signup_url": "https://joinmastodon.org/servers",  # "no account?": "" — not said
     },
     "storage": {
@@ -386,11 +389,13 @@ DEFAULTS = {
         "picture_rows": 8,
         "viewer": "auto",
         "video": "auto",
+        "keys": [],  # the terminal's own keys by their names: ["quit = Ctrl+Q"]
     },
     "web": {
         "host": "127.0.0.1",
         "port": 8765,
         "open_browser": True,
+        "login_days": 400,  # how long a browser stays logged in (its cookie's age)
     },
     "phone": {
         "overview": "lanes",
@@ -407,6 +412,30 @@ DEFAULTS = {
         "color": "auto",
         "max_lines": 0,
         "tail_lanes": [],
+    },
+    # which key does what (core/keys.py): "Ctrl+N", "Shift+F3", "j"; several for one
+    # action — by spaces ("o Enter"); "" — no key. Never F1 or Shift+F1.
+    "keys": {
+        "new_post": "Ctrl+N",
+        "send": "Ctrl+Enter",
+        "search": "Ctrl+K",
+        "find": "Ctrl+F",
+        "find_next": "F3",
+        "find_previous": "Shift+F3",
+        "command_line": "Ctrl+L",
+        "refresh": "F5",
+        "close_tab": "Ctrl+W",
+        "quit": "Ctrl+Q",
+        "next_post": "j",
+        "previous_post": "k",
+        "reply": "r",
+        "like": "f",
+        "boost": "b",
+        "bookmark": "m",
+        "open_thread": "o Enter",
+        "next_comment": "]",
+        "previous_comment": "[",
+        "fold_branch": "-",
     },
 }
 
@@ -500,6 +529,9 @@ SUBS_AUTO = {"posts", "comments", "boosts", "likes", "bookmarks", "quotes", "vot
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("net", "retry_seconds"): 5,
+    ("ui", "video_max_mb"): 1,
+    ("web", "login_days"): 1,
     ("lanes", "browse_start_hours"): 1,
     ("lanes", "browse_fill_pages"): 0,
     ("lanes", "funnel_fill_pages"): 0,
@@ -604,6 +636,9 @@ FILE_LAYOUT = (
                            "command_line "
                            "whats_this compose compose_size icon_count icon_count_except "
                            "desktop_entry")),
+    ("keys", _keys("keys", "new_post send search find find_next find_previous command_line "
+                           "refresh close_tab quit next_post previous_post reply like boost "
+                           "bookmark open_thread next_comment previous_comment fold_branch")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
                              "browse_fill_pages funnel_fill_pages browse_start "
                              "browse_start_hours custom "
@@ -617,7 +652,7 @@ FILE_LAYOUT = (
                               "late_hours late_minutes render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
-     + _keys("read", "mark_read read_button dwell_ms unfocused_seconds")),
+     + _keys("read", "mark_read read_button dwell_ms unfocused_seconds replied_is_read")),
     ("card", _keys("feed", "show_reply_context parents_first thread_indent_max reply_context_chars "
                            "mute_tags_shown link_chars thread_news repeat_boosts quotes link_cards "
                            "old_days collapse_tags fold_chars long_form sensitive_media "
@@ -644,7 +679,7 @@ FILE_LAYOUT = (
                           "video_decode gifv gifv_max gifv_fps image_upscale save_dir "
                           "image_search")
      + _keys("feed", "prefetch")
-     + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
+     + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb video_max_mb "
                    "unload_hidden_minutes keep_hidden_lanes")),
     ("post", _keys("post", "default_visibility send_timeout reply_never_wider drafts_autosave "
                            "autosave_ms cw_field reply_warning camelcase_hint plain_posts language "
@@ -674,7 +709,7 @@ FILE_LAYOUT = (
      + _keys("read", "sync_markers mentions_by_marker")),
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes "
                              "announcements_minutes")
-     + _keys("net", "proxy proxy_at_login signup_url")),
+     + _keys("net", "proxy proxy_at_login signup_url retry_seconds")),
     ("updates", _keys("updates", "check url every_hours")),
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
@@ -683,8 +718,8 @@ FILE_LAYOUT = (
                              "issue_repo raw_json")),
     ("cli", _keys("cli", "enabled color max_lines tail_lanes")),
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
-                         "video")),
-    ("web", _keys("web", "host port open_browser")),
+                         "video keys")),
+    ("web", _keys("web", "host port open_browser login_days")),
     ("phone", _keys("phone", "overview layout to_new hold_text free_memory lane_strip push "
                              "stream")),
 )
@@ -948,6 +983,10 @@ def validate(user):
                 continue
             cfg[section][key] = val
 
+    # [keys]: a key that isn't one, F1, one key for two actions — said, never fatal: the
+    # action is left without that key
+    from . import keys as keys_mod
+    warnings += keys_mod.problems(cfg["keys"], DEFAULTS["keys"])
     # lanes by their names before 0.15 ("people", "comments"…) are the same lanes now
     from .lanes import canonical
     for section, key in LANE_LISTS:

@@ -47,6 +47,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Window, tray, keys | · | a phone has no window, tray or keys |
+| Keys of your own | · | a phone has no keyboard |
 | A bug report straight into your private repository | — | the phone hands the report's archive on through Share: git is beyond it |
 | Leak hunting: trends, an object census, memory snapshots | ◐ | the stats, trends and memory breakdown in the phone's logs; snapshots and the census on the desktop |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |

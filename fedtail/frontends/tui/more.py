@@ -17,6 +17,7 @@ from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
 from ...i18n import _
 from ...model import real
+from .keymap import named
 from .model import poll_line, when
 
 
@@ -28,12 +29,12 @@ class OptionItem(ListItem):
 
 
 class PollScreen(ModalScreen):
-    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
+    BINDINGS = named([Binding("escape,q", "app.pop_screen", _("tui_back")),
                 Binding("j", "down", show=False), Binding("k", "up", show=False),
                 Binding("space", "tick", "☑"),
                 Binding("enter", "vote", _("poll_vote")),
                 Binding("r", "results", _("poll_results")),
-                Binding("u", "refresh", _("poll_refresh"))]
+                Binding("u", "refresh", _("poll_refresh"))])
     CSS = """
     PollScreen { align: center middle; }
     PollScreen > Vertical { width: 76; height: auto; max-height: 90%;
@@ -158,7 +159,7 @@ class PollScreen(ModalScreen):
 
 
 class PreviewScreen(ModalScreen):
-    BINDINGS = [Binding("escape,enter,q", "app.pop_screen", _("preview_back"))]
+    BINDINGS = named([Binding("escape,enter,q", "app.pop_screen", _("preview_back"))])
     CSS = """
     PreviewScreen { align: center middle; }
     PreviewScreen > Vertical { width: 90%; height: 90%; border: thick $primary;
@@ -197,8 +198,8 @@ class TextFileScreen(ModalScreen):
     """A text file attached to a post (common/links.file_link), read here: its name on
     top, its words below — "loading" until they come; o — the file in the browser."""
 
-    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
-                Binding("o", "browser", _("open_browser"))]
+    BINDINGS = named([Binding("escape,q", "app.pop_screen", _("tui_back")),
+                Binding("o", "browser", _("open_browser"))])
     CSS = PreviewScreen.CSS.replace("PreviewScreen", "TextFileScreen")
 
     def __init__(self, name, url):

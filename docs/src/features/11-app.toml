@@ -97,6 +97,25 @@ clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "tut"]
 details.ru = "Крестик прячет в трей; значка в трее можно не держать вовсе (`window.tray = false`, с 0.19). `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
 details.en = "The cross hides to the tray; the tray icon can go altogether (`window.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
 
+
+[[feature]]
+id = "keys-own"
+status = "has"
+android = "na"
+android_note.ru = "у телефона нет клавиатуры"
+android_note.en = "a phone has no keyboard"
+since = "next"
+name.ru = "Свои клавиши"
+name.en = "Keys of your own"
+config = "`[keys]`, `tui.keys`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "tut"
+others.en = "tut"
+clients = ["tut"]
+details.ru = "Какая клавиша что делает — в конфиге: `[keys]` — двадцать действий (новый пост, отправить, поиск, найти и дальше/назад, командная строка, обновить, закрыть вкладку, выйти; следующий/предыдущий пост, ответить, лайк, буст, закладка, открыть тред, комментарии треда, свернуть ветку). Клавиша пишется как `Ctrl+N`, `Shift+F3`, `j`; несколько — через пробел (`o Enter`); `\"\"` — без клавиши. Окна Qt и GTK берут все; терминал и веб-страница — клавиши постов (остальное у терминала и браузера своё). У терминала сверх того переназначается любая его клавиша по имени: `tui.keys = [\"quit = Ctrl+Q\"]`; имена и нынешние клавиши показывает `fedtail --keys`. F1 и Shift+F1 клавишами не бывают никогда (они рядом с Esc): такая отбрасывается, запуск об этом говорит."
+details.en = "Which key does what is in the config: `[keys]` — twenty actions (a new post, send, search, find and next/previous, the command line, refresh, close the tab, quit; the next/previous post, reply, like, boost, bookmark, open the thread, a thread's comments, fold a branch). A key is written as `Ctrl+N`, `Shift+F3`, `j`; several — by spaces (`o Enter`); `\"\"` — no key. The Qt and GTK windows take all of them; the terminal and the web page — the posts' keys (the rest is a terminal's and a browser's own). The terminal besides lets any of its keys be set by name: `tui.keys = [\"quit = Ctrl+Q\"]`; `fedtail --keys` lists the names and the keys of now. F1 and Shift+F1 are never keys (they sit next to Esc): such a one is dropped and the start says so."
+
 [[feature]]
 id = "links-inside"
 status = "has"
@@ -396,7 +415,7 @@ android = "partly"
 since = "0.21.0"
 name.ru = "Прокси, Ctrl+1…9, закреплённые вкладки, поток только на Wi‑Fi, статистика, LibreTranslate и автоперевод"
 name.en = "A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself"
-config = "`server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key`"
+config = "`server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key`, `server.retry_seconds`, `web.login_days`"
 api.ru = "`/api/v1/statuses/:id/translate` или LibreTranslate `/translate`"
 api.en = "`/api/v1/statuses/:id/translate` or LibreTranslate's `/translate`"
 others.ru = "Tokodon (прокси до входа), FastSMRW (Ctrl+цифра, закреплённые ленты), iMast (поток только на Wi‑Fi), Ivory (статистика), Fedilab и Scatto (автоперевод, свой переводчик)"
@@ -404,8 +423,8 @@ others.en = "Tokodon (a proxy before login), FastSMRW (Ctrl+digit, pinned lanes)
 clients = ["Tokodon", "Ivory", "Fedilab"]
 android_note.ru = "Прокси, поле прокси при входе, поток только на Wi‑Fi, статистика и перевод — есть; клавиш и вкладок у телефона нет."
 android_note.en = "The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs."
-details.ru = "`proxy` — прокси для всего: API, картинки, живой поток (через HTTP-прокси), синхронизация, вход; `socks5h://…` — с PySocks. `proxy_at_login` — поле «Прокси» в окне входа (Qt, GTK, терминал, веб, телефон): что введёшь, запишется в config.toml и сразу пойдёт в дело. `number_keys` — \"ctrl\" или \"both\": лента по номеру ещё и Ctrl+1…9 (окна). `pin_tabs` — правый щелчок по вкладке треда или профиля: закреплённую не закрыть ни ×, ни Ctrl+W, ни Esc (окна). `phone.stream = \"wifi\"` — живой поток только на Wi‑Fi, на мобильной сети — опрос. `stats` — «Статистика» в меню ≡: неделя по дням (в Ленте, мои посты, активность) кто больше всех заполняет Ленту и чем больше всего делились. `translate_backend = \"libretranslate\"` с `translate_url` (и `translate_key`) — «Перевести» через LibreTranslate, даже если сервер не умеет. `translate_auto` — посты на языках, которых ты не читаешь и на которых не пишешь, переводятся сами, с пометкой «переведено с …»."
-details.en = "`proxy` — a proxy for everything: the API, pictures, the live stream (through an HTTP proxy), sync, the login; `socks5h://…` — with PySocks. `proxy_at_login` — a \"Proxy\" field in the login window (Qt, GTK, the terminal, the web page, the phone): what you type is written into config.toml and used at once. `number_keys` — \"ctrl\" or \"both\": a lane by its number with Ctrl+1…9 too (the windows). `pin_tabs` — right-click a thread's or a profile's tab: a pinned one won't close by ×, Ctrl+W or Esc (the windows). `phone.stream = \"wifi\"` — the live stream on Wi-Fi only, polling on a mobile network. `stats` — \"Statistics\" in the ≡ menu: the week day by day (Home, my posts, activity) who fills Home the most and what was shared most. `translate_backend = \"libretranslate\"` with `translate_url` (and `translate_key`) — \"Translate\" through LibreTranslate, even when the server can't. `translate_auto` — posts in languages you neither read nor write translate by themselves, marked \"translated from …\"."
+details.ru = "`proxy` — прокси для всего: API, картинки, живой поток (через HTTP-прокси), синхронизация, вход; `socks5h://…` — с PySocks. `proxy_at_login` — поле «Прокси» в окне входа (Qt, GTK, терминал, веб, телефон): что введёшь, запишется в config.toml и сразу пойдёт в дело. `number_keys` — \"ctrl\" или \"both\": лента по номеру ещё и Ctrl+1…9 (окна). `pin_tabs` — правый щелчок по вкладке треда или профиля: закреплённую не закрыть ни ×, ни Ctrl+W, ни Esc (окна). `phone.stream = \"wifi\"` — живой поток только на Wi‑Fi, на мобильной сети — опрос. `stats` — «Статистика» в меню ≡: неделя по дням (в Ленте, мои посты, активность) кто больше всех заполняет Ленту и чем больше всего делились. `translate_backend = \"libretranslate\"` с `translate_url` (и `translate_key`) — «Перевести» через LibreTranslate, даже если сервер не умеет. `translate_auto` — посты на языках, которых ты не читаешь и на которых не пишешь, переводятся сами, с пометкой «переведено с …». Неудавшееся соединение пробуется снова через `server.retry_seconds` (20 с); браузер остаётся вошедшим на веб-страницу `web.login_days` дней (400)."
+details.en = "`proxy` — a proxy for everything: the API, pictures, the live stream (through an HTTP proxy), sync, the login; `socks5h://…` — with PySocks. `proxy_at_login` — a \"Proxy\" field in the login window (Qt, GTK, the terminal, the web page, the phone): what you type is written into config.toml and used at once. `number_keys` — \"ctrl\" or \"both\": a lane by its number with Ctrl+1…9 too (the windows). `pin_tabs` — right-click a thread's or a profile's tab: a pinned one won't close by ×, Ctrl+W or Esc (the windows). `phone.stream = \"wifi\"` — the live stream on Wi-Fi only, polling on a mobile network. `stats` — \"Statistics\" in the ≡ menu: the week day by day (Home, my posts, activity) who fills Home the most and what was shared most. `translate_backend = \"libretranslate\"` with `translate_url` (and `translate_key`) — \"Translate\" through LibreTranslate, even when the server can't. `translate_auto` — posts in languages you neither read nor write translate by themselves, marked \"translated from …\". A connect that failed is tried again after `server.retry_seconds` (20 s); a browser stays logged in to the web page for `web.login_days` days (400)."
 
 [[feature]]
 id = "deps-check"

@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 from ... import __version__, i18n, version
 from ...core import config
+from ...core import keys as keymap
 from ...core.view import View
 from ...i18n import _
 from ...model import Account, Share, only_private, real
@@ -899,7 +900,7 @@ class Web:
                 self.core.connect().result(timeout=120)
             except Exception as e:  # noqa: BLE001 — said as the windows say it
                 from ..common.connecting import trouble
-                t = trouble(f"{type(e).__name__}: {e}")
+                t = trouble(f"{type(e).__name__}: {e}", self.core.cfg)
                 if not t["relogin"]:  # the page says it and asks again in a while
                     return {"down": t["text"], "again": t["again"]}
                 self.core.logout(revoke=False)  # the login place, from scratch
@@ -942,6 +943,9 @@ class Web:
                 # on hover (ui.alt_text), pictures in squares (ui.media_grid): as the
                 # windows show them (the page did one way whatever they said, 21.11)
                 "post_keys": bool(c["ui"].get("post_keys", True)),
+                # …and which keys they are: the config's [keys] (none when they're off)
+                "keys": keymap.web_table(c, keymap.POSTS)
+                if c["ui"].get("post_keys", True) else [],
                 "alt_text": c["ui"].get("alt_text", "tooltip"),
                 "media_grid": c["ui"].get("media_grid", "natural"),
                 "message_percent": int(c["ui"].get("message_percent", 100)),
@@ -1233,6 +1237,10 @@ class Web:
         core = self.core
         folded = sidebar.folded(core)
         out = []
+        # the number on the tab (the windows' on the tray and the taskbar icon): the lanes
+        # window.icon_count chose, by the one rule (sidebar.icon_total)
+        wanted = core.cfg["ui"].get("icon_count") or []
+        skipped = core.cfg["ui"].get("icon_count_except", [])
         for group, names in sidebar.groups(core, core.cfg):
             title = None
             if group:
@@ -1245,6 +1253,8 @@ class Web:
                             "fresh": min(fresh, n), "fresh_words": sidebar.fresh_words(
                                 min(fresh, n)),
                             "tip": sidebar.lane_tip(name),  # (no number keys here)
+                            "counted": bool(wanted) and bool(
+                                core.lane_chosen(name, wanted, skipped)),
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})
         first = sidebar.start_lane(core, [x["name"] for x in out])  # None: the curtain
@@ -2621,8 +2631,9 @@ class Handler(BaseHTTPRequestHandler):
             # for links people kept from before — both end in the cookie and "/"
             if self.web.use_link(q["t"]) if "t" in q else \
                     hmac.compare_digest(q["k"].encode(), self.web.key.encode()):
+                days = max(1, int(self.web.core.cfg["web"].get("login_days", 400)))
                 cookie = f"{self._cookie()}={self.web.key}; HttpOnly; SameSite=Strict; Path=/; " \
-                         f"Max-Age={400 * 24 * 3600}"
+                         f"Max-Age={days * 24 * 3600}"
                 self._send(HTTPStatus.SEE_OTHER, b"", "text/plain",
                            extra=(("Set-Cookie", cookie), ("Location", "/")))
             else:

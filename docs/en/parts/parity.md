@@ -6,8 +6,9 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| Keys of your own ([keys]) | ✓ | ✓ | ◐ | ◐ | · | `[keys]` in the config: the Qt and GTK windows take all twenty actions. The terminal and the web page take the posts' keys from it (next/previous, reply, like, boost, bookmark, the thread; the terminal — a thread's comment keys too): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for themselves. The terminal instead lets any of its keys be set by name (`tui.keys`, the names — `fedtail --keys`); the page's own letters (n, p, x, R, q, /, :) are written in for now. Android: The phone has no keyboard. |
 | Pinned tabs | ✓ | ✓ | · | · | · | ui.pin_tabs: right-click a thread's or a profile's tab. The terminal, the web page and the phone have no such tabs — a thread and a profile open over the lane and go with "back". Android: No tabs: screens stack, "back" is the one before. |
-| The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
+| The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. The unread number the windows put on the icon the web page writes into the tab's title ("(3) Home") and on the installed page's icon; the phone has it on the app's icon; the terminal shows it nowhere. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. The curtain is there at start (`window.start_lane = "none"`), Enter opens the last lane. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
 | The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |

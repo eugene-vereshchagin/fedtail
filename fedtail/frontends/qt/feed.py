@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import diag
+from ...core import keys
 from ...i18n import _
 from ...model import Relationship, only_private
 from ...model import real as real_entry
@@ -349,7 +350,7 @@ class LaneWidget(QWidget):
                                                      tip=_("activity_clear_tip")))
             self.clear_btn.setVisible(self.core.supports("dismiss"))
         self.header.add(_button("", self.refresh_now, icon="refresh",
-                                tip=_("refresh") + " (F5)"))
+                                tip=_("refresh") + keys.hint(self.cfg, "refresh")))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         self.view.windowed = True

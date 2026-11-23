@@ -2112,6 +2112,32 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(deep, view._hidden)
         key(Qt.Key.Key_Minus)
         self.assertNotIn(deep, view._hidden)
+        # the keys are the config's ([keys]): another's own letter does it, the old doesn't
+        self.core.cfg["keys"]["next_comment"] = "n"
+        view.put_cursor(next(s.key for s in view.model
+                             if s.entry is not None and s.entry.id == "8001"))
+        key(Qt.Key.Key_BracketRight)
+        self.assertEqual(at(), "8001")
+        key(Qt.Key.Key_N)
+        self.assertEqual(at(), "8002")
+
+    def test_the_windows_shortcuts_are_the_configs(self):
+        """[keys]: a shortcut is made for what the config says, none for "" — they were
+        written into the window."""
+        from PySide6.QtWidgets import QWidget
+
+        from fedtail.frontends.qt.keys import bind
+        w = QWidget()
+        hit = []
+        cfg = {"keys": {"new_post": "Ctrl+J Alt+N", "refresh": "", "send": "Ctrl+Enter"}}
+        made = bind(w, cfg, "new_post", lambda: hit.append(1))
+        self.assertEqual([sc.key().toString() for sc in made], ["Ctrl+J", "Alt+N"])
+        self.assertEqual(bind(w, cfg, "refresh", lambda: None), [])
+        self.assertEqual([sc.key().toString() for sc in bind(w, cfg, "send", lambda: None)],
+                         ["Ctrl+Return", "Ctrl+Enter"])  # the keypad's Enter too
+        made[0].activated.emit()
+        self.assertEqual(hit, [1])
+        w.deleteLater()
 
     def test_thread_says_how_fetching_goes(self):
         from fedtail.frontends.qt.feed import ThreadWidget

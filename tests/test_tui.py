@@ -47,8 +47,8 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         slow = Future()
         slow.set_exception(TimeoutError("Read timed out"))
         app = FedtailApp(core)
-        with mock.patch("fedtail.frontends.common.connecting.AGAIN_SECONDS", 0.2), \
-                mock.patch.object(core, "connect", side_effect=[slow, real()]) as conn:
+        core.cfg["net"]["retry_seconds"] = 0.2  # server.retry_seconds: the wait is the config's
+        with mock.patch.object(core, "connect", side_effect=[slow, real()]) as conn:
             async with app.run_test(size=(120, 40)) as pilot:
                 await self.wait(pilot, lambda: conn.call_count == 2)
                 await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
@@ -482,6 +482,41 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.2)
             await self.wait(pilot, lambda: "001" not in w.statuses)
             await self.wait(pilot, lambda: "001" not in shown())
+
+    async def test_the_keys_are_the_configs(self):
+        """[keys] and tui.keys: reply on a key of one's own, the command line on another
+        — pressed, not called; the letters written in the screens no longer do it."""
+        from textual.widgets import Input, ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem, PostItem
+        core, w = self.make()
+        core.cfg["keys"]["reply"] = "a"
+        core.cfg["tui"]["keys"] = ["command = g"]
+        w.add(status("001", BOB, minute=1, vis="public", text="hello"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
+                                               for i in app.query_one("#lanes").children))
+            await self.wait(pilot, lambda: any(isinstance(i, PostItem)
+                                               for i in app.query_one("#posts").children))
+            posts = app.query_one("#posts", ListView)
+            cmd = app.query_one("#cmd", Input)
+            posts.focus()
+            posts.index = next(i for i, x in enumerate(posts.children)
+                               if isinstance(x, PostItem))
+            await pilot.pause(0.2)
+            await pilot.press("r")  # the letter written in the screen: no longer reply
+            await pilot.pause(0.1)
+            self.assertFalse(cmd.has_focus)
+            await pilot.press("a")
+            await self.wait(pilot, lambda: cmd.has_focus)
+            self.assertTrue(cmd.value.startswith("#"))
+            cmd.value = ""
+            posts.focus()
+            await pilot.pause(0.1)
+            await pilot.press("g")
+            await self.wait(pilot, lambda: cmd.has_focus)
 
     async def test_up_and_down_walk_the_lines_run_before(self):
         """↑ ↓ in the command line, the windows' (Qt and GTK alone had it, 23.11): typed

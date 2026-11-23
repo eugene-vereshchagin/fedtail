@@ -2,10 +2,27 @@
 walk the posts, r f b m o and Enter act on the one under the cursor, as a fedtail: link
 of its card would. One table for every window: GTK had none of them (21.11)."""
 
-# a key's name (lower case; Enter by its name) -> the card's link action
-ACTIONS = {"r": "reply", "f": "fav", "b": "boost", "m": "bookmark", "o": "thread",
-           "enter": "thread", "return": "thread", "kp_enter": "thread"}
-WALK = {"j": 1, "k": -1}
+from ...core import keys
+
+# what an action of the config's [keys] (core/keys.py POSTS) means among posts: walk the
+# cursor, go between a thread's top comments, fold a branch, or do what a card's link does
+MEANING = {"next_post": ("walk", 1), "previous_post": ("walk", -1),
+           "next_comment": ("top", 1), "previous_comment": ("top", -1),
+           "fold_branch": ("fold", None),
+           "reply": ("act", "reply"), "like": ("act", "fav"), "boost": ("act", "boost"),
+           "bookmark": ("act", "bookmark"), "open_thread": ("act", "thread")}
+
+
+def meaning(cfg, key):
+    """What a key pressed among posts means — (kind, value) of MEANING — or None: not
+    the posts' key, or window.post_keys is off. key: core.keys.Key (keys.from_qt,
+    keys.from_gdk, or parsed from a terminal's or the page's own words). The one table of
+    every interface, the keys the config's ([keys]) — they were letters written into
+    each window (23.11)."""
+    if not ((cfg or {}).get("ui") or {}).get("post_keys", True):
+        return None
+    action = keys.table(cfg, keys.POSTS).get(key)
+    return MEANING.get(action) if action else None
 
 
 def step(posts, at, delta, first_on_screen=None):

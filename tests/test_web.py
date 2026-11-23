@@ -240,6 +240,14 @@ class WebTest(TmpDir):
             port = self.srv.server_address[1]
             self.assertIn(f"{web.COOKIE}_{port}={self.key}", cookie)
             self.assertIn("HttpOnly", cookie)
+            self.assertIn(f"Max-Age={400 * 24 * 3600}", cookie)  # web.login_days' default
+        self.core.cfg["web"]["login_days"] = 7  # …and the reader's own
+        try:
+            opener.open(self.base + "/?k=" + self.key, timeout=10)
+            self.fail("expected a redirect")
+        except urllib.error.HTTPError as e:
+            self.assertIn(f"Max-Age={7 * 24 * 3600}", e.headers["Set-Cookie"])
+            cookie = e.headers["Set-Cookie"]
             self.assertIn("SameSite=Strict", cookie)
         code, _h, _b = self.req("/?k=wrong", cookie=False)
         self.assertEqual(code, 403)
@@ -411,6 +419,38 @@ class WebTest(TmpDir):
         self.w.add(status("062", ME, "002", "B", minute=62, text="dm", vis="direct"))
         posts = json.loads(self.req("/api/thread?id=062")[2])["posts"]
         self.assertFalse(any(p.get("lane_private") for p in posts))
+
+    def test_the_tab_says_the_unread_number(self):
+        """The windows put the unread number on the tray and the taskbar icon; the page
+        had none (23.11): each lane says whether window.icon_count counts it, the page
+        sums them into its title and the installed page's badge."""
+        lanes = json.loads(self.req("/api/lanes")[2])
+        self.assertTrue(all("counted" in x for x in lanes))
+        chosen = self.core.cfg["ui"]["icon_count"]
+        self.assertEqual({x["name"] for x in lanes if x["counted"]},
+                         {x["name"] for x in lanes
+                          if self.core.lane_chosen(x["name"], chosen, [])})
+        self.core.cfg["ui"]["icon_count"] = []
+        self.assertFalse(any(x["counted"] for x in json.loads(self.req("/api/lanes")[2])))
+        js = web.static_text("app.js")
+        self.assertIn('document.title = (titled.n ? "(" + titled.n + ") " : "")', js)
+        self.assertIn("navigator.setAppBadge", js)
+
+    def test_the_posts_keys_are_the_configs(self):
+        """[keys]: the page is told what a key means among posts, and has no letter of
+        them written in it; window.post_keys off — no keys at all."""
+        me = json.loads(self.req("/api/me")[2])
+        by = {k["action"]: k["key"] for k in me["keys"]}
+        self.assertEqual((by["next_post"], by["reply"], by["like"]), ("j", "r", "f"))
+        self.core.cfg["keys"]["reply"] = "Ctrl+R"
+        row = next(k for k in json.loads(self.req("/api/me")[2])["keys"]
+                   if k["action"] == "reply")
+        self.assertEqual((row["key"], row["ctrl"]), ("r", True))
+        self.core.cfg["ui"]["post_keys"] = False
+        self.assertEqual(json.loads(self.req("/api/me")[2])["keys"], [])
+        js = web.static_text("app.js")
+        self.assertIn("const means = postKey(e);", js)
+        self.assertNotRegex(js, r"\bj: \(\) => setCursor")
 
     def test_the_command_line_remembers_its_lines(self):
         """↑ ↓ in the page's command line, the windows' (23.11: Qt and GTK alone had it):

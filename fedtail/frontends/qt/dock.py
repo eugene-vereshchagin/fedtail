@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core import keys
 from ...i18n import _
 from ...model import VISIBILITIES, Scheduled
 from ..common import compose as rules
@@ -125,7 +126,7 @@ class InputDock(QWidget):
         side.addStretch(1)
         self.send_btn = QPushButton(_("dock_send"))
         self.send_btn.setObjectName("compose")
-        self.send_btn.setToolTip(_("dock_send") + " (Ctrl+Enter)")
+        self.send_btn.setToolTip(_("dock_send") + keys.hint(win.cfg, "send"))
         self.send_btn.clicked.connect(self.send)
         side.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignHCenter)
         row.addLayout(side)
@@ -374,12 +375,14 @@ class InputDock(QWidget):
                 if e.type() == QEvent.Type.KeyPress:
                     apply(self.text, name)
                 return True
-        if obj is self.text and e.type() == QEvent.Type.KeyPress and \
-                e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and \
-                (e.modifiers() & Qt.KeyboardModifier.ControlModifier or
-                 self.command() is not None):  # a command: plain Enter, as on Point
-            self.send()
-            return True
+        if obj is self.text and e.type() == QEvent.Type.KeyPress:
+            from .keys import key_of
+            pressed = key_of(e)
+            # the config's key for "send" ([keys]); a command: plain Enter, as on Point
+            if pressed in keys.of(self.win.cfg, "send") or (
+                    pressed == keys.Key("enter") and self.command() is not None):
+                self.send()
+                return True
         return super().eventFilter(obj, e)
 
     # ---- sending ---------------------------------------------------------------------

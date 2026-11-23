@@ -89,6 +89,9 @@ def parse_args(argv):
                    help="a lane of rules: its warnings, its sources and, for the newest "
                         "stored posts, whether it takes each and by which condition — "
                         "and exit")
+    p.add_argument("--keys", action="store_true",
+                   help="which key does what, as your config says ([keys]), and the "
+                        "terminal's own keys by the names tui.keys takes — and exit")
     p.add_argument("--profiles", action="store_true",
                    help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
@@ -243,6 +246,8 @@ def main(argv=None):
         return 0
     if getattr(args, "explain_lane", None):
         return _explain_lane(cfg, where, args.explain_lane)
+    if args.keys:
+        return _keys(cfg)
     if args.lanes_to_config:
         report = {}
         new_text = config_update.lanes_to_config(user_text, report)
@@ -360,6 +365,27 @@ def main(argv=None):
         for other in held:
             other.close()
     return _leave(code)
+
+
+def _keys(cfg):
+    """--keys: the config's [keys] as they are now, then the terminal's keys by the
+    names tui.keys takes (when Textual is here)."""
+    from .core import keys
+    print("[keys]")
+    for action in keys.ACTIONS:
+        print(f"  {action:<18} {keys.words(cfg, action) or '—'}")
+    try:
+        from .frontends.tui import app as tui_app
+        from .frontends.tui import keymap
+    except ImportError:
+        print("\n(the terminal interface isn't installed: `fedtail --check`)")
+        return 0
+    over = keymap.keymap(cfg)
+    print("\n[tui] keys — the terminal's own, by name (name = keys)")
+    for name, default in keymap.defaults(*tui_app.SCREENS):
+        now = over.get(name)
+        print(f"  {name:<22} {now.replace(',', ' ') if now else default}")
+    return 0
 
 
 def _explain_lane(cfg, where, name):

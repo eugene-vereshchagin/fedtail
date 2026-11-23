@@ -36,6 +36,7 @@ from textual.widgets.option_list import Option
 from ...i18n import _
 from ...model import real
 from ..common import places as places_mod
+from .keymap import named
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ log = logging.getLogger(__name__)
 class ConfirmScreen(ModalScreen):
     """"Sure?": y or Enter — yes, n or Esc — no. Dismissed with True or False."""
 
-    BINDINGS = [Binding("y,enter", "answer(True)", _("yes_short")),
-                Binding("n,escape", "answer(False)", _("no_short"))]
+    BINDINGS = named([Binding("y,enter", "answer(True)", _("yes_short")),
+                Binding("n,escape", "answer(False)", _("no_short"))])
     CSS = """
     ConfirmScreen { align: center middle; }
     ConfirmScreen > Vertical { width: 70; height: auto; max-height: 80%;
@@ -73,7 +74,7 @@ class ConfirmScreen(ModalScreen):
 class AskScreen(ModalScreen):
     """A line to type: Enter — done (dismissed with the text), Esc — never mind (None)."""
 
-    BINDINGS = [Binding("escape", "cancel", _("cancel"))]
+    BINDINGS = named([Binding("escape", "cancel", _("cancel"))])
     CSS = """
     AskScreen { align: center middle; }
     AskScreen > Vertical { width: 76; height: auto; border: thick $primary;
@@ -115,8 +116,8 @@ class MenuScreen(ModalScreen):
     dismissed with the value, Esc — with None. A post's ⋯ menu and the ≡ menu are these.
     An item's hint (the windows' tooltip) shows under the menu while it is chosen."""
 
-    BINDINGS = [Binding("escape,q", "cancel", _("tui_back")),
-                Binding("j", "down", show=False), Binding("k", "up", show=False)]
+    BINDINGS = named([Binding("escape,q", "cancel", _("tui_back")),
+                Binding("j", "down", show=False), Binding("k", "up", show=False)])
     CSS = """
     MenuScreen { align: center middle; }
     MenuScreen > Vertical { width: 64; height: auto; max-height: 90%;
@@ -184,9 +185,9 @@ class ChooseScreen(ModalScreen):
     an answer — dismissed with (key, ticked), space or t — the box, Esc — None. The
     host's choose() (common/timed.py) is this."""
 
-    BINDINGS = [Binding("escape,q", "cancel", _("tui_back")),
+    BINDINGS = named([Binding("escape,q", "cancel", _("tui_back")),
                 Binding("space,t", "tick", "☑"),
-                Binding("j", "down", show=False), Binding("k", "up", show=False)]
+                Binding("j", "down", show=False), Binding("k", "up", show=False)])
     CSS = """
     ChooseScreen { align: center middle; }
     ChooseScreen > Vertical { width: 64; height: auto; max-height: 90%;
@@ -294,7 +295,7 @@ class PlaceScreen(Screen):
     the rows (Enter — a post's thread, a person's profile, else the row's first button;
     1…9 — its buttons), a form (Ctrl+S — its button) and "more" at the end."""
 
-    BINDINGS = [Binding("escape,q", "back", _("tui_back")),
+    BINDINGS = named([Binding("escape,q", "back", _("tui_back")),
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("left_square_bracket", "tab(-1)", _("tui_tab_prev")),
                 Binding("right_square_bracket", "tab(1)", _("tui_tab_next")),
@@ -308,7 +309,7 @@ class PlaceScreen(Screen):
                 Binding("full_stop", "post_menu", "⋯", show=False),
                 # the help's pages, as the windows' ← and →
                 Binding("alt+left", "help_back", _("help_back")),
-                Binding("alt+right", "help_forward", _("help_forward"))]
+                Binding("alt+right", "help_forward", _("help_forward"))])
     CSS = """
     PlaceScreen { overflow: hidden hidden; layout: vertical; }
     PlaceScreen #title { height: 1; padding: 0 1; background: $primary-background; }
@@ -673,11 +674,11 @@ class EmojiScreen(ModalScreen):
     None with Esc. Down / Up go to the list, Enter chooses, Ctrl+Left / Ctrl+Right change
     the tab. What each tab lists comes from common/compose.py (the core searches)."""
 
-    BINDINGS = [Binding("escape", "cancel", _("tui_back")),
+    BINDINGS = named([Binding("escape", "cancel", _("tui_back")),
                 Binding("down", "to_list(1)", show=False, priority=True),
                 Binding("up", "to_list(-1)", show=False, priority=True),
                 Binding("ctrl+right", "tab(1)", show=False, priority=True),
-                Binding("ctrl+left", "tab(-1)", show=False, priority=True)]
+                Binding("ctrl+left", "tab(-1)", show=False, priority=True)])
     CSS = """
     EmojiScreen { align: center middle; }
     EmojiScreen > Vertical { width: 64; height: 80%; border: thick $primary;
@@ -803,14 +804,14 @@ class ComposeScreen(Screen):
     What it starts with and how drafts are kept are the windows' (common/compose.py).
     Ctrl+S — send; Esc — away (the draft is kept, as in the windows)."""
 
-    BINDINGS = [Binding("ctrl+s", "send", _("tui_send")),
+    BINDINGS = named([Binding("ctrl+s", "send", _("tui_send")),
                 Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
                 Binding("ctrl+e", "emoji", _("emoji_pick"), priority=True),
                 # Ctrl+R: Textual keeps Ctrl+P for its command palette, above any screen
                 Binding("ctrl+r", "preview", _("preview")),
                 # priority: Textual's TextArea takes F7 for "select all" otherwise
                 Binding("f7", "spell", _("spell_check"), priority=True),
-                Binding("escape", "leave", _("web_cancel"))]
+                Binding("escape", "leave", _("web_cancel"))])
     CSS = """
     ComposeScreen { layout: vertical; padding: 0 1; }
     ComposeScreen #c-extras { height: auto; color: $accent; }

@@ -536,7 +536,8 @@ class InputDock(Gtk.Box):
         self.send_btn = Gtk.Button(label=_("dock_send"))
         self.send_btn.add_css_class("suggested-action")
         self.send_btn.add_css_class("ft-primary")
-        tip(self.send_btn, _("dock_send") + " (Ctrl+Enter)")
+        from ...core import keys as keymap
+        tip(self.send_btn, _("dock_send") + keymap.hint(win.cfg, "send"))
         self.send_btn.connect("clicked", lambda _b: self.send())
         side.append(self.send_btn)
         row.append(side)
@@ -774,9 +775,13 @@ class InputDock(Gtk.Box):
         self.text.grab_focus()
 
     def _key(self, _ctl, keyval, _code, state):
+        from ...core import keys as keymap
         from .gi_setup import Gdk
-        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and \
-                (state & Gdk.ModifierType.CONTROL_MASK or self.command() is not None):
+        from .keys import key_of
+        pressed = key_of(keyval, state)
+        # the config's key for "send" ([keys]); a command: plain Enter, as on Point
+        if pressed in keymap.of(self.win.cfg, "send") or (
+                pressed == keymap.Key("enter") and self.command() is not None):
             self.send()
             return True
         if keyval == Gdk.KEY_Tab and self._complete():

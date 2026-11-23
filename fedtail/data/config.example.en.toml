@@ -27,6 +27,7 @@
 #   --theme-export NAME FILE.zip  a theme into an archive, with a manual on changing it — and exit
 #   --theme-import FILE.zip  a theme from an archive into the themes folder (--replace: over one
 #                        of the same name) — and exit
+#   --keys               which key does what, and the terminal's keys by name — and exit
 #   --profiles           which profiles there are — and exit
 #   --update-config      add this version's new settings to this file with explanations — and exit
 #   --rebuild-config     rebuild this file by chapters, with your values — and exit
@@ -42,7 +43,7 @@
 #
 # Chapters:
 #   1. Appearance .................. [appearance]
-#   2. Window and layout ........... [window]
+#   2. Window and layout ........... [window] [keys]
 #   3. Lanes ....................... [lanes] [lists]
 #   4. Reading ..................... [reading]
 #   5. The post card ............... [card]
@@ -334,6 +335,73 @@ icon_count_except = []
 desktop_entry = true
 
 
+[keys]
+# Which key does what — yours to say; these are the author's. A key is written as people
+# write it: "Ctrl+N", "Shift+F3", "Alt+Left", "j", "]"; several keys for one action are
+# separated by spaces ("o Enter"); "" — no key for it. Names: Enter, Esc, Space, Tab,
+# Up, Down, Left, Right, Home, End, PgUp, PgDn, Del, Ins, Backspace, F2…F12. Never F1 or
+# Shift+F1: they sit next to Esc — such a key is dropped and the start says so; the same
+# for a key given to two actions (the first in this order keeps it).
+# The Qt and GTK windows take all of them; the terminal and the web page — the posts'
+# keys (from next_post down): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for
+# themselves, their own letters are in the help (Keys).
+
+# A new post.
+new_post = "Ctrl+N"
+
+# Send what the editor holds.
+send = "Ctrl+Enter"
+
+# Find people, tags, posts: into the sidebar's search.
+search = "Ctrl+K"
+
+# Find in the lane, thread or profile open now; the next and the previous match.
+find = "Ctrl+F"
+
+find_next = "F3"
+
+find_previous = "Shift+F3"
+
+# The command line.
+command_line = "Ctrl+L"
+
+# Refresh: a round now.
+refresh = "F5"
+
+# Close the tab.
+close_tab = "Ctrl+W"
+
+# Quit (the cross only hides to the tray).
+quit = "Ctrl+Q"
+
+# The keys of a lane's and a thread's posts (window.post_keys = false turns all of these
+# off at once): the next and the previous post.
+next_post = "j"
+
+previous_post = "k"
+
+# Reply to the post under the cursor, like it, boost it, bookmark it.
+reply = "r"
+
+like = "f"
+
+boost = "b"
+
+bookmark = "m"
+
+# Open its thread.
+open_thread = "o Enter"
+
+# In a thread: the next and the previous comment at the top of the tree.
+next_comment = "]"
+
+previous_comment = "["
+
+# In a thread: fold the branch (from a deep reply — its top comment's whole branch),
+# again — unfold.
+fold_branch = "-"
+
+
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  3. Lanes
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -619,6 +687,10 @@ dwell_ms = 350
 # A window without focus (behind another, a browser tab not in front) counts as read only
 # while it is scrolled by hand and this many seconds after. 0 — never, the focused one only.
 unfocused_seconds = 5
+
+# A post you answered — from fedtail or any other client — counts as read: you saw it.
+# false — it stays unread until read like any other.
+replied_is_read = true
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -1073,6 +1145,10 @@ image_disk_mb = 1000
 # or two is a gigabyte already). A video opened once stays on disk and plays at once the next time.
 # 0 — don't keep videos on disk.
 video_disk_mb = 10000
+
+# The most one video or sound file may be, in megabytes, to be fetched and played here; a
+# bigger one is refused (open it in the browser).
+video_max_mb = 300
 
 # A lane not opened for this many minutes lets its cards go from memory: a client open
 # for days otherwise holds hundreds of cards with all their pictures (over a gigabyte).
@@ -1598,6 +1674,10 @@ proxy_at_login = false
 # servers to sign up at (an account is made on a server, not in fedtail). "" — not said.
 signup_url = "https://joinmastodon.org/servers"
 
+# A connect that failed — the server slow to answer, no network — is said and tried again
+# after so many seconds (5 at least).
+retry_seconds = 20
+
 [updates]
 # At start and then once a day fedtail asks the project's website whether a newer
 # version is out; if so, Activity says it ("FedTail 0.22.4 — a new version is out"), its
@@ -1810,6 +1890,13 @@ viewer = "auto"
 # "browser" — open in the browser. No mpv — the browser, and it says so.
 video = "auto"
 
+# The terminal's own keys by their names — any of them, beside what [keys] gives the
+# posts' keys (j, k, r, f, b, m, ], [, - follow [keys] here too): a name is what the key
+# does, as `fedtail --keys` lists them (quit, new, command, refresh, post_menu,
+# lane_step(1)…), then "=" and the keys as in [keys]. For example:
+#   keys = ["quit = Ctrl+Q", "new = n Ctrl+N"]
+keys = []
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  17. In a browser
@@ -1831,6 +1918,10 @@ port = 8765
 
 # Open the browser at start.
 open_browser = true
+
+# How many days a browser stays logged in to the page (its cookie's age); after that the
+# link with the key is needed again.
+login_days = 400
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════

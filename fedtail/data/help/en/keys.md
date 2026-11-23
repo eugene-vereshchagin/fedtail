@@ -1,6 +1,8 @@
 # Keys
 
-Every shortcut in one table.
+Every shortcut in one table — as the author set them: each is yours to change in the
+config's `[keys]` (`"Ctrl+N"`, `"o Enter"`, `""` — none); the terminal's own keys — by name
+in `tui.keys`; `fedtail --keys` shows what is set now.
 
 ## The window
 

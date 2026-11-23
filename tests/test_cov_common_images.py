@@ -530,15 +530,26 @@ class ImagesTest(unittest.TestCase):
         self.assertTrue(str(self.c._video_path("https://a/x.weird")).endswith(".bin"))
 
     def test_videos_too_big_or_failing_leave_nothing(self):
-        for url, ans in (("https://a/big1.mp4", Answer(length=images.VIDEO_MAX + 1)),
-                         ("https://a/big2.mp4", Answer(chunks=[b"x"] * 3)),
-                         ("https://a/err.mp4", Answer(status=500))):
+        """Over media.video_max_mb (said by the server, or found while it comes), or an
+        error: nothing kept, no half a file."""
+        mb = 1 << 20
+        for url, ans, most in (
+                ("https://a/big1.mp4", Answer(length=images.VIDEO_MAX + 1), None),
+                ("https://a/big2.mp4", Answer(chunks=[b"x" * mb] * 3), 2),  # the reader's own
+                ("https://a/big3.mp4", Answer(length=5 * mb), 4),
+                ("https://a/err.mp4", Answer(status=500), None)):
             self.net[url] = ans
-            with mock.patch.object(images, "VIDEO_MAX", 2) if url.endswith("2.mp4") else \
-                    mock.patch.object(images, "_short", images._short):
-                self.c._fetch_video(url)
+            if most:
+                self.core.cfg["ui"]["video_max_mb"] = most
+            else:
+                self.core.cfg["ui"].pop("video_max_mb", None)
+            self.c._fetch_video(url)
             self.assertIsNone(self.c.video_local(url), url)
             self.assertEqual(list(self.c.video_dir.glob("*.part")), [])
+        self.core.cfg["ui"]["video_max_mb"] = 4  # within it: kept
+        self.net["https://a/fits.mp4"] = Answer(chunks=[b"x" * mb] * 3)
+        self.c._fetch_video("https://a/fits.mp4")
+        self.assertIsNotNone(self.c.video_local("https://a/fits.mp4"))
 
     def test_the_watched_video_is_fetched_now_and_again(self):
         """video_fetch (the players, when the server's stream doesn't open): a Future of

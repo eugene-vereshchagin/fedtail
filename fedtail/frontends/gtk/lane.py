@@ -26,6 +26,7 @@ import time
 from dataclasses import replace
 
 from ... import diag
+from ...core import keys as keymap
 from ...i18n import _
 from ...model import Share, real
 from ..common.cardtext import thread_news_bit
@@ -196,8 +197,9 @@ class LaneView(Gtk.Box):
             self.clear_btn.set_visible(ctx.supports("dismiss"))
             tools.append(self.clear_btn)
         refresh = Gtk.Button()  # as Qt's: the theme's picture alone, or the words
-        self._dress(refresh, "refresh", _("refresh") + " (F5)")
-        tip(refresh, _("refresh") + " (F5)")
+        said = _("refresh") + keymap.hint(self.ctx.cfg, "refresh")  # the config's key
+        self._dress(refresh, "refresh", said)
+        tip(refresh, said)
         refresh.connect("clicked", lambda _b: ctx.view.refresh_by_hand())
         tools.append(refresh)
         self.append(header)
@@ -718,25 +720,25 @@ class LaneView(Gtk.Box):
 
     def _post_key(self, _ctl, keyval, _code, state):
         from ..common import postkeys
-        mods = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | \
-            Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.SUPER_MASK
-        if state & mods or not self.ctx.cfg["ui"].get("post_keys", True):
+        from .keys import key_of
+        if state & Gdk.ModifierType.SUPER_MASK:
             return False
+        what = postkeys.meaning(self.ctx.cfg, key_of(keyval, state))  # the config's [keys]
+        if what is None or what[0] not in ("walk", "act"):
+            return False  # (a thread's own keys: gtk/threadkeys.py)
         root = self.get_root()
         focus = root.get_focus() if root is not None else None
         if isinstance(focus, (Gtk.Text, Gtk.TextView, Gtk.Entry)):
             return False  # typing somewhere: its letters
-        name = (Gdk.keyval_name(keyval) or "").lower()
         posts = self._posts()
-        if name in postkeys.WALK:
-            key = postkeys.step(posts, self.cursor_key, postkeys.WALK[name],
-                                self._first_visible())
+        if what[0] == "walk":
+            key = postkeys.step(posts, self.cursor_key, what[1], self._first_visible())
             if key is None:
                 return False
             self.put_cursor(key)
             return True
-        action = postkeys.ACTIONS.get(name)
-        if action is None or self.cursor_key not in posts:
+        action = what[1]
+        if self.cursor_key not in posts:
             return False
         self.ctx.on_link(postkeys.link(action, self.specs[self.cursor_key].post.id))
         return True

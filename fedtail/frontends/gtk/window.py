@@ -590,18 +590,16 @@ class MainWindow(Gtk.ApplicationWindow):
         ctl = Gtk.ShortcutController()
         ctl.set_scope(Gtk.ShortcutScope.GLOBAL)
 
-        def add(trigger, fn):
-            ctl.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trigger),
-                                              Gtk.CallbackAction.new(lambda *_a: (fn(), True)[1])))
-        add("<Control>l", self.open_cmdline)
-        add("<Control>n", self.compose)
-        add("<Control>f", self.find_bar.open)
-        add("F3", lambda: self.find_bar.step(1))  # as Qt's FindNext / FindPrevious
-        add("<Shift>F3", lambda: self.find_bar.step(-1))
-        add("<Control>k", self.search.grab_focus)  # the sidebar's search, as in Qt
-        add("F5", self.view.refresh_by_hand)
-        add("<Control>q", self.close)
-        add("<Control>w", self._close_current_tab)
+        # the window's keys, the config's ([keys], core/keys.py): none written here
+        from .keys import bind
+        for action, fn in (("command_line", self.open_cmdline), ("new_post", self.compose),
+                           ("find", self.find_bar.open),
+                           ("find_next", lambda: self.find_bar.step(1)),
+                           ("find_previous", lambda: self.find_bar.step(-1)),
+                           ("search", self.search.grab_focus),  # the sidebar's, as in Qt
+                           ("refresh", self.view.refresh_by_hand), ("quit", self.close),
+                           ("close_tab", self._close_current_tab)):
+            bind(ctl, self.cfg, action, fn)
         self.add_controller(ctl)
         keys = Gtk.EventControllerKey()  # Esc and Enter, as Qt's (ui.esc)
         keys.connect("key-pressed", self._key)
@@ -1511,7 +1509,7 @@ class MainWindow(Gtk.ApplicationWindow):
         """As Qt: a token no longer taken — said, and the login from scratch; the server
         not answering — said, and again in 20 s."""
         from ..common.connecting import trouble
-        t = trouble(err)  # the same in every interface
+        t = trouble(err, self.cfg)  # the same in every interface
         if t["relogin"]:  # the core asked again and again (Core.token_refused)
             self.alert(_("auth_failed_title"), t["text"])
             self.view.logout(revoke=False)  # not revoked by us: it may be fine after all

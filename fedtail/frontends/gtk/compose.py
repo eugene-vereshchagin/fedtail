@@ -964,8 +964,10 @@ class ComposeWindow(Gtk.Box):
         return True
 
     def _key_first(self, _ctl, keyval, _code, state):
+        from ...core import keys as keymap
+        from .keys import key_of
         ctrl = state & Gdk.ModifierType.CONTROL_MASK
-        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and ctrl:
+        if key_of(keyval, state) in keymap.of(self.win.cfg, "send"):  # the config's [keys]
             self.send()
             return True
         if keyval == Gdk.KEY_Tab and not ctrl and self._complete():

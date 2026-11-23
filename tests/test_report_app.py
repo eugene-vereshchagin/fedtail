@@ -22,6 +22,7 @@ class OffByDefaultTest(unittest.TestCase):
     def test_as_before(self):
         cfg, _w = config.validate({})
         self.assertEqual(cfg["net"], {"proxy": "", "proxy_at_login": False,
+                                      "retry_seconds": 20,  # (as it was nailed in, 23.11)
                                       "signup_url": "https://joinmastodon.org/servers"})
         self.assertEqual(cfg["ui"]["number_keys"], "alt")
         self.assertFalse(cfg["ui"]["pin_tabs"])

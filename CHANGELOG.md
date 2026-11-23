@@ -41,6 +41,23 @@
   in the config (GTK said neither).
 - **A notification's words follow the lane's rule, not its name**: a lane of your own with
   the replies' rule says "Reply from …" as the built-in one does.
+- **Keys of your own.** Which key does what is the config's now — `[keys]`, twenty
+  actions: a new post, send, search, find and its next/previous, the command line,
+  refresh, close the tab, quit; the next/previous post, reply, like, boost, bookmark, open
+  the thread, a thread's comments, fold a branch. A key is written `"Ctrl+N"`, `"j"`;
+  several by spaces (`"o Enter"`); `""` — none. The Qt and GTK windows take all of them
+  (tooltips say the key that is set); the terminal and the web page — the posts' keys. In
+  the terminal any key of its own can be set by name besides: `tui.keys = ["quit =
+  Ctrl+Q"]`. `fedtail --keys` lists the actions, the names and the keys of now. F1 and
+  Shift+F1 are never keys: such a one is dropped and the start says so.
+- **Four things that were nailed in are settings**: `reading.replied_is_read` (a post you
+  answered counts as read; false — it doesn't), `server.retry_seconds` (a failed connect
+  tried again after so long, 20), `media.video_max_mb` (the biggest video or sound file
+  fetched to play, 300), `web.login_days` (how long a browser stays logged in, 400). What
+  stays a number in the code, and why, is listed in `docs/*/dev/design.md`.
+- **The web page's tab says the unread number** — "(3) Home — FedTail", and the installed
+  page's icon carries it: what the windows put on the tray and the taskbar icon, for the
+  lanes `window.icon_count` chose.
 - Behind the scenes: `docs/*/dev/protocols.md` says where "no protocol field outside
   `protocols/`" really stands (true for the interfaces; the core still reads Mastodon's
   names — stage 7) and a test keeps the core's count from growing; `gtk.md`, `roadmap.md`

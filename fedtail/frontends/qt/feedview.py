@@ -38,6 +38,7 @@ from ..common.strip import Strip
 from .card import _set_prop as _mark
 from .card import row_class
 from .gone import drop
+from .keys import key_of
 
 log = logging.getLogger(__name__)
 
@@ -583,19 +584,13 @@ class FeedView(QScrollArea):
     # ---- keys -------------------------------------------------------------------------
     # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys):
     # the table every window shares (common/postkeys.py)
-    POST_KEYS = {getattr(Qt.Key, "Key_" + {"enter": "Enter", "return": "Return"}.get(
-        name, name.upper())): action for name, action in postkeys.ACTIONS.items()
-        if name != "kp_enter"}
-
     def keyPressEvent(self, e):
         from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
         if isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit)):
             # a field in the header (Search): its Enter is its own, not "open the post"
             e.accept()
             return
-        plain = e.modifiers() in (Qt.KeyboardModifier.NoModifier,
-                                  Qt.KeyboardModifier.KeypadModifier)
-        if plain and self.ctx.cfg["ui"].get("post_keys", True) and self._post_key(e.key()):
+        if self._post_key(key_of(e)):  # the config's [keys], through common/postkeys
             e.accept()
             return
         self._touched()
@@ -611,32 +606,30 @@ class FeedView(QScrollArea):
                 s.key not in self._hidden and not s.extra.get("event")]
 
     def _post_key(self, key):
-        posts = self._posts()
+        what = postkeys.meaning(self.ctx.cfg, key)
+        posts = self._posts() if what else None
         if not posts:
             return False
-        if key in (Qt.Key.Key_J, Qt.Key.Key_K):
+        kind, value = what
+        if kind == "walk":
             # no cursor yet: from the post at the top of the screen
             top = self.verticalScrollBar().value()
             guess = self._guess()
             first = next((k for k in posts if self._ys.get(k, 0) + self._height(k, guess)
                           > top + 4), posts[0])
-            self.put_cursor(postkeys.step(posts, self.cursor_key,
-                                          postkeys.WALK["j" if key == Qt.Key.Key_J else "k"],
-                                          first))
+            self.put_cursor(postkeys.step(posts, self.cursor_key, value, first))
             return True
-        if key in (Qt.Key.Key_BracketRight, Qt.Key.Key_BracketLeft):
+        if kind == "top":
             # a thread: the next / previous comment at the top of the tree (common/postkeys)
-            nxt = postkeys.top_comment(posts, self.cursor_key,
-                                       1 if key == Qt.Key.Key_BracketRight else -1,
-                                       self._depth_of)
+            nxt = postkeys.top_comment(posts, self.cursor_key, value, self._depth_of)
             if nxt is None:
                 return False
             self.put_cursor(nxt)
             return True
-        if key == Qt.Key.Key_Minus and self.cursor_key in posts:
-            return self._fold_branch(posts)
-        action = self.POST_KEYS.get(key)
-        if action is None or self.cursor_key not in posts:
+        if kind == "fold":
+            return self.cursor_key in posts and self._fold_branch(posts)
+        action = value
+        if self.cursor_key not in posts:
             return False
         p = self._spec(self.cursor_key).post
         self.ctx.on_link(postkeys.link(action, p.id))

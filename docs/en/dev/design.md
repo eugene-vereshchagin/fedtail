@@ -109,6 +109,29 @@ find. Next, roughly in order:
 
 Taken out of the queue (not needed for now): an XMPP gateway, following old threads in bulk.
 
+## Numbers that stay in the code
+
+"Every behaviour is a config key" is about what a reader would want another way. These are
+not settings on purpose — the engine's own care, each beside its reason in the code; one
+that turns out to be somebody's taste becomes a key (as `server.retry_seconds`,
+`media.video_max_mb`, `web.login_days`, `reading.replied_is_read` did on 23.11).
+
+| what | where | why not a key |
+|---|---|---|
+| a post counts as "on screen" for 30 min | `core/counts.py` `SEEN_FOR` | how long counts are asked again for what scrolled by; `card.counts_minutes` is the switch |
+| threads sized at once, requests a minute, the share of the server's limit | `core/threadsize.py` | the care for the server's limit; `card.thread_size_minutes` is the switch |
+| a quarter of the limit for followed threads | `core/subs.py` `SHARE` | the same care |
+| parents fetched before a round is sorted (20) | `core/poll.py` `PARENTS_FIRST` | bounds a round's length; `reading.parents_first` is the switch |
+| a closed lane of another server asked again in 6 h | `core/wider.py` `CLOSED_S` | politeness to someone's server |
+| whom I follow, read once a day | `core/social.py` `MUTUALS_EVERY` | a list that changes by hand; "refresh" asks now |
+| a lane never cut below 300 posts | `core/app.py` `KEEP_FLOOR` | the floor under `storage.keep_per_lane` and the size budget |
+| a language decided at 0.6 of the letters, 0.8 sure | `core/langs.py` | the detector's tuning, measured |
+| quotes two deep | `protocols/mastodon/adapter.py` `QUOTE_DEPTH` | deeper draws nothing readable |
+| a picture 20 MB, an original 100 MB | `frontends/common/images.py` | a guard against a server's mistake, not a choice |
+| a place waits 60 s for the server | `frontends/common/places.py` `WAIT` | a guard; the request's own timeout is shorter |
+| the page: 32 connections, a login link good for 15 min, a file of 40 MB | `frontends/web/server.py` | the page's guards against the network |
+| a stream's ping after 60 s of silence | `protocols/mastodon/stream.py` | the protocol's |
+
 ## Known server limits
 
 - A server notifies only about replies where you were mentioned. Two people answering each other

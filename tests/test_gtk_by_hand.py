@@ -282,6 +282,15 @@ class GtkByHandTest(_ByHand, _GtkBase):
         xdo("key", "k")
         xdo("key", "minus")
         self.assertTrue(pump(lambda: deep.get_visible(), 2))
+        # the keys are the config's ([keys]): another's own letter does it, the old doesn't
+        self.win.cfg["keys"]["next_comment"] = "n"
+        keys.put_cursor("8001")
+        xdo("key", "bracketright")
+        pump(timeout=0.3)
+        self.assertEqual(keys.cursor, "8001")
+        xdo("key", "n")
+        pump(timeout=0.3)
+        self.assertEqual(keys.cursor, "8002")
 
     def test_the_editor_follows_the_window(self):
         """The window resized by hand: the editor stays in its middle — placed on the

@@ -31,6 +31,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `--theme NAME` | the theme for one run (for good — appearance.theme) |
 | `--theme-export NAME FILE.zip` | a theme into an archive, with a manual on changing it — and exit |
 | `--theme-import FILE.zip` | a theme from an archive into the themes folder (--replace: over one of the same name) — and exit |
+| `--keys` | which key does what, and the terminal's keys by name — and exit |
 | `--profiles` | which profiles there are — and exit |
 | `--update-config` | add this version's new settings to this file with explanations — and exit |
 | `--rebuild-config` | rebuild this file by chapters, with your values — and exit |
@@ -46,7 +47,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 ## Chapters
 
 - [1. Appearance](#1-appearance) — `[appearance]`
-- [2. Window and layout](#2-window-and-layout) — `[window]`
+- [2. Window and layout](#2-window-and-layout) — `[window]`, `[keys]`
 - [3. Lanes](#3-lanes) — `[lanes]`, `[lists]`
 - [4. Reading](#4-reading) — `[reading]`
 - [5. The post card](#5-the-post-card) — `[card]`
@@ -126,6 +127,31 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `window.icon_count_except` | `[]` | Which lanes not to count on the icon, even if they are in icon_count (say, with icon_count = ["all"]): the same names — "home", "bots", "lists", "list:News"… |
 | `window.desktop_entry` | `true` | The menu entry and the icon (~/.local/share/applications, icons): at every start of a window (qt, gtk) check they're there and point to this fedtail (a moved checkout, a new one-file build) and mend them; old entries of the former name (fedtail.desktop) go. With the deb package its menu entry is the one: none of ours beside it. |
 
+### `[keys]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `keys.new_post` | `"Ctrl+N"` | Which key does what — yours to say; these are the author's. A key is written as people write it: "Ctrl+N", "Shift+F3", "Alt+Left", "j", "]"; several keys for one action are separated by spaces ("o Enter"); "" — no key for it. Names: Enter, Esc, Space, Tab, Up, Down, Left, Right, Home, End, PgUp, PgDn, Del, Ins, Backspace, F2…F12. Never F1 or Shift+F1: they sit next to Esc — such a key is dropped and the start says so; the same for a key given to two actions (the first in this order keeps it). The Qt and GTK windows take all of them; the terminal and the web page — the posts' keys (from next_post down): a terminal and a browser keep Ctrl+N, Ctrl+W, F5 for themselves, their own letters are in the help (Keys). A new post. |
+| `keys.send` | `"Ctrl+Enter"` | Send what the editor holds. |
+| `keys.search` | `"Ctrl+K"` | Find people, tags, posts: into the sidebar's search. |
+| `keys.find` | `"Ctrl+F"` | Find in the lane, thread or profile open now; the next and the previous match. |
+| `keys.find_next` | `"F3"` |  |
+| `keys.find_previous` | `"Shift+F3"` |  |
+| `keys.command_line` | `"Ctrl+L"` | The command line. |
+| `keys.refresh` | `"F5"` | Refresh: a round now. |
+| `keys.close_tab` | `"Ctrl+W"` | Close the tab. |
+| `keys.quit` | `"Ctrl+Q"` | Quit (the cross only hides to the tray). |
+| `keys.next_post` | `"j"` | The keys of a lane's and a thread's posts (window.post_keys = false turns all of these off at once): the next and the previous post. |
+| `keys.previous_post` | `"k"` |  |
+| `keys.reply` | `"r"` | Reply to the post under the cursor, like it, boost it, bookmark it. |
+| `keys.like` | `"f"` |  |
+| `keys.boost` | `"b"` |  |
+| `keys.bookmark` | `"m"` |  |
+| `keys.open_thread` | `"o Enter"` | Open its thread. |
+| `keys.next_comment` | `"]"` | In a thread: the next and the previous comment at the top of the tree. |
+| `keys.previous_comment` | `"["` |  |
+| `keys.fold_branch` | `"-"` | In a thread: fold the branch (from a deep reply — its top comment's whole branch), again — unfold. |
+
 ## 3. Lanes
 
 ### `[lanes]`
@@ -191,6 +217,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `reading.read_button` | `false` | A ✓ "Read" button right under each unread post (handy with "manual"). |
 | `reading.dwell_ms` | `350` | With mark_read "on_scroll": how many milliseconds the feed must stand still for what is on it to count as read. A slow reader — more. One number for the windows and the web page. |
 | `reading.unfocused_seconds` | `5` | A window without focus (behind another, a browser tab not in front) counts as read only while it is scrolled by hand and this many seconds after. 0 — never, the focused one only. |
+| `reading.replied_is_read` | `true` | A post you answered — from fedtail or any other client — counts as read: you saw it. false — it stays unread until read like any other. |
 
 ## 5. The post card
 
@@ -309,6 +336,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `media.image_decode` | `"box"` | Pictures in a lane are decoded in memory to the size of their frame (minding the screen's density): "box" — several times less memory and work for the processor; "full" — as before, up to 1200 pixels on the longer side (sharper if you stretch the window later). |
 | `media.image_disk_mb` | `1000` | How much disk space, MB, to keep for fetched pictures: over that, out go the ones not opened the longest (at start and along the way). 0 — don't clean. |
 | `media.video_disk_mb` | `10000` | The same for videos, gifs and sound — they have their own folder and their own limit, MB (a clip or two is a gigabyte already). A video opened once stays on disk and plays at once the next time. 0 — don't keep videos on disk. |
+| `media.video_max_mb` | `300` | The most one video or sound file may be, in megabytes, to be fetched and played here; a bigger one is refused (open it in the browser). |
 | `media.unload_hidden_minutes` | `10` | A lane not opened for this many minutes lets its cards go from memory: a client open for days otherwise holds hundreds of cards with all their pictures (over a gigabyte). Open it again — it's drawn anew, from the first unread (that's quick). The lane open right now is never unloaded. 0 — keep everything. |
 | `media.keep_hidden_lanes` | `3` | How many lanes out of sight keep their cards for coming back at once, besides the one in front: the ones opened last. One opened before them lets its cards go the moment another lane comes to the front (a lane drawn is some 15–20 MB with its pictures; reading through a dozen held half a gigabyte). Opened again — drawn anew, at the first unread. 0 — only unload_hidden_minutes decides. |
 
@@ -461,6 +489,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `server.proxy` | `""` | A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login: "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live stream doesn't go through SOCKS, polling does). A user and password — "http://user:pass@host:port". "" — as the system says (HTTPS_PROXY and the like). |
 | `server.proxy_at_login` | `false` | A "Proxy" field in the login window: set it before the first request to the server (when the server can't be reached without it). What you type is written here, in proxy. |
 | `server.signup_url` | `"https://joinmastodon.org/servers"` | "No account?" under the login window's server field, with a link to this page of servers to sign up at (an account is made on a server, not in fedtail). "" — not said. |
+| `server.retry_seconds` | `20` | A connect that failed — the server slow to answer, no network — is said and tried again after so many seconds (5 at least). |
 
 ### `[updates]`
 
@@ -532,6 +561,7 @@ The interface in a terminal — `fedtail --ui tui` (or window.frontend = "tui"):
 | `tui.picture_rows` | `8` | How high a picture in the lane is, in lines. |
 | `tui.viewer` | `"auto"` | v on a post with pictures: "auto" — shown by chafa, timg or kitty's icat when one of them is installed (the interface steps aside, Enter brings it back): real size and colours in Konsole, kitty, WezTerm and the rest; without them — in the interface itself. "app" — always in the interface. |
 | `tui.video` | `"auto"` | Video and gifs (v on a post with a video, Enter on it among the pictures) play in mpv: "auto" — right in the terminal, a console player (space, arrows, q back), when the terminal shows real pictures (sixel in Konsole, kitty), else in a window of its own on a desktop, else as coloured text; "window" — always a window; "terminal" — always in the terminal; "browser" — open in the browser. No mpv — the browser, and it says so. |
+| `tui.keys` | `[]` | The terminal's own keys by their names — any of them, beside what [keys] gives the posts' keys (j, k, r, f, b, m, ], [, - follow [keys] here too): a name is what the key does, as `fedtail --keys` lists them (quit, new, command, refresh, post_menu, lane_step(1)…), then "=" and the keys as in [keys]. For example:<br>keys = ["quit = Ctrl+Q", "new = n Ctrl+N"] |
 
 ## 17. In a browser
 
@@ -544,6 +574,7 @@ The interface in a terminal — `fedtail --ui tui` (or window.frontend = "tui"):
 | `web.host` | `"127.0.0.1"` | Which address to wait on. "127.0.0.1" — from this computer only; "0.0.0.0" — from the home network too (from the phone: the one-time link fedtail prints at start, with the computer's address instead of 127.0.0.1; good for 15 minutes). Everything goes unencrypted there, so for your own network only; from outside — through a VPN or a proxy with TLS. |
 | `web.port` | `8765` | The port. |
 | `web.open_browser` | `true` | Open the browser at start. |
+| `web.login_days` | `400` | How many days a browser stays logged in to the page (its cookie's age); after that the link with the key is needed again. |
 
 ## 18. On a phone and a tablet
 

@@ -252,6 +252,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The config as a file in chapters | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | The settings reference | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Window, tray, keys | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
+| Keys of your own | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Links to posts and profiles — inside | ✓ |   |   | ✓ | ✓ | ✓ |   |   | ✓ |   | ✓ |   |   |   |
 | Open a link in the running fedtail | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
 | Everything is stored locally, readable offline | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |
@@ -272,4 +273,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **74** features of the 208 compared.
+Only in fedtail — **74** features of the 209 compared.

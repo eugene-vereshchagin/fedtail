@@ -413,7 +413,7 @@ def open():  # noqa: A001 — what Kotlin calls it
                 core.connect().result(120)
             except Exception as e:  # noqa: BLE001 — one slow answer isn't "didn't start"
                 from fedtail.frontends.common.connecting import trouble
-                t = trouble(f"{e.__class__.__name__}: {e}")
+                t = trouble(f"{e.__class__.__name__}: {e}", core.cfg)
                 if t["relogin"]:  # as the windows: the login from scratch, not revoked
                     core.logout(revoke=False)
                 return {"error": t["text"], "relogin": t["relogin"], "again": t["again"]}

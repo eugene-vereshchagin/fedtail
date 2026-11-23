@@ -40,7 +40,8 @@ from ..common.cardtext import direct_mark, indent_of
 from ..common.commands import History
 from ..common.strip import nearest_staying
 from ..richtext import openable
-from . import pictures, termcaps
+from . import keymap, pictures, termcaps
+from .keymap import named
 from .model import (
     Commands,
     DeleteGuard,
@@ -211,14 +212,14 @@ class PictureScreen(Screen):
     o — the original in the browser, Esc — back. As big as the terminal allows: sixel
     or kitty graphics where it can, half blocks elsewhere."""
 
-    BINDINGS = [Binding("escape,q,v", "app.pop_screen", _("tui_back")),
+    BINDINGS = named([Binding("escape,q,v", "app.pop_screen", _("tui_back")),
                 Binding("left,h,k", "step(-1)", "←"), Binding("right,l,j", "step(1)", "→"),
                 Binding("enter,p,space", "play", _("tui_play")),
                 Binding("s", "save", _("viewer_save")),
                 Binding("r", "again", show=False),
                 Binding("d", "description", _("alt_title")),
                 Binding("o", "original", _("open_browser")),
-                Binding("f", "search", _("tui_image_search"))]
+                Binding("f", "search", _("tui_image_search"))])
     CSS = """
     PictureScreen { align: center middle; }
     PictureScreen #pic { width: auto; height: auto; }
@@ -535,7 +536,7 @@ class PostsMixin(Ui):
 
 
 class ThreadScreen(Screen, PostsMixin):
-    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
+    BINDINGS = named([Binding("escape,q", "app.pop_screen", _("tui_back")),
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
@@ -552,7 +553,7 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("s", "follow_thread", _("sub_tip"), show=False),
                 # "to the next new one" (NOTES/15); n is "write" everywhere
                 Binding("N", "next_new", "↓ " + _("thread_next_new", n="N")),
-                Binding("colon", "command", ":", show=False)]
+                Binding("colon", "command", ":", show=False)])
     # the screen doesn't scroll as a whole, the list does (see ProfileScreen)
     CSS = """
     ThreadScreen { overflow: hidden hidden; layout: vertical; }
@@ -746,7 +747,7 @@ class ProfileScreen(Screen, PostsMixin):
     to, and highlighting the first post scrolled the header away — the profile
     flashed and what stayed looked just like a lane."""
 
-    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
+    BINDINGS = named([Binding("escape,q", "app.pop_screen", _("tui_back")),
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("F", "follow", _("follow")),
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
@@ -759,7 +760,7 @@ class ProfileScreen(Screen, PostsMixin):
                         _("profile_show_media")),
                 *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
                 Binding("0", "all_buttons", show=False),
-                Binding("colon", "command", ":", show=False)]
+                Binding("colon", "command", ":", show=False)])
     CSS = """
     ProfileScreen { overflow: hidden hidden; layout: vertical; }
     ProfileScreen #buttons { height: auto; padding: 0 1; }
@@ -938,7 +939,7 @@ class FedtailApp(App, PostsMixin):
     #cmd { dock: bottom; }
     .post { width: 1fr; }
     """
-    BINDINGS = [Binding("q", "quit", _("quit")),
+    BINDINGS = named([Binding("q", "quit", _("quit")),
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
@@ -970,7 +971,7 @@ class FedtailApp(App, PostsMixin):
                 # couldn't be reached without the mouse
                 Binding("tab", "switch", _("tui_switch"), show=False, priority=True),
                 Binding("colon", "command", ":", show=False),
-                Binding("escape", "escape", _("find_close"), show=False)]
+                Binding("escape", "escape", _("find_close"), show=False)])
 
     def notify(self, message, *, timeout=None, **kw):
         """Textual's notify, its time times ui.message_percent (common/lane.message_seconds),
@@ -1056,6 +1057,8 @@ class FedtailApp(App, PostsMixin):
         yield Footer()
 
     def on_mount(self):
+        # the keys as the config says them ([keys] for the posts', tui.keys for the rest)
+        keymap.apply(self, self.core.cfg, keymap.ids(*SCREENS))
         self._ui_thread = threading.get_ident()
         self._ui_loop = asyncio.get_running_loop()
         self.title = NAME
@@ -1129,7 +1132,7 @@ class FedtailApp(App, PostsMixin):
         """As the windows: a refused token — said, Accounts opened; anything else (a
         server slow to answer) — said, and connected again in 20 s (it only said it)."""
         from ..common.connecting import trouble
-        t = trouble(err)
+        t = trouble(err, self.core.cfg)
         if t["relogin"]:
             self.auth_lost()
             return
@@ -2627,7 +2630,7 @@ class FedtailApp(App, PostsMixin):
 class LoginScreen(Screen, Ui):
     """No token yet: the server, then the code the browser shows (OAuth, as in the window)."""
 
-    BINDINGS = [Binding("escape", "app.quit", _("quit"))]
+    BINDINGS = named([Binding("escape", "app.quit", _("quit"))])
 
     def compose(self) -> ComposeResult:
         yield Static(_("tui_login_server"), id="ask")
@@ -2677,3 +2680,18 @@ class LoginScreen(Screen, Ui):
     def done(self, _me):
         self.app.pop_screen()
         self.app.begin()
+
+
+def _screens():
+    """Every screen with keys of its own, for the keymap (tui/keymap.py)."""
+    from . import more, screens
+    return (FedtailApp, ThreadScreen, ProfileScreen, PictureScreen, LoginScreen,
+            screens.ConfirmScreen, screens.AskScreen, screens.MenuScreen,
+            screens.ChooseScreen, screens.PlaceScreen, screens.EmojiScreen,
+            screens.ComposeScreen, more.PollScreen, more.PreviewScreen,
+            more.TextFileScreen)
+
+
+# every screen's bindings are named by their actions (keymap.named, at each BINDINGS):
+# [keys] and tui.keys reach them (set in on_mount)
+SCREENS = _screens()

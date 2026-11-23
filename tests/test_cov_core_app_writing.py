@@ -45,6 +45,20 @@ class PostTest(CoreCase):
         self.assertTrue(st["scheduled"])
         self.assertIsNone(c.store.get_draft("new"))
 
+    def test_a_post_answered_is_read_unless_told_otherwise(self):
+        """reading.replied_is_read: the post I answer counts as read (it was nailed in);
+        false — it stays unread."""
+        c = self.connect()
+        self.w.add(status("050", BOB, minute=1, vis="public"), home=True)
+        self.w.add(status("051", BOB, minute=2, vis="public"), home=True)
+        c.poll_once()
+        self.assertEqual(c.store.read_set(["050", "051"]), set())
+        c.post("ответ", "public", reply_to="050").settled.result(timeout=T)
+        self.assertEqual(c.store.read_set(["050", "051"]), {"050"})
+        c.cfg["read"]["replied_is_read"] = False
+        c.post("и тут", "public", reply_to="051").settled.result(timeout=T)
+        self.assertEqual(c.store.read_set(["050", "051"]), {"050"})
+
     def test_a_scheduled_post_goes_with_its_key(self):
         """An answer lost and the post scheduled again made two waiting on the server:
         it goes with an Idempotency-Key, the same at the retry — and a new one once the
