@@ -83,6 +83,9 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: the core's working state is declared in one place
+  (`core/state.py`: what each part keeps, what it starts as, which lock guards it) instead
+  of being made up where first needed; a test keeps it so.
 - Behind the scenes: `docs/*/dev/protocols.md` says where "no protocol field outside
   `protocols/`" really stands (true for the interfaces; the core still reads Mastodon's
   names — stage 7) and a test keeps the core's count from growing; `gtk.md`, `roadmap.md`

@@ -55,7 +55,7 @@ class OriginMixin:
         """[(server, token)] of my other logged-in profiles (not this one), looked up
         once in ten minutes."""
         now = time.monotonic()
-        cached = getattr(self, "_others_cache", None)
+        cached = self._others_cache
         if cached and now - cached[0] < 600:
             return cached[1]
         from . import paths as paths_module

@@ -10,7 +10,6 @@ is stored and said (`status_updated`): the windows redo only its row of buttons,
 lanes counting new comments (a thread's news) see the replies grow."""
 
 import logging
-import threading
 import time
 
 from .model import real
@@ -39,7 +38,7 @@ class CountsMixin:
         now = time.monotonic()
         ids = [str(i) for i in ids or () if i and not str(i).startswith(("event:", "__"))]
         with self._screen_lock():
-            seen = self.__dict__.setdefault("_on_screen", {})
+            seen = self._on_screen
             for i in ids:
                 seen[i] = now
         sizing = getattr(self, "size_threads", None)  # the Thread button's number
@@ -47,10 +46,8 @@ class CountsMixin:
             sizing(ids)
 
     def _screen_lock(self):
-        lock = self.__dict__.get("_counts_lock")
-        if lock is None:
-            lock = self.__dict__.setdefault("_counts_lock", threading.Lock())
-        return lock
+        """The lock of what is on screen (core/state.py: _on_screen)."""
+        return self._counts_lock
 
     def refresh_counts(self, force=False):
         """The round's step: the posts seen on screen lately asked again, if the time
@@ -59,12 +56,12 @@ class CountsMixin:
         now = time.monotonic()
         with self._screen_lock():  # forgotten every round, counts asked or not: with
             # counts_minutes = 0 and the threads' sizes on, the list only grew
-            seen = self.__dict__.get("_on_screen", {})
+            seen = self._on_screen
             for i in [i for i, t in seen.items() if now - t > SEEN_FOR]:
                 del seen[i]
         if self.api is None or (every <= 0 and not force):
             return []
-        if not force and now - self.__dict__.get("_counts_at", -1e9) < every:
+        if not force and now - self._counts_at < every:
             return []
         self._counts_at = now
         with self._screen_lock():
@@ -110,7 +107,7 @@ class CountsMixin:
         the server doesn't serve batches."""
         out = []
         batches = getattr(self.api, "statuses", None)
-        if batches is not None and not self.__dict__.get("_no_batches"):
+        if batches is not None and not self._no_batches:
             try:
                 for at in range(0, len(ids), BATCH):
                     out += batches(ids[at:at + BATCH]) or []

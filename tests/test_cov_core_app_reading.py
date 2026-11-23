@@ -268,7 +268,7 @@ class MoreTest(CoreCase):
         self.assertIn(("read_changed", ["010"]), self.events)  # the cards: at once
         c.reads.submit(lambda: None).result(timeout=T)  # its thread done
         self.assertIn(("counts_ready", None), self.events)
-        warmed = c.__dict__.get("_unread_cache", {})
+        warmed = c._unread_cache
         self.assertTrue(warmed)  # made already: the window only reads them
 
     def test_me_my_replies_found_marks_read(self):

@@ -58,6 +58,7 @@ from .push import PushMixin
 from .silence import SilenceMixin
 from .social import SocialMixin
 from .sounds import Chime
+from .state import CoreState
 from .store import Store, now_iso
 from .syncing import SyncMixin
 from .thread_ops import ThreadsMixin
@@ -221,7 +222,7 @@ def _counted(before, got, what, on):
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
            CountsMixin, ThreadSizeMixin,
            OriginMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
-           TranslateMixin, SocialMixin):
+           TranslateMixin, SocialMixin, CoreState):
     """The core the frontends talk to: one account, its store, its rounds. Its parts
     live in modules of their own, mixed in here — poll.py (the rounds, the stream),
     people.py, thread_ops.py, writing.py, silence.py, lists.py, activity.py, syncing.py,
@@ -230,6 +231,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
 
     def __init__(self, cfg, paths, api_class=None):
+        self._init_state()  # what the core and its parts keep between calls (state.py)
         self.cfg = cfg
         self.paths = paths
         langs.configure(cfg["lanes"].get("detect_among", "auto"))  # before any guess
@@ -367,7 +369,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             # the same error from every poll while a server is down: shown and logged
             # once, again only when it changes or after ERROR_QUIET_S of it
             now = time.monotonic()
-            seen = getattr(self, "_errors_seen", None)
+            seen = self._errors_seen
             if seen is None:
                 seen = self._errors_seen = {}
             if "HTTP 429" in str(payload):
@@ -398,13 +400,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         if threading.current_thread() is threading.main_thread():
             return  # the window's own act: counting here is counting there
         store = getattr(self, "store", None)
-        if store is None or not getattr(self, "lanes", None) or getattr(self, "_warming", 0):
+        if store is None or not getattr(self, "lanes", None) or self._warming:
             return
         try:
             key = (store.status_version, tuple(sorted(store.items_version.items())))
         except Exception:  # noqa: BLE001 — a store without versions (a test's fake)
             return
-        if key == getattr(self, "_warmed_at", None):
+        if key == self._warmed_at:
             return
         self._warming = 1
         try:
@@ -590,7 +592,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         (the phone's second login, 02.11: "token not supplied")."""
         log.info("login anew: the requests go on with the new token")
         self.api = self.api_class(server, token)
-        running = getattr(self, "_stream", None)
+        running = self._stream
         if running is not None:
             running.stop()
             self._stream = None
@@ -654,7 +656,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def retry_caps(self):
         """The instance document didn't come at the connection: asked again (a poll
         round's step, until it comes) — the limits then are the server's own."""
-        if not getattr(self, "_caps_unsure", False) or self.api is None:
+        if not self._caps_unsure or self.api is None:
             return
         try:
             v2 = self.api.instance_v2() if hasattr(self.api, "instance_v2") else None
@@ -687,7 +689,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
     def connect(self):
         def job():
-            if not getattr(self, "_poll_count", 0):  # (connecting anew later: not starting)
+            if not self._poll_count:  # (connecting anew later: not starting)
                 self._starting = True
                 self.emit("poll_state", True)
             try:
@@ -926,7 +928,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                            subscribed=_Subscribed(), my_threads=_MyThreads(),
                            self_threads=_SelfThreads(),
                            following=self._following or set(),
-                           followed_tags=getattr(self, "_followed_tag_names", None) or set(),
+                           followed_tags=self._followed_tag_names or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
                            parents=_Parents(), new_replies=_News(),
                            deleted=store.deleted_set(),
@@ -1057,7 +1059,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             out.append(_("why_p_mention"))
         if me and aid != me and raw.reply_to_author(p) == me:
             out.append(_("why_p_reply"))
-        followed = {t.lower() for t in (getattr(self, "_followed_tag_names", None) or ())}
+        followed = {t.lower() for t in (self._followed_tag_names or ())}
         tags = {str(t.get("name") or "").lower() for t in p.get("tags") or ()}
         for tag in sorted(tags & followed):
             out.append(_("why_p_tag", tag=tag))
@@ -1286,7 +1288,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         if not self.cfg["feed"].get("thread_news", True):
             return {}
         key = (self.store.items_version.get("subs", 0), self.store.read_version)
-        hit = getattr(self, "_thread_news", None)
+        hit = self._thread_news
         if hit and hit[0] == key:
             return hit[1]
         got = self.store.thread_news_counts()
@@ -1309,7 +1311,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         except ApiError as e:
             log.debug("announcements: %s", e)
             return []
-        gone = self.__dict__.get("_dismissed_ann", set())
+        gone = self._dismissed_ann
         return sorted((a for a in got if not a.get("read") and a.get("id") not in gone),
                       key=lambda a: a.get("published_at") or "")
 
@@ -1328,7 +1330,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def dismiss_announcement(self, aid):
         """Read: gone here at once — a round asking the server before the dismissal got
         there brought it back (the banner came again: CI on Windows, 30.10)."""
-        self.__dict__.setdefault("_dismissed_ann", set()).add(aid)
+        self._dismissed_ann.add(aid)
         return self.call_api("dismiss_announcement", aid)
 
     def scheduled(self):
@@ -1359,15 +1361,15 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
     @property
     def _browse_waiting(self):
-        return self.__dict__.setdefault("_browse_waiting_set", set())
+        return self._browse_waiting_set
 
     @property
     def _lang_out(self):
-        return self.__dict__.setdefault("_lang_out_counts", {})
+        return self._lang_out_counts
 
     @property
     def _filter_out(self):
-        return self.__dict__.setdefault("_filter_out_ids", {})
+        return self._filter_out_ids
 
     def filter_hidden_unread(self, name):
         """The unread posts of a lane its quick filters and funnel keep out of sight (the
@@ -1774,7 +1776,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         entries = self.lane_entries(name)
         hit = self._lane_cache.get(name)
         key = (hit[0] if hit else None, id(entries), self.store.read_version)
-        cache = self.__dict__.setdefault("_unread_cache", {})
+        cache = self._unread_cache
         got = cache.get(name)
         if got and got[0] == key:
             return got[1]
@@ -1795,7 +1797,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         if self._events_only(name) or lane is None or not lane.source or lane.lazy:
             return self.unread_count(name)  # nothing to work out, or nothing kept
         hit = self._lane_cache.get(name)
-        got = self.__dict__.get("_unread_cache", {}).get(name)
+        got = self._unread_cache.get(name)
         if hit and got and hit[0] == self._lane_key(name, lane) and \
                 got[0] == (hit[0], id(hit[1]), self.store.read_version):
             return got[1]
@@ -1809,9 +1811,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         again (a lane that can't be kept would ask for ever)."""
         now = (self.store.status_version, self.store.read_version,
                tuple(sorted(self.store.items_version.items())))
-        if self.__dict__.get("_warming"):
+        if self._warming:
             return True
-        if self.__dict__.get("_warmed_for") == now:
+        if self._warmed_for == now:
             return False
         self._warming = True
 
@@ -1835,7 +1837,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         they held, parsed, go with them; the store keeps every one. → how many lanes."""
         n = len(self._lane_cache)
         self._lane_cache.clear()
-        self.__dict__.pop("_unread_cache", None)
+        self._unread_cache = {}
         self._filter_out.clear()
         return n
 
@@ -1895,8 +1897,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         the first marks after an hour's quiet — the night left behind — and, once marks
         have stopped for ten minutes (a round looks: n = 0), the end of it."""
         now = time.monotonic()
-        run = self.__dict__.get("_reading_run")
-        last = self.__dict__.get("_last_mark")
+        run = self._reading_run
+        last = self._last_mark
         if n:
             if last is None or now - last > self.READ_QUIET_S:
                 quiet = round((now - last) / 3600, 1) if last is not None else None
@@ -1917,8 +1919,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         None (nothing asked). Every interface asks only this; the core decides."""
         if not self.cfg["feed"].get("older_ahead") or name not in self.lane_by_name:
             return None
-        busy = self.__dict__.setdefault("_older_busy", set())
-        if name in busy or name in self.__dict__.get("_older_none", set()):
+        busy = self._older_busy
+        if name in busy or name in self._older_none:
             return None
         busy.add(name)
         fut = self.load_older(name)
@@ -1929,7 +1931,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             # no more by itself — a lane drawn anew at its end would ask on and on; the
             # button still may
             if f.exception() is not None or not f.result():
-                self.__dict__.setdefault("_older_none", set()).add(name)
+                self._older_none.add(name)
         fut.add_done_callback(done)
         return fut
 
@@ -2239,7 +2241,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         fut = self.call_api("follow_tag", name, on)
 
         def done(f):
-            if f.exception() is None and getattr(self, "_followed_tag_names", None) is not None:
+            if f.exception() is None and self._followed_tag_names is not None:
                 key = str(name or "").lstrip("#")
                 names = {t for t in self._followed_tag_names if t.lower() != key.lower()}
                 self._followed_tag_names = names | ({key} if on else set())
@@ -2249,7 +2251,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def tag_followed(self, name):
         """Do I follow this hashtag — as last heard (the free lanes and the editor keep the
         names); None while not known yet."""
-        names = getattr(self, "_followed_tag_names", None)
+        names = self._followed_tag_names
         if names is None:
             return None
         key = str(name or "").lstrip("#").lower()
@@ -2357,7 +2359,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def stats_links(self):
         """[(url, title, how many posts)] — the links Home shared most this week (the
         last stats())."""
-        return list(getattr(self, "_stats_links", []))
+        return list(self._stats_links)
 
     def _home_source(self):
         """The source the Home lane is fed by (the server's home timeline)."""
@@ -2377,7 +2379,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         who = (st.get("account") or {}).get("id")
         if not who or who == (self.me or {}).get("id") or who in (self._following or ()):
             return ""
-        followed = getattr(self, "_followed_tag_names", None) or set()
+        followed = self._followed_tag_names or set()
         return next(((t.get("name") or "") for t in st.get("tags") or ()
                      if (t.get("name") or "").lower() in followed), "")
 
@@ -2551,7 +2553,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             rel = {}
         people = {}
         for acc_id in ids:
-            known = getattr(self, "_waiting_accounts", None)
+            known = self._waiting_accounts
             if known is None:
                 known = self._waiting_accounts = {}
             acc = self.store.account_of(acc_id) or known.get(acc_id)
@@ -2581,7 +2583,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         def job():
             from . import health
             snap = health.REC.snapshot()
-            stream = getattr(self, "_stream", None)
+            stream = self._stream
             waiting = self._list_waiting()
             caps = getattr(self, "caps", None)
             return {
@@ -2611,7 +2613,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
     def diag_stats(self):
         """For the periodic stats line: what could grow or get stuck."""
         out = {"polls": self._poll_count, "last_poll_s": self._last_poll_s,
-               "max_poll_s": round(getattr(self, "_poll_max_s", 0.0), 2),  # since last
+               "max_poll_s": round(self._poll_max_s, 2),  # since last
                "pool_queue": self.pool._work_queue.qsize(),
                "bg_queue": self.bg._work_queue.qsize(),
                "lane_cache": len(self._lane_cache),
@@ -2634,7 +2636,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._wake.set()
         if self.sync:
             self.sync.stop(wait=min(3.0, self.EXIT_WAIT))  # its last round: the marks
-        if getattr(self, "_stream", None) is not None:
+        if self._stream is not None:
             self._stream.stop()
         self.pool.shutdown(wait=False, cancel_futures=True)
         self.bg.shutdown(wait=False, cancel_futures=True)

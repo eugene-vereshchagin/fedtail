@@ -150,7 +150,7 @@ class ActivityMixin:
         key = (self.store.activity_newest(), self.store.activity_count_after(""),
                self._world_version, self._lists_version, limit, which, reqs,
                self._silence_version)
-        cache = self.__dict__.setdefault("_events_cache", {})
+        cache = self._events_cache
         hit = cache.get((name, which))
         if hit and hit[0] == key:
             return hit[1]

@@ -116,7 +116,7 @@ class SyncMixin:
         if wanted(self.cfg):
             from .sync import Sync
             self.sync = Sync(self)
-            if getattr(self, "_poller", None) is not None:
+            if self._poller is not None:
                 self.sync.start()
         self.emit("sync_changed", None)
         return self.sync is not None

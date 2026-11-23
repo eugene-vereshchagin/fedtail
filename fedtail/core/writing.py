@@ -65,7 +65,7 @@ class WritingMixin:
         the background — once a run: the counts then keep themselves up to date. Every
         editor of every interface asks as it opens, and the suggestions ask themselves,
         so none can forget (GTK's and the terminal's never had any: 20.11)."""
-        if getattr(self, "_completion_warm", False):
+        if self._completion_warm:
             return
         self._completion_warm = True
         self.prepare_tags()
@@ -77,7 +77,7 @@ class WritingMixin:
         """Warm up what tag_suggestions() needs, in the background: the tags of the
         stored posts and the tags you follow."""
         self.bg.submit(self.store.tag_counts)
-        if getattr(self, "_followed_tag_names", None) is None:
+        if self._followed_tag_names is None:
             self._followed_tag_names = set()
 
             def followed():
@@ -93,7 +93,7 @@ class WritingMixin:
 
     def prepare_emoji(self):
         """The server's own emoji, once a run, for emoji_suggestions()."""
-        if getattr(self, "_emoji", None) is not None or not self.api:
+        if self._emoji is not None or not self.api:
             return
         self._emoji = []
 
@@ -110,7 +110,7 @@ class WritingMixin:
         and shortcode) — fetched now if not yet (prepare_emoji fetches in the
         background: a picker opened first must not be empty)."""
         def job():
-            have = getattr(self, "_emoji", None)
+            have = self._emoji
             if not have and self.api:
                 try:
                     have = [e for e in self.api.custom_emojis()
@@ -130,7 +130,7 @@ class WritingMixin:
         p = prefix.casefold()
         if not p:
             return []
-        every = getattr(self, "_emoji", None) or []
+        every = self._emoji or []
         starts = [e for e in every if e["shortcode"].casefold().startswith(p)]
         within = [e for e in every if p in e["shortcode"].casefold() and e not in starts]
         best = sorted(starts, key=lambda e: e["shortcode"].casefold()) + \
@@ -177,7 +177,7 @@ class WritingMixin:
         p = prefix.casefold()
         if not p:
             return []
-        followed = getattr(self, "_followed_tag_names", None) or set()
+        followed = self._followed_tag_names or set()
         counts = self.store.tag_counts(compute=False) or {}
         score = {}
         for key, (name, n) in counts.items():

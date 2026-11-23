@@ -81,7 +81,7 @@ class ThreadsMixin:
         """The tops of the threads I wrote in, as the store has them (cached until a
         post comes or goes)."""
         key = getattr(self.store, "status_version", 0)
-        hit = self.__dict__.get("_my_roots_cache")
+        hit = self._my_roots_cache
         if hit and hit[0] == key:
             return hit[1]
         me = (self.me or {}).get("id")
@@ -305,7 +305,7 @@ class ThreadsMixin:
         ctx = self.api.context(focus["id"])
         ancestors = ctx.get("ancestors", [])
         root = ancestors[0] if ancestors else focus
-        roots = self.__dict__.setdefault("_thread_root_of", {})
+        roots = self._thread_root_of
         if len(roots) > 5000:
             roots.clear()
         roots[str(sid)] = roots[str(focus["id"])] = str(root["id"])  # thread_progress(any)
@@ -404,7 +404,7 @@ class ThreadsMixin:
         thread_grew for each opened thread one of them answers. Decided here once, for
         every interface: each only reloads the thread it shows on thread_grew (my answer
         showed only on opening anew; a round's news in Qt alone, by its own rule)."""
-        roots = self.__dict__.get("_thread_root_of") or {}
+        roots = self._thread_root_of or {}
         grew = []
         for sid, parent in pairs:
             root = roots.get(str(parent)) if parent else None
@@ -510,7 +510,7 @@ class ThreadsMixin:
         The open thread says so (event thread_progress); thread_progress() reads it."""
         if not self.cfg["feed"].get("thread_progress"):
             return
-        steps = self.__dict__.setdefault("_thread_steps", {})
+        steps = self._thread_steps
         steps[str(root_id)] = {"stage": stage, "done": done, "total": total,
                                "at": time.monotonic()}
         self.emit("thread_progress", str(root_id))
@@ -518,9 +518,9 @@ class ThreadsMixin:
     def thread_progress(self, root_id):
         """{"stage", "done", "total"} of the thread's fetching now, or None (none going,
         or its "done" said long enough ago)."""
-        steps = self.__dict__.get("_thread_steps", {})
+        steps = self._thread_steps
         got = steps.get(str(root_id)) or \
-            steps.get(self.__dict__.get("_thread_root_of", {}).get(str(root_id), ""))
+            steps.get(self._thread_root_of.get(str(root_id), ""))
         if got is None:
             return None
         if got["stage"] in ("done", "failed") and \

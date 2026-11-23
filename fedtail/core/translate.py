@@ -2,7 +2,6 @@
 (feed.translate_auto) for posts in languages I neither read nor write."""
 
 import logging
-from collections import OrderedDict
 from html import escape as html_escape
 
 import requests
@@ -116,7 +115,7 @@ class TranslateMixin:
         inner = raw.boosted(st) if isinstance(raw.boosted(st), dict) else st
         if not self._wants_translation(inner):
             return None
-        cache = self.__dict__.setdefault("_translated", OrderedDict())
+        cache = self._translated
         done = cache.get(inner.get("id"))
         if done is None:
             self._ask_translation(inner)
@@ -151,7 +150,7 @@ class TranslateMixin:
 
     def _ask_translation(self, st):
         sid = st.get("id")
-        asking = self.__dict__.setdefault("_translating", set())
+        asking = self._translating
         if not sid or sid in asking or len(asking) >= self.AUTO_TRANSLATE_AT_ONCE:
             return
         asking.add(sid)
@@ -164,7 +163,7 @@ class TranslateMixin:
             except Exception as e:  # noqa: BLE001 — not translated: the post as it is
                 log.info("auto translation of %s: %s", sid, e)
                 got = {}
-            cache = self.__dict__.setdefault("_translated", OrderedDict())
+            cache = self._translated
             cache[sid] = got if isinstance(got, dict) and got.get("content") else {}
             while len(cache) > 500:
                 cache.popitem(last=False)

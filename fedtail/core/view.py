@@ -116,6 +116,8 @@ class View:
         self._cache = {}   # lane -> (the raw list it was made from, converted)
         self._lock = threading.Lock()
         self._media = None  # pictures' own workers, made when first needed
+        self._pk_last = None     # (people, its key) as last asked: the words of a person
+        self._roster_convs = {}  # the roster's private talks as last made
         self._raw_accounts = OrderedDict()  # (profile, id) -> the core's account dict
         self._raw_activity = OrderedDict()  # (profile, id) -> the core's activity entry
         # one Post per stored post (memory.md step 1, the model's side): id(Stored) ->
@@ -302,7 +304,7 @@ class View:
     def _people_key(self, people):
         """The names and colours as one comparable value — worked out once for a lane
         (the same `people` handed for each of its posts), not once a post."""
-        last = getattr(self, "_pk_last", None)
+        last = self._pk_last
         if last is not None and last[0] is people:
             return last[1]
         aliases, colors = people
@@ -895,7 +897,7 @@ class View:
             # them reads every post's parent from the store — too slow to redo per event)
             raw = c.lane_entries(lane)
             key = (lane, id(raw), len(raw), getattr(c.store, "read_version", None))
-            cache = self.__dict__.setdefault("_roster_convs", {})
+            cache = self._roster_convs
             if cache.get(lane, (None,))[0] != key:
                 entries = self.entries(lane)
                 cache[lane] = (key, list(reversed(self.conversations(
@@ -920,7 +922,7 @@ class View:
         if people:
             from ..model.text import norm_handle
             talks = {}
-            convs_seen = self.__dict__.get("_roster_convs", {})
+            convs_seen = self._roster_convs
             for g in reversed(convs_seen.get(talk_lane, (None, []))[1]):
                 top = real(g["top"])
                 mine = norm_handle(self.me.handle) if self.me else ""

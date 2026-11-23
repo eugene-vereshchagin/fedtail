@@ -26,7 +26,7 @@ class PeopleMixin:
             self._following = set(kept.get("ids") or ())
             self._following_at = float(kept.get("at") or 0)
             if kept.get("tags") is not None and \
-                    getattr(self, "_followed_tag_names", None) is None:
+                    self._followed_tag_names is None:
                 self._followed_tag_names = set(kept["tags"])
         if time.time() - self._following_at < self.FOLLOWING_EVERY_S:
             return
@@ -45,7 +45,7 @@ class PeopleMixin:
         except Exception as e:  # noqa: BLE001 — the old sets stay; next time
             log.info("free lanes: whom I follow: %s", e)
             return
-        if (ids, tags) != (self._following, getattr(self, "_followed_tag_names", None)):
+        if (ids, tags) != (self._following, self._followed_tag_names):
             self._world_version += 1  # the lanes' rules see another world: drawn anew
         if self._following and ids - self._following:  # followed since (here or elsewhere)
             self._my_follows([accounts[i] for i in sorted(ids - self._following)][:50])
@@ -77,7 +77,7 @@ class PeopleMixin:
 
     def relation_known(self, acc_id):
         """The relationship asked for lately, or None — for menus that open at once."""
-        got = getattr(self, "_relations", {}).get(acc_id)
+        got = self._relations.get(acc_id)
         if got and time.monotonic() - got[0] < self.RELATION_KEEP_S:
             return got[1]
         return None
@@ -205,7 +205,7 @@ class PeopleMixin:
 
     def people_aliases(self):
         """{account id: my name for them}."""
-        cached = getattr(self, "_aliases_cache", None)
+        cached = self._aliases_cache
         if cached is None:  # asked for every card drawn: read once, again when changed
             got = self.store.kv_get("people_aliases", {}) or {}
             cached = {str(k): str(v) for k, v in got.items() if v} \
@@ -237,7 +237,7 @@ class PeopleMixin:
 
     def people_colors(self):
         """{account id: "#rrggbb"} — my colours for people's names (people.nick_colors)."""
-        cached = getattr(self, "_colors_cache", None)
+        cached = self._colors_cache
         if cached is None:
             got = self.store.kv_get("people_colors", {}) or {}
             cached = {str(k): str(v) for k, v in got.items() if v} \

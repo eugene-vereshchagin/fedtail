@@ -125,6 +125,9 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         core, w = self.make()
         w.add(status("001", ME, minute=1, text="mine", vis="public"), home=True)
         w.add(status("002", BOB, minute=2, text="bob's", vis="public"), home=True)
+        # card.menu_groups off: the ⋯ menu as one list (its submenus — Author ▸, Thread ▸,
+        # More ▸ — are walked by the keys in test_cov_tui_app)
+        core.cfg["ui"]["menu_groups"] = False
         app = FedtailApp(core)
         async with app.run_test(size=(140, 48)) as pilot:
             await self.start(pilot, app, core)

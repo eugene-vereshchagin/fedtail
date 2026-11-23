@@ -38,7 +38,7 @@ class SilenceMixin:
             self.muted, self.blocked, self.blocked_domains = muted, blocked, domains
             self._silence_version += 1
         if people_changed or filters_changed and self._muted_tags_of(got) != \
-                self.__dict__.get("_tags_seen_muted"):
+                self._tags_seen_muted:
             self._tags_seen_muted = self._muted_tags_of(got)
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
 

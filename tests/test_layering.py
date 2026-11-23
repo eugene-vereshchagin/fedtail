@@ -51,6 +51,40 @@ class CoreRawTest(unittest.TestCase):
         self.assertEqual(under, [], "\n".join(under))
 
 
+class CoreStateTest(unittest.TestCase):
+    """The core's state is declared (core/state.py), not made up where first needed: no
+    part of the Core reads an attribute of its own "if it is there" (the audit of 23.11:
+    ``self.__dict__.setdefault(...)``, ``getattr(self, "_x", None)`` in a dozen modules —
+    nothing said what state there is, nor which lock guards it)."""
+    LAZY = re.compile(r'self\.__dict__\b|getattr\(self, "_')
+
+    def test_no_part_of_the_core_makes_up_its_state(self):
+        import ast
+        hits = []
+        for path in sorted((ROOT / "core").glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            for c in ast.parse(text).body:
+                if isinstance(c, ast.ClassDef) and (c.name in ("Core", "View")
+                                                    or c.name.endswith("Mixin")):
+                    hits += [f"{path.name}:{n}: {lines[n - 1].strip()}"
+                             for n in range(c.lineno, c.end_lineno + 1)
+                             if self.LAZY.search(lines[n - 1])]
+        self.assertEqual(hits, [], "declare it in core/state.py:\n" + "\n".join(hits))
+
+    def test_every_core_gets_containers_of_its_own(self):
+        from fedtail.core.state import CoreState
+        a, b = CoreState(), CoreState()
+        a._init_state()
+        b._init_state()
+        shared = [k for k, v in vars(a).items()
+                  if not isinstance(v, (bool, int, float, str, type(None))) and v is vars(b)[k]]
+        self.assertEqual(shared, [])
+        # …and nothing mutable is a class attribute (it would be every core's at once)
+        self.assertEqual([k for k, v in vars(CoreState).items() if isinstance(
+            v, (dict, list, set))], [])
+
+
 class LayeringTest(unittest.TestCase):
     def test_moved_frontends_read_no_protocol_fields(self):
         """A line marked "# ours:" reads fedtail's own data (auth.json), not a server's."""

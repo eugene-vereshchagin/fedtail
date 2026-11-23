@@ -17,7 +17,7 @@ class MarkersMixin:
         """The server's markers, or None: none there (Sharkey, Misskey, Pleroma's older:
         28.10 — "markers: HTTP 404" in every round) asked no more till a restart, said
         once in words; another failure, in the log, asked again next round."""
-        if getattr(self, "_no_markers", False):
+        if self._no_markers:
             return None
         try:
             return self.api.markers(timelines) or {}

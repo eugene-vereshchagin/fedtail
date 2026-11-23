@@ -82,6 +82,7 @@ fedtail/
                      place with /api/v… paths
       stream.py      the live stream: a stdlib WebSocket client that wakes the poller
       counters.py    honest counters: ask the post's own server
+      raw.py         the server's objects read by what a thing is: the core names no field
       probe.py       Server info → What it can do: harmless GETs, one per feature
   core/              everything that is not GUI
     view.py          View: the core as frontends see it — model in, model out (Post,
@@ -100,6 +101,7 @@ fedtail/
     origin.py        other servers without my token: honest counts, profiles, public lanes
     counts.py        the posts on screen (on_screen) asked again: fresh counts, threads woken
     threadsize.py    the Thread button's number: a thread's comments for the posts on screen
+    state.py         the Core's working state declared: what each part keeps, its lock (CoreState)
     translate.py     translation on a click and by itself
     push.py          Web Push for the web page
     markers.py       the read position shared with other clients

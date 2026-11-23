@@ -9,7 +9,6 @@ screen said again (`status_updated`) — the View puts the number into the model
 replies."""
 
 import logging
-import threading
 import time
 
 from .model import real
@@ -30,18 +29,8 @@ class ThreadSizeMixin:
     """A part of Core (core/app.py): see the module's words."""
 
     def _ts(self):
-        d = self.__dict__
-        if "_ts_lock" not in d:
-            d.setdefault("_ts_lock", threading.Lock())
-        with d["_ts_lock"]:
-            d.setdefault("_ts_root", {})      # post id -> its thread's root id
-            d.setdefault("_ts_size", {})      # root id -> (comments, monotonic time)
-            d.setdefault("_ts_busy", set())   # roots (or posts) being asked now
-            d.setdefault("_ts_spent", [])     # monotonic times of the requests made
-            d.setdefault("_ts_failed", {})    # root or post id -> when it wasn't given
-            d.setdefault("_ts_wanted", set())  # posts on screen, waiting to be looked at
-            d.setdefault("_ts_looking", False)  # a look through _ts_wanted is under way
-        return d["_ts_lock"]
+        """The lock of everything here (the state itself: core/state.py, _ts_*)."""
+        return self._ts_lock
 
     def _ts_every(self):
         return int(self.cfg["feed"].get("thread_size_minutes", 60) or 0) * 60
@@ -207,7 +196,7 @@ class ThreadSizeMixin:
                 return
             mine = {s for s, r in self._ts_root.items() if r == root}
         with self._screen_lock():
-            shown = set(self.__dict__.get("_on_screen", {}))
+            shown = set(self._on_screen)
         said = 0
         for st in self.store.get_statuses(shown).values() if shown else ():
             if str(real(st).get("id")) in mine:  # a boost on screen: its post's

@@ -80,7 +80,7 @@ class PollMixin:
         from concurrent.futures import Future
         self.hand_refreshes += 1
         fut = Future()
-        until = getattr(self, "_quiet_until", 0) or 0
+        until = self._quiet_until or 0
         if until > time.time():  # the server's budget waited out: the round comes then
             self._refreshed([fut], {"wait_until": until})
         else:
@@ -126,7 +126,7 @@ class PollMixin:
         """A round now keeps to slow mode: off, or its minutes have passed since the last
         (a phone's round from the system or a push asks this first)."""
         slow = self.slow_minutes()
-        last = getattr(self, "_last_poll_ok", None)
+        last = self._last_poll_ok
         return not slow or last is None or time.time() - last >= slow * 60 - 5
 
     def calm(self, name):
@@ -163,7 +163,7 @@ class PollMixin:
     def stream_allowed(self, on):
         """The phone's phone.stream ("wifi": on Wi-Fi only): the live stream stopped
         on a metered network, started again on Wi-Fi. Polling goes on either way."""
-        running = getattr(self, "_stream", None)
+        running = self._stream
         if not on and running is not None:
             running.stop()
             self._stream = None
@@ -197,7 +197,7 @@ class PollMixin:
 
     def _poll_loop(self):
         while not self._stop.is_set():
-            if getattr(self, "_paused", False) and not self._hand_waiting:
+            if self._paused and not self._hand_waiting:
                 self._wake.wait(60)
                 self._wake.clear()
                 if not self._hand_waiting:  # a Refresh pressed: its round all the same
@@ -236,7 +236,7 @@ class PollMixin:
             self._wake.clear()
             gap = float(self.cfg["poll"].get("stream_gap_seconds", 10))
             left = gap - (time.monotonic() - done)
-            if not getattr(self, "_urgent", False) and left > 0 and not self._stop.is_set():
+            if not self._urgent and left > 0 and not self._stop.is_set():
                 # woken by the stream right after a poll: gather what else comes meanwhile
                 self._wake.wait(left)  # Refresh still cuts it short
                 self._wake.clear()
@@ -256,7 +256,7 @@ class PollMixin:
                 break
             self._wake.wait(left)
             self._wake.clear()
-            if getattr(self, "_urgent", False):
+            if self._urgent:
                 break
         self._urgent = False
 
@@ -302,7 +302,7 @@ class PollMixin:
             self._refreshed(asked, {"error": str(e)[:200]})
             raise
         self._back_online()
-        self._refreshed(asked, {"new": int(getattr(self, "_round_new", 0) or 0)})
+        self._refreshed(asked, {"new": int(self._round_new or 0)})
         self._reading_moment()  # marks stopped a while: "reading ended" (diag.moment)
 
     def _cut_off(self, e):
@@ -332,7 +332,7 @@ class PollMixin:
         status line says "no answer since…" meanwhile (common/sidebar.poll_words)."""
         self._poll_failures += 1
         self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
-        if getattr(self, "_offline_since", None):
+        if self._offline_since:
             log.info("poll: still out of reach (%s), next in %.0f s",
                      neterr.kind(e) or "down", self.backoff())
             return
@@ -343,7 +343,7 @@ class PollMixin:
         self.emit("error", _("poll_offline", why=neterr.words(e, host)))
 
     def _back_online(self):
-        since = getattr(self, "_offline_since", None)
+        since = self._offline_since
         if since:
             self._offline_since = None
             log.info("poll: the server answers again (out of reach %.0f s)", time.time() - since)
@@ -352,7 +352,7 @@ class PollMixin:
         """Seconds to wait before the next round after rounds failed in a row (the server
         down, no network): the interval doubled each time — 90 s, 3, 6, 12 min — up to
         BACKOFF_MAX; 0 when the last round went through."""
-        n = getattr(self, "_fails_in_row", 0)
+        n = self._fails_in_row
         if n < 2:
             return 0
         base = float(self.cfg["poll"]["interval_seconds"])
@@ -371,13 +371,13 @@ class PollMixin:
             return 0
         # the dearest of the last rounds: a round cut short by a 429 cost 1 and let a
         # whole one start with 9 left (the night of 22.10: 429 again three minutes on)
-        per_round = max(getattr(self, "_round_costs", None) or [0])
+        per_round = max(self._round_costs or [0])
         if not (budget.spent() or budget.low(2 * per_round + self.RESERVE)):
             return 0
         # the server's window ends a little after its X-RateLimit-Reset says: it still
         # answered 429 right at it
         wait = max(0.0, budget.reset - time.time() + self.RESET_MARGIN)
-        if wait and getattr(self, "_quiet_said", None) != budget.reset:
+        if wait and self._quiet_said != budget.reset:
             self._quiet_said = budget.reset
             log.info("rate limit: %d of %d left, a round takes %d — quiet for %.0f s",
                      budget.remaining, budget.limit, per_round, wait)
@@ -407,7 +407,7 @@ class PollMixin:
         except RateLimited:  # the server asks to wait: not a failure of the network
             raise
         except Exception:
-            self._fails_in_row = getattr(self, "_fails_in_row", 0) + 1
+            self._fails_in_row = self._fails_in_row + 1
             raise
         finally:
             self._polling = False
@@ -415,14 +415,14 @@ class PollMixin:
             self.emit("poll_state", False)
             took = time.monotonic() - t
             self._round_requests = getattr(self.api, "requests", 0) - before
-            costs = getattr(self, "_round_costs", None)
+            costs = self._round_costs
             if costs is None:
                 costs = self._round_costs = []
             costs.append(self._round_requests)
             del costs[:-6]  # the last six rounds
             self._poll_count += 1
             self._last_poll_s = round(took, 2)
-            self._poll_max_s = max(getattr(self, "_poll_max_s", 0.0), took)
+            self._poll_max_s = max(self._poll_max_s, took)
             slow = float(self.cfg.get("debug", {}).get("slow_request_seconds", 5) or 5)
             # a slow poll says where the time went: which source, the store, markers…
             steps = ", ".join(f"{k} {v:.2f}" for k, v in
@@ -461,10 +461,10 @@ class PollMixin:
         """Is a round going on, when did the last one come through, how many failed in
         a row since: what the window says of the lanes' freshness (common/sidebar.py
         poll_words) — so an empty lane reads as "nothing new", not "is it broken?"."""
-        ok = getattr(self, "_last_poll_ok", None)
-        busy = getattr(self, "_polling", False) or getattr(self, "_starting", False)
+        ok = self._last_poll_ok
+        busy = self._polling or self._starting
         return {"busy": bool(busy), "ok_at": ok,
-                "failing": int(getattr(self, "_fails_in_row", 0) or 0)}
+                "failing": int(self._fails_in_row or 0)}
 
     # lanes looked through for late posts (sources.late_arrivals): Home and those read
     # through like it — lists, tags (by name: "list:<id>", "tags:<spec>")
@@ -475,7 +475,7 @@ class PollMixin:
         every = float(self.cfg["feed"].get("late_minutes", 10) or 0) * 60
         if every <= 0 or not (name == "home" or name.startswith(self.LATE_SOURCES)):
             return False
-        done = self.__dict__.setdefault("_late_checked", {})
+        done = self._late_checked
         now = time.monotonic()
         if now - done.get(name, now - every - 1) < every:
             return False
@@ -486,12 +486,13 @@ class PollMixin:
         """Poll timing: the time since the last step goes to name (summed). The round's
         own thread only: _warm_lanes after a read mark (another thread) stepped too, and
         took the round's slow request for itself ("warm lanes 21.77 s", 31.10)."""
-        if threading.current_thread() is not getattr(self, "_round_thread", None):
+        if threading.current_thread() is not self._round_thread:
             return
         now = time.monotonic()
-        steps = getattr(self, "_steps", None)
+        steps = self._steps
         if steps is not None:
-            steps[name] = steps.get(name, 0.0) + now - getattr(self, "_step_at", now)
+            since = self._step_at if self._step_at is not None else now
+            steps[name] = steps.get(name, 0.0) + now - since
         self._step_at = now
 
     def _fill_browse(self, name):
