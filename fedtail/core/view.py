@@ -201,11 +201,7 @@ class View:
         got = self._raw_accounts.get((a.ref.profile, a.id))
         if got is not None:
             return got
-        return {"id": a.id, "acct": a.handle, "username": a.username,
-                "display_name": a.name, "url": a.url, "uri": a.uri,
-                "avatar": a.avatar, "avatar_static": a.avatar_static, "bot": a.bot,
-                "locked": a.locked, "note": a.note, "statuses_count": a.posts,
-                "followers_count": a.followers, "following_count": a.following}
+        return adapter.account_out(a)
 
     def _activity_of(self, raw):
         """A notification (or a stored activity entry) → Activity; its order is the
@@ -318,10 +314,10 @@ class View:
     def _entry(self, raw, people):
         if (people[0] or people[1]) and isinstance(raw, dict):
             raw = dict(raw, account=self._named(raw.get("account"), people))
-            if isinstance(raw.get("reblog"), dict):
-                raw["reblog"] = dict(raw["reblog"],
-                                     account=self._named(raw["reblog"].get("account"),
-                                                         people))
+            inner = srv.boosted(raw)
+            if isinstance(inner, dict):
+                raw = srv.with_boosted(raw, dict(
+                    inner, account=self._named(inner.get("account"), people)))
         return adapter.post(raw, self._prof(raw))
 
     def acc(self, raw):
@@ -348,11 +344,7 @@ class View:
         if isinstance(x, str):
             return {"id": x}
         p = real(x)
-        return {"id": p.id, "favourited": p.mine.liked, "reblogged": p.mine.shared,
-                "bookmarked": p.mine.bookmarked,
-                "visibility": adapter.visibility_out(p.visibility),
-                "in_reply_to_id": p.reply_to, "account": {"id": p.author.id,
-                                                          "acct": p.author.handle}}
+        return adapter.post_out(p)
 
     # ---- me ------------------------------------------------------------------------
     @property
@@ -377,7 +369,7 @@ class View:
     def unread(self, entries):
         """The ids of the unread among entries (a Share counts by its own id)."""
         return self._core.unread_ids([
-            (None, {"id": e.id, "reblog": {"id": e.post.id}} if isinstance(e, Share)
+            (None, adapter.boost_out(e.id, e.post.id) if isinstance(e, Share)
              else {"id": e.id}) for e in self._only(entries)])
 
     @staticmethod
@@ -432,7 +424,7 @@ class View:
         """{entry id: the Post it answers | "missing" | None (not known yet)}, in two
         queries for the lot."""
         es = self._only(entries)
-        got = self._core.parents_for([{"id": e.id, "in_reply_to_id": real(e).reply_to}
+        got = self._core.parents_for([adapter.reply_out(e.id, real(e).reply_to)
                                       for e in es])
         return {k: v if v is None or v == "missing" else real(self.entry(v))
                 for k, v in got.items()}
@@ -638,7 +630,7 @@ class View:
     @property
     def auth_handle(self):
         """The handle I logged in as (from the login itself: known before connecting)."""
-        return (self._core.auth or {}).get("acct", "")
+        return (self._core.auth or {}).get("acct", "")  # ours: auth.json's own key
 
     def filtered(self):
         """Future: {"policy": {key: "accept"|"filter"|"drop"}, "pending": n, "requests":
@@ -1057,25 +1049,9 @@ def is_entry(x):
 
 
 def _shape(d):
-    """What a dict from the core is, by its keys: "status", "account", "relationship",
-    "activity" (a notification or a stored activity entry), "tag", or None."""
-    if "name" in d and not ("acct" in d or "account" in d or "count" in d or
-                            "shortcode" in d) and \
-            ("url" in d or "history" in d or "statuses_count" in d or "following" in d):
-        return "tag"  # (an emoji reaction has a count, an emoji a shortcode: not tags)
-    if "id" not in d:
-        return None
-    if "title" in d and ("exclusive" in d or "replies_policy" in d) and "account" not in d:
-        return "list"
-    if "account" in d and ("content" in d or "reblog" in d or "media_attachments" in d):
-        return "status"
-    if "acct" in d and "username" in d:
-        return "account"
-    if "following" in d and "followed_by" in d:
-        return "relationship"
-    if "type" in d and "account" in d and ("status" in d or "created_at" in d):
-        return "activity"
-    return None
+    """What a dict from the core is, by its keys — the protocol's to tell (its adapter)."""
+    return adapter.shape(d)
+
 
 
 def _conv_title(top, kind, me):

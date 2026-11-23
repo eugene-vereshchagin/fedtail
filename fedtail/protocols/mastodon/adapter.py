@@ -449,6 +449,59 @@ def visibility_in(v):
     return VISIBILITY.get(v, v if v in VISIBILITY_OUT else "public")
 
 
+# ---- the way back: the model → the server's shape, for what the core takes -------------
+
+def account_out(a):
+    """An Account as the server would have given it: rebuilt, when what came isn't kept."""
+    return {"id": a.id, "acct": a.handle, "username": a.username,
+            "display_name": a.name, "url": a.url, "uri": a.uri,
+            "avatar": a.avatar, "avatar_static": a.avatar_static, "bot": a.bot,
+            "locked": a.locked, "note": a.note, "statuses_count": a.posts,
+            "followers_count": a.followers, "following_count": a.following}
+
+
+def post_out(p):
+    """As much of a Post as an action on it needs, when the store no longer has it: which
+    post, whose, what it answers, who sees it, my marks on it."""
+    return {"id": p.id, "favourited": p.mine.liked, "reblogged": p.mine.shared,
+            "bookmarked": p.mine.bookmarked, "visibility": visibility_out(p.visibility),
+            "in_reply_to_id": p.reply_to,
+            "account": {"id": p.author.id, "acct": p.author.handle}}
+
+
+def boost_out(boost_id, post_id):
+    """A boost as little as says which post it is of."""
+    return {"id": boost_id, "reblog": {"id": post_id}}
+
+
+def reply_out(entry_id, reply_to):
+    """An entry as little as says what it answers."""
+    return {"id": entry_id, "in_reply_to_id": reply_to}
+
+
+def shape(d):
+    """What an object from the server is, by its keys: "status", "account",
+    "relationship", "activity" (a notification or a stored activity entry), "tag",
+    "list", or None."""
+    if "name" in d and not ("acct" in d or "account" in d or "count" in d or
+                            "shortcode" in d) and \
+            ("url" in d or "history" in d or "statuses_count" in d or "following" in d):
+        return "tag"  # (an emoji reaction has a count, an emoji a shortcode: not tags)
+    if "id" not in d:
+        return None
+    if "title" in d and ("exclusive" in d or "replies_policy" in d) and "account" not in d:
+        return "list"
+    if "account" in d and ("content" in d or "reblog" in d or "media_attachments" in d):
+        return "status"
+    if "acct" in d and "username" in d:
+        return "account"
+    if "following" in d and "followed_by" in d:
+        return "relationship"
+    if "type" in d and "account" in d and ("status" in d or "created_at" in d):
+        return "activity"
+    return None
+
+
 def tag(raw):
     """A hashtag (Tag) or a featured one (on a profile: with its count of posts)."""
     raw = _dict(raw)

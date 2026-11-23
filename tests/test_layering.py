@@ -28,7 +28,6 @@ FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
 # only goes down (lower it here when it does), a module not listed has none.
 CORE_RAW = {
     "app.py": 39,
-    "view.py": 21,
 }
 
 
