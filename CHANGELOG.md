@@ -59,6 +59,9 @@
 - **A thread's branch folds on the web page and on the phone**: a "− N" button on a
   top-level comment hides the answers under it, again — shows them (the windows' and the
   terminal's `-`).
+- Android: turning the phone on its side with the editor (or a thread, a profile)
+  opened straight from the overview closed it — the wide screen brought a lane in and
+  swept away what was open. The words were kept as a draft, but nothing said so.
 - Android: inside a thread every comment's reply button showed the whole thread's size
   ("4" at each of four comments) — now its own answers.
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal

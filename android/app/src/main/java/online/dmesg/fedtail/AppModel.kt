@@ -809,16 +809,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Columns side by side: the lane pane never stands empty — the lane of last time. */
+    /** A wide screen shows a lane beside the overview: the start lane, if none is open.
+     *  What is open over it stays: the phone turned on its side with the editor (or a
+     *  thread, a profile, the settings) opened from the overview closed it and its words
+     *  went out of sight (24.11). */
     fun openStartLane() {
-        if (current == null) (startLane ?: lanes.firstOrNull()?.name)?.let { showLane(it) }
+        if (current == null) (startLane ?: lanes.firstOrNull()?.name)?.let {
+            showLane(it, keepPlaces = true)
+        }
     }
 
-    fun showLane(name: String) {
+    fun showLane(name: String, keepPlaces: Boolean = false) {
         current = name
         title = laneTitle(name)
         posts = emptyList()
         divider = null
-        places = emptyList()
+        if (!keepPlaces) places = emptyList()
         viewModelScope.launch { loadLane(name, keep = false) }
     }
 

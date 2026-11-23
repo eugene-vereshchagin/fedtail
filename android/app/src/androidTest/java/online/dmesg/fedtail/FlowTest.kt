@@ -226,6 +226,30 @@ class FlowTest {
     }
 
     @Test
+    fun theEditorStaysWhenThePhoneIsTurned() {
+        // from the overview no lane is open; on its side the phone shows one beside the
+        // overview — bringing it in closed the editor, and what was typed went out of
+        // sight (24.11: a draft kept it, but nothing said so)
+        launch()
+        overview()
+        compose.onAllNodesWithContentDescription("Write").onFirst().performClick()
+        waitDescription("Send")
+        val words = "turned " + System.currentTimeMillis()
+        compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput(words)
+        waitText(words)
+        scenario!!.onActivity {
+            it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
+        waitText(words, 30_000)
+        waitDescription("Send")
+        scenario!!.onActivity {
+            it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+        waitText(words, 30_000)
+        compose.onAllNodesWithContentDescription("Discard").onFirst().performClick()
+    }
+
+    @Test
     fun aThreadsBranchFoldsAndUnfolds() {
         // the windows' and the terminal's "-", the page's "− N": a top comment's branch
         // away on a tap and back on the next (the phone had no such thing, 24.11)
