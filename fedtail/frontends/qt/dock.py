@@ -48,6 +48,8 @@ class InputDock(QWidget):
         self.target = None      # the Post answered, None: a new post
         self._prefill = ""      # the mentions put in for it (still untouched: replaced)
         self._about = _("dock_new")  # what it says it will do, above the line
+        # (before the text is made: its first change already says who will see it)
+        self.visibility = win.ctx.view.reply_visibility(None)
         v = QVBoxLayout(self)
         v.setContentsMargins(6, 4, 6, 6)
         v.setSpacing(4)
@@ -75,6 +77,18 @@ class InputDock(QWidget):
         self.lang_btn.menu().aboutToShow.connect(self._fill_languages)
         self.language = None    # None: post.language
         bar.addWidget(self.lang_btn)
+        # ⋯: what the full editor has and the line has no room for (common/split.py
+        # line_more — the GTK line's own list too): the emoji picker, "From", sensitive
+        # here; a poll, later, drafts, a preview, the files' words in the editor, opened
+        # with what the line holds
+        self.more_btn = self._mini("⋯", _("dock_more"))
+        self.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.more_btn.setMenu(QMenu(self.more_btn))
+        self.more_btn.menu().aboutToShow.connect(self._fill_more)
+        bar.addWidget(self.more_btn)
+        self.sensitive = False  # the files are marked sensitive
+        self.account = None     # "From" (all accounts in one window); None: as it starts
+        self.core = win.ctx.view  # (the spell checker asks its host for this)
         self.about = QLabel()
         self.about.setObjectName("muted")
         bar.addWidget(self.about, 1)
@@ -131,9 +145,12 @@ class InputDock(QWidget):
         side.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignHCenter)
         row.addLayout(side)
         v.addLayout(row)
-        self.visibility = win.ctx.view.reply_visibility(None)
         self.dress()
         self._count()
+        # spelling, as in the Compose window (post.spellcheck), in the post's language —
+        # made last: its marks are a change of the text, counted as one
+        from .spellcheck import Spell
+        self.spell = Spell(self, self.text)
 
     def dress(self):
         """Pictures on the buttons, or words (ui.additional_icons); again after a theme."""
@@ -176,7 +193,95 @@ class InputDock(QWidget):
 
     def _set_language(self, code):
         self.language = code
+        self.spell.repick()
         self.dress()
+
+    def _language(self):
+        """The post's language as chosen here ("" — post.language): the spell checker's."""
+        return self.language or ""
+
+    # ---- ⋯: the rest of the editor ----------------------------------------------------
+    def more(self):
+        """The ⋯ menu's items now (common/split.line_more)."""
+        return split.line_more(self.win.ctx.view, self.win.cfg, self.target,
+                               len(self.media), self.sensitive, self.account)
+
+    def _fill_more(self):
+        m = self.more_btn.menu()
+        m.clear()
+        for it in self.more():
+            if it.kind == "choice":
+                sub = m.addMenu(it.label)
+                for key, label in it.choices:
+                    a = sub.addAction(label, lambda k=key: self.do_more("from", k))
+                    a.setCheckable(True)
+                    a.setChecked(key == it.on)
+            else:
+                a = m.addAction(it.label, lambda k=it.key: self.do_more(k))
+                if it.kind == "check":
+                    a.setCheckable(True)
+                    a.setChecked(bool(it.on))
+
+    def do_more(self, key, value=None):
+        """One item of ⋯ done: here (emoji, From, sensitive), or in the full editor."""
+        if key == "emoji":
+            from .emoji import EmojiPicker
+            self.emoji_picker = EmojiPicker(self, self.win, self._put_emoji)
+            self.emoji_picker.show()
+        elif key == "from":
+            self.account = value
+        elif key == "sensitive":
+            self.sensitive = not self.sensitive
+        else:
+            self.to_editor(key)
+
+    def _put_emoji(self, s):
+        self.text.insertPlainText(s)
+        self.text.setFocus()
+
+    def to_editor(self, tool="editor"):
+        """The full Compose window with what the line holds — its text, warning,
+        visibility, language, files — and the tool asked for at once: a poll, "Later",
+        the preview, the first file's words; "drafts" — the Drafts place. The line is
+        cleared: the words are in the editor now. → the editor."""
+        if tool == "drafts":
+            self.win.open_place("drafts")
+            return None
+        from .compose import Compose
+        text = self.text.toPlainText()
+        dlg = Compose(self.win, reply_to=self.target,
+                      attach=[p for p, _d in self.media], text=text)
+        if text.strip() and text.strip() != self._prefill.strip():
+            dlg.text.setPlainText(text)  # (over what a kept draft of this reply held)
+        if self.cw_btn.isChecked() and self.cw.text().strip():
+            dlg.cw_btn.setChecked(True)
+            dlg.cw.setText(self.cw.text())
+        i = dlg.vis.findData(self.visibility)
+        if i >= 0:
+            dlg.vis.setCurrentIndex(i)
+        if self.language:
+            dlg.set_language(self.language)
+        if self.sensitive and self.media:
+            dlg.sensitive_btn.setChecked(True)
+        if self.account is not None and dlg.from_box is not None:
+            dlg.from_box.setCurrentIndex(max(0, dlg.from_box.findData(self.account)))
+        dlg.show()
+        self.editor = dlg  # (the one the line last handed its words to)
+        self.media, self.sensitive = [], False
+        self.text.clear()
+        self._prefill = ""
+        self.cw.clear()
+        self.cw_btn.setChecked(False)
+        self.dress()
+        if tool == "poll":
+            dlg.poll_btn.setChecked(True)
+        elif tool == "schedule":
+            dlg.ask_schedule()
+        elif tool == "preview":
+            dlg.preview()
+        elif tool == "alt" and dlg.media.count():
+            dlg.edit_description(dlg.media.item(0))
+        return dlg
 
     def _mini(self, text, tip):
         b = QToolButton()
@@ -316,7 +421,7 @@ class InputDock(QWidget):
             self.send_btn.setEnabled(True)
             return
         self._say()
-        limit = self.win.ctx.view.post_limit(None, self.target)
+        limit = self.win.ctx.view.post_limit(self.account, self.target)
         n = len(self.text.toPlainText())
         self.count.setText(f"{n}/{limit}")
         self.send_btn.setEnabled(0 < n <= limit and
@@ -405,7 +510,7 @@ class InputDock(QWidget):
         log.info("dock: %s", "reply to " + target.id if target else "new post")
 
         def sent(st):
-            self.media = []
+            self.media, self.sensitive = [], False
             self.dress()
             self.text.clear()
             self._prefill = ""
@@ -428,6 +533,10 @@ class InputDock(QWidget):
         kw = {"language": self.language} if self.language else {}
         if self.media:
             kw["media"] = list(self.media)
+            if self.sensitive:
+                kw["sensitive"] = True
+        if self.account is not None:  # "From": another account of the window
+            kw["account"] = self.account
         self.win.bridge.call(self.win.ctx.view.post(text, self.visibility, target, warning,
                                                     **kw), ok=sent, fail=failed)
 

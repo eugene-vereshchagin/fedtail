@@ -1031,17 +1031,15 @@ keys = []
 
 [[editor]]
 place = "qt-line"
-lacks = ["emoji", "alt", "sensitive", "focus", "cover", "poll", "schedule", "drafts",
-         "preview", "from", "spell"]
-note.ru = "Строка ввода раскладки split — для быстрого слова: текст, кнопки разметки, дополнение @ # :, предупреждение, язык, кому видно, вложение, счётчик. Остальное — в полном редакторе, куда ведёт ⤢ с уже набранным текстом. Проверка орфографии, выбор эмодзи и «от кого» в общем окне здесь были бы к месту и ничем не заняты — кандидаты на добавление."
-note.en = "The split layout's input line is for a quick word: the text, the formatting buttons, @ # : completion, the warning, the language, who sees it, an attachment, the counter. The rest is in the full editor, where ⤢ leads with what was typed. The spellcheck, the emoji picker and \"From\" in the merged window would fit here and nothing stands in their way — candidates to add."
+via = ["alt", "focus", "cover", "poll", "schedule", "drafts", "preview"]
+note.ru = "Строка ввода раскладки split — для быстрого слова. Сама она держит текст, кнопки разметки, дополнение @ # :, проверку орфографии, предупреждение, язык, кому видно, вложения и «деликатное», эмодзи, «от кого» и счётчик. Остальное — описания вложений с точкой фокуса и обложкой, опрос, «Позже», черновики, предпросмотр — делается в полном редакторе: пункт в меню ⋯ открывает его с тем, что в строке уже набрано, и сразу с нужным инструментом."
+note.en = "The split layout's input line is for a quick word. It holds the text itself, the formatting buttons, @ # : completion, the spellcheck, the warning, the language, who sees it, the files and \"Sensitive\", emoji, \"From\" and the counter. The rest — the files' words with the focus point and the cover, a poll, \"Later\", the drafts, the preview — is done in the full editor: an item of the ⋯ menu opens it with what the line already holds, and that tool at once."
 
 [[editor]]
 place = "gtk-line"
-lacks = ["emoji", "alt", "sensitive", "focus", "cover", "poll", "schedule", "drafts",
-         "preview", "from", "spell"]
-note.ru = "То же, что строка ввода в Qt: быстрое слово, остальное — в полном редакторе по ⤢."
-note.en = "As Qt's input line: a quick word, the rest in the full editor by ⤢."
+via = ["alt", "focus", "cover", "poll", "schedule", "drafts", "preview"]
+note.ru = "То же, что строка ввода в Qt (один список — common/split.line_more): быстрое слово в строке, остальное — в полном редакторе из меню ⋯."
+note.en = "As Qt's input line (one list — common/split.line_more): a quick word in the line, the rest in the full editor from the ⋯ menu."
 
 [[editor]]
 place = "tui"

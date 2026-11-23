@@ -30,6 +30,12 @@
 - **The terminal: the post's menu in submenus** — "Author ▸", "Thread ▸", "More ▸" open
   as a menu over the menu (`card.menu_groups`), as in the windows, on the page and the
   phone; it was one long list.
+- **The split layout's input line reaches the whole editor.** It checks the spelling now
+  (in the post's language), and has a ⋯ menu: the emoji picker, "From" (all accounts in
+  one window) and "Sensitive" for the files — in the line itself; a poll, "Later", the
+  drafts, the preview and the files' descriptions — in the full editor, which opens with
+  what the line already holds and that tool at once. Qt and GTK, one list. Before, the
+  line had none of it, and no way to the editor either.
 - **The terminal's editor takes files pasted as paths.** A file dropped on a terminal
   (or copied in a file manager and pasted) comes as its path: the editor attaches it
   instead of typing the path into the post; several at once too. Any other paste is

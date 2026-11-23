@@ -3835,6 +3835,53 @@ class QtSmokeTest(unittest.TestCase):
             self.assertEqual(dock.text.toPlainText(), "**hi**")
             dock.format_bar.buttons["italic"].click()
             self.assertEqual(dock.text.toPlainText(), "***hi***")
+            # ⋯: the rest of the editor, from the line (24.11: the line had no emoji, no
+            # poll, no "Later", no drafts, no way to the full editor at all) — its menu
+            # opened as a person does, and each kind of item done
+            from fedtail.frontends.qt.compose import Compose
+            from fedtail.frontends.qt.emoji import EmojiPicker
+            self.assertIsNotNone(dock.spell.highlighter)  # spelling, as the window's
+            dock.more_btn.menu().aboutToShow.emit()
+            labels = [a.text() for a in dock.more_btn.menu().actions()]
+            for word in ("emoji_pick", "poll_add", "schedule", "drafts_title", "preview",
+                         "dock_editor"):
+                self.assertIn(i18n._(word), labels)
+            by = {a.text(): a for a in dock.more_btn.menu().actions()}
+            by[i18n._("emoji_pick")].trigger()
+            self.assertIsInstance(dock.emoji_picker, EmojiPicker)
+            dock._put_emoji("🦊")
+            self.assertIn("🦊", dock.text.toPlainText())  # where the cursor was
+            dock.emoji_picker.close()
+            dock.text.setPlainText("to the editor")
+            dock.cw_btn.setChecked(True)
+            dock.cw.setText("careful")
+            dock.set_visibility("public")
+            dock.more_btn.menu().aboutToShow.emit()
+            by = {a.text(): a for a in dock.more_btn.menu().actions()}
+            by[i18n._("poll_add")].trigger()
+            editor = dock.editor
+            self.assertIsInstance(editor, Compose)
+            self.assertEqual(editor.text.toPlainText(), "to the editor")
+            self.assertEqual(editor.cw.text(), "careful")
+            self.assertEqual(editor.vis.currentData(), "public")
+            self.assertTrue(editor.poll_btn.isChecked())  # the tool asked for, at once
+            self.assertEqual(dock.text.toPlainText(), "")  # the words are there now
+            editor.sent = True  # (closed without its "discard?" — nothing to keep here)
+            editor._leave()
+            # files attached: "Sensitive" is a switch here, their words — in the editor
+            import tempfile
+            folder = tempfile.mkdtemp()
+            self.addCleanup(__import__("shutil").rmtree, folder, True)
+            pic = Path(folder) / "line.png"
+            pm.save(str(pic), "PNG")
+            dock.add_paths([str(pic)])
+            keys_now = [it.key for it in dock.more()]
+            self.assertIn("sensitive", keys_now)
+            self.assertIn("alt", keys_now)
+            self.assertNotIn("poll", keys_now)  # a poll or pictures
+            dock.do_more("sensitive")
+            self.assertTrue(dock.sensitive)
+            dock.media = []
         finally:
             win.quitting = True
             win.roster.close()

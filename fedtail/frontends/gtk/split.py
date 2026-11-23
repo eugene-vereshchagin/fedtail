@@ -460,7 +460,7 @@ class InputDock(Gtk.Box):
         self._about = _("dock_new")
         self._to = None
         self.media = []         # [(path, description)]
-        self.language = None    # None: post.language
+        self.lang_code = None   # None: post.language
         view = win.view
         self.visibility = "public"
         try:
@@ -494,7 +494,18 @@ class InputDock(Gtk.Box):
         tip(self.lang_btn, _("dock_language"))
         self.lang_btn.set_create_popup_func(self._fill_languages)
         bar.append(self.lang_btn)
-        for b in (self.vis_btn, self.cw_btn, self.attach_btn, self.lang_btn):
+        # ⋯: what the full editor has and the line has no room for (common/split.py
+        # line_more — Qt's line has the same list): the emoji picker, "From", sensitive
+        # here; a poll, later, drafts, a preview, the files' words in the editor, opened
+        # with what the line holds
+        self.more_btn = Gtk.MenuButton(label="⋯")
+        tip(self.more_btn, _("dock_more"))
+        self.more_btn.set_create_popup_func(self._fill_more)
+        bar.append(self.more_btn)
+        self.sensitive = False  # the files are marked sensitive
+        self.account = None     # "From" (all accounts in one window); None: as it starts
+        self.view = view        # (the spell checker asks its host for this)
+        for b in (self.vis_btn, self.cw_btn, self.attach_btn, self.lang_btn, self.more_btn):
             b.add_css_class("flat")
         self.about = Gtk.Label(xalign=0, hexpand=True)
         self.about.add_css_class("ft-muted")
@@ -556,6 +567,9 @@ class InputDock(Gtk.Box):
         self.dress()
         self._say()
         self._count()
+        # spelling, as in the editor (post.spellcheck), in the post's language
+        from .spellcheck import Spell
+        self.spell = Spell(self, self.text)
 
     # ---- what it answers ---------------------------------------------------------------
     def _text(self):
@@ -703,8 +717,105 @@ class InputDock(Gtk.Box):
         btn.set_popover(pop)
 
     def _set_language(self, code):
-        self.language = code
+        self.lang_code = code
         self.lang_btn.set_label(code or _("dock_lang_default"))
+        self.spell.repick()
+
+    def language(self):
+        """The post's language as chosen here ("" — post.language): the spell checker's."""
+        return self.lang_code or ""
+
+    # ---- ⋯: the rest of the editor ------------------------------------------------------
+    def more(self):
+        """The ⋯ menu's items now (common/split.line_more)."""
+        return split.line_more(self.win.view, self.win.cfg, self.target, len(self.media),
+                               self.sensitive, self.account)
+
+    def _fill_more(self, btn):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
+        def item(label, key, value=None):
+            b = Gtk.Button(label=label)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.connect("clicked", lambda _b: (btn.popdown(), self.do_more(key, value)))
+            box.append(b)
+        for it in self.more():
+            if it.kind == "choice":
+                head = Gtk.Label(label=it.label, xalign=0)
+                head.add_css_class("ft-muted")
+                box.append(head)
+                for key, label in it.choices:
+                    item(("● " if key == it.on else "○ ") + label, "from", key)
+            elif it.kind == "check":
+                item(("☑ " if it.on else "☐ ") + it.label, it.key)
+            else:
+                item(it.label, it.key)
+        pop = Gtk.Popover()
+        pop.set_child(box)
+        btn.set_popover(pop)
+
+    def do_more(self, key, value=None):
+        """One item of ⋯ done: here (emoji, From, sensitive), or in the full editor."""
+        if key == "emoji":
+            from .emoji import EmojiPicker
+            self.emoji_pop = EmojiPicker(self.win, self._emoji_picked)
+            self.emoji_pop.set_parent(self.more_btn)
+            self.emoji_pop.popup()
+        elif key == "from":
+            self.account = value
+        elif key == "sensitive":
+            self.sensitive = not self.sensitive
+        else:
+            self.to_editor(key)
+
+    def _emoji_picked(self, text):
+        self.buffer.insert_at_cursor(text)
+        self.text.grab_focus()
+
+    def to_editor(self, tool="editor"):
+        """The full editor with what the line holds — its text, warning, visibility,
+        language, files — and the tool asked for at once: a poll, "Later", the preview
+        (the files' words are fields of the editor itself); "drafts" — the Drafts
+        place. The line is cleared: the words are in the editor now. → the editor."""
+        win = self.win
+        if tool == "drafts":
+            win.open_place("drafts")
+            return None
+        text = self._text()
+        panel = win.compose_panel(reply_to=self.target)
+        if panel is None:
+            return None
+        typed = text.strip() and text.strip() != self._prefill.strip()
+        warning = self.cw.get_text().strip() if self.cw_btn.get_active() else ""
+        if typed or warning:
+            panel.fill(text if typed else panel.buffer.props.text, warning,
+                       self.visibility, self.lang_code)
+        else:
+            panel._set_vis(self.visibility)
+            if self.lang_code:
+                panel._set_language(self.lang_code)
+        if self.media:
+            panel.add_paths([p for p, _d in self.media])
+            if self.sensitive:
+                panel.sensitive_btn.set_active(True)
+        if self.account is not None and getattr(panel, "from_keys", None) and \
+                self.account in panel.from_keys:
+            panel.from_drop.set_selected(panel.from_keys.index(self.account))
+        self.editor = panel  # (the one the line last handed its words to)
+        self.media, self.sensitive = [], False
+        self._set_text("")
+        self._prefill = ""
+        self.cw.set_text("")
+        self.cw_btn.set_active(False)
+        self.dress()
+        if tool == "poll":
+            panel.poll_btn.set_active(True)
+        elif tool == "schedule":
+            panel.ask_schedule()
+        elif tool == "preview":
+            panel.preview()
+        return panel
 
     def _attach(self):
         """Pictures or a video for the next post; pressed again: what was chosen goes."""
@@ -817,12 +928,16 @@ class InputDock(Gtk.Box):
         warning = self.cw.get_text().strip() if self.cw_btn.get_active() else ""
         self.send_btn.set_sensitive(False)
         log.info("dock: %s", "reply to " + target.id if target else "new post")
-        kw = {"language": self.language} if self.language else {}
+        kw = {"language": self.lang_code} if self.lang_code else {}
         if self.media:
             kw["media"] = list(self.media)
+            if self.sensitive:
+                kw["sensitive"] = True
+        if self.account is not None:  # "From": another account of the window
+            kw["account"] = self.account
 
         def sent(st):
-            self.media = []
+            self.media, self.sensitive = [], False
             self.dress()
             self._set_text("")
             self._prefill = ""

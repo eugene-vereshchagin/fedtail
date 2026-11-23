@@ -123,3 +123,47 @@ def talk(view, handle, sent=()):
     mine.sort(key=lambda x: (x[1].created is not None, x[1].created or 0))
     return mine, view.unread([e for _i, e in mine])
 
+
+# ---- the line's "more": everything the full editor has, reachable from the line -----------
+
+@dataclass(frozen=True)
+class More:
+    """An item of the input line's ⋯ menu. kind: "here" — done in the line itself (the
+    emoji picker); "check" — a switch (on); "choice" — one of several (choices: [(key,
+    label)], on: the key chosen); "editor" — done in the full editor, opened with what
+    the line holds (its text, warning, visibility, language, files) and that tool."""
+    key: str
+    label: str
+    kind: str = "editor"
+    on: object = None
+    choices: tuple = ()
+
+
+def line_more(view, cfg, reply_to=None, media=0, sensitive=False, account=None):
+    """The input line's ⋯ menu: what the full editor offers and the line has no room for
+    — one list for the Qt and the GTK line (each had what its author thought of: no
+    emoji, no poll, no "From", no way to the editor at all, 24.11). media: how many
+    files are attached; account: the "From" chosen (None — the one it starts with)."""
+    post = cfg.get("post") or {}
+    out = [More("emoji", _("emoji_pick"), "here")]
+    try:
+        accounts, first = view.post_accounts(reply_to)
+    except AttributeError:
+        accounts, first = [], ""
+    if accounts:  # all accounts in one window: which one it goes from
+        out.append(More("from", _("dock_from"), "choice",
+                        account if account is not None else first,
+                        tuple((key, _("post_from", acct=handle)) for key, handle in accounts)))
+    if media:
+        out.append(More("sensitive", _("sensitive_mark"), "check", bool(sensitive)))
+        out.append(More("alt", _("dock_describe")))  # …their focus point, a cover
+    else:
+        out.append(More("poll", _("poll_add")))      # a poll or pictures, as the server takes
+    if post.get("schedule", True):
+        out.append(More("schedule", _("schedule")))
+    if post.get("drafts_place", True):
+        out.append(More("drafts", _("drafts_title")))
+    if post.get("preview", True):
+        out.append(More("preview", _("preview")))
+    out.append(More("editor", _("dock_editor")))
+    return out

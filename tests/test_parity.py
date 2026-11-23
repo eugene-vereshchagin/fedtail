@@ -50,6 +50,14 @@ class ParityTest(unittest.TestCase):
         self.assertEqual(parity.check_editors(said, have),
                          ["editor qt-line: said to lack poll, but has it — done? take it "
                           "out of lacks"])
+        # "via": handed to the full editor — the place needs the hand-over for it
+        via = {"editor": [{"place": "tui", "via": ["poll"],
+                           "note": {"ru": "почему", "en": "why"}}]}
+        got = parity.check_editors(via, {p: set(parity.EDITOR_PARTS) - {"poll"}
+                                         if p == "tui" else set(parity.EDITOR_PARTS)
+                                         for p in parity.EDITOR_PLACES})
+        self.assertEqual(len(got), 1)  # the terminal's editor has no to_editor
+        self.assertIn("no way there", got[0])
         bad = {"editor": [{"place": "nowhere", "lacks": []},
                           {"place": "tui", "lacks": ["wings"], "note": {"ru": "x"}}]}
         got = parity.check_editors(bad, {p: set(parity.EDITOR_PARTS)

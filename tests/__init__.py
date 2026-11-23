@@ -16,6 +16,24 @@ _os.environ.setdefault("FEDTAIL_NO_DEPCHECK", "1")
 _os.environ.setdefault("FEDTAIL_TOKEN_WAITS", "0")
 
 
+def _no_desktop_bus():
+    """A test run never talks to the desktop's own session bus. With no address given
+    D-Bus finds the bus by itself ($XDG_RUNTIME_DIR/bus), and the windows under test
+    put a tray icon on the developer's panel and sent their notes to their desktop —
+    and what a test saw depended on that panel (a tray there: GTK's "close" hid the
+    roster too, 24.11). An address given (dbus-run-session, a test's own bus) is kept;
+    FEDTAIL_TESTS_DBUS=1 lets a run have the desktop's."""
+    import sys
+    main = (sys.argv[0] if sys.argv else "").replace("\\", "/")
+    test_run = "unittest" in main or main.endswith("tools/coverage_lite.py")
+    if test_run and _os.environ.get("FEDTAIL_TESTS_DBUS") != "1" and \
+            not _os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        _os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/nonexistent/fedtail-tests"
+
+
+_no_desktop_bus()
+
+
 def _offline():
     """A test run never reaches the internet: a name other than this machine's doesn't
     resolve (an OSError, as with no network at all). A test that forgot to stub a call

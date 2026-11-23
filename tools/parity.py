@@ -252,17 +252,23 @@ EDITOR_PARTS = {
     "language": r"lang_tip|dock_language|lang_other|LanguagePick|composeLang|#lang\b",
     "attach": r"dock_attach|media_files|_attached\(|/api/upload|PickVisualMedia",
     "alt": r"alt_describe|alt_prompt|alt_title|alt_label|\.alt = ",
-    "sensitive": r"sensitive_mark|composeSensitive|#sensitive\b|c-sensitive",
+    "sensitive": r"sensitive_mark|composeSensitive|#sensitive\b|c-sensitive|key == \"sensitive\"",
     "focus": r"focus_tip|focus_point|put\(\"focus\"|focus: \[",
     "cover": r"media_cover",
     "poll": r"poll_add|PollEditor|state\.poll\b|tui_poll|poll_option",
     "schedule": r"schedule_when|tui_when|composeWhen|schedule_tip|#when\b",
     "drafts": r"drafts_waiting|draft_shelve|draftsWaiting|openDrafts",
     "preview": r"preview_tip|preview_md|/api/preview|PreviewScreen|model\.preview\(\)",
-    "from": r"post_from|fromAccounts|post_accounts",
+    "from": r"post_from|fromAccounts|post_accounts|key == \"from\"",
     "spell": r"spell",
     "counter": r"\.counter\b|counter\(|compose_check|composeCount|c-count|_count\(\)",
 }
+
+
+# A part an input line doesn't draw itself but hands to the full editor, opened with what
+# the line holds (its ⋯ menu, common/split.line_more → to_editor): the menu's item for it
+EDITOR_VIA = {"alt": "alt", "focus": "alt", "cover": "alt", "poll": "poll",
+              "schedule": "schedule", "drafts": "drafts", "preview": "preview"}
 
 
 def editors():
@@ -280,26 +286,40 @@ def check_editors(reg=None, have=None):
     it out); a place or a part nobody knows; a gap without its reason. [] — they agree."""
     reg = registry() if reg is None else reg
     have = editors() if have is None else have
-    problems, said = [], {}
+    problems, said, handed = [], {}, {}
+    menu = (ROOT / "fedtail/frontends/common/split.py").read_text("utf-8")
     for e in reg.get("editor", []):
         place = e.get("place", "?")
         if place not in EDITOR_PLACES:
             problems.append(f"editor {place}: no such place; there are "
                             + ", ".join(EDITOR_PLACES))
             continue
-        for part in e.get("lacks", []):
+        for part in list(e.get("lacks", [])) + list(e.get("via", [])):
             if part not in EDITOR_PARTS:
                 problems.append(f"editor {place}: no such part {part!r}")
         for lang in ("ru", "en"):
             if not (e.get("note") or {}).get(lang):
                 problems.append(f"editor {place}: note.{lang} — say why")
         said.setdefault(place, set()).update(e.get("lacks", []))
+        handed.setdefault(place, set()).update(e.get("via", []))
+        # "via": the place hands these to the full editor — it must have the hand-over,
+        # and the shared ⋯ menu the item
+        text = "\n".join((ROOT / p).read_text("utf-8", errors="replace")
+                         for p in EDITOR_PLACES[place])
+        for part in e.get("via", []):
+            item = EDITOR_VIA.get(part)
+            if item is None or "to_editor" not in text or f'More("{item}"' not in menu:
+                problems.append(f"editor {place}: {part} is said to go by the full "
+                                "editor, but the line has no way there for it")
     for place, parts in have.items():
-        lacks = said.get(place, set())
+        lacks = said.get(place, set()) | handed.get(place, set())
+        for part in sorted(handed.get(place, set()) & parts):
+            problems.append(f"editor {place}: {part} is said to go by the full editor, "
+                            "but the place has it itself — take it out of via")
         for part in sorted(set(EDITOR_PARTS) - parts - lacks):
             problems.append(f"editor {place}: no {part} — add it, or say why in "
                             "docs/src/parity.toml ([[editor]])")
-        for part in sorted(lacks & parts):
+        for part in sorted(said.get(place, set()) & parts):
             problems.append(f"editor {place}: said to lack {part}, but has it — done? "
                             "take it out of lacks")
     return problems

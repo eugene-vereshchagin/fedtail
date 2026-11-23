@@ -37,6 +37,15 @@ def _place_btn(pw, key, act):
     """A row's button on a common place by its row key and action."""
     return next(b for r in pw.page.rows if r.key == key for b in r.buttons if b.act[1] == act)
 
+def _children(widget):
+    """A widget's own children, in order."""
+    out, c = [], widget.get_first_child()
+    while c is not None:
+        out.append(c)
+        c = c.get_next_sibling()
+    return out
+
+
 def pump(until=None, timeout=3.0):
     """Run the main loop until until() is true (or a while, when None)."""
     ctx = GLib.MainContext.default()
@@ -391,6 +400,10 @@ class GtkSmokeTest(_GtkBase):
         errors = []
         self.win.error = lambda e: errors.append(str(e))
         self.win.bridge.on_error = errors.append
+        # "Test a notification" shows one — to this test, not to the desk it runs at
+        # (it went to the developer's own desktop, by the session bus found by itself)
+        shown = []
+        self.win.notifier.show = shown.append
         for name in ("filters", "muted", "scheduled", "server", "federation", "help",
                      "test_notify", "stacks", "census", "trim", "whats_this"):
             self.win.activate_action("win." + name, None)
@@ -404,6 +417,7 @@ class GtkSmokeTest(_GtkBase):
         pump(timeout=0.3)
         self.assertIn("tag:linux", self.win.extra_tabs)
         self.assertEqual(errors, [])
+        self.assertEqual(len(shown), 1)  # the test note, made and handed on
         for w in list(Gtk.Window.list_toplevels()):
             if w is not self.win:
                 w.close()
@@ -2524,6 +2538,54 @@ class GtkSplitTest(_GtkBase):
         dock.format_bar.buttons["italic"].emit("clicked")
         self.assertEqual(dock._text(), "***hi***")
         dock._set_text("")
+
+    def test_the_input_line_reaches_the_rest_of_the_editor(self):
+        """⋯ on the input line (common/split.line_more, Qt's list too): the emoji picker,
+        "Sensitive" and the spelling here; a poll, "Later", the drafts, the preview and
+        the full editor itself — opened with what the line holds. The line had none of
+        it, nor a way to the editor (24.11)."""
+        from fedtail.frontends.gtk.compose import ComposeWindow
+        from fedtail.frontends.gtk.emoji import EmojiPicker
+        dock = self.win.dock
+        self.assertTrue(dock.spell.on)  # spelling, as the editor's (post.spellcheck)
+        self.assertEqual(dock.language(), "")
+        dock._set_language("en")
+        self.assertEqual(dock.language(), "en")  # …in the post's language
+        keys = [it.key for it in dock.more()]
+        for key in ("emoji", "poll", "schedule", "drafts", "preview", "editor"):
+            self.assertIn(key, keys)
+        dock._fill_more(dock.more_btn)  # the menu as it is drawn
+        labels = [b.get_label() for b in _children(dock.more_btn.get_popover().get_child())
+                  if isinstance(b, Gtk.Button)]
+        self.assertIn(i18n._("poll_add"), labels)
+        self.assertIn(i18n._("dock_editor"), labels)
+        dock.do_more("emoji")
+        self.assertIsInstance(dock.emoji_pop, EmojiPicker)
+        dock.emoji_pop.popdown()
+        dock._emoji_picked("🦊")
+        self.assertEqual(dock._text(), "🦊")
+        dock._set_text("to the editor")
+        dock.cw_btn.set_active(True)
+        dock.cw.set_text("careful")
+        dock.set_visibility("public")
+        next(b for b in _children(dock.more_btn.get_popover().get_child())
+             if isinstance(b, Gtk.Button) and b.get_label() == i18n._("poll_add")
+             ).emit("clicked")
+        editor = dock.editor
+        self.assertIsInstance(editor, ComposeWindow)
+        self.assertEqual(editor.buffer.props.text, "to the editor")
+        self.assertEqual(editor.cw.get_text(), "careful")
+        self.assertTrue(editor.poll_btn.get_active())  # the tool asked for, at once
+        self.assertEqual(dock._text(), "")  # the words are there now
+        editor.close()
+        # files attached: "Sensitive" is a switch here; no poll beside pictures
+        dock.media = [("/nowhere/a.png", "")]
+        keys = [it.key for it in dock.more()]
+        self.assertIn("sensitive", keys)
+        self.assertNotIn("poll", keys)
+        dock.do_more("sensitive")
+        self.assertTrue(dock.sensitive)
+        dock.media, dock.sensitive = [], False
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
