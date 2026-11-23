@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from .proto import raw
+
 
 @dataclass
 class Node:
@@ -22,15 +24,15 @@ def build(focus, context):
     by_id = {s["id"]: s for s in every}
 
     root = ancestors[0] if ancestors else focus
-    while root.get("in_reply_to_id") in by_id:
-        root = by_id[root["in_reply_to_id"]]
+    while raw.reply_to(root) in by_id:
+        root = by_id[raw.reply_to(root)]
 
     children = {}
     orphans = []
     for s in every:
         if s["id"] == root["id"]:
             continue
-        parent = s.get("in_reply_to_id")
+        parent = raw.reply_to(s)
         if parent in by_id:
             children.setdefault(parent, []).append(s)
         else:
@@ -64,11 +66,11 @@ def conversations(entries, get_status, unread):
     """
     groups, order = {}, []
     for _item, st in entries:
-        s = st.get("reblog") or st
+        s = raw.real(st)
         top, seen = s, set()
-        while top.get("in_reply_to_id") and top["id"] not in seen:
+        while raw.reply_to(top) and top["id"] not in seen:
             seen.add(top["id"])
-            parent = get_status(top["in_reply_to_id"])
+            parent = get_status(raw.reply_to(top))
             if not parent:
                 break
             top = parent

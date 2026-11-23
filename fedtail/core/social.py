@@ -20,7 +20,7 @@ import requests
 from . import proto
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
-from .proto import ServerError
+from .proto import ServerError, raw
 
 # follow requests stand in Activity as entries of their own (activity.requests)
 FOLLOW_REQUEST = "follow_request:"
@@ -117,12 +117,9 @@ class SocialMixin:
                     log.debug("mutuals: %s", e)
                     continue
                 back |= {r["id"] for r in rel if r.get("followed_by")}
-            keep = ("id", "username", "acct", "display_name", "avatar", "avatar_static",
-                    "url", "uri", "emojis", "bot", "note", "locked", "created_at",
-                    "last_status_at", "statuses_count", "followers_count",
-                    "following_count")
+            keep = raw.ROSTER_KEPT  # who they are, their face, how busy
             out = [{k: a.get(k) for k in keep} for a in following if a["id"] in back]
-            out.sort(key=lambda a: (a.get("display_name") or a.get("username") or "").casefold())
+            out.sort(key=lambda a: (raw.name(a) or a.get("username") or "").casefold())
             self.store.kv_set(MUTUALS_KV, {"me": me, "at": time.time(), "accounts": out})
             log.info("mutuals: %d of %d I follow", len(out), len(following))
             self.emit("mutuals_changed", len(out))
@@ -155,7 +152,7 @@ class SocialMixin:
             total = len(theirs)
             have, found = set(have_ids), []
             for a in theirs[:limit]:
-                handle = a.get("acct") or ""
+                handle = raw.handle(a)
                 if "@" not in handle:  # local to their server
                     handle = f"{handle}@{urlparse(url).hostname}"
                 try:
@@ -278,11 +275,11 @@ class SocialMixin:
     def answer_event(self, event_id, approve):
         """An event's row answered by its id (a follow request, a reply waiting for my
         yes) — the buttons of any lane that shows it (fedtail:eventyes / eventno)."""
-        raw = next((n for n in self.event_items(1000) if str(n.get("id")) == str(event_id)),
+        event = next((n for n in self.event_items(1000) if str(n.get("id")) == str(event_id)),
                    None)
-        if raw is None:
+        if event is None:
             return self.submit(lambda: False)  # answered elsewhere meanwhile
-        return self.answer_interaction(raw, approve)
+        return self.answer_interaction(event, approve)
 
     def dismiss_events(self, ids):
         """A row of events gone (×): each of them, here and on the server where it can."""

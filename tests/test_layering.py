@@ -27,12 +27,22 @@ FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
 # fields. How many times each of its modules does, as of 23.11 — a ceiling: the number
 # only goes down (lower it here when it does), a module not listed has none.
 CORE_RAW = {
-    "app.py": 39, "atoms.py": 24, "config.py": 2, "counts.py": 7, "derived.py": 11,
-    "langs.py": 1, "lists.py": 3, "merged.py": 16, "model.py": 10, "origin.py": 7,
-    "people.py": 4, "poll.py": 4, "profiles.py": 12, "push.py": 1, "rss.py": 11,
-    "search.py": 4, "silence.py": 1, "social.py": 7, "sources.py": 1, "store.py": 13,
-    "subs.py": 5, "sync/engine.py": 2, "thread_ops.py": 9, "threads.py": 6,
-    "threadsize.py": 5, "translate.py": 11, "updates.py": 2, "view.py": 23,
+    "app.py": 39,
+    "atoms.py": 24,
+    "config.py": 2,
+    "derived.py": 11,
+    "merged.py": 16,
+    "model.py": 10,
+    "profiles.py": 12,
+    "push.py": 1,
+    "rss.py": 11,
+    "store.py": 13,
+    "sync/engine.py": 2,
+    "thread_ops.py": 9,
+    "threadsize.py": 5,
+    "translate.py": 11,
+    "updates.py": 2,
+    "view.py": 23,
     "writing.py": 12,
 }
 

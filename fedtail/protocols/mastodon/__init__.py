@@ -15,9 +15,9 @@ def protocol():
     from types import SimpleNamespace
 
     from ..base import Protocol
-    from . import adapter, api, counters, probe, stream
+    from . import adapter, api, counters, probe, raw, stream
     urls = SimpleNamespace(search=api.search_url, lookup=api.lookup_url,
                            statuses=api.statuses_url, public=api.public_url, tag=api.tag_url)
     return Protocol(PROTO, api.Api, api.ApiError, api.capabilities_from_instance, adapter,
                     stream, address=api.server_address, tune=_tune, probe=probe,
-                    counters=counters, urls=urls)
+                    counters=counters, urls=urls, raw=raw)

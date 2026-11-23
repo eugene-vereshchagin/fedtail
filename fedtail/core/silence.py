@@ -8,6 +8,7 @@ import time
 
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -118,7 +119,7 @@ class SilenceMixin:
         if s["account"]["id"] in quiet or status["account"]["id"] in quiet:
             return True
         if self.blocked_domains and any(
-                (a.get("acct") or "").partition("@")[2].lower() in self.blocked_domains
+                raw.handle(a).partition("@")[2].lower() in self.blocked_domains
                 for a in (s["account"], status["account"])):
             return True
         muted_tags = self.muted_tags()

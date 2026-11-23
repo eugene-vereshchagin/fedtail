@@ -11,6 +11,7 @@ from ..version import USER_AGENT
 from . import auth, proto, remote
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -95,9 +96,8 @@ class OriginMixin:
                 continue
             if not isinstance(got, dict) or got.get("uri") != st.get("uri"):
                 continue
-            if best is None or sum(got.get(k) or 0 for k in ("favourites_count",
-                                                             "reblogs_count")) > \
-                    sum(best.get(k) or 0 for k in ("favourites_count", "reblogs_count")):
+            if best is None or sum(got.get(k) or 0 for k in raw.SHARED_AND_LIKED) > \
+                    sum(best.get(k) or 0 for k in raw.SHARED_AND_LIKED):
                 best = got
         return best
 
@@ -108,7 +108,7 @@ class OriginMixin:
         likeable. A future of those statuses (feed.remote_profiles)."""
         def job():
             fc = self.cfg["feed"]
-            if not fc.get("remote_profiles", True) or "@" not in (acc.get("acct") or ""):
+            if not fc.get("remote_profiles", True) or "@" not in raw.handle(acc):
                 return []
             from . import replies
             t = time.monotonic()
@@ -136,7 +136,7 @@ class OriginMixin:
         for the next call or None) — cursor None to start from their newest."""
         def job():
             if not self.cfg["feed"].get("remote_profiles", True) or \
-                    "@" not in (acc.get("acct") or ""):
+                    "@" not in raw.handle(acc):
                 return [], None
             from . import replies
             t = time.monotonic()
@@ -251,7 +251,7 @@ class OriginMixin:
             acc = self.api.account(acc_id) or {}
         except ApiError:
             return []
-        if "@" not in (acc.get("acct") or "") or not acc.get("uri"):
+        if "@" not in raw.handle(acc) or not acc.get("uri"):
             return []  # one of my server's own: it knows their pins
         try:
             actor = self._origin_json(acc["uri"])

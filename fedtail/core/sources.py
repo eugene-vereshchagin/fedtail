@@ -8,6 +8,7 @@ chronological. Older history is pulled on request with max_id.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from .proto import raw
 from .store import now_iso, sort_key
 
 
@@ -104,7 +105,7 @@ def wider_sources(api, bubble=()):
     hosts = {h.lower().lstrip("@") for h in bubble or ()}
 
     def in_bubble(st):
-        acct = ((st or {}).get("account") or {}).get("acct") or ""
+        acct = raw.handle((st or {}).get("account"))
         return _status_entry(st) if "@" in acct and acct.split("@", 1)[1].lower() in hosts \
             else None
     return {
@@ -187,14 +188,14 @@ def list_source(api, list_id):
 
 
 def _entries(source, page):
-    return [e for e in (source.entry(raw) for raw in page) if e]
+    return [e for e in (source.entry(obj) for obj in page) if e]
 
 
 def _newest_raw_id(source, page):
     best = None
-    for raw in page:
-        e = source.entry(raw)
-        item_id, created = (e[0], e[2]) if e else (raw["id"], raw.get("created_at", ""))
+    for obj in page:
+        e = source.entry(obj)
+        item_id, created = (e[0], e[2]) if e else (obj["id"], obj.get("created_at", ""))
         key = sort_key(created, item_id)
         if best is None or key > best[0]:
             best = (key, item_id)

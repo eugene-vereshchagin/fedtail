@@ -24,6 +24,7 @@ import requests
 
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 from .store import now_iso
 
 log = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ def leave(store, api, status, quiet=False):
     Returns the root id."""
     st = real(status)
     root = store.sub_root_of(st["id"]) or \
-        (st.get("in_reply_to_id") and store.sub_root_of(st["in_reply_to_id"])) or None
+        (raw.reply_to(st) and store.sub_root_of(raw.reply_to(st))) or None
     members = [st["id"]]
     try:
         ctx = api.context(st["id"])
@@ -85,7 +86,7 @@ def leave(store, api, status, quiet=False):
         members += [s["id"] for s in anc + desc]
     except (ApiError, OSError) as e:  # offline: the post itself is the best guess
         log.info("leave thread %s: no context (%s)", st["id"], e)
-        root = root or store.left_root_of([st["id"], st.get("in_reply_to_id")]) or st["id"]
+        root = root or store.left_root_of([st["id"], raw.reply_to(st)]) or st["id"]
     store.sub_remove(root, members=members)
     if quiet:
         store.quiet_set(root)
@@ -104,7 +105,7 @@ def unquiet(store, status):
 def quiet_root(store, status, left_too=False):
     """The muted (or, left_too, left) thread this post is known to be in, or None."""
     st = real(status)
-    root = store.left_root_of([st["id"], st.get("in_reply_to_id")])
+    root = store.left_root_of([st["id"], raw.reply_to(st)])
     return root if root and root in store.quiet_roots(left_too) else None
 
 
@@ -127,7 +128,7 @@ def silenced(store, api, status, left_too):
         if hit or cur["id"] in roots:
             root = hit or cur["id"]
             break
-        pid = cur.get("in_reply_to_id")
+        pid = raw.reply_to(cur)
         if not pid:
             break
         nxt = store.get_status(pid)

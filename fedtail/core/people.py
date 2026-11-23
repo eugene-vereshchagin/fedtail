@@ -6,6 +6,7 @@ import logging
 import time
 
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 from .store import now_iso
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
@@ -332,7 +333,7 @@ class PeopleMixin:
         from . import subs
         done = 0
         for st in statuses:
-            if not st.get("id") or st.get("reblog") or st.get("in_reply_to_id") or \
+            if not st.get("id") or raw.boosted(st) or raw.reply_to(st) or \
                     (st.get("created_at") or "") < since or self.subscribed(st):
                 continue
             try:
@@ -422,5 +423,5 @@ class PeopleMixin:
         a future of [(acct, display name)]."""
         def job():
             got = self.api.search(q, "accounts", resolve=False, limit=limit)
-            return [(a["acct"], a.get("display_name") or "") for a in got.get("accounts") or []]
+            return [(raw.handle(a), raw.name(a)) for a in got.get("accounts") or []]
         return self.submit(job)

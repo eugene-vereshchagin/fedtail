@@ -9,6 +9,7 @@ import time
 from . import custom, lanes, presets, sources, taggroups
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -272,8 +273,8 @@ class ListsMixin:
             for s in (st, real(st)):
                 acc = s.get("account") or {}
                 urls.append(acc.get("avatar_static") or acc.get("avatar"))
-            for m in real(st).get("media_attachments") or []:
-                urls.append(m.get("preview_url"))
+            for m in raw.media(real(st)):
+                urls.append(raw.media_preview(m))
                 if mode == "all" and m.get("type") == "image":
                     urls.append(m.get("url"))
             card = real(st).get("card") or {}
@@ -283,7 +284,7 @@ class ListsMixin:
             self.emit("prefetch", urls)
         if mode == "all":  # videos, gifs, sounds: to their own cache (ui.video_disk_mb)
             videos = [m.get("url") for st in statuses
-                      for m in real(st).get("media_attachments") or []
+                      for m in raw.media(real(st))
                       if m.get("type") in ("video", "gifv", "audio") and m.get("url")]
             if videos:
                 self.emit("prefetch_video", list(dict.fromkeys(videos)))

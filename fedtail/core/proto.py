@@ -14,3 +14,4 @@ probe = PROTO.probe          # "what can the server do"
 counters = PROTO.counters    # a post's honest counts from its own server
 urls = PROTO.urls            # other servers' public pages
 address = PROTO.address      # what a person typed → the server's URL
+raw = PROTO.raw              # the server's objects read by what a thing is (stage 7)

@@ -15,14 +15,14 @@ import time
 
 from .model import real
 from .proto import Error as ApiError
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 BATCH = 40        # ids in one request (Mastodon takes up to 40)
 ONE_BY_ONE = 20   # at most so many single requests a round where batches aren't served
 SEEN_FOR = 1800   # s: a post shown this long ago is no longer "on screen"
-COUNTED = ("replies_count", "reblogs_count", "favourites_count", "quotes_count",
-           "favourited", "reblogged", "bookmarked", "muted", "pinned")
+COUNTED = raw.COUNTED  # a post's numbers and my marks on it, as the protocol names them
 
 
 def changed(old, new):
@@ -99,7 +99,7 @@ class CountsMixin:
         from .store import now_iso
         for st in now:
             old = before.get(st["id"]) or {}
-            if (st.get("replies_count") or 0) > (old.get("replies_count") or 0):
+            if (raw.replies(st) or 0) > (raw.replies(old) or 0):
                 root = self.store.sub_root_of(st["id"])
                 if root:
                     self.store.sub_wake(root, now_iso())

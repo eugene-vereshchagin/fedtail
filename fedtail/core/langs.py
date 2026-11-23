@@ -16,6 +16,7 @@ import re
 import unicodedata
 
 from .model import html_to_text
+from .proto import raw
 
 # (first, last code point) → language, for scripts that give the language away
 _SCRIPTS = [
@@ -229,7 +230,7 @@ def post_language(status, mode="untagged", min_words=12):
     key = (status.get("id"), status.get("edited_at"), mode, min_words)
     if key[0] and key in _cache:
         return _cache[key]
-    text = words_only("\n".join(x for x in (status.get("spoiler_text") or "",
+    text = words_only("\n".join(x for x in (raw.warning(status),
                                             html_to_text(status.get("content") or "")) if x))
     script = by_script(text)
     if mode == "untagged" and tagged and not _contradicts(script, tagged):

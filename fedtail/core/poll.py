@@ -19,7 +19,7 @@ from . import (
 )
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
-from .proto import RateLimited
+from .proto import RateLimited, raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -733,8 +733,8 @@ class PollMixin:
             elif mine:
                 self.store.mark_read(mine)
             # a post I replied to (from any client) counts as read
-            answered = [st["in_reply_to_id"] for st in new_statuses
-                        if st["account"]["id"] == self.me["id"] and st.get("in_reply_to_id")]
+            answered = [raw.reply_to(st) for st in new_statuses
+                        if st["account"]["id"] == self.me["id"] and raw.reply_to(st)]
             if answered and not first_run and self.cfg["read"].get("replied_is_read", True):
                 self.mark_read(answered)
             if first_run:
@@ -748,7 +748,7 @@ class PollMixin:
             # reply it is) sort a reply only once its parent is known: fetched first
             # (feeds.md §8, "atoms known late"), a few at most — the rest come after
             # (and "state" — "subscribed" is known up a reply's parents)
-            replies = [st for st in new_statuses if real(st).get("in_reply_to_id")]
+            replies = [st for st in new_statuses if raw.reply_to(real(st))]
             if self._parents_first():  # whole: shown with their parents (feed.parents_first)
                 self._fetch_parents(replies, tell=False, budget=self.PARENTS_WAIT)
             elif any(c.routed and {"parent", "me", "state"} & set(c.needs)
@@ -765,7 +765,7 @@ class PollMixin:
                 self.emit("lanes_updated", {lane.name: [] for lane in self.lanes
                                             if lane.source in browse_changed})
             if new_statuses and not first_run:
-                pairs = [(real(st)["id"], real(st).get("in_reply_to_id"))
+                pairs = [(real(st)["id"], raw.reply_to(real(st)))
                          for st in new_statuses]
                 self.emit("arrived", pairs)
                 self._answers_in_open_threads(pairs)

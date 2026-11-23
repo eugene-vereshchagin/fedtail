@@ -182,6 +182,9 @@ class Protocol:
     counters: Any = None  # module: origin_api_url(status, own), merge(status, origin)
     urls: Any = None      # the addresses of other servers' public pages: search, lookup,
     #                       statuses, public, tag (fetched without a token, core/remote)
+    raw: Any = None       # module: the server's own objects read by what a thing is
+    #                       (reply_to(st), boosted(st), handle(acc)…) — the core's
+    #                       logic names no field of the protocol (protocols.md, stage 7)
 
 
 # Types the system may not know (Python on Windows asks the registry: .md, .fb2, .epub
