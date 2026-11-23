@@ -1,8 +1,8 @@
 # fedtail: protocols and a normalized model
 
-Status: **agreed on 20 Oct 2026**. Stages 0–6 are done (0–4 in 0.17.0); stage 7 — the
-core's own logic off the protocol's fields — is under way (the small modules first); as each is ready, its
-description moves to architecture.md.
+Status: **agreed on 20 Oct 2026, carried out**: stages 0–6 by 0.18, stage 7 — the core's
+own logic off the protocol's fields — on 23 Nov 2026. What follows is the plan as it was
+written, with where each thing stands; how it is built is in architecture.md.
 
 ## Why
 
@@ -46,13 +46,12 @@ single protocol field**. Where it stands: for the frontends it holds and a test 
 (`tests/test_layering.py`: a grep for `"reblog"`, `"spoiler_text"`, `/api/v1` and the like in
 `frontends/` and the phone's Python) — they don't see raw data at all: the exchange goes
 only over the model's bus, and the debugging "show the JSON" gets the data through the core.
-For the core it does **not** hold everywhere yet: the store keeps the server's raw JSON
-(the decision below) and part of the core's own logic — the rules' atoms, writing, the
-merged window, the store's own questions — still reads those fields by Mastodon's names
-(about 250 places in 29 modules on 23.11; the modules done since read them through the
-protocol's `raw`). That is stage 7 below; until it is done the same test keeps a ceiling
-for every module of the core, so the number only goes down and a new module starts at
-none.
+For the core it holds too, since 23.11 (stage 7 below): the store keeps the server's raw
+JSON (the decision below), and the core asks it through the protocol's `raw` module —
+`raw.reply_to(st)`, `raw.boosted(st)`, `raw.handle(acc)` — never by Mastodon's names; the
+same test counts those names in every module of the core and allows none (a line that
+names fedtail's own words — a file of its own, the config's vocabulary — is marked
+`# ours:`).
 
 ## The normalized model (`fedtail/model/`)
 
@@ -178,7 +177,7 @@ the roster is the model's data, the same for all.
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — one place: what the server said about itself, the probe's answers, "no such thing" refusals and what's known of the software (`KNOWN`); `Core.supports` asks it, the answers survive a reconnect, the last probe counts from the start; the `capabilities_changed` event — frontends hide buttons at once | `tests/test_protocols.py`, `test_social.py`, smoke: "Clear" goes as soon as the server refused |
 | 5 ✓ | the roster (`View.roster()` → `RosterGroup` / `RosterItem`) and `window.layout = "split"` on Qt: a roster window, a messages window with its own tabs, an input line, faces — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + screenshots by `tools/screenshots.py` |
 | 6 ✓ | themes in the spirit of QIP, Psi+ and Agent; a theme sets the layout's look too (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, screenshots |
-| 7 ◐ | the core's logic off the protocol's fields. How (decided 23.11): the store keeps what the server gave, and the core asks it through the protocol's `raw` module — `raw.reply_to(st)`, `raw.boosted(st)`, `raw.handle(acc)` (`protocols/mastodon/raw.py`, through the one door `core/proto.py`) — instead of Mastodon's names; another protocol brings the same functions over its own objects. What every protocol has under one name (an id, the account, the text, who sees it, when) the core reads as it is. Module by module: twelve done on 23.11 (counts, langs, lists, origin, people, poll, search, silence, social, sources, subs, threads) | `tests/test_layering.py`: the ceilings of `CORE_RAW` all at 0, then the core listed with the frontends |
+| 7 ✓ | the core's logic off the protocol's fields. How (decided 23.11): the store keeps what the server gave, and the core asks it through the protocol's `raw` module — `raw.reply_to(st)`, `raw.boosted(st)`, `raw.handle(acc)` (`protocols/mastodon/raw.py`, through the one door `core/proto.py`) — instead of Mastodon's names; another protocol brings the same functions over its own objects. What the core builds in the server's shape (an RSS item, a row it tells itself) and the model's way back (`adapter.account_out`, `post_out`, `shape`) are the protocol's too. What every protocol has under one name (an id, the account, the text, who sees it, when) the core reads as it is | `tests/test_layering.py` `CoreRawTest`: no module of the core names a protocol's field |
 
 The user shouldn't notice stages 0–4 at all: the behaviour is the same, the CHANGELOG says
 "an internal rewrite". Each stage ships separately as a dev build, which you run with

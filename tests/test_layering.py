@@ -23,12 +23,10 @@ RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'
 # names
 FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
 
-# Stage 7 of docs/en/dev/protocols.md isn't done: the core still reads the protocol's
-# fields. How many times each of its modules does, as of 23.11 — a ceiling: the number
-# only goes down (lower it here when it does), a module not listed has none.
-CORE_RAW = {
-    "app.py": 39,
-}
+# Stage 7 of docs/en/dev/protocols.md, done on 23.11: the core reads the server's objects
+# through the protocol's raw module (core/proto.raw), never by its field names. A module
+# that still may (none does) would be named here with how many times.
+CORE_RAW = {}
 
 
 class CoreRawTest(unittest.TestCase):

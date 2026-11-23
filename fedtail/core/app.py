@@ -52,7 +52,7 @@ from .model import real
 from .origin import OriginMixin
 from .people import PeopleMixin
 from .poll import PollMixin
-from .proto import Capabilities
+from .proto import Capabilities, raw
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .push import PushMixin
 from .silence import SilenceMixin
@@ -170,8 +170,7 @@ def _by_counts(entries, how, oldest_first):
 
     def score(e):
         p = real(e[1])
-        n = {"replies": p.get("replies_count"), "likes": p.get("favourites_count"),
-             "boosts": p.get("reblogs_count")}
+        n = {"replies": raw.replies(p), "likes": raw.likes(p), "boosts": raw.shares(p)}
         if how != "density":
             return int(n[how] or 0)
         total = sum(int(v or 0) for v in n.values())
@@ -186,7 +185,7 @@ def _filter_hits(st, filters):
     import re
     from html import unescape
     text = unescape(re.sub(r"<[^>]+>", " ", st.get("content") or "")) + " " + \
-        (st.get("spoiler_text") or "")
+        raw.warning(st)
     low = text.lower()
     out = []
     for f in filters:
@@ -201,20 +200,23 @@ def _filter_hits(st, filters):
     return out
 
 
-def _counted(before, got, flag, count, on):
+def _counted(before, got, what, on):
     """A like's or a boost's answer as it must be: the server's own copy may lag behind
-    (GoToSocial answers a boost with the post as cached — not yet "reblogged", the old
+    (GoToSocial answers a boost with the post as cached — not yet boosted, the old
     count), and the card then looked as if the tap did nothing. My mark is what I just
-    did; the count moves by one from what it was unless the server's has moved already."""
+    did; the count moves by one from what it was unless the server's has moved already.
+    what: "liked" or "shared"."""
     if not isinstance(got, dict):
         return got
-    got = dict(got, **{flag: on})
-    was, now = int(before.get(count) or 0), int(got.get(count) or 0)
+    count, name = (raw.likes, "likes") if what == "liked" else (raw.shares, "shares")
+    got = raw.marked(got, **{what: on})
+    was, now = int(count(before) or 0), int(count(got) or 0)
     if on and now <= was:
-        got[count] = was + 1
+        got = raw.with_counts(got, **{name: was + 1})
     elif not on and now >= was:
-        got[count] = max(0, was - 1)
+        got = raw.with_counts(got, **{name: max(0, was - 1)})
     return got
+
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
            CountsMixin, ThreadSizeMixin,
@@ -511,12 +513,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             api, app, where = begun
             token = api.get_token(app["client_id"], app["client_secret"], code, **where)
             me = self.api_class(api.base, token).me()
-            if expect and (api.base.rstrip("/"), me["acct"]) != \
+            if expect and (api.base.rstrip("/"), raw.handle(me)) != \
                     (expect[0].rstrip("/"), expect[1]):
                 log.warning("login anew: another account, not saved")
-                raise OtherAccount(f"{OtherAccount.PREFIX}@{me['acct']}")
+                raise OtherAccount(f"{OtherAccount.PREFIX}@{raw.handle(me)}")
             data = {"server": api.base, "client_id": app["client_id"],
-                    "client_secret": app["client_secret"], "token": token, "acct": me["acct"]}
+                    "client_secret": app["client_secret"], "token": token,
+                    "acct": raw.handle(me)}  # ours: auth.json's own key
             old = self.auth
             auth.save(self.paths.auth_file, data)
             self.auth = data
@@ -1039,20 +1042,20 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         p = real(st)
         me = (self.me or {}).get("id")
         author = p.get("account") or {}
-        aid, acct = author.get("id"), "@" + str(author.get("acct") or "")
+        aid, acct = author.get("id"), "@" + raw.handle(author)
         following = self._following or set()
         out = []
         if aid and aid == me:
             out.append(_("why_p_mine"))
-        if st.get("reblog") and (st.get("account") or {}).get("id") in following:
-            out.append(_("why_p_boosted", who="@" + st["account"].get("acct", "")))
+        if raw.boosted(st) and (st.get("account") or {}).get("id") in following:
+            out.append(_("why_p_boosted", who="@" + raw.handle(st["account"])))
         if aid and aid != me and aid in following:
             out.append(_("why_p_follow", who=acct))
         if p.get("visibility") == "direct" and aid != me:
             out.append(_("why_p_direct"))
         elif me and aid != me and any((m or {}).get("id") == me for m in p.get("mentions") or ()):
             out.append(_("why_p_mention"))
-        if me and aid != me and p.get("in_reply_to_account_id") == me:
+        if me and aid != me and raw.reply_to_author(p) == me:
             out.append(_("why_p_reply"))
         followed = {t.lower() for t in (getattr(self, "_followed_tag_names", None) or ())}
         tags = {str(t.get("name") or "").lower() for t in p.get("tags") or ()}
@@ -1118,7 +1121,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 seen.add(sid)
                 got = custom.explain(c, st, world, self.store.sources_of(st["id"]))
                 rows.append(dict(got, id=st["id"], source=source,
-                                 who=real(st)["account"].get("acct", ""),
+                                 who=raw.handle(real(st)["account"]),
                                  created=st.get("created_at", ""),
                                  text=re.sub(r"<[^>]+>", " ", real(st).get("content") or "")))
         rows.sort(key=lambda r: r["created"], reverse=True)
@@ -1512,7 +1515,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             scanned += 1
             if self.silenced(st):
                 continue
-            filtered = (only_posts and real(st).get("in_reply_to_id")) or \
+            filtered = (only_posts and raw.reply_to(real(st))) or \
                 (funnel is not None and not funnel(st)) or (shows is not None and not shows(st))
             if filtered and len(out_by_filter) >= limit:
                 continue
@@ -1573,7 +1576,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 if more:
                     r = real(st)
                     r = dict(r, filtered=list(r.get("filtered") or ()) + more)
-                    st = dict(st, reblog=r) if st.get("reblog") else r
+                    st = raw.with_boosted(st, r) if raw.boosted(st) else r
             out.append((item_id, st))
         return out
 
@@ -1612,7 +1615,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         if (not wanted or wanted == set(atoms.MEDIA_KINDS)) and boosts:
             return None
         every = not wanted or wanted == set(atoms.MEDIA_KINDS)
-        return lambda st: (boosts or not st.get("reblog")) and \
+        return lambda st: (boosts or not raw.boosted(st)) and \
             (every or bool(atoms.media_kinds(st) & wanted))
 
     def set_lane_filter(self, name, which):
@@ -1633,10 +1636,11 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         batch = []
 
         def flush():
-            firsts = self.store.first_seen(source, [st["reblog"]["id"] for _, st in batch
-                                                    if st.get("reblog")])
+            firsts = self.store.first_seen(source, [raw.boosted(st)["id"] for _, st in batch
+                                                    if raw.boosted(st)])
             for item_id, st in batch:
-                if not st.get("reblog") or firsts.get(st["reblog"]["id"], item_id) == item_id:
+                if not raw.boosted(st) or \
+                        firsts.get(raw.boosted(st)["id"], item_id) == item_id:
                     yield item_id, st
         for row in rows:
             batch.append(row)
@@ -1657,7 +1661,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
             found, i = [], 0
             for _item, st in self.store.iter_items(lane.source):
-                if only_posts and real(st).get("in_reply_to_id"):
+                if only_posts and raw.reply_to(real(st)):
                     continue
                 if not lanes.keeps(lane, st, ctx):
                     continue
@@ -1698,7 +1702,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 for item_id, st in rows:
                     if self.silenced(st):
                         continue
-                    reply = bool(real(st).get("in_reply_to_id"))
+                    reply = bool(raw.reply_to(real(st)))
                     hit = None  # matched lazily: only if some lane keeps the post
                     for lane in group:
                         if (only[lane.name] and reply) or not lanes.keeps(lane, st, ctx):
@@ -1735,7 +1739,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         a boost counts read when its post is (read as itself, in another lane, or as
         someone else's boost) — each was read by its own id, and the same post stood
         unread in the next lane or interface (29.10)."""
-        pairs = [(st["id"], (st.get("reblog") or {}).get("id")) for _, st in entries]
+        pairs = [(st["id"], (raw.boosted(st) or {}).get("id")) for _, st in entries]
         read = self.store.read_set({i for pair in pairs for i in pair if i})
         return {i for i, post in pairs if i not in read and (not post or post not in read)}
 
@@ -1865,8 +1869,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 have = self.store.get_statuses(set(status_ids))
             except Exception:  # noqa: BLE001 — a store without statuses (a test's fake)
                 have = {}
-            posts = {(st.get("reblog") or {}).get("id") for st in have.values()
-                     if isinstance(st, dict) and isinstance(st.get("reblog"), dict)}
+            posts = {raw.boosted(st).get("id") for st in have.values()
+                     if isinstance(st, dict) and isinstance(raw.boosted(st), dict)}
             status_ids += sorted(i for i in posts - set(status_ids) if i)
             self.store.mark_read(status_ids, shared=True)
             self.emit("read_changed", status_ids)  # the cards: at once
@@ -2050,7 +2054,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         want = []
         for st in statuses:
             s = real(st)
-            n = s.get("replies_count") or 0
+            n = raw.replies(s) or 0
             if n and s["id"] not in self._replies_inflight and \
                     self.store.kv_get(f"replies_checked:{s['id']}") != n:
                 self._replies_inflight.add(s["id"])
@@ -2067,7 +2071,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                     ctx = self.api.context(sid)
                     self.store.put_statuses(ctx.get("descendants", []))
                     mine = [d for d in ctx.get("descendants", [])
-                            if d.get("in_reply_to_id") == sid
+                            if raw.reply_to(d) == sid
                             and d["account"]["id"] == self.me["id"]]
                     if mine:
                         found.append(sid)
@@ -2283,10 +2287,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         s = real(status)
         self._on_server(s)
         def job():
-            on = not s.get("favourited")
-            got = self._update(_counted(s, self.api.favourite(s["id"], on), "favourited",
-                                        "favourites_count", on))
-            if not s.get("favourited"):  # liked now: threads.auto = "likes"
+            on = not raw.liked(s)
+            got = self._update(_counted(s, self.api.favourite(s["id"], on), "liked", on))
+            if not raw.liked(s):  # liked now: threads.auto = "likes"
                 self._follow_for("likes", s)
             return got
         return self.submit(job)
@@ -2478,11 +2481,11 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._on_server(s)
 
         def job():
-            on = not s.get("reblogged")
+            on = not raw.shared(s)
             res = self.api.reblog(s["id"], on)
-            got = self._update(_counted(s, (res or {}).get("reblog") or self.api.status(s["id"]),
-                                        "reblogged", "reblogs_count", on))
-            if not s.get("reblogged"):  # boosted now: threads.auto = "boosts"
+            got = self._update(_counted(s, raw.boosted(res or {}) or self.api.status(s["id"]),
+                                        "shared", on))
+            if not raw.shared(s):  # boosted now: threads.auto = "boosts"
                 self._follow_for("boosts", s)
             return got
         return self.submit(job)
@@ -2563,8 +2566,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
             acc, r = people[acc_id], rel.get(acc_id)
             state = "unknown" if r is None else "following" if r.get("following") else \
                 "requested" if r.get("requested") else "not_following"
-            out.append({"id": acc_id, "account": acc.get("acct") or "",
-                        "name": acc.get("display_name") or acc.get("username") or "",
+            out.append({"id": acc_id, "account": raw.handle(acc),
+                        "name": raw.name(acc) or acc.get("username") or "",
                         "url": acc.get("url") or "", "state": state,
                         "list": next((x["title"] for x in self.lists if x["id"] == list_id),
                                      list_id), "since": since})
@@ -2585,7 +2588,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 "server": (self.auth or {}).get("server", ""),
                 "software": getattr(caps, "software", "") if caps else "",
                 "version": getattr(caps, "version", "") if caps else "",
-                "me": (self.me or {}).get("acct", ""),
+                "me": raw.handle(self.me),
                 "polls": {"count": self._poll_count, "last_s": self._last_poll_s,
                           "last_ok": self._last_poll_ok, "failures": self._poll_failures,
                           "last_error": self._last_poll_error,

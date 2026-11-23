@@ -79,6 +79,10 @@
   lanes `window.icon_count` chose.
 - Behind the scenes: the linter now holds every broad `except Exception` to a stated
   reason (ruff's BLE; the last twenty got theirs).
+- Behind the scenes: the core no longer names a field of Mastodon's (`protocols.md`, stage
+  7): it reads the server's objects through the protocol's own functions
+  (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
+  Nothing a reader sees changes.
 - Behind the scenes: `docs/*/dev/protocols.md` says where "no protocol field outside
   `protocols/`" really stands (true for the interfaces; the core still reads Mastodon's
   names — stage 7) and a test keeps the core's count from growing; `gtk.md`, `roadmap.md`
