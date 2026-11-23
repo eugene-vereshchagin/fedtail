@@ -152,7 +152,9 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
         Screen.Main -> BoxWithConstraints(Modifier.fillMaxSize().letGoOfSelection()) {
             val cols = columnsFor(model.layoutPref, maxWidth)
             SideEffect { model.columns = cols }
-            LaunchedEffect(cols) { if (cols > 1) model.openStartLane() }
+            LaunchedEffect(cols) {
+                if (cols > 1) model.openStartLane() else model.closeStartLane()
+            }
             BackHandler(enabled = model.place != null || (cols == 1 && model.current != null)) {
                 model.back()
             }

@@ -159,5 +159,15 @@ object Core {
 
     /** Blocks up to [seconds] for a change in the lanes; → the version now. */
     suspend fun waitChange(since: Int, seconds: Int): Int =
-        withContext(Dispatchers.IO) { bridge.callAttr("wait", since, seconds).toInt() }
+        withContext(Dispatchers.IO) {
+            // the one call that isn't answered through _answer: an exception of the core
+            // here (it restarted meanwhile: all accounts in one, a config saved) would
+            // go up the watcher's coroutine and take the app down
+            try {
+                bridge.callAttr("wait", since, seconds).toInt()
+            } catch (e: Exception) {
+                Thread.sleep(1000)  // (not a busy loop while it keeps failing)
+                since
+            }
+        }
 }

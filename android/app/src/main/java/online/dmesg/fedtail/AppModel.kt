@@ -816,8 +816,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun openStartLane() {
         if (current == null) (startLane ?: lanes.firstOrNull()?.name)?.let {
             showLane(it, keepPlaces = true)
+            byWidth = it
         }
     }
+
+    /** One column again: the lane the wide screen brought in (nobody opened it) goes —
+     *  the reader was on the overview, and is again. One they opened themselves stays. */
+    fun closeStartLane() {
+        if (byWidth != null && byWidth == current) current = null
+        byWidth = null
+    }
+    private var byWidth: String? = null
 
     fun showLane(name: String, keepPlaces: Boolean = false) {
         current = name
@@ -825,6 +834,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         posts = emptyList()
         divider = null
         if (!keepPlaces) places = emptyList()
+        byWidth = null
+        // the lane before's search isn't this one's
+        findIds = emptyList(); findAt = 0; findWords = ""
         viewModelScope.launch { loadLane(name, keep = false) }
     }
 
@@ -929,6 +941,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (step == 0) {
                 val got = Core.find(name, q)
                 Core.failed(got)?.let { message = it; return@launch }
+                if (name != current) return@launch
                 val ids = got.optJSONArray("ids") ?: JSONArray()
                 findIds = (0 until ids.length()).map { ids.optString(it) }
                 findAt = 0
@@ -1031,7 +1044,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val got = Core.older(name, ahead)
             if (ahead && !got.optBoolean("asked", true)) { loadingOlder = false; return@launch }
             Core.failed(got)?.let { message = it }
-            if (got.optInt("n") == 0 && !got.has("error")) laneOlder = false
+            if (name == current && got.optInt("n") == 0 && !got.has("error")) laneOlder = false
             loadLane(name, keep = true)
             loadingOlder = false
         }
@@ -1061,7 +1074,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun markLaneRead() {
         val name = current ?: return
+        // another lane's "all read" still waiting for its Undo: it goes to the core now —
+        // cancelled with the timer, that lane came back unread after a refresh (24.11)
+        val waiting = readUndo
         readLater?.cancel()
+        if (waiting != null && waiting != name) viewModelScope.launch {
+            Core.laneRead(waiting)
+            loadHub()
+        }
         readBefore = posts
         posts = posts.map { if (it.unread) it.copy(unread = false) else it }
         readUndo = name
@@ -1097,8 +1117,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun stood(key: String, end: Boolean) {
         val lane = current ?: return
         val k = if (end) "" else key // at the lane's end: no place kept, it opens as ever
-        if (k == stoodKey || (!end && posts.none { it.key == key })) return
-        stoodKey = k
+        // (per lane: the end of one lane and then of another are two places to keep —
+        // the second went unsaved while the key alone was remembered, 24.11)
+        val mark = lane + "\u0000" + k
+        if (mark == stoodKey || (!end && posts.none { it.key == key })) return
+        stoodKey = mark
         viewModelScope.launch { Core.stood(lane, k, end) }
     }
 
@@ -1367,7 +1390,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         watchThreadProgress(postId)
         viewModelScope.launch {
             val got = Core.thread(postId, at)
-            Core.failed(got)?.let { message = it; back(); return@launch }
+            // left meanwhile (Back, another thread): its answer isn't this screen's — it
+            // filled the next thread with this one's posts and marked them read (24.11)
+            val mine = Place.Thread(postId)
+            Core.failed(got)?.let {
+                message = it
+                if (place == mine) back() else places = places.filterNot { p -> p == mine }
+                return@launch
+            }
+            if (threadOnTop() != postId) return@launch
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
             // read as it opens, unless by hand — the core's decision (common/lane.py)
@@ -1412,12 +1443,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A text file attached to a post (the core reads it: Web.text_file), over the screen. */
     fun openTextFile(p: PostItem, m: MediaItem) {
         textFileBody = null
-        places = places + Place.TextFile(m.file.removePrefix("📄 "), m.url)
+        val mine = Place.TextFile(m.file.removePrefix("📄 "), m.url)
+        places = places + mine
         viewModelScope.launch {
             val r = Core.textFile(p.sid, m.index)
+            if (place != mine) return@launch  // closed, another opened: not that one's text
             textFileBody = Core.failed(r) ?: r.optString("text")
         }
     }
+
+    private var composeTurn = 0
 
     fun compose(replyTo: PostItem?) {
         clearEditor()
@@ -1426,8 +1461,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         composeText = replyTo?.let { if (it.handle.isNotBlank()) "@${it.handle} " else "" } ?: ""
         // the draft kept for it (here, or from another device), or the reply's mentions
         val opened = composeText
+        val turn = ++composeTurn  // (a late answer for the editor opened before: not ours)
         viewModelScope.launch {
             val d = Core.draftStart(replyTo?.sid ?: "")
+            if (turn != composeTurn) return@launch
             if (Core.failed(d) != null || editId != null || quoteId != null) return@launch
             // all accounts in one: "From" starts at the account that got the post replied to
             if (composeFrom == null && !d.isNull("account")) composeFrom = str(d, "account")
@@ -1518,6 +1555,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (got.optBoolean("edited")) {
                 message = getApplication<Application>().getString(R.string.edited_done)
             }
+            // its own editor closes — left meanwhile (Back, then a thread opened), the
+            // answer closed whatever stood on top instead (24.11)
+            if (place !== p) {
+                places = places.filterNot { it === p }
+                Core.refresh()
+                return@launch
+            }
             clearEditor()
             places = places.dropLast(1)
             (place as? Place.Thread)?.let {
@@ -1530,9 +1574,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** The thread on screen: the topmost one among what is open (an editor may be over it). */
+    private fun threadOnTop() = (places.lastOrNull { it is Place.Thread } as? Place.Thread)?.focus
+
     private suspend fun reloadThread(focus: String) {
         val got = Core.thread(focus)
-        if (Core.failed(got) == null) {
+        if (Core.failed(got) == null && threadOnTop() == focus) {
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
             // read as it opens, unless by hand — the core's decision (common/lane.py)

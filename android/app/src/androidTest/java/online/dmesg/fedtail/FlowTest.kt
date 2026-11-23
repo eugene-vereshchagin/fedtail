@@ -250,6 +250,26 @@ class FlowTest {
     }
 
     @Test
+    fun theOverviewIsStillThereAfterATurn() {
+        // on its side the phone shows a lane beside the overview; upright again, that
+        // lane stayed — the reader was on the overview and found themselves in a lane
+        // nobody opened (24.11)
+        launch()
+        overview()
+        fun inALane() = compose.onAllNodesWithContentDescription("open now", substring = true)
+            .fetchSemanticsNodes().isNotEmpty()
+        scenario!!.onActivity {
+            it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
+        waitFor("the lane beside the overview", 30_000) { inALane() }
+        scenario!!.onActivity {
+            it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+        waitFor("the overview alone again", 30_000) { !inALane() }
+        overview()
+    }
+
+    @Test
     fun aThreadsBranchFoldsAndUnfolds() {
         // the windows' and the terminal's "-", the page's "− N": a top comment's branch
         // away on a tap and back on the next (the phone had no such thing, 24.11)

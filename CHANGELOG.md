@@ -62,6 +62,12 @@
 - Android: turning the phone on its side with the editor (or a thread, a profile)
   opened straight from the overview closed it — the wide screen brought a lane in and
   swept away what was open. The words were kept as a draft, but nothing said so.
+- Android, found by reading the code after those: "mark all read" in one lane and then in
+  another within five seconds left the first one unread for the server; a thread's slow
+  answer could fill the thread opened after it (and mark its posts read); a post sent
+  after the editor was left closed whatever stood on top; a lane's reading place at its
+  end went unsaved after another lane's; the overview turned into a lane after the phone
+  was turned on its side and back; a draft's late answer could land in another reply.
 - Android, big letters (the system's font size at 130 % and more): the overview puts a
   tile fewer in a row (four broke the lanes' names mid-word), the editor's buttons go
   two in a row, and "who sees it" wraps instead of running past the screen's edge.
