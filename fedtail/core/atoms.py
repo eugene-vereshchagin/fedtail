@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 
 from . import langs
 from .model import html_to_text, is_bot, norm_acct, real
+from .proto import raw
 
 NEW_ACCOUNT_DAYS = 30   # Mastodon's notification policy: "new accounts"
 NEW_FOLLOWER_DAYS = 3   # …and "followed you lately"
@@ -51,11 +52,11 @@ def media_kinds(st):
     """{"image", "gifv", "video", "audio"} of a status's attachments (a boost: its post's;
     a video a server called a picture — by its file's name — counts as a video), or
     {"text"}."""
-    st = st.get("reblog") or st
+    st = raw.real(st)
     kinds = set()
-    for m in st.get("media_attachments") or ():
+    for m in raw.media(st):
         kind = m.get("type")
-        url = str(m.get("url") or m.get("remote_url") or "").lower().split("?")[0]
+        url = str(m.get("url") or raw.media_remote(m) or "").lower().split("?")[0]
         if kind in ("image", "unknown") and url.endswith(VIDEO_EXT):
             kind = "video"
         if kind in MEDIA_KINDS:
@@ -76,7 +77,8 @@ VIA = {"followed", "tag", "boost", "mine", "list"}
 # what a boost (or a like, a boost, a quote event) is about: my post or comment, someone
 # else's post or comment, and whether its original was already known / read before
 TARGET = {"my_post", "my_comment", "post", "comment", "seen", "read"}
-EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "status",
+EVENTS = {"favourite", "reblog", "follow",  # ours: the rules' own words for events
+          "follow_request", "poll", "update", "status",
           "quote", "quoted_update", "pending", "admin", "severed", "warning",
           "annual_report", "i_followed",
           # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
@@ -89,16 +91,7 @@ EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "
 TEXT_IN = {"text", "cw", "alt", "poll", "name"}  # name: the author's name and @nick
 
 # the server's notification type → our event word
-EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
-            "follow_request": "follow_request", "poll": "poll", "update": "update",
-            "status": "status", "quote": "quote", "quoted_update": "quoted_update",
-            "pending.reply": "pending", "pending.favourite": "pending",
-            "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
-            "severed_relationships": "severed", "moderation_warning": "warning",
-            "annual_report": "annual_report", "fedtail.followed": "i_followed",
-            "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
-            "fedtail.moved": "moved", "fedtail.unliked": "unliked",
-            "fedtail.device": "device", "fedtail.release": "release"}
+EVENT_OF = raw.EVENT_OF  # (the protocol's own words for them: protocols/…/raw.py)
 
 # the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
 # "mutuals_only"; Akkoma's "local" is public that stays home)
@@ -209,7 +202,7 @@ def _host(url):
 
 def handle(account, my_host=""):
     """'nick@host' in lower case, my server's people included."""
-    acct = norm_acct(account.get("acct"))
+    acct = norm_acct(raw.handle(account))
     if acct and "@" not in acct:
         host = my_host or _host(account.get("url"))
         acct = f"{acct}@{host}" if host else acct
@@ -231,7 +224,7 @@ def _author_atoms(acc, world, now):
         out |= {"new_follower"} if aid in world.new_followers else set()
     if is_bot(acc, world.extra_bots):
         out.add("bot")
-    local = "@" not in norm_acct(acc.get("acct")) or \
+    local = "@" not in norm_acct(raw.handle(acc)) or \
         bool(world.my_host) and acct.endswith("@" + world.my_host.lower())
     out.add("local" if local else "remote")
     created = _when(acc.get("created_at"))
@@ -268,9 +261,8 @@ def _until(value):
 
 
 def _texts(st):
-    out = {"text": html_to_text(st.get("content") or ""), "cw": st.get("spoiler_text") or ""}
-    out["alt"] = "\n".join(m.get("description") or "" for m in st.get("media_attachments")
-                           or [])
+    out = {"text": html_to_text(st.get("content") or ""), "cw": raw.warning(st)}
+    out["alt"] = "\n".join(m.get("description") or "" for m in raw.media(st))
     poll = st.get("poll") or {}
     out["poll"] = "\n".join(o.get("title") or "" for o in poll.get("options") or [])
     acc = st.get("account") or {}
@@ -281,7 +273,7 @@ def _texts(st):
 def _target(st, world):
     """What an action is about: whose, a post or a comment, known or read already."""
     mine = bool(world.me_id) and (st.get("account") or {}).get("id") == world.me_id
-    comment = bool(st.get("in_reply_to_id"))
+    comment = bool(raw.reply_to(st))
     out = {("my_" if mine else "") + ("comment" if comment else "post")}
     if st.get("id") in world.seen_before:
         out.add("seen")
@@ -313,7 +305,7 @@ def post_facts(status, world=None, source=None, needs=None):
         f.visibility.add("local_only")
 
     # kind
-    reply_to = st.get("in_reply_to_id")
+    reply_to = raw.reply_to(st)
     author_id = (st.get("account") or {}).get("id")
     if boost:
         f.kind.add("boost")
@@ -325,7 +317,7 @@ def post_facts(status, world=None, source=None, needs=None):
             f.me.add("boost_of_mine")
     if reply_to:
         f.kind.add("reply")
-        if st.get("in_reply_to_account_id") == author_id:
+        if raw.reply_to_author(st) == author_id:
             f.kind.add("self_reply")
             if want("kind") and st.get("id") in world.self_threads:
                 f.kind.add("self_thread")
@@ -348,11 +340,11 @@ def post_facts(status, world=None, source=None, needs=None):
     if not want("me"):
         pass
     elif me and not mine:
-        if reply_to and st.get("in_reply_to_account_id") == me:
+        if reply_to and raw.reply_to_author(st) == me:
             f.me.add("reply")
             parent = world.parents.get(reply_to)
             if isinstance(parent, dict):
-                f.me.add("reply_to_comment" if parent.get("in_reply_to_id")
+                f.me.add("reply_to_comment" if raw.reply_to(parent)
                          else "reply_to_post")
             else:
                 f.unsure.add("me")
@@ -369,7 +361,7 @@ def post_facts(status, world=None, source=None, needs=None):
     # parent
     if reply_to and want("parent"):
         parent = world.parents.get(reply_to)
-        pid = st.get("in_reply_to_account_id")
+        pid = raw.reply_to_author(st)
         if me and pid == me:
             f.parent.add("mine")
         elif pid and pid in world.following:
@@ -409,16 +401,15 @@ def post_facts(status, world=None, source=None, needs=None):
 
     f.created = _when(wrapper.get("created_at"))
     f.original_created = _when(st.get("created_at"))
-    f.counts = {"likes": st.get("favourites_count") or 0,
-                "boosts": st.get("reblogs_count") or 0,
-                "replies": st.get("replies_count") or 0}
+    f.counts = {"likes": raw.likes(st) or 0, "boosts": raw.shares(st) or 0,
+                "replies": raw.replies(st) or 0}
     if want("text"):
         f.texts = _texts(st)
     return f
 
 
 def _has_atoms(f, st, world):
-    media = st.get("media_attachments") or []
+    media = raw.media(st)
     if media:
         f.has.add("media")
         for m in media:
@@ -427,7 +418,7 @@ def _has_atoms(f, st, world):
                 f.has.add(kind)
             if not (m.get("description") or "").strip():
                 f.has.add("alt_missing")
-    if st.get("spoiler_text"):
+    if raw.warning(st):
         f.has.add("cw")
     if st.get("sensitive"):
         f.has.add("sensitive")
@@ -450,11 +441,11 @@ def _has_atoms(f, st, world):
 def _state_atoms(f, st, wrapper, world, author_id):
     sid = st.get("id")
     f.state.add("read" if sid in world.read else "unread")
-    for flag, key in (("bookmarked", "bookmarked"), ("liked", "favourited"),
-                      ("boosted", "reblogged")):
+    for flag, key in raw.MY_MARKS.items():
         if st.get(key):
             f.state.add(flag)
-    for flag, key in (("unbookmarked", "bookmarked"), ("unliked", "favourited")):
+    for flag, mark in (("unbookmarked", "bookmarked"), ("unliked", "liked")):
+        key = raw.MY_MARKS[mark]
         if key in st and not st[key]:
             f.state.add(flag)
     if sid in world.replied:

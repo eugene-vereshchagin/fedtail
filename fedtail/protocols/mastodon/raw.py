@@ -224,3 +224,22 @@ def with_translation(st, done):
 # what a push subscription is told about: everything the activity shows
 PUSH_ALERTS = {"mention": True, "status": True, "reblog": True, "follow": True,
                "follow_request": True, "favourite": True, "poll": True, "update": True}
+
+
+# ---- what the rules ask (core/atoms.py) --------------------------------------------------
+
+# the server's notification type (and the types fedtail tells itself) → the rules' event
+EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
+            "follow_request": "follow_request", "poll": "poll", "update": "update",
+            "status": "status", "quote": "quote", "quoted_update": "quoted_update",
+            "pending.reply": "pending", "pending.favourite": "pending",
+            "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
+            "severed_relationships": "severed", "moderation_warning": "warning",
+            "annual_report": "annual_report", "fedtail.followed": "i_followed",
+            "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
+            "fedtail.moved": "moved", "fedtail.unliked": "unliked",
+            "fedtail.device": "device", "fedtail.release": "release"}
+
+# my marks on a post, the rules' word → the server's field: set — the mark is there; said
+# and false — it was taken back
+MY_MARKS = {"bookmarked": "bookmarked", "liked": "favourited", "boosted": "reblogged"}
