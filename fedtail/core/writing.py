@@ -10,7 +10,7 @@ import requests
 
 from .model import interaction_policy, looks_sent, narrower, real, send_key
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
-from .proto import ServerError
+from .proto import ServerError, raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -43,8 +43,8 @@ def _post_print(media, sensitive, poll, extra):
 def _mentions_of(st, me):
     """@user@server of whom a post I made names, me aside."""
     mine = str((me or {}).get("id") or "")
-    return [m["acct"] for m in st.get("mentions") or []
-            if m.get("acct") and str(m.get("id") or "") != mine]
+    return [raw.handle(m) for m in st.get("mentions") or []
+            if raw.handle(m) and str(m.get("id") or "") != mine]
 
 
 def _named(text, accts):
@@ -159,7 +159,7 @@ class WritingMixin:
         p = prefix.casefold()
         if not p:
             return []
-        me = (self.me or {}).get("acct", "").casefold()
+        me = raw.handle(self.me).casefold()
         found = []
         for key, (acct, name, n) in (self.store.people_counts(compute=False) or {}).items():
             if key == me:
@@ -435,7 +435,7 @@ class WritingMixin:
                     # and a thread open on it takes my answer in: stored already, the
                     # next round doesn't count it new
                     self._answers_in_open_threads(
-                        [(x["id"], x.get("in_reply_to_id")) for x in chain])
+                        [(x["id"], raw.reply_to(x)) for x in chain])
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()
@@ -510,7 +510,7 @@ class WritingMixin:
         s = real(status)
 
         def job():
-            ids = [m["id"] for m in s.get("media_attachments") or []]
+            ids = [m["id"] for m in raw.media(s)]
             attrs = [dict({"id": mid, "description": desc or ""},
                           **({"focus": f"{float(focus[0]):.2f},{float(focus[1]):.2f}"}
                              if focus else {}))
@@ -537,8 +537,7 @@ class WritingMixin:
                 return self.api.status_source(s["id"])
             except ApiError:
                 from .model import html_to_text
-                return {"text": html_to_text(s.get("content", "")),
-                        "spoiler_text": s.get("spoiler_text", "")}
+                return raw.source(html_to_text(s.get("content", "")), raw.warning(s))
         return self.submit(job)
 
     def history(self, status):
@@ -576,11 +575,11 @@ class WritingMixin:
             self.emit("status_deleted", s["id"])
             from .model import html_to_text
             return {"text": src.get("text") or html_to_text(s.get("content") or ""),
-                    "cw": src.get("spoiler_text", s.get("spoiler_text") or ""),
+                    "cw": raw.warning(src) if raw.says_warning(src) else raw.warning(s),
                     "visibility": s.get("visibility") or "private",
                     "language": s.get("language") or "",
-                    "in_reply_to_id": s.get("in_reply_to_id"),
-                    "media": len(s.get("media_attachments") or [])}
+                    "reply_to": raw.reply_to(s),
+                    "media": len(raw.media(s))}
         return self.submit(job)
 
     @staticmethod

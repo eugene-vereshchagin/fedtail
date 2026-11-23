@@ -30,11 +30,8 @@ CORE_RAW = {
     "app.py": 39,
     "atoms.py": 24,
     "merged.py": 16,
-    "model.py": 10,
     "store.py": 13,
-    "thread_ops.py": 9,
-    "view.py": 23,
-    "writing.py": 12,
+    "view.py": 21,
 }
 
 

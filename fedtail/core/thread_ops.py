@@ -13,6 +13,7 @@ from . import (
 )
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -55,7 +56,7 @@ class ThreadsMixin:
             if cur != status_id and (st.get("account") or {}).get("id") == me:
                 return True
             top = cur
-            cur = st.get("in_reply_to_id")
+            cur = raw.reply_to(st)
             if not cur:
                 break
         return top in self._my_roots() or store.sub_root_of(status_id) in self._my_roots()
@@ -70,7 +71,7 @@ class ThreadsMixin:
         for _ in range(self.SUB_CHAIN):
             if not st or (st.get("account") or {}).get("id") != who:
                 return False
-            pid = st.get("in_reply_to_id")
+            pid = raw.reply_to(st)
             if not pid:
                 return True
             st = self.store.get_status(pid)
@@ -92,7 +93,7 @@ class ThreadsMixin:
                 if not st:
                     break
                 top = cur
-                cur = st.get("in_reply_to_id")
+                cur = raw.reply_to(st)
                 if not cur:
                     break
             roots.add(top)
@@ -112,7 +113,7 @@ class ThreadsMixin:
         seen, cur = {status_id}, status_id
         for _ in range(self.SUB_CHAIN):
             st = store.get_status(cur)
-            parent = real(st).get("in_reply_to_id") if st else None
+            parent = raw.reply_to(real(st)) if st else None
             if not parent or parent in seen:
                 return None
             root = store.sub_root_of(parent)
@@ -175,7 +176,7 @@ class ThreadsMixin:
         want = set(self.cfg["subs"]["auto"])
         for st in my_statuses:
             st = real(st)
-            kind = "comments" if st.get("in_reply_to_id") else "posts"
+            kind = "comments" if raw.reply_to(st) else "posts"
             if kind not in want or self.subscribed(st):
                 continue
             try:
@@ -202,7 +203,7 @@ class ThreadsMixin:
 
     def parent_of(self, status):
         """Parent status, 'missing', or None when it isn't known (yet)."""
-        pid = real(status).get("in_reply_to_id")
+        pid = raw.reply_to(real(status))
         if not pid:
             return None
         p = self.store.get_status(pid)
@@ -214,7 +215,7 @@ class ThreadsMixin:
 
     def parents_for(self, statuses):
         """{status id: parent status | 'missing' | None} in two queries."""
-        pids = {st["id"]: real(st).get("in_reply_to_id") for st in statuses}
+        pids = {st["id"]: raw.reply_to(real(st)) for st in statuses}
         wanted = {p for p in pids.values() if p}
         found = self.store.get_statuses(wanted)
         missing = self.store.missing_set(wanted - set(found))
@@ -248,7 +249,7 @@ class ThreadsMixin:
         at all. `budget`: seconds at most, the rest left for a call after."""
         want = []
         for st in statuses:
-            pid = real(st).get("in_reply_to_id")
+            pid = raw.reply_to(real(st))
             if pid and pid not in self._parent_inflight and pid not in want and \
                     not self.store.get_status(pid) and not self.store.is_missing(pid):
                 self._parent_inflight.add(pid)
@@ -363,7 +364,7 @@ class ThreadsMixin:
                 cur = st
                 while cur is not None and cur["id"] not in keep:
                     keep.add(cur["id"])
-                    cur = by_id.get(cur.get("in_reply_to_id"))
+                    cur = by_id.get(raw.reply_to(cur))
         return [st for st in rest if st["id"] in keep]
 
     def recheck_threads(self):

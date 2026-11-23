@@ -46,7 +46,12 @@ from ..model import (
     real,
 )
 from . import links
-from .proto import adapter  # the protocol's: server objects → the model (core/proto.py)
+from .proto import (
+    adapter,  # the protocol's: server objects → the model (core/proto.py)
+)
+from .proto import raw as srv  # …and its objects read by what a thing is (stage 7);
+
+# (not "raw": that is what this module calls a server's object in a dozen places)
 
 
 def _then(fut, fn):
@@ -1013,7 +1018,7 @@ class View:
         """Future: (text, warning) — what I typed for my post, to edit it."""
         return _then(self._core.source(self._raw(real(post))),
                      lambda d: ((d or {}).get("text") or "",
-                                (d or {}).get("spoiler_text") or ""))
+                                srv.warning(d or {})))
 
     def edit(self, post, text, warning="", **kw):
         """My post corrected. Future: the Post as it is now."""
@@ -1026,7 +1031,7 @@ class View:
             return Redraft(text=d.get("text") or "", warning=d.get("cw") or "",
                            visibility=adapter.visibility_in(d.get("visibility") or ""),
                            language=d.get("language") or "",
-                           reply_to=d.get("in_reply_to_id"), media=int(d.get("media") or 0))
+                           reply_to=d.get("reply_to"), media=int(d.get("media") or 0))
         return _then(self._core.redraft(self._raw(real(post))), made)
 
     # ---- events --------------------------------------------------------------------

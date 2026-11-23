@@ -40,6 +40,12 @@ def warning(st):
     return st.get("spoiler_text") or ""
 
 
+def says_warning(obj):
+    """Does the object say anything of a warning at all (even "none")? A post's source
+    from a server that gives no warning with it doesn't."""
+    return "spoiler_text" in (obj or {})
+
+
 def media(st):
     """The attachments, as the server gave them ([] — none)."""
     return st.get("media_attachments") or []
@@ -160,6 +166,11 @@ def post(sid, author, content, created_at, url="", uri="", **more):
             "sensitive": False, "mentions": [], "tags": [], "media_attachments": [],
             "replies_count": 0, "favourites_count": 0, "reblogs_count": 0,
             "favourited": False, "reblogged": False, "url": url, "uri": uri, **more}
+
+
+def source(text, warning=""):
+    """What I typed for a post, in the shape the server gives its source in."""
+    return {"text": text, "spoiler_text": warning}
 
 
 # ---- a translation (what the server's translator answers, and ours in its shape) --------
