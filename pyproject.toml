@@ -55,6 +55,36 @@ include = ["fedtail*"]
 # every file under data/ (a folder added later comes along: tests/test_packaging.py)
 fedtail = ["_vendor/VENDORED.toml", "_vendor/*/LICENSE.txt", "_vendor/*/py.typed", "data/**/*"]
 
+# Types, checked where they are said (docs/en/dev/ci.md, the `types` job — it warns, it
+# doesn't block): the model, the core and the protocol first. Lenient on purpose: a
+# function without annotations is still looked into (check_untyped_defs), nothing has
+# to be annotated; tighten module by module.
+[tool.mypy]
+python_version = "3.11"
+files = ["fedtail/model", "fedtail/core", "fedtail/protocols"]
+ignore_missing_imports = true
+follow_imports = "silent"
+check_untyped_defs = true
+# "say what this empty dict holds" and "I can't tell this attribute's type yet" are
+# requests to annotate, not defects: not asked while nothing has to be annotated
+disable_error_code = ["var-annotated", "has-type"]
+warn_unused_ignores = true
+cache_dir = "tmp/.mypy_cache"
+
+# The Core's parts are mixins (core/app.py puts them together): each calls what another
+# part or the Core itself has — `self.store`, `self.emit` — which a mixin alone doesn't
+# declare. Until they do, "no such attribute" is not asked of these modules.
+[[tool.mypy.overrides]]
+module = [
+    "fedtail.core.activity", "fedtail.core.counts", "fedtail.core.lists",
+    "fedtail.core.markers", "fedtail.core.origin", "fedtail.core.people",
+    "fedtail.core.poll", "fedtail.core.push", "fedtail.core.silence",
+    "fedtail.core.social", "fedtail.core.syncing", "fedtail.core.thread_ops",
+    "fedtail.core.threadsize", "fedtail.core.translate", "fedtail.core.updates",
+    "fedtail.core.writing",
+]
+disable_error_code = ["attr-defined"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

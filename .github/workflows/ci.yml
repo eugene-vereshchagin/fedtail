@@ -17,6 +17,20 @@ jobs:
       - run: pip install ruff
       - run: ruff check --output-format=github .
 
+  # Types (pyproject's [tool.mypy]): the model, the core and the protocol, lenient — a
+  # function without annotations is looked into, none has to be annotated. It warns: a
+  # report here never holds a release (docs/en/dev/ci.md).
+  types:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install mypy types-requests requests
+      - run: mypy --cache-dir=/tmp/mypy
+
   # fedtail-sync faces the internet: its tests, every line of it covered, and a static
   # check (bandit, and ruff's bandit rules over the sync code) must pass — on the oldest
   # Python the server promises too

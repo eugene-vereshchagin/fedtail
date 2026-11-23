@@ -10,6 +10,7 @@ import re
 import threading
 import time
 from datetime import UTC
+from typing import Any
 from urllib.parse import quote, urlencode, urlsplit
 
 import requests
@@ -60,7 +61,7 @@ def _read_capped(r, cap):
             raise TooBig(f"answer over {cap // 1048576} MB refused")
         got.append(chunk)
     r._content = b"".join(got)  # what .content, .text and .json() read from now on
-    r._content_consumed = True
+    r._content_consumed = True  # type: ignore[attr-defined]  # requests' own flag
 
 
 def error_text(r):
@@ -779,7 +780,7 @@ class Api:
         theirs muted too (the server's default) or still coming."""
         if not on:
             return self.post(f"/api/v1/accounts/{seg(acc_id)}/unmute")
-        body = {"notifications": bool(notifications)}
+        body: dict[str, Any] = {"notifications": bool(notifications)}
         if duration:
             body["duration"] = int(duration)
         return self.post(f"/api/v1/accounts/{seg(acc_id)}/mute", json=body)
@@ -1068,7 +1069,7 @@ class Api:
     def follow_options(self, acc_id, reblogs=None, languages=None):
         """For someone I follow: their boosts in my Home or not; only posts in these
         languages ([] — all). Kept by the server, for every client."""
-        body = {}
+        body: dict[str, Any] = {}
         if reblogs is not None:
             body["reblogs"] = bool(reblogs)
         if languages is not None:

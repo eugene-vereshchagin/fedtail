@@ -26,6 +26,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import requests
 
@@ -384,7 +385,7 @@ CONTENT_TREE = None
 class FolderBackend(TreeBackend):
     def __init__(self, root):
         if str(root).startswith("content://"):
-            self.root = str(root)
+            self.root: Any = str(root)  # (a content:// address here, a Path below)
             tree = CONTENT_TREE(self.root) if CONTENT_TREE is not None else _NotHere(root)
             super().__init__(tree, "folder (chosen on the phone)")
             return

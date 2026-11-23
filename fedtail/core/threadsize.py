@@ -13,6 +13,7 @@ import time
 
 from .model import real
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -25,7 +26,7 @@ KEEP = 5000         # posts whose thread is remembered; the oldest go first
 KEY = "fedtail_thread_size"  # the raw status's key the adapter reads (Counts.thread)
 
 
-class ThreadSizeMixin:
+class ThreadSizeMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def _ts(self):

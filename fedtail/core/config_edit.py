@@ -146,7 +146,7 @@ def set_value(text, section, key, value, example_text=""):
     found = _find(lines, section, key)
     if found is not None:
         first, last, _c = found
-        indent = re.match(r"^(\s*)", lines[first]).group(1)
+        indent = lines[first][:len(lines[first]) - len(lines[first].lstrip())]
         lines[first:last + 1] = [indent + line]
     else:
         span = _sections(lines).get(section)
@@ -174,7 +174,7 @@ def unset(text, section, key, default=None):
     if found is None or found[2]:
         return text if text.endswith("\n") else text + "\n"
     first, last, _c = found
-    indent = re.match(r"^(\s*)", lines[first]).group(1)
+    indent = lines[first][:len(lines[first]) - len(lines[first].lstrip())]
     shown = toml_value(default) if default is not None else \
         lines[first].split("=", 1)[1].strip()
     lines[first:last + 1] = [f"{indent}#{key} = {shown}"]

@@ -877,7 +877,7 @@ class Sync:
         known[device] = {"name": name or (had or {}).get("name", ""),
                          "at": (had or {}).get("at") or now_iso()}
         if what is not None or (had or {}).get("what") is not None:
-            known[device]["what"] = what if what is not None else had.get("what")
+            known[device]["what"] = what if what is not None else (had or {}).get("what")
         self.store.kv_set("sync.devices", known)
         # the journal read from its start after a key was taken: the others' "joined"
         # there is old news

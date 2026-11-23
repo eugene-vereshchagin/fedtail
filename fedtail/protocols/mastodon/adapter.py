@@ -9,6 +9,7 @@ an odd value turns into an empty one, never an exception.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from ...model import (
     Account,
@@ -247,6 +248,7 @@ def quote(raw, profile="", depth=0):
     if not isinstance(q, dict):
         qid = raw.get("quote_id") or _dict(raw.get("pleroma")).get("quote_id")
         return Quote("accepted", None, str(qid)) if qid else None
+    inner: Any
     if "account" in q and "content" in q:  # a whole status
         inner, state, qid = q, "accepted", q.get("id")
     else:

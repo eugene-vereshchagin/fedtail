@@ -13,6 +13,7 @@ import time
 from .. import __version__
 from ..version import HOMEPAGE, USER_AGENT
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -57,7 +58,7 @@ def _system():
     return {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
 
 
-class UpdatesMixin:
+class UpdatesMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def updates_due(self):

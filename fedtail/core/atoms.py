@@ -15,6 +15,7 @@ import re
 from collections.abc import Container, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import urlsplit
 
 from . import langs
@@ -725,7 +726,8 @@ RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", 
 SWITCHES = ("posts_only", "unread_only")
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
-LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
+LANE_ICONS: tuple[str, ...] = (
+              "home", "local", "federated", "bots", "my_posts", "direct", "replies",
               "mentions", "subs", "bookmarks", "my_likes", "activity", "requests", "list",
               "tags", "star_full")
 # the library of pictures for one's own lanes (data/icons/lanes, tools/lane_pictures.py)
@@ -761,7 +763,7 @@ class Rule:
     """A free lane's rule: a post goes in if it matches any of `any` and none of `none`;
     `source`, when given, narrows every condition to those sources."""
     name: str
-    title: str = ""
+    title: Any = ""  # a word, or one per language: {"ru": …, "en": …}
     any: list = field(default_factory=list)
     none: list = field(default_factory=list)
     source: set = field(default_factory=set)
@@ -795,7 +797,7 @@ class Rule:
         rule = cls(name=name if isinstance(name, str) else "", warnings=warnings)
         if not rule.name:
             warnings.append("a lane needs a name")
-        title = table.get("title") or rule.name
+        title: Any = table.get("title") or rule.name
         if isinstance(title, dict):  # one per language: { ru = "Посты", en = "Posts" }
             title = {str(k): str(v) for k, v in title.items() if v} or rule.name
         rule.title = title if isinstance(title, dict) else str(title)

@@ -7,12 +7,13 @@ import time
 
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import raw
+from .state import CoreState
 from .store import now_iso
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class PeopleMixin:
+class PeopleMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     FOLLOWING_EVERY_S = 6 * 3600

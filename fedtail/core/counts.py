@@ -15,6 +15,7 @@ import time
 from .model import real
 from .proto import Error as ApiError
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -29,7 +30,7 @@ def changed(old, new):
     return any(old.get(k) != new.get(k) for k in COUNTED if k in new)
 
 
-class CountsMixin:
+class CountsMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def on_screen(self, ids):
@@ -65,7 +66,7 @@ class CountsMixin:
             return []
         self._counts_at = now
         with self._screen_lock():
-            ids = sorted(seen, key=seen.get, reverse=True)[:BATCH * 3]
+            ids = sorted(seen, key=lambda i: seen[i], reverse=True)[:BATCH * 3]
         if not ids:
             return []
         have = self.store.get_statuses(set(ids))

@@ -10,11 +10,12 @@ from . import custom, lanes, presets, sources, taggroups
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class ListsMixin:
+class ListsMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def _refresh_lists(self):

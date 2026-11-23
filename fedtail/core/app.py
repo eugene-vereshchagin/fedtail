@@ -27,6 +27,7 @@ import threading
 import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 import requests
 
@@ -248,8 +249,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # after read marks: the lanes' counts made anew here, not in a window (mark_read)
         self.reads = Pool(max_workers=1, thread_name_prefix="fedtail-read")
         self.auth = auth.load(paths.auth_file)
-        self.api = None
-        self.me = None
+        self.api: Any = None  # the protocol's client, once connected
+        self.me: Any = None   # my account as the server gave it
         # read marks, thread states and my lanes' arrangement shared with the account's
         # other devices (sync.*): on when sync.url or sync.folder says where they meet;
         # recorded whenever it is on, sent by the thread polling starts
@@ -304,8 +305,10 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         # leaves no census behind, nor itself alive)
         import weakref
         me = weakref.ref(self)
-        diag.report_extra("unread.txt",
-                          lambda: me().unread_census() if me() is not None else "")
+        def census():  # (one look at the weak ref: the core may go between two)
+            core = me()
+            return core.unread_census() if core is not None else ""
+        diag.report_extra("unread.txt", census)
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._poll_lock = threading.Lock()
@@ -930,7 +933,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                            following=self._following or set(),
                            followed_tags=self._followed_tag_names or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
-                           parents=_Parents(), new_replies=_News(),
+                           parents=_Parents(),  # type: ignore[arg-type]  # (get only)
+                           new_replies=_News(),
                            deleted=store.deleted_set(),
                            hidden_home=set(store.kv_get("people.hidden_home", []) or ()),
                            detect=lc["detect_language"],

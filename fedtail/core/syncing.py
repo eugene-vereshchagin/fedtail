@@ -5,11 +5,12 @@ and the threads' state."""
 import logging
 
 from . import remote, subs
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class SyncMixin:
+class SyncMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def sync_key(self):

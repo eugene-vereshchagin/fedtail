@@ -82,7 +82,7 @@ class CoreStateTest(unittest.TestCase):
         self.assertEqual(shared, [])
         # …and nothing mutable is a class attribute (it would be every core's at once)
         self.assertEqual([k for k, v in vars(CoreState).items() if isinstance(
-            v, (dict, list, set))], [])
+            v, (dict, list, set)) and not k.startswith("__")], [])  # (__annotations__)
 
 
 class LayeringTest(unittest.TestCase):

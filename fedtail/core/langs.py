@@ -100,7 +100,7 @@ def by_script(text):
                 break
     if counts.get("ja") and counts.get("zh"):  # kanji among kana: Japanese
         counts["ja"] += counts.pop("zh")
-    best = max(counts, key=counts.get) if counts else None
+    best = max(counts, key=lambda k: counts[k]) if counts else None
     if best and counts[best] >= MIN_SHARE * len(letters):
         return best
     if cyr >= MIN_SHARE * len(letters):

@@ -5,12 +5,14 @@ emoji, a link's quote); drafts; my profile."""
 import logging
 import re
 import time
+from typing import Any
 
 import requests
 
 from .model import interaction_policy, looks_sent, narrower, real, send_key
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import ServerError, raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -57,7 +59,7 @@ def _named(text, accts):
     return " ".join(lead + [text]) if lead else text
 
 
-class WritingMixin:
+class WritingMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def prepare_completion(self):
@@ -515,7 +517,8 @@ class WritingMixin:
                           **({"focus": f"{float(focus[0]):.2f},{float(focus[1]):.2f}"}
                              if focus else {}))
                      for mid, (desc, focus) in (media or {}).items() if mid in ids]
-            keep = {"sensitive": bool(s.get("sensitive"))}  # as it was: see edit_status
+            # as it was: see edit_status
+            keep: dict[str, Any] = {"sensitive": bool(s.get("sensitive"))}
             if s.get("poll"):
                 keep["poll"] = s["poll"]
             if attrs:
@@ -621,10 +624,10 @@ class WritingMixin:
         nowhere to be found but the ≡ menu (18.11). 0 with post.drafts_place off."""
         if not self.cfg["post"].get("drafts_place", True):
             return 0
-        return sum(1 for k, data, _u in self.store.list_drafts()
-                   if k != key and isinstance(data, dict) and
-                   (str(data.get("text") or "").strip() or data.get("cw")
-                    or data.get("media") or data.get("poll")))
+        return len([k for k, data, _u in self.store.list_drafts()
+                    if k != key and isinstance(data, dict) and
+                    (str(data.get("text") or "").strip() or data.get("cw")
+                     or data.get("media") or data.get("poll"))])
 
     def shelve_draft(self, key="new"):
         """"New draft": the new post's draft set aside under a name of its own

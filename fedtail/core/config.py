@@ -8,6 +8,7 @@ import copy
 import re
 import tomllib
 from importlib import resources
+from typing import Any
 
 from . import presets, taggroups
 
@@ -19,7 +20,7 @@ IMAGE_SEARCH = ["Google Lens|https://lens.google.com/uploadbyurl?url={image}",
 FACT_CHECK = ["Google Fact Check|https://toolbox.google.com/factcheck/explorer/search/"
               "{query};hl={lang}"]
 
-DEFAULTS = {
+DEFAULTS: dict[str, dict[str, Any]] = {
     "account": {"markdown": "auto"},
     "ui": {
         "tiles": "none",          # the curtain's tiles (common/sidebar.overview)
@@ -783,7 +784,7 @@ def _older_values(user, warnings):
     """The file's values an older version wrote, read as what they are now."""
     phone = user.get("phone")
     if isinstance(phone, dict) and phone.get("overview") == "tiles":
-        now = _OLD_OVERVIEW.get(phone.get("tiles"), "lanes")
+        now = _OLD_OVERVIEW.get(str(phone.get("tiles")), "lanes")
         warnings.append(f'phone.overview = "tiles" is read as "{now}" (0.22.2: lanes | all '
                         f'| list)')
         user = {**user, "phone": {**phone, "overview": now}}

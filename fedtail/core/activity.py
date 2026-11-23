@@ -3,12 +3,13 @@ the lanes whose rules take them, counted and seen."""
 
 import logging
 
+from .state import CoreState
 from .store import now_iso, sort_key
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class ActivityMixin:
+class ActivityMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def _poll_activity(self):

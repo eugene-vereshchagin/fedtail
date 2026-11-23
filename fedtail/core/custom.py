@@ -15,6 +15,7 @@ tag groups make stand among the others."""
 import hashlib
 import json
 import logging
+from typing import Any
 
 from . import atoms, lanes, presets
 from .model import real
@@ -221,7 +222,8 @@ def explain(custom, status, world, sources):
     facts = atoms.post_facts(status, world, feeds - {None} or None, None)
     now = world.now
     verdicts = custom.rule.explain(facts, now)
-    out = {"taken": False, "by": None, "out": None, "conds": [], "source_ok": True}
+    out: dict[str, Any] = {"taken": False, "by": None, "out": None, "conds": [],
+                           "source_ok": True}
     for where, i, reason in verdicts:
         if where == "source":
             out["source_ok"] = False

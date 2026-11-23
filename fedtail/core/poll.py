@@ -20,6 +20,7 @@ from . import (
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import RateLimited, raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -53,7 +54,7 @@ def _due(last, every):
     return last is None or time.monotonic() - last > every
 
 
-class PollMixin:
+class PollMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def start_polling(self):

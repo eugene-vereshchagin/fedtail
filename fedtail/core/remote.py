@@ -123,7 +123,7 @@ def _addresses(host, port, own):
 def _pinned(base, own):
     """A urllib3 connection class that connects to the addresses _addresses checked —
     the certificate and the Host header still the name's."""
-    class Pinned(base):
+    class Pinned(base):  # type: ignore[valid-type,misc]  # (a class made per base)
         def _new_conn(self):
             addrs = _addresses(self._dns_host, self.port, own)
             if not addrs:
@@ -136,7 +136,7 @@ def _pinned(base, own):
                         return super()._new_conn()
                     except Exception as e:  # noqa: BLE001 — the next address, or this
                         last = e
-                raise last
+                raise last  # type: ignore[misc]  # (addrs is never empty: one failed)
             finally:
                 self._dns_host = name
     return Pinned

@@ -83,6 +83,9 @@
   7): it reads the server's objects through the protocol's own functions
   (`protocols/mastodon/raw.py`) — about 250 places in 29 modules; a test allows none back.
   Nothing a reader sees changes.
+- Behind the scenes: types are checked (mypy, lenient) over the model, the core and the
+  protocol — clean; a CI job warns when that changes. On the way: a function defined
+  twice in the merged window's code and a weak reference looked at twice are gone.
 - Behind the scenes: the core's working state is declared in one place
   (`core/state.py`: what each part keeps, what it starts as, which lock guards it) instead
   of being made up where first needed; a test keeps it so.

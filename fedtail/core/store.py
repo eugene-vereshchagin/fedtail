@@ -410,7 +410,7 @@ class Store:
     def _reading(self):
         """The connection to read from: the writer's own inside its lock (its rows not
         committed yet), else the readers' — no waiting for a write going on."""
-        if self.lock._is_owned():
+        if self.lock._is_owned():  # type: ignore[attr-defined]  # RLock's own, CPython
             yield self.db
             return
         with self._rlock:
@@ -602,7 +602,7 @@ class Store:
                     self._count_people(raw.real(st))
 
     def _count_tag(self, name):
-        if not name:
+        if not name or self._tags is None:
             return
         seen = self._tags.setdefault(name.casefold(), [name, 0])
         seen[1] += 1
@@ -616,7 +616,7 @@ class Store:
             self._count_person(raw.handle(m) or None, None)
 
     def _count_person(self, acct, name):
-        if not acct:
+        if not acct or self._people is None:
             return
         seen = self._people.setdefault(acct.casefold(), [acct, "", 0])
         seen[2] += 1

@@ -1,5 +1,6 @@
 """What the dev tools need that the system's Python doesn't have (Playwright and its
-Chromium, for the web walk and the gallery), in a virtual environment of their own —
+Chromium, for the web walk and the gallery; ruff and mypy, for the lint and the types),
+in a virtual environment of their own —
 the system's Python stays as Debian keeps it (PEP 668: no pip there).
 
     python3 tools/devenv.py          # once; again to update
@@ -17,7 +18,7 @@ import sys
 import venv
 from pathlib import Path
 
-PACKAGES = ["playwright"]
+PACKAGES = ["playwright", "ruff", "mypy", "types-requests"]
 
 
 def where():

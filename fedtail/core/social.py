@@ -21,6 +21,7 @@ from . import proto
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import ServerError, raw
+from .state import CoreState
 
 # follow requests stand in Activity as entries of their own (activity.requests)
 FOLLOW_REQUEST = "follow_request:"
@@ -41,7 +42,7 @@ class NotSupported(ApiError):
         self.feature = feature
 
 
-class SocialMixin:
+class SocialMixin(CoreState):
     # ---- what the server can do ----------------------------------------------------
     def supports(self, feature):
         """Does my server have this feature (Capabilities.has): yes until it said no."""

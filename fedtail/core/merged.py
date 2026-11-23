@@ -819,9 +819,3 @@ def _tag_name(t):
     """A followed hashtag's name, from the model's Tag or the server's dict."""
     name = t.get("name") if isinstance(t, dict) else getattr(t, "name", "")
     return str(name or "").lstrip("#")
-
-
-def _tag_name(t):
-    """A followed hashtag's name, from the model's Tag or the server's dict."""
-    name = t.get("name") if isinstance(t, dict) else getattr(t, "name", "")
-    return str(name or "").lstrip("#")

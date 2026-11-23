@@ -171,8 +171,11 @@ class SingleInstance:
 
     def _loop(self):
         while True:
+            sock = self.sock
+            if sock is None:  # closed meanwhile
+                return
             try:
-                conn, _ = self.sock.accept()
+                conn, _ = sock.accept()
             except OSError:
                 return
             with conn:

@@ -3,6 +3,7 @@
 
 import logging
 from html import escape as html_escape
+from typing import Any
 
 import requests
 
@@ -10,16 +11,17 @@ from ..version import USER_AGENT
 from . import proto, remote
 from .model import real
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 # a translator on this very device — the phone's Offline Translator app (dev.davidv.
 # translator, through its AIDL API): fn(text, source, target) -> text, set by the phone's
 # bridge; None anywhere else (feed.translate_backend = "device" then does nothing)
-DEVICE = None
+DEVICE: Any = None
 
 
-class TranslateMixin:
+class TranslateMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def translate(self, status):

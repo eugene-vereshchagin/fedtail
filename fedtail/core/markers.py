@@ -4,11 +4,12 @@ the notifications were read up to, taken and given."""
 import logging
 
 from .model import id_after
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class MarkersMixin:
+class MarkersMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     MARKERS = {"home": "home", "notifications": "mentions"}  # marker timeline -> our source

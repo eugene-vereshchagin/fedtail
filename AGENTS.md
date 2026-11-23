@@ -21,6 +21,7 @@ python3 -m fedtail                       # run from the checkout (needs PySide6 
 python3 -m unittest discover -s tests -t .   # all tests; Qt ones skip without PySide6
 QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_qt_smoke
 ruff check .                             # line length 100
+mypy                                     # types: model, core, protocols (lenient; devenv has it)
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
 xvfb-run -a python3 -m unittest tests.test_gtk_smoke   # the GTK window (python3-gi gir1.2-gtk-4.0)
 python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs xvfb-run itself)

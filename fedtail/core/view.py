@@ -217,9 +217,9 @@ class View:
         a = adapter.activity(raw, self._prof(acc if isinstance(acc, dict) else raw))
         if raw.get("sort"):
             a = replace(a, sort=raw["sort"])
-        key = (a.ref.profile, a.id)
-        self._raw_activity[key] = raw
-        self._raw_activity.move_to_end(key)
+        ref = (a.ref.profile, a.id)
+        self._raw_activity[ref] = raw
+        self._raw_activity.move_to_end(ref)
         while len(self._raw_activity) > RAW_KEEP:
             self._raw_activity.popitem(last=False)
         if isinstance(acc, dict) and acc.get("id"):
@@ -296,7 +296,8 @@ class View:
                 return hit[2]
             post = self._entry(raw, people)
             rid = id(raw)
-            self._posts[rid] = (weakref.ref(raw, lambda _r, rid=rid: self._posts.pop(rid, None)),
+            self._posts[rid] = (weakref.ref(
+                raw, lambda _r, rid=rid: self._posts.pop(rid, None)),  # type: ignore[misc]
                                 key, post)
             return post
         return self._entry(raw, people)
@@ -912,10 +913,10 @@ class View:
                 twice = {t for t, n in Counter(titles).items() if n > 1}
                 titles = [f"{t}: {snippet(real(g['top']), 30)}" if t in twice else t
                           for t, g in zip(titles, convs, strict=True)]
-            items = tuple(RosterItem(kind, g["key"], t, g["unread"], len(g["members"]),
-                                     g["last"], tuple(g["members"]))
-                          for t, g in zip(titles, convs, strict=True))
-            out.append(RosterGroup(group, items))
+            made = tuple(RosterItem(kind, g["key"], t, g["unread"], len(g["members"]),
+                                    g["last"], tuple(g["members"]))
+                         for t, g in zip(titles, convs, strict=True))
+            out.append(RosterGroup(group, made))
         # people I follow who follow me back: a double click — our private talk, or a
         # private message to them (asked of the server once a day: refresh_mutuals)
         people = self.mutuals()

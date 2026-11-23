@@ -12,11 +12,12 @@ from . import auth, proto, remote
 from .model import real
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
 
-class OriginMixin:
+class OriginMixin(CoreState):
     """A part of Core (core/app.py): see the module's words."""
 
     def _origin_get(self, url):

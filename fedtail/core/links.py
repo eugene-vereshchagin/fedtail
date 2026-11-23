@@ -95,8 +95,8 @@ def in_app(html, status=None, mentions=None, tags=None, author=None):
         attrs = (before + after).lower()
         target = href
         tag = _tag_of(href)
-        said = _HASH_TEXT.match(_MARKUP.sub("", inner))
-        said = unquote(said.group(1)) if said else None
+        hashed = _HASH_TEXT.match(_MARKUP.sub("", inner))
+        said = unquote(hashed.group(1)) if hashed else None
         if href.rstrip("/") in mentions:
             target = f"fedtail:account/{mentions[href.rstrip('/')]}"
         elif tag and ("hashtag" in attrs or "mention" in attrs or 'rel="tag"' in attrs

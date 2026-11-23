@@ -11,6 +11,7 @@ A commit with `[skip ci]` in its message runs nothing.
 | job | when | what it does |
 |---|---|---|
 | `lint` | every push and PR | `ruff check .` (line length 100) |
+| `types` | every push and PR | `mypy` over `fedtail/model`, `fedtail/core` and `fedtail/protocols` (pyproject's `[tool.mypy]`), lenient: a function without annotations is looked into, none has to be annotated; warnings only, it never holds a release. Clean since 24.11 — keep it so: `~/.cache/fedtail/devenv/bin/python3 -m mypy` before a commit that touches the core |
 | `security` | every push and PR | the sync code faces the internet: `bandit` and ruff's bandit rules over `fedtail/core/sync`; the client against the real server (a checkout of fedtail-syncserver's main, whose version must be fedtail's), on Python 3.11 and 3.13 — the server's own tests run in its repository |
 | `audit` | every push and PR | known vulnerabilities in what fedtail runs on (`pip-audit`): warnings only, a new CVE upstream never holds a release |
 | `test` | every push and PR | all the tests on Python 3.11, 3.12 and 3.13 with Qt from pip, offscreen; then fedtail installed as a package and started |
