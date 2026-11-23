@@ -409,6 +409,7 @@ private fun ThreadPlace(
             LaunchedEffect(model.threadOpening) {
                 if (model.threadOpening == model.threadAimed) return@LaunchedEffect
                 val want = model.threadAimAt ?: focus
+                model.unfoldFor(want)  // (aimed into a folded branch: it opens)
                 val i = model.threadShown.indexOfFirst { it.sid == want || it.id == want }
                     .takeIf { it >= 0 } ?: model.threadShown.indexOfFirst { it.sid == focus }
                 // the head is the list's first item: every post one further
@@ -440,7 +441,8 @@ private fun ThreadPlace(
                         if (went != null && idx(went) > idx(from)) from = went
                         val to = from?.let { map.optString(it).takeIf { s -> s.isNotBlank() } }
                             ?: return@ThreadHead
-                        val i = idx(to)
+                        model.unfoldFor(to)  // the next new one sits in a folded branch
+                        val i = model.threadShown.indexOfFirst { it.id == to }
                         if (i < 0) return@ThreadHead
                         nextWent.value = to
                         scope.launch { state.animateScrollToItem(i + 1) }

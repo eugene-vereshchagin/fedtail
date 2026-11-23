@@ -3915,6 +3915,21 @@ class QtSmokeTest(unittest.TestCase):
             dock.text.clear()
             dock.keep_draft()
             self.assertIsNone(self.core.get_draft(key))
+            # the words go on to another post (Reply pressed there): their draft goes
+            # with them, none is left behind for the first one
+            posts = [E(st) for st in list(self.world.statuses.values())[:2]]
+            dock.set_target(posts[0], fresh=True, restore=False)
+            dock.text.setPlainText(dock.text.toPlainText() + " moving words")
+            dock.keep_draft()
+            first = crules.draft_key(self.core, posts[0])
+            self.assertIsNotNone(self.core.get_draft(first))
+            dock.set_target(posts[1])
+            self.assertIsNone(self.core.get_draft(first))
+            dock.keep_draft()
+            self.assertIn("moving words",
+                          self.core.get_draft(crules.draft_key(self.core, posts[1]))["text"])
+            dock.text.clear()
+            dock.keep_draft()
             dock._keeper.stop()
             # post.cw_field: the warning's field from the start, and after a send
             self.assertFalse(line_rules.line_warning_shown(self.core.cfg))

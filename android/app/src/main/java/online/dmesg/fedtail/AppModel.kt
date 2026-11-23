@@ -999,6 +999,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val away = threadPosts.filter { it.id in threadFolded }.flatMap { it.branch }.toSet()
             return threadPosts.filter { it.id !in away }
         }
+    /** The folded branch that hides this comment opens (a reply just sent into it, the
+     *  next new comment): what is aimed at must be there to stand on. */
+    fun unfoldFor(id: String?) {
+        if (id == null || threadFolded.isEmpty()) return
+        val over = threadPosts.filter { it.id in threadFolded &&
+            it.branch.any { b -> b == id || threadPosts.any { p -> p.id == b && p.sid == id } } }
+        if (over.isNotEmpty()) threadFolded = threadFolded - over.map { it.id }.toSet()
+    }
     fun toggleFold(id: String) {
         threadFolded = if (id in threadFolded) threadFolded - id else threadFolded + id
     }

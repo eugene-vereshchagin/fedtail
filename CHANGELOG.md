@@ -46,6 +46,8 @@
   layout's line is saved a moment after the last key and is there again after a crash or
   a restart — as the same draft the full editor opens for that post. A draft written in
   the full editor is never shown in the line nor written over by it.
+- The input line's draft goes with its words when they move on to another post (Reply
+  pressed elsewhere) — none is left behind for the first one.
 - **The input line listens to the editor's settings.** `post.alt_reminder` and
   `post.lang_check`: a file without a description, or a text in another language than
   marked, takes the post to the full editor, which asks (the line sent it as it was);

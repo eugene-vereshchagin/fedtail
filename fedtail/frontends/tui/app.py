@@ -844,24 +844,30 @@ class ProfileScreen(Screen, PostsMixin):
                           self.app.notify(str(e), severity="error"))
         if self._older == "":
             self.later(core.account_posts(self.acc_id, core.next_page(self._page),
-                                          show=self.show), ok=self._more_mine, fail=fail)
+                                          show=self.show),
+                       ok=lambda page, show=self.show: self._more_mine(page, show),
+                       fail=fail)
             return
         self.app.notify(_("older_from_origin", host=host), timeout=3)
         self.later(core.older_from_origin(self.acc, None if self._older == "origin"
                                           else self._older, (), resolve=True),
-                   ok=self._more_theirs, fail=fail)
+                   ok=lambda got, show=self.show: self._more_theirs(got, show), fail=fail)
 
-    async def _more_mine(self, page):
+    async def _more_mine(self, page, show=None):
         self._more_busy = False
+        if show != self.show:  # "s" pressed meanwhile: these are the other kind's
+            return
         if not page:  # my server has no more: theirs next, when they live elsewhere
             self._older = "origin"
             self.action_more()
             return
         await self._append(page)
 
-    async def _more_theirs(self, answer):
+    async def _more_theirs(self, answer, show=None):
         from ..common import profile as prof
         self._more_busy = False
+        if show != self.show:
+            return
         got, nxt = answer
         self._older = nxt or "end"
         got = [e for e in got or () if timed.keeps(e, self.show, self.acc_id)]
@@ -906,7 +912,13 @@ class ProfileScreen(Screen, PostsMixin):
     async def got_pinned(self, posts):
         self.pinned = list(posts or [])
         if self.pinned and self._page is not None:
+            # (they may come late: the reader stays on the post they stood on)
+            lv = self.query_one("#posts", ListView)
+            here = getattr(lv.highlighted_child, "entry", None)
             await self.fill(self._page)
+            ids = [getattr(i, "entry", None) and i.entry.id for i in lv.children]
+            if here is not None and here.id in ids:
+                lv.index = ids.index(here.id)
 
     def got_software(self, name):
         if name:

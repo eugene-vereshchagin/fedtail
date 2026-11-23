@@ -677,6 +677,12 @@ class InputDock(Gtk.Box):
     def set_target(self, post, fresh=None, restore=True):
         if post is not None and self.target is not None and post.id == self.target.id:
             return
+        # words of mine going on to another post: their draft goes with them — the one
+        # kept for the post they were for would come back there as a second copy
+        if getattr(self, "_draft_key", None) and (self._typed() if fresh is None
+                                                  else not fresh):
+            split.line_keep(self.win.view, self.target, False)
+            self._draft_key = None
         self.target = post
         if fresh is None:
             fresh = not self._typed()
@@ -863,7 +869,7 @@ class InputDock(Gtk.Box):
         self._set_text("")
         self._prefill = ""
         self.cw.set_text("")
-        self.cw_btn.set_active(False)
+        self.cw_btn.set_active(split.line_warning_shown(win.cfg))
         self.dress()
         if tool == "poll":
             panel.poll_btn.set_active(True)

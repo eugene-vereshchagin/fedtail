@@ -283,7 +283,7 @@ class InputDock(QWidget):
         self.text.clear()
         self._prefill = ""
         self.cw.clear()
-        self.cw_btn.setChecked(False)
+        self.cw_btn.setChecked(split.line_warning_shown(self.win.cfg))
         self.dress()
         if tool == "poll":
             dlg.poll_btn.setChecked(True)
@@ -389,6 +389,12 @@ class InputDock(QWidget):
     def set_target(self, post, fresh=None, restore=True):
         if post is not None and self.target is not None and post.id == self.target.id:
             return
+        # words of mine going on to another post: their draft goes with them — the one
+        # kept for the post they were for would come back there as a second copy
+        if getattr(self, "_draft_key", None) and (self._typed() if fresh is None
+                                                  else not fresh):
+            split.line_keep(self.win.ctx.view, self.target, False)
+            self._draft_key = None
         self.target = post
         view = self.win.ctx.view
         if fresh is None:
