@@ -12,6 +12,7 @@ import time
 
 from .. import __version__
 from ..version import HOMEPAGE, USER_AGENT
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -131,9 +132,8 @@ class UpdatesMixin:
         from ..version import NAME
         from .store import LOCAL_EVENT, now_iso
         row = {"id": f"{LOCAL_EVENT}release:{version}", "type": TYPE_RELEASE,
-               "account": {"id": f"release:{version}", "acct": "", "username": NAME,
-                           "display_name": f"{NAME} {version}",
-                           "url": release_page(version)},
+               "account": raw.account(f"release:{version}", "", NAME, f"{NAME} {version}",
+                                      url=release_page(version)),
                "created_at": now_iso()}
         if self.store.activity_put([row]):
             self.emit("activity_updated", 1)

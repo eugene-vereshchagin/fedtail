@@ -23,6 +23,7 @@ import logging
 import time
 from collections import Counter
 
+from .proto import raw
 from .store import LOCAL_EVENT
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ TYPE_LOST = "fedtail.lost_domain"
 TYPE_MOVED = "fedtail.moved"
 TYPE_UNLIKED = "fedtail.unliked"
 MOVED_ASK = 20  # the ones gone asked one by one whether they moved, at most
-KEEP_ACC = ("id", "acct", "username", "display_name", "url", "avatar", "avatar_static", "bot")
+KEEP_ACC = raw.FOLLOWER_KEPT  # who they are, enough to say so once they are gone
 MINE_KEEP_S = 7 * 86400  # my own removals remembered this long
 
 
@@ -91,7 +92,7 @@ class Derived:
         """{id: account} of every follower, or None when the list didn't come whole."""
         api, me = self.core.api, self.core.me
         try:
-            count = int((api.account(me["id"]) or {}).get("followers_count") or 0)
+            count = int(raw.followers_count(api.account(me["id"])) or 0)
         except Exception as e:  # noqa: BLE001
             log.info("derived: my count: %s", e)
             return None
@@ -155,8 +156,8 @@ class Derived:
                 log.debug("derived: %s moved?: %s", i, e)
                 continue
             new = acc.get("moved")
-            if isinstance(new, dict) and new.get("acct"):
-                out[i] = new["acct"]
+            if isinstance(new, dict) and raw.handle(new):
+                out[i] = raw.handle(new)
         return out
 
     # ---- likes taken back (activity.unlikes, off by default: a request a post) ----------
@@ -175,7 +176,7 @@ class Derived:
         most = max(1, int(self.cfg.get("unlikes_posts", 20)))
         since = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() - days * 86400))
         posts = [st for _i, st in self.store.items("mine", most * 2)
-                 if not st.get("reblog") and (st.get("created_at") or "") >= since
+                 if not raw.boosted(st) and (st.get("created_at") or "") >= since
                  and (st.get("account") or {}).get("id") == me["id"]][:most]
         before = self.store.kv_get("derived.likes", {}) or {}
         now, rows = {}, []
@@ -226,19 +227,18 @@ class Derived:
             elif not r.get("followed_by"):
                 left.append(i)
         rows = []
-        by_domain = Counter(_domain(before[i].get("acct")) for i in left)
+        by_domain = Counter(_domain(raw.handle(before[i])) for i in left)
         mass = int(self.cfg.get("unfollows_mass", 10))
         lost = {d for d, n in by_domain.items() if d and n > mass}
         for d in sorted(lost):
             n = by_domain[d]
             rows.append({"id": f"{LOCAL_EVENT}lost:{d}:{day}", "type": TYPE_LOST,
-                         "account": {"id": f"domain:{d}", "acct": d, "username": d,
-                                     "display_name": f"{d} ({n})"},
+                         "account": raw.account(f"domain:{d}", d, d, f"{d} ({n})"),
                          "created_at": stamp})
-        moved = self._moved([i for i in left if _domain(before[i].get("acct")) not in lost])
+        moved = self._moved([i for i in left if _domain(raw.handle(before[i])) not in lost])
         for i in left:
             acc = before[i]
-            if _domain(acc.get("acct")) in lost:
+            if _domain(raw.handle(acc)) in lost:
                 continue
             if i in moved:  # not an unfollow: the new account follows by itself
                 rows.append({"id": f"{LOCAL_EVENT}moved:{i}:{day}", "type": TYPE_MOVED,

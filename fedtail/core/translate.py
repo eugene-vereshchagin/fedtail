@@ -10,6 +10,7 @@ import requests
 from ..version import USER_AGENT
 from . import proto, remote
 from .model import real
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -70,11 +71,10 @@ class TranslateMixin:
         paras = [p.strip() for p in str(out or "").split("\n\n") if p.strip()]
         content = "".join("<p>" + html_escape(p).replace("\n", "<br>") + "</p>"
                           for p in paras)
-        spoiler = str(DEVICE(st["spoiler_text"], "", into) or "") \
-            if st.get("spoiler_text") else ""
-        return {"content": content, "spoiler_text": spoiler,
-                "detected_source_language": st.get("language") or "",
-                "provider": "Offline Translator"}
+        spoiler = str(DEVICE(raw.warning(st), "", into) or "") if raw.warning(st) else ""
+        return raw.translation(content, spoiler,
+                               detected_source_language=st.get("language") or "",
+                               provider="Offline Translator")
 
     def _libre(self, st, into):
         """LibreTranslate's /translate: the post's HTML (and its warning) into `into`."""
@@ -102,10 +102,10 @@ class TranslateMixin:
             return str(got.get("translatedText") or ""), \
                 str((got.get("detectedLanguage") or {}).get("language") or "")
         content, lang = one(st.get("content") or "", "html")
-        spoiler = one(st["spoiler_text"], "text")[0] if st.get("spoiler_text") else ""
-        return {"content": content, "spoiler_text": spoiler,
-                "detected_source_language": lang or st.get("language") or "",
-                "provider": "LibreTranslate"}
+        spoiler = one(raw.warning(st), "text")[0] if raw.warning(st) else ""
+        return raw.translation(content, spoiler,
+                               detected_source_language=lang or st.get("language") or "",
+                               provider="LibreTranslate")
 
     def auto_translation(self, st):
         """The post with its translation in place of its text, when feed.translate_auto
@@ -113,7 +113,7 @@ class TranslateMixin:
         the background, a few at a time) and the card is drawn anew when it comes."""
         if not self.cfg["feed"].get("translate_auto") or not isinstance(st, dict):
             return None
-        inner = st.get("reblog") if isinstance(st.get("reblog"), dict) else st
+        inner = raw.boosted(st) if isinstance(raw.boosted(st), dict) else st
         if not self._wants_translation(inner):
             return None
         cache = self.__dict__.setdefault("_translated", OrderedDict())
@@ -127,9 +127,8 @@ class TranslateMixin:
         mark = _("translated_auto", lang=done.get("detected_source_language") or "?")
         text = f"<p><small>🌐 {html_escape(mark)}</small></p>" + (done.get("content") or "")
         out = dict(inner, content=text, _fedtail_translated=True)
-        if done.get("spoiler_text"):
-            out["spoiler_text"] = done["spoiler_text"]
-        return dict(st, reblog=out) if inner is not st else out
+        out = raw.with_translation(out, dict(done, content=text))
+        return raw.with_boosted(st, out) if inner is not st else out
 
     def _wants_translation(self, st):
         from ..i18n import current_language

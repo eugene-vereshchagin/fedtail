@@ -139,3 +139,52 @@ def following_count(acc):
 ROSTER_KEPT = ("id", "username", "acct", "display_name", "avatar", "avatar_static",
                "url", "uri", "emojis", "bot", "note", "locked", "created_at",
                "last_status_at", "statuses_count", "followers_count", "following_count")
+
+# an account as "who went" keeps it between two looks at my followers
+FOLLOWER_KEPT = ("id", "acct", "username", "display_name", "url", "avatar",
+                 "avatar_static", "bot")
+
+
+def account(aid, handle="", username="", name="", **more):
+    """An account made here, in the server's shape — the one behind a row fedtail tells
+    itself (a new release, a device that joined, a server that went) or an RSS feed."""
+    return {"id": aid, "acct": handle, "username": username, "display_name": name, **more}
+
+
+def post(sid, author, content, created_at, url="", uri="", **more):
+    """A post made here (an RSS item), in the server's shape: public, nobody's reply, no
+    warning, no attachments, every count at nought, nothing of mine on it."""
+    return {"id": sid, "account": author, "in_reply_to_id": None,
+            "in_reply_to_account_id": None, "created_at": created_at,
+            "visibility": "public", "content": content, "spoiler_text": "",
+            "sensitive": False, "mentions": [], "tags": [], "media_attachments": [],
+            "replies_count": 0, "favourites_count": 0, "reblogs_count": 0,
+            "favourited": False, "reblogged": False, "url": url, "uri": uri, **more}
+
+
+# ---- a translation (what the server's translator answers, and ours in its shape) --------
+
+def translation(content, warning="", **more):
+    """A post's translation: its text and its warning's words, with what else is known
+    (the language found, who translated)."""
+    return {"content": content, "spoiler_text": warning, **more}
+
+
+def translated_warning(done):
+    """The warning's words in a translation ("" — none, or not translated)."""
+    return (done or {}).get("spoiler_text") or ""
+
+
+def with_translation(st, done):
+    """The post with its text (and its warning, when translated) from a translation."""
+    out = dict(st, content=done.get("content") or st.get("content") or "")
+    if translated_warning(done):
+        out["spoiler_text"] = translated_warning(done)
+    return out
+
+
+# ---- a push subscription -----------------------------------------------------------------
+
+# what a push subscription is told about: everything the activity shows
+PUSH_ALERTS = {"mention": True, "status": True, "reblog": True, "follow": True,
+               "follow_request": True, "favourite": True, "poll": True, "update": True}

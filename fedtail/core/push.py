@@ -4,6 +4,7 @@ it); fedtail only hands over the key and the subscription."""
 import logging
 
 from .proto import Error as ApiError  # the protocol's error answer (core/proto.py)
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -21,8 +22,7 @@ class PushMixin:
         return self.submit(job)
 
     # what a push subscription is told about: everything the activity shows
-    PUSH_ALERTS = {"mention": True, "status": True, "reblog": True, "follow": True,
-                   "follow_request": True, "favourite": True, "poll": True, "update": True}
+    PUSH_ALERTS = raw.PUSH_ALERTS  # (the protocol's own words for them)
 
     def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
         return self.call_api("push_subscribe", endpoint, p256dh, auth,

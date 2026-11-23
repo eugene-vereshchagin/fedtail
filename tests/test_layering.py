@@ -29,19 +29,10 @@ FIELDS = re.compile(RAW.pattern.split(r"|/api/v")[0])
 CORE_RAW = {
     "app.py": 39,
     "atoms.py": 24,
-    "config.py": 2,
-    "derived.py": 11,
     "merged.py": 16,
     "model.py": 10,
-    "profiles.py": 12,
-    "push.py": 1,
-    "rss.py": 11,
     "store.py": 13,
-    "sync/engine.py": 2,
     "thread_ops.py": 9,
-    "threadsize.py": 5,
-    "translate.py": 11,
-    "updates.py": 2,
     "view.py": 23,
     "writing.py": 12,
 }
@@ -53,8 +44,11 @@ class CoreRawTest(unittest.TestCase):
         over, under = [], []
         for path in sorted(core.rglob("*.py")):
             rel = str(path.relative_to(core))
+            # (a line marked "# ours:" names fedtail's own words — a file of its own, the
+            # config's vocabulary — that happen to be spelled as the server's)
             n = sum(len(FIELDS.findall(line))
-                    for line in path.read_text(encoding="utf-8").splitlines())
+                    for line in path.read_text(encoding="utf-8").splitlines()
+                    if "# ours:" not in line)
             most = CORE_RAW.get(rel, 0)
             if n > most:
                 over.append(f"{rel}: {n} (the ceiling is {most})")

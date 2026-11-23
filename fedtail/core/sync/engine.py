@@ -77,6 +77,7 @@ from pathlib import Path
 
 from ...i18n import _
 from .. import auth
+from ..proto import raw
 from ..store import now_iso
 from . import backends, crypto
 
@@ -970,8 +971,7 @@ def joined(core, device, name):
     if name and name in names:
         shown = f"{name} ({device[:4]})"
     row = {"id": f"{LOCAL_EVENT}device:{device}", "type": "fedtail.device",
-           "account": {"id": f"device:{device}", "acct": "", "username": shown,
-                       "display_name": shown},
+           "account": raw.account(f"device:{device}", "", shown, shown),
            "created_at": now_iso()}
     if store.activity_put([row]):
         log.info("sync: a device joined: %s", shown)

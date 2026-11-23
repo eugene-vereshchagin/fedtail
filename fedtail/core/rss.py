@@ -19,6 +19,8 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
+from .proto import raw
+
 log = logging.getLogger(__name__)
 
 PREFIX = "rss-"          # the id of a post that came from a feed
@@ -70,10 +72,10 @@ def _iso(d):
     return d.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def _summary(raw, most=SUMMARY_MAX):
+def _summary(markup, most=SUMMARY_MAX):
     """A feed's HTML summary as safe short HTML: tags out, the text escaped, paragraphs
     kept as line breaks."""
-    text = html.unescape(_TAGS.sub(" ", raw or ""))
+    text = html.unescape(_TAGS.sub(" ", markup or ""))
     text = re.sub(r"[ \t\r\f\v]+", " ", text)
     text = re.sub(r"\s*\n\s*", "\n", text).strip()
     if len(text) > most:
@@ -111,9 +113,8 @@ def parse(body, feed_url, now=None, items_max=ITEMS_MAX, summary_max=SUMMARY_MAX
     else:
         return []
     host = urlsplit(link or feed_url).hostname or urlsplit(feed_url).hostname or "feed"
-    account = {"id": "rss:" + host, "acct": host, "username": host,
-               "display_name": title or host, "url": link or feed_url, "avatar_static": "",
-               "avatar": "", "bot": True, "note": "", "fields": []}
+    account = raw.account("rss:" + host, host, host, title or host, url=link or feed_url,
+                          avatar_static="", avatar="", bot=True, note="", fields=[])
     now = now or datetime.now(UTC)
     out = []
     for it in items[:items_max]:
@@ -135,14 +136,9 @@ def parse(body, feed_url, now=None, items_max=ITEMS_MAX, summary_max=SUMMARY_MAX
         sid = PREFIX + hashlib.sha1((feed_url + "\n" + (guid or head)).encode()).hexdigest()[:16]
         content = (f"<p><b>{html.escape(head)}</b></p>" if head else "") + \
             (f"<p>{_summary(body_html, summary_max)}</p>" if body_html else "")
-        st = {"id": sid, "account": account, "in_reply_to_id": None,
-              "in_reply_to_account_id": None,
-              "created_at": _iso(min(when or now, now)), "visibility": "public",
-              "content": content, "spoiler_text": "", "sensitive": False, "mentions": [],
-              "tags": [], "media_attachments": [], "replies_count": 0,
-              "favourites_count": 0, "reblogs_count": 0, "favourited": False,
-              "reblogged": False, "url": url or link or feed_url,
-              "uri": url or (feed_url + "#" + sid), "fedtail_rss": feed_url}
+        st = raw.post(sid, account, content, _iso(min(when or now, now)),
+                      url=url or link or feed_url, uri=url or (feed_url + "#" + sid),
+                      fedtail_rss=feed_url)
         if url:
             st["card"] = {"url": url, "title": head or url,
                           "provider_name": host, "description": "", "image": None}

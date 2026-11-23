@@ -28,10 +28,16 @@ def config_root():
     return paths.config_base()
 
 
+# ours: the keys of a profile's card (profile.json) and of listing()'s rows — fedtail's own
+# file; the frontends read them by these names
+HANDLE, NAME = "acct", "display_name"  # ours: a file of fedtail's, not the server's object
+
+
 def remember(where, me, server):
     """Write who this profile is (on connect)."""
-    card = {"acct": me.get("acct", ""), "display_name": me.get("display_name", ""),
-            "server": server}
+    from .proto import raw  # (here, not at the top: listing profiles needs no protocol)
+    # ours: the card's own keys (a file of fedtail's), filled from the server's account
+    card = {HANDLE: raw.handle(me), NAME: raw.name(me), "server": server}
     try:
         f = where.data_dir / CARD
         if not f.exists() or json.loads(f.read_text("utf-8")) != card:
@@ -41,7 +47,7 @@ def remember(where, me, server):
 
 
 def listing():
-    """[{"name", "acct", "server", "display_name", "logged_in", "main"}] for every
+    """[{name, acct, server, display_name, logged_in, main}] for every
     profile found in the data and config folders, the main one first, then by name."""
     # a profile is a config folder with config.toml or a data folder with a login or a
     # database in it — not just any folder there (themes/ lives next to the profiles)
@@ -63,8 +69,8 @@ def listing():
             pass
         if not isinstance(card, dict):  # a broken card: the profile by its name
             card = {}
-        out.append({"name": name, "acct": card.get("acct", ""),
-                    "display_name": card.get("display_name", ""),
+        out.append({"name": name, HANDLE: card.get(HANDLE, ""),
+                    NAME: card.get(NAME, ""),
                     "server": card.get("server", ""),
                     "logged_in": (d / "auth.json").exists(), "main": name == main})
     out.sort(key=lambda p: (not p["main"], p["name"].lower()))
@@ -89,8 +95,8 @@ def hand_over_main(name):
 def label(p):
     """"@me@server (work)" — how a profile is named in menus and lists."""
     host = p["server"].split("://")[-1].rstrip("/") if p["server"] else ""
-    who = f"@{p['acct']}" + (f"@{host}" if host and "@" not in p["acct"] else "") \
-        if p["acct"] else ""
+    who = f"@{p[HANDLE]}" + (f"@{host}" if host and "@" not in p[HANDLE] else "") \
+        if p[HANDLE] else ""
     if who:
         return who if p.get("main", p["name"] == paths.main_profile()) \
             else f"{who} ({p['name']})"

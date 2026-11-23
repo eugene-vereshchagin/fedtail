@@ -13,6 +13,7 @@ import threading
 import time
 
 from .model import real
+from .proto import raw
 
 log = logging.getLogger("fedtail.core.app")  # the Core's log: one name for all its parts
 
@@ -62,8 +63,8 @@ class ThreadSizeMixin:
         n = self.thread_size(st)
         if n is None:
             return None
-        if isinstance(st.get("reblog"), dict):
-            return dict(st, reblog=dict(st["reblog"], **{KEY: n}))
+        if isinstance(raw.boosted(st), dict):
+            return raw.with_boosted(st, dict(raw.boosted(st), **{KEY: n}))
         return dict(st, **{KEY: n})
 
     def size_threads(self, ids):
@@ -114,7 +115,7 @@ class ThreadSizeMixin:
             for st in have.values():
                 p = real(st)
                 sid = str(p.get("id") or "")
-                if not sid or not (p.get("in_reply_to_id") or p.get("replies_count")):
+                if not sid or not (raw.reply_to(p) or raw.replies(p)):
                     continue  # a post alone: nothing to count
                 root = self._ts_root.get(sid)
                 got = self._ts_size.get(root) if root else None
@@ -223,7 +224,7 @@ class ThreadSizeMixin:
             st = self.store.get_statuses({at}).get(at)
             if st is None:
                 return None
-            up = st.get("in_reply_to_id")
+            up = raw.reply_to(st)
             if not up:
                 return str(at)
             at = str(up)
