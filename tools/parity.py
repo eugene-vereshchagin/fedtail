@@ -254,7 +254,7 @@ EDITOR_PARTS = {
     "alt": r"alt_describe|alt_prompt|alt_title|alt_label|\.alt = ",
     "sensitive": r"sensitive_mark|composeSensitive|#sensitive\b|c-sensitive|key == \"sensitive\"",
     "focus": r"focus_tip|focus_point|put\(\"focus\"|focus: \[",
-    "cover": r"media_cover",
+    "cover": r"media_cover|coverPreview",  # (the phone's own word for it)
     "poll": r"poll_add|PollEditor|state\.poll\b|tui_poll|poll_option",
     "schedule": r"schedule_when|tui_when|composeWhen|schedule_tip|#when\b",
     "drafts": r"drafts_waiting|draft_shelve|draftsWaiting|openDrafts",

@@ -1550,6 +1550,8 @@ def _check_pictures():
 
     from fedtail.core import remote
     from fedtail.version import USER_AGENT
+    if _s.get("demo"):  # its pictures live nowhere: the step said "broken" there (24.11)
+        return "the demo world: its pictures have made-up addresses"
     p = _first_post(lambda x: x.get("media") or (x.get("account") or {}).get("avatar"))
     if p is None:
         return "no pictures to try"

@@ -1049,9 +1049,9 @@ note.en = "A picture's focus point is set with the mouse on the picture itself; 
 
 [[editor]]
 place = "android"
-lacks = ["cover", "spell"]
-note.ru = "Орфографию на телефоне проверяет клавиатура системы — своя проверка не нужна. Обложки для видео и звука в редакторе телефона пока нет."
-note.en = "On the phone the system's keyboard checks the spelling — one of our own isn't needed. A cover for a video or a sound isn't in the phone's editor yet."
+lacks = ["spell"]
+note.ru = "Орфографию на телефоне проверяет клавиатура системы — своя проверка не нужна."
+note.en = "On the phone the system's keyboard checks the spelling — one of our own isn't needed."
 
 # ---- a lane's head and a thread's, interface by interface ------------------------------------
 # The same check (tools/parity.py LANE_PARTS, THREAD_PARTS) for what stands over a lane —
