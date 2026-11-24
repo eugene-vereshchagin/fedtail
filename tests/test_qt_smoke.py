@@ -1256,6 +1256,29 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("fedtail:threadnew/", links("post"))
         self.assertIn("fedtail:threadnew/098", links("post", thread_news=2))
 
+    def test_the_buttons_its_lane_names(self):
+        """A lane's own `buttons` (24.11): those under its cards, in its order — and
+        what it took off the row in the ⋯ menu; none named — the usual row."""
+        from PySide6.QtWidgets import QMenu, QToolButton
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("096", BOB, minute=1, vis="public")
+        words = [i18n._(k) for k in ("reply", "fav", "boost", "thread", "bookmark")]
+
+        def row(**kw):
+            r = PostRow(CardSpec(key="096", entry=E(st), **kw), self.win.ctx)
+            return r, [b.toolTip() for b in r.findChildren(QToolButton)
+                       if b.toolTip() in words]
+        self.assertEqual(row()[1], words)
+        r, got = row(buttons=("thread", "like"))
+        self.assertEqual(got, [i18n._("thread"), i18n._("fav")])
+        menu = QMenu()
+        r._fill_more(menu, r.spec.entry)
+        labels = [a.text() for a in menu.actions()]
+        self.assertIn(i18n._("reply"), labels)
+        self.assertNotIn(i18n._("fav"), labels)
+        self.assertEqual(row(buttons=())[1], [])
+
     def test_a_text_file_attached(self):
         """12.11: a file attached — "📄 notes.txt" in the card; its link reads it in a
         window of its own (the words from the core, without the token)."""

@@ -1183,7 +1183,8 @@ class PostRow(QWidget):
             thread_quiet=c.thread_quiet, lists=c.fill_list_menu is not None,
             act_as=c.act_as, long_form=bool(c.long_form), translate=bool(c.translate),
             translates=getattr(getattr(c, "view", None), "translation_languages", None),
-            quote_reply=self._can_quote(), in_thread=self.spec.in_thread)
+            quote_reply=self._can_quote(), in_thread=self.spec.in_thread,
+            buttons=getattr(self.spec, "buttons", None))
 
     def _fill_more(self, menu, entry):
         """The post's ⋯ menu: what's in it comes from common/actions.py."""

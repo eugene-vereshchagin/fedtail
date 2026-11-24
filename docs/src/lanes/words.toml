@@ -76,6 +76,10 @@ ru = "`true` — лента видна в боковой панели, толь�
 en = "`true` shows the lane in the sidebar only when something is in it."
 takes = "`true`"
 
+[rule.buttons]
+ru = "Кнопки под постами ленты, в написанном порядке. `[]` — никаких. Без ключа — по тому, что за запись: у поста с сервера ответ, лайк, буст, тред, закладка; у записи RSS — «открыть» и закладка. Кнопка, которую пост принять не может (буст личного сообщения), не рисуется; убранное с ряда остаётся в меню ⋯."
+en = "The buttons under the lane's posts, in the order written. `[]` — none. Without the key they follow what the item is: a server's post gets reply, like, boost, thread, bookmark; an RSS item — “open” and bookmark. A button the post cannot take (boosting a private message) is not drawn; what is off the row stays in the ⋯ menu."
+
 [rule.switches]
 ru = "Быстрые фильтры над лентой: «только посты», «только новое». `[]` — никаких. Без ключа — как в ленте до 0.22."
 en = "Quick filters above the lane: “posts only”, “unread only”. `[]` means none. Without the key, as in lanes before 0.22."
@@ -764,3 +768,24 @@ en = "The “posts only” chip: hides comments."
 [word.switches.unread_only]
 ru = "Чип «только новое»: оставляет непрочитанное."
 en = "The “unread only” chip: keeps what is unread."
+[word.buttons.reply]
+ru = "Ответить."
+en = "Reply."
+[word.buttons.like]
+ru = "В избранное, с числом."
+en = "Favourite, with its count."
+[word.buttons.boost]
+ru = "Продвинуть, с числом; только у публичных постов."
+en = "Boost, with its count; on public posts only."
+[word.buttons.thread]
+ru = "Открыть тред, с числом комментариев; внутри треда её нет."
+en = "Open the thread, with the number of comments; not inside a thread."
+[word.buttons.bookmark]
+ru = "В закладки."
+en = "Bookmark."
+[word.buttons.read]
+ru = "«Прочитано» под непрочитанным постом."
+en = "“Mark read” under an unread post."
+[word.buttons.open]
+ru = "Открыть адрес поста в браузере."
+en = "Open the post's address in the browser."

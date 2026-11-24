@@ -140,6 +140,7 @@ program knows it.
 | `any` | a list of tables: `[{ author = "me" }, { me = "reply" }]` | A list of conditions: a post is in the lane if it matches any of them. |
 | `badge` | `hot`, `quiet` | The colour of the lane's counter in the sidebar: “hot” is something to answer, “quiet” is no hurry. Empty means the usual one. |
 | `bundle` | `author` | Each author's posts together, the busiest first: catching up by people. |
+| `buttons` | see below | The buttons under the lane's posts, in the order written. `[]` — none. Without the key they follow what the item is: a server's post gets reply, like, boost, thread, bookmark; an RSS item — “open” and bookmark. A button the post cannot take (boosting a private message) is not drawn; what is off the row stays in the ⋯ menu. |
 | `filter_context` | `account`, `home`, `notifications`, `public`, `thread` | The server's filters of this context hide or fold the lane's posts, whatever source they came from. |
 | `group` | a word: `standard` or a name of your own | The sidebar section the lane sits in: `standard`, `personal`, `lists`, `tags`, or a name of your own. |
 | `hide_empty` | `true` | `true` shows the lane in the sidebar only when something is in it. |
@@ -470,6 +471,18 @@ program knows it.
 |---|---|
 | `posts_only` | The “posts only” chip: hides comments. |
 | `unread_only` | The “unread only” chip: keeps what is unread. |
+
+### The words of `buttons`
+
+| Word | What it means |
+|---|---|
+| `reply` | Reply. |
+| `like` | Favourite, with its count. |
+| `boost` | Boost, with its count; on public posts only. |
+| `thread` | Open the thread, with the number of comments; not inside a thread. |
+| `bookmark` | Bookmark. |
+| `read` | “Mark read” under an unread post. |
+| `open` | Open the post's address in the browser. |
 
 ### Pictures (`icon`)
 

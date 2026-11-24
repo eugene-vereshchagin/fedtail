@@ -72,7 +72,8 @@ object Core {
         obj("page", name, arg, tab, cursor)
 
     // a card's ⋯ as the windows have it; each item done their way (common/links.py)
-    suspend fun postMenu(id: String, sheet: Boolean = false) = obj("post_menu", id, sheet)
+    suspend fun postMenu(id: String, sheet: Boolean = false, row: String? = null) =
+        obj("post_menu", id, sheet, row)
     suspend fun link(url: String, confirmed: Boolean, chosen: JSONObject?,
                      shown: List<String> = emptyList()) =
         obj("link", url, confirmed, chosen?.toString(), JSONArray(shown).toString())

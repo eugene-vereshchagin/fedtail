@@ -248,3 +248,108 @@ class EmojiOffEverywhereTest(Base):
         core, _w = self.make(feed={"emoji": False})
         self.assertEqual(emoji_cut(core.cfg, "🔥 :blob:", (), "bob"), "bob")
         self.assertEqual(emoji_cut(core.cfg, "Bob 🔥", ()), "Bob ")
+
+
+class CardButtonsTest(Base):
+    """The buttons under a post: one rule (common/actions.button_words) — the lane's own
+    `buttons`, else by what the post is — for the windows, the page and the phone, which
+    drew lists of their own, each in its own order (24.11)."""
+
+    def setUp(self):
+        i18n.setup("en")
+
+    def test_a_lane_names_its_buttons_and_an_rss_item_has_its_own(self):
+        import dataclasses
+
+        from fedtail.frontends.common.lane import LaneModel
+        from fedtail.frontends.web.server import Web
+        core, w = self.make(lanes={"custom": [
+            {"name": "quiet", "source": "home", "any": [{}],
+             "buttons": ["thread", "like", "open", "nonsense"]},
+            {"name": "bare", "source": "home", "any": [{}], "buttons": []}]})
+        w.add(status("070", BOB, minute=1, vis="public"), home=True)
+        w.add(status("071", BOB, minute=2), home=True)  # followers only: no boost
+        core.poll_once()
+        view = View(core)
+        self.assertEqual(view.card_buttons("quiet"), ("thread", "like", "open"))
+        self.assertEqual(view.card_buttons("bare"), ())
+        self.assertIsNone(view.card_buttons("home"))
+        self.assertIsNone(view.card_buttons())
+        p, quiet = view.by_id("070"), view.by_id("071")
+        ctx = actions.Ctx(core.cfg, "ME", supports=core.supports)
+        act = lambda *a, **k: [b.action for b in actions.buttons(*a, **k)]  # noqa: E731
+        # no lane's word: by what the post is, as it always was
+        self.assertEqual(act(p, ctx), ["reply", "fav", "boost", "thread", "bookmark"])
+        self.assertEqual(act(quiet, ctx), ["reply", "fav", "thread", "bookmark"])
+        core.cfg["read"]["read_button"] = True
+        self.assertEqual(act(p, ctx, unread=True)[-1], "readone")
+        self.assertNotIn("readone", act(p, ctx))
+        core.cfg["read"]["read_button"] = False
+        # an RSS feed's item: no server to answer, like or boost it on
+        item = dataclasses.replace(p, ref=dataclasses.replace(p.ref, id="rss-1"),
+                                   url="https://feed.test/1")
+        got = actions.buttons(item, ctx)
+        self.assertEqual([b.action for b in got], ["open", "bookmark"])
+        self.assertEqual(got[0].url, "https://feed.test/1")
+        labels = [i.label for i in actions.menu(item, ctx)]
+        self.assertNotIn("Reply", labels)
+        self.assertNotIn("Favourite", labels)
+        # the lane's own: its order; only what the post can take; the rest in the menu
+        own = actions.Ctx(core.cfg, "ME", supports=core.supports,
+                          buttons=("thread", "like", "open"))
+        self.assertEqual(act(p, own), ["thread", "fav", "open"])
+        labels = [i.label for i in actions.menu(p, own)]
+        for word in ("Reply", "Boost", "Bookmark"):
+            self.assertIn(word, labels)
+        self.assertNotIn("Favourite", labels)  # under the post: not twice
+        self.assertNotIn("Thread", labels)
+        self.assertNotIn("Boost", [i.label for i in actions.menu(quiet, own)])
+        usual = [i.label for i in actions.menu(p, ctx)]
+        self.assertFalse({"Reply", "Boost", "Bookmark", "Thread"} & set(usual))
+        inside = actions.Ctx(core.cfg, "ME", in_thread=True, buttons=("thread", "reply"))
+        self.assertEqual(act(p, inside), ["reply"])
+        self.assertEqual(act(p, actions.Ctx(core.cfg, "ME", buttons=())), [])
+        # the cards of the lanes carry it, and the page and the phone are told the list
+        specs = {n: [s for s in LaneModel(view, n).build(False).specs if s.entry is not None]
+                 for n in ("quiet", "bare", "home")}
+        self.assertTrue(all(s.buttons == ("thread", "like", "open") for s in specs["quiet"]))
+        self.assertTrue(all(s.buttons == () for s in specs["bare"]))
+        self.assertTrue(all(s.buttons is None for s in specs["home"]))
+        web = Web(core, "k")
+        by = lambda lane: {x["sid"]: x["buttons"] for x in web.lane(lane)["posts"]}  # noqa: E731
+        self.assertEqual(by("home"), {"070": ["reply", "like", "boost", "thread", "bookmark"],
+                                      "071": ["reply", "like", "thread", "bookmark"]})
+        self.assertEqual(by("quiet"), {"070": ["thread", "like", "open"],
+                                       "071": ["thread", "like", "open"]})
+        self.assertEqual(by("bare"), {"070": [], "071": []})
+        in_thread = web.thread("070")["posts"]
+        self.assertNotIn("thread", in_thread[0]["buttons"])
+        # the menu of a card that shows this row: what is off it
+        flat = lambda m: [i["label"] for i in m["items"]]  # noqa: E731
+        self.assertIn("Reply", flat(web.post_menu("070", row="thread,like")))
+        self.assertNotIn("Reply", flat(web.post_menu("070")))
+        self.assertNotIn("Reply", flat(web.post_menu("070", row="reply,nonsense")))
+
+    def test_the_rule_and_the_editor(self):
+        from fedtail.core import atoms
+        from fedtail.frontends.common import lanesplace
+        rule = atoms.Rule.parse({"name": "x", "any": [{}], "buttons": ["like", "like", "reply"]})
+        self.assertEqual(rule.buttons, ("like", "reply"))
+        self.assertEqual(rule.warnings, [])
+        self.assertIsNone(atoms.Rule.parse({"name": "x", "any": [{}]}).buttons)
+        bad = atoms.Rule.parse({"name": "x", "any": [{}], "buttons": "reply"})
+        self.assertIsNone(bad.buttons)
+        self.assertTrue(any("buttons" in x for x in bad.warnings))
+        odd = atoms.Rule.parse({"name": "x", "any": [{}], "buttons": ["reply", "fly", 3]})
+        self.assertEqual(odd.buttons, ("reply",))
+        self.assertTrue(any("buttons" in x for x in odd.warnings))
+        old = {"name": "x", "any": [{}]}
+        table = lambda said: lanesplace._table_of("x", old, {"buttons": said})  # noqa: E731
+        self.assertNotIn("buttons", table(""))
+        self.assertEqual(table("thread, like  reply")["buttons"], ["thread", "like", "reply"])
+        self.assertEqual(table("-")["buttons"], [])
+        with self.assertRaises(ValueError):
+            table("reply, fly")
+        self.assertEqual(lanesplace._buttons_text(["reply", "like"]), "reply, like")
+        self.assertEqual(lanesplace._buttons_text([]), "-")
+        self.assertEqual(lanesplace._buttons_text(None), "")

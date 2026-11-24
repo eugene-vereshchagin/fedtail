@@ -7,6 +7,15 @@
 
 ## What's next
 
+- The buttons under a post are one rule for every interface: the web page and the phone drew
+  lists of their own (the phone in another order — reply, boost, like; the page with the
+  bookmark before the thread), now they draw what the windows do. A lane of rules may name
+  its own buttons and their order — `buttons = ["reply", "like", "thread"]` (reply, like,
+  boost, thread, bookmark, read, open; `[]` — none), in the file or in the lane editor;
+  what it takes off the row stays in the ⋯ menu. Without the key the buttons follow what the
+  item is: an RSS feed's item offered reply, like and boost, which only answered "no server
+  has it" — it has "open in the browser" and the bookmark now.
+
 - **The Thread button counts the whole thread.** Mastodon says only a post's direct
   replies, so a boosted comment from a busy thread showed no number at all. Now, for a
   post on screen in a thread, fedtail asks your server for the thread once (one or two

@@ -667,6 +667,7 @@ class LaneView(Gtk.Box):
                         short_id=sp.extra.get("short_id"),
                         my_replies=sp.extra.get("my_replies", ()),
                         via=sp.extra.get("via"), open_at=sp.open_at,
+                        buttons=sp.buttons,
                         lane_private=sp.extra.get("lane_private", False))
             line = conversation_line(sp)
             if line:

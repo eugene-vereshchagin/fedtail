@@ -371,6 +371,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | A post's character count | has | 0.23.1 | `card.char_count` | own | none: clients show the count only while writing |
 | A long post folded | has | 0.23.1 | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
+| The buttons under a post follow the lane and what the item is | has | next | `buttons` of a lane of rules; `card.bookmark_button`, `read.read_button` | own | none |
 
 <details><summary>In detail</summary>
 
@@ -432,6 +433,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A post's character count.** On the left of the row under a post, before "Reply" — how many characters its text has (`312 chars`; the warning not counted). In every interface; in the terminal, first on the line under the post. Off by default.
 
 **A long post folded.** A post longer than `fold_chars` characters (2000; a text of fifteen hundred reads whole in a lane) shows its beginning in a lane — whole paragraphs or lines, about half — and "Show all · N chars", which opens the rest in place. An open thread always shows it whole. In the terminal the beginning ends in "▾ Show all… — Enter": Enter opens the thread. `0` — never folded.
+
+**The buttons under a post follow the lane and what the item is.** Which buttons stand under a post and in which order is one rule for every interface. A lane of rules names its own: `buttons = ["reply", "like"]` (the words: reply, like, boost, thread, bookmark, read, open; `[]` — none) — in the file or in the lane editor. Without the key they follow what the item is: a server's post gets reply, like, boost, thread, bookmark; an RSS item, which no server knows, gets “open in the browser” and bookmark. A button the post cannot take is not drawn; what a lane took off the row stays in the ⋯ menu. The phone has no “thread” button: a tap on the card opens the thread.
 
 </details>
 

@@ -114,7 +114,7 @@ class Card(Gtk.Box):
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
                  depth=0, number=None, my_replies=(), via=None, open_at=None,
-                 profile_of=None, lane_private=False):
+                 profile_of=None, lane_private=False, buttons=None):
         # vertical, the face laid over the column's left margin: GTK 4.18 takes a
         # horizontal box's least height as its children's at their least width — the
         # text wrapped word by word — above the natural one at the width it has, and
@@ -125,6 +125,7 @@ class Card(Gtk.Box):
         # where its thread opens (CardSpec.open_at; none given — threads.open_at)
         view = getattr(ctx, "view", None)
         self.open_at = open_at or (view.open_at() if hasattr(view, "open_at") else "post")
+        self.buttons = buttons  # the lane's own, in order (CardSpec.buttons); None — usual
         self.short_id = short_id
         # on this person's own profile: their name and face lead nowhere new — no link
         # (as Qt's; 08.11: a link that did nothing)
@@ -1001,7 +1002,7 @@ class Card(Gtk.Box):
         c = self.ctx
         return actions.Ctx(cfg=c.cfg, me_id=c.me_id, supports=c.supports,
                            subscribed=c.subscribed, thread_quiet=c.thread_quiet,
-                           in_thread=c.in_thread,
+                           in_thread=c.in_thread, buttons=self.buttons,
                            long_form=bool(c.cfg["feed"].get("long_form", True)),
                            lists=True,
                            translate=bool(getattr(c.view.caps, "translation", False)),

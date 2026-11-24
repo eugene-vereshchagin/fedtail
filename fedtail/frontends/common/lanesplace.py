@@ -303,6 +303,9 @@ class LanePlaces:
             # the lane's own switches over what it holds (atoms.SWITCHES): its rule says
             Field("switches", _("le_f_switches"), list(t.get("switches") or ()), "checks",
                   tuple((s, _(s)) for s in atoms.SWITCHES), tip=_("le_f_switches_tip")),
+            # the buttons under its posts, in the order written (atoms.CARD_BUTTONS)
+            Field("buttons", _("le_f_buttons"), _buttons_text(t.get("buttons")),
+                  tip=_("le_f_buttons_tip", words=", ".join(atoms.CARD_BUTTONS))),
         ]
         page.form = tuple(form)
         page.submit = self._btn(_("save"), "lane", "save", name, primary=True)
@@ -551,13 +554,20 @@ def _words(v):
     return [v] if isinstance(v, str) else [str(x) for x in v]
 
 
+def _buttons_text(said):
+    """A lane's `buttons` as the form's line: "reply, like"; "-" — none; "" — not said."""
+    if not isinstance(said, list):
+        return ""
+    return ", ".join(str(x) for x in said) or "-"
+
+
 def _table_of(name, old, values):
     """The form's values → the lane's new table (what the form doesn't show stays)."""
     t = {k: v for k, v in old.items() if k not in ("title", "icon", "group", "source", "read",
                                                     "sort", "mode", "window", "filter_context",
                                                     "per_author", "bundle", "view",
                                                     "threads_shown", "open_at",
-                                                    "any", "none", "switches")}
+                                                    "any", "none", "switches", "buttons")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
@@ -585,6 +595,13 @@ def _table_of(name, old, values):
     switches = [s for s in values.get("switches") or () if s in atoms.SWITCHES]
     if switches or "switches" in old:
         t["switches"] = switches
+    said = str(values.get("buttons") or "").strip()
+    if said:  # "reply, like": those, in that order; "-" — none at all; "" — the usual
+        words = [] if said == "-" else [x for x in said.replace(",", " ").split()]
+        bad = [x for x in words if x not in atoms.CARD_BUTTONS]
+        if bad:
+            raise ValueError(_("le_f_buttons_tip", words=", ".join(atoms.CARD_BUTTONS)))
+        t["buttons"] = list(dict.fromkeys(words))
     src = [s for s in values.get("source") or () if isinstance(s, str)]
     if src:
         t["source"] = src[0] if len(src) == 1 else src

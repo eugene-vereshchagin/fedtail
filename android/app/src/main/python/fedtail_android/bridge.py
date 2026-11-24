@@ -680,13 +680,15 @@ def page(name, arg="", tab="", cursor=""):
 
 # ---- a card's ⋯ as the windows have it, a profile ----------------------------------------
 
-def post_menu(post_id, sheet=False):
+def post_menu(post_id, sheet=False, row=None):
     """{subscribed, muted, own, items: [{kind: link|open|copy|separator|quote_reply|lists|
     long_form|translate|submenu, label, url, text, page?, items?}], tools: [{tool, glyph,
     on, …}]} — common/actions.menu, in its order. sheet: the phone's sheet (09.11) shows
     the tools as a grid on top and the rest grouped (Author ▸, Thread ▸, More ▸): the
-    items then without the tools, and with their submenus."""
-    return _answer(lambda: _s["web"].post_menu(post_id, hover=bool(sheet), nested=bool(sheet)))
+    items then without the tools, and with their submenus. row: the buttons the card
+    shows ("reply,like,…"): what its lane took off them is in the menu; None — the usual."""
+    return _answer(lambda: _s["web"].post_menu(post_id, hover=bool(sheet), nested=bool(sheet),
+                                               row=row))
 
 
 def link(url, confirmed=False, chosen_json=None, shown_json=None):

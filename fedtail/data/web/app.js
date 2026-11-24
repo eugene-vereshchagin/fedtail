@@ -578,21 +578,27 @@ function renderActions(p, inThread) {
     c.title = w("char_count_tip");
     row.append(c);
   }
-  btn("↩", w("reply"), false, () => compose(p));
-  btn(p.mine.liked ? "★" : "☆", p.mine.liked ? w("faved") : w("fav"),
-      p.mine.liked, () => act("like", p), p.counts.likes);
-  if (p.can_boost)  // the core's word (common/actions.can_boost)
-    btn("♻", p.mine.shared ? w("boosted") : w("boost"), p.mine.shared,
-        () => act("share", p), p.counts.shares);
-  if (!state.me || state.me.bookmark_button !== false)  // ui.bookmark_button
-    btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"), p.mine.bookmarked,
-        () => act("bookmark", p));
-  // the whole thread's comments when known (common/actions.thread_count), as the windows'
-  if (!inThread) btn("⤷", w("thread"), false, () => openThread(p.sid, p.open_at),
-                     p.counts.thread);
-  if (p.unread && state.me && state.me.read_button)  // read.read_button: ✓ under the unread
-    btn("✓", w("mark_one_read"), false, () => linkAct("fedtail:readone/" + p.sid, p));
-  if (p.url) {
+  // which buttons, in which order: the core's word (p.buttons — common/actions.
+  // button_words: the lane's own `buttons`, else by what the post is); how each looks
+  // now (liked, boosted, the counts) is the post's own state, fresh after an action
+  const draw = {
+    reply: () => btn("↩", w("reply"), false, () => compose(p)),
+    like: () => btn(p.mine.liked ? "★" : "☆", p.mine.liked ? w("faved") : w("fav"),
+                    p.mine.liked, () => act("like", p), p.counts.likes),
+    boost: () => btn("♻", p.mine.shared ? w("boosted") : w("boost"), p.mine.shared,
+                     () => act("share", p), p.counts.shares),
+    bookmark: () => btn("🔖", p.mine.bookmarked ? w("unbookmark") : w("bookmark"),
+                        p.mine.bookmarked, () => act("bookmark", p)),
+    // the whole thread's comments when known (common/actions.thread_count)
+    thread: () => { if (!inThread) btn("⤷", w("thread"), false,
+                                       () => openThread(p.sid, p.open_at), p.counts.thread); },
+    read: () => { if (p.unread) btn("✓", w("mark_one_read"), false,
+                                    () => linkAct("fedtail:readone/" + p.sid, p)); },
+    open: () => { if (p.url) btn("↗", w("open_browser"), false,
+                                 () => window.open(p.url, "_blank", "noopener")); },
+  };
+  for (const word of p.buttons || []) if (draw[word]) draw[word]();
+  if (p.url && !(p.buttons || []).includes("open")) {  // the page's own: the post's address
     const a = link("↗", p.url);
     a.title = w("open_browser");
     row.append(a);
@@ -644,6 +650,13 @@ function itemAct(it, p) {
   if (it.kind === "open") return () => window.open(it.url, "_blank", "noopener");
   if (it.kind === "copy") return () => copyText(it.text);
   if (it.kind === "quote_reply") return () => quoteReply(p);
+  if (it.kind === "link" && p) {
+    // what a lane's `buttons` took off the row: done as the row's own buttons do it
+    const m = /^fedtail:(reply|fav|boost|thread)\//.exec(it.url);
+    if (m) return { reply: () => compose(p), fav: () => act("like", p),
+                    boost: () => act("share", p),
+                    thread: () => openThread(p.sid, p.open_at) }[m[1]];
+  }
   if (it.kind === "link") return () => linkAct(it.url, p);
   if (it.page) return () => openThing(it.page);
   return null;
@@ -652,7 +665,9 @@ function itemAct(it, p) {
 function menuInfo(p) {
   const hover = state.me.hover_tools ? "&hover=1" : "";
   // Author ▸, Thread ▸, More ▸ (ui.menu_groups): the page draws submenus
-  return api("/api/post_menu?id=" + encodeURIComponent(p.sid) + hover + "&nested=1");
+  // row: the buttons under this card — what its lane took off them is in the menu
+  return api("/api/post_menu?id=" + encodeURIComponent(p.sid) + hover + "&nested=1" +
+             "&row=" + encodeURIComponent((p.buttons || []).join(",")));
 }
 
 // a post's menu lines as popup() takes them; a submenu — the same popup with its lines

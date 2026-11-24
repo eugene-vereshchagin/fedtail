@@ -131,6 +131,7 @@ class Custom:
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
                               group="standard" if self.rule.group == "standard"
                               else "personal", events=True, open_at=self.rule.open_at,
+                              buttons=self.rule.buttons,
                               start=self.rule.start,
                               hide_empty=self.rule.hide_empty, badge=self.rule.badge,
                               switches=self._switches())
@@ -150,7 +151,7 @@ class Custom:
                           filter_context=self.rule.filter_context,
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, threads_shown=self.rule.threads_shown,
-                          open_at=self.rule.open_at,
+                          open_at=self.rule.open_at, buttons=self.rule.buttons,
                           events=bool(self.event_conds), start=self.rule.start,
                           hide_empty=self.rule.hide_empty, badge=self.rule.badge,
                           switches=self._switches())

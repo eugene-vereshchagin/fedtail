@@ -456,6 +456,7 @@ def lane_words():
     for key, words in atoms._RULE_WORDS.items():
         out[key] = [w for w in sorted(words) if w]
     out["switches"] = list(atoms.SWITCHES)
+    out["buttons"] = list(atoms.CARD_BUTTONS)
     return out
 
 

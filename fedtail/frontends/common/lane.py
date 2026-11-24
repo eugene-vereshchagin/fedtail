@@ -37,6 +37,9 @@ class CardSpec:
     # where its thread opens: "post" / "first_unread" (core.open_at: the lane's own, else
     # threads.open_at) — the card's links say it (common/links.thread_url)
     open_at: str = "post"
+    # the buttons under it, in order (core.card_buttons: the lane's own `buttons`); None
+    # — by what the post is (common/actions.buttons)
+    buttons: tuple | None = None
 
     @property
     def post(self):
@@ -435,8 +438,10 @@ class LaneModel:
         specs = self._with_events(specs)
         specs = _once_each(specs, self.name)
         at = view.open_at(self.name) if hasattr(view, "open_at") else "post"
+        own = view.card_buttons(self.name) if hasattr(view, "card_buttons") else None
         for s in specs:
             s.open_at = at
+            s.buttons = own
         only = getattr(view, "only_private", None)
         if only is not None and only(self.name):  # all private: none marked out (direct_mark)
             for s in specs:

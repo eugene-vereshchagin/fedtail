@@ -51,6 +51,9 @@ class Lane:
     view: str = ""
     threads_shown: str = ""  # "all": a threads view's every thread ("" / "new": with news)
     open_at: str = ""
+    # the buttons under its posts, in order (its rule's `buttons`, atoms.CARD_BUTTONS);
+    # None — not said: by what each post is (frontends/common/actions.buttons)
+    buttons: tuple | None = None
     # it takes events (likes, follows, follow requests… — a condition with `event`):
     # Core.lane_events gives them; with no source it takes nothing else (Activity)
     events: bool = False

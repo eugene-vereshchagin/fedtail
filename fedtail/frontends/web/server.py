@@ -440,6 +440,13 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     # where its thread opens (CardSpec.open_at: the lane's, else threads.open_at)
     out["open_at"] = spec.open_at if spec is not None else \
         (view.open_at() if hasattr(view, "open_at") else "post")
+    # the buttons under it, in order — the windows' one rule (common/actions.button_words:
+    # the lane's own `buttons`, else by what the post is); the page and the phone draw
+    # these, each had a list of its own (24.11)
+    out["buttons"] = actions.button_words(entry, actions.Ctx(
+        cfg=view.cfg, me_id=me.id if me else None,
+        in_thread=number is not None or depth is not None,
+        buttons=spec.buttons if spec is not None else None), unread)
     if spec is not None:
         out["words"] = words_json(view, spec, web_date)
         out["item"] = spec.key
@@ -1975,10 +1982,12 @@ class Web:
                            "url": url if it.kind == "save" else it.url, "text": it.text}
                           for it in media_items(self.core.cfg, m)]}
 
-    def post_menu(self, sid, hover=False, nested=False):
+    def post_menu(self, sid, hover=False, nested=False, row=None):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
         what is offered, when, in which order) — the page only lays them out; a list's
         submenu, the whole text and the translation open as places (common/places.py).
+        row: the buttons the card shows under the post (its "buttons") — what a lane's
+        own `buttons` took off the row is in the menu then; None — the usual row.
         Left out: "as another account" (one account a page)."""
         from ..common import actions
         core = self.core
@@ -1992,7 +2001,9 @@ class Web:
                           translates=getattr(core, "translation_languages", None),
                           quote_reply=bool(cfg["post"].get("quote_prefix", "> ")),
                           # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as)
-                          act_as=actions.act_as_of(core, cfg))
+                          act_as=actions.act_as_of(core, cfg),
+                          buttons=None if row is None else tuple(
+                              x for x in str(row).split(",") if x in actions.BUTTON_ACTION))
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])
 
@@ -2753,7 +2764,8 @@ class Handler(BaseHTTPRequestHandler):
                       q.get("cursor", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", ""),
                                                                q.get("hover") == "1",
-                                                               q.get("nested") == "1"),
+                                                               q.get("nested") == "1",
+                                                               q.get("row")),
                   "/api/media_menu": lambda: self.web.media_menu(q.get("id", ""),
                                                                  q.get("i", "0")),
                   "/api/text_file": lambda: self.web.text_file(q.get("id", ""),

@@ -1285,6 +1285,13 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         own = getattr(self.lane_by_name.get(lane), "open_at", "") if lane else ""
         return own or self.cfg["feed"].get("open_at") or "post"
 
+    def card_buttons(self, lane=None):
+        """The buttons under the posts of `lane`, in order — its rule's own `buttons`
+        (atoms.CARD_BUTTONS) — or None: the lane names none (or there is no lane: a
+        profile, a thread's own cards), each card's are by what its post is
+        (frontends/common/actions.buttons)."""
+        return getattr(self.lane_by_name.get(lane), "buttons", None) if lane else None
+
     def thread_news(self):
         """{root post id: unread replies} — the followed threads with something new
         (feed.thread_news: the line under such a post's card). Cached till the store

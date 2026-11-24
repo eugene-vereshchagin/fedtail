@@ -1446,6 +1446,23 @@ class GtkSmokeTest(_GtkBase):
         self.assertIsInstance(first, Gtk.Label)
         self.assertEqual(first.get_label(), i18n._("char_count", n=5))
 
+    def test_the_buttons_its_lane_names(self):
+        """A lane's own `buttons` (24.11): those under its cards, in its order; none
+        named — the usual row (common/actions.button_words)."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.protocols.mastodon import adapter
+        st = status("093", BOB, minute=2, vis="public")
+
+        def row(**kw):
+            card = Card(self.win.ctx, "b", adapter.post(st), **kw)
+            return [getattr(w, "_ft_tip", "").split("\n")[0] for w in _walk(card.actions)
+                    if isinstance(w, Gtk.Button)]
+        words = [i18n._(k) for k in ("reply", "fav", "boost", "thread", "bookmark")]
+        self.assertEqual([t for t in row() if t in words], words)
+        self.assertEqual([t for t in row(buttons=("thread", "like")) if t in words],
+                         [i18n._("thread"), i18n._("fav")])
+        self.assertEqual([t for t in row(buttons=()) if t in words], [])
+
     def test_the_command_line_hidden_comes_on_ctrl_l(self):
         """ui.command_line = false (the default, 12.11): the line is there, hidden; Ctrl+L
         shows it — as Qt (GTK had none at all, so Ctrl+L did nothing)."""

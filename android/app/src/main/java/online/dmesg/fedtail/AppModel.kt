@@ -171,6 +171,9 @@ data class PostItem(
     val visibility: String = "",     // public | unlisted | private | direct
     val lanePrivate: Boolean = false, // a lane of private messages only: none marked out
     val canBoost: Boolean = true,    // the core's word (common/actions.can_boost)
+    // the buttons under it, in order: the core's word (common/actions.button_words — the
+    // lane's own `buttons`, else by what the post is)
+    val buttons: List<String> = listOf("reply", "like", "boost", "bookmark"),
     val chars: String = "",          // card.char_count: "312 chars" on the left; "" — off
     val foldHtml: String = "",       // feed.fold_chars: a long post's beginning; "" — whole
     val foldLabel: String = "",      // its button: "Show all · 2345 chars"
@@ -276,8 +279,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var newestFirst by mutableStateOf(false)
     var markOnScroll by mutableStateOf(true)
     var dwellMs by mutableStateOf(350L)  // read.dwell_ms: the list stands still this long
-    var bookmarkButton by mutableStateOf(true)  // ui.bookmark_button: 🔖 beside ↩ ★ ♻
-    var readButton by mutableStateOf(false)     // read.read_button: ✓ under an unread post
     var mediaLook by mutableStateOf(MediaLook()) // ui.media_grid, alt_text, gifv, image_viewer
     // a private message among posts: the core's "frame", "fill", "badge" or "none"
     // (ui.direct_highlight, the theme's shape.direct)
@@ -653,8 +654,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         newestFirst = me.optString("order") == "newest_first"
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         dwellMs = me.optLong("dwell_ms", 350L).coerceAtLeast(0L)
-        bookmarkButton = me.optBoolean("bookmark_button", true)
-        readButton = me.optBoolean("read_button")
         mediaLook = MediaLook(grid = me.optString("media_grid", "natural"),
             alt = me.optString("alt_text", "tooltip"),
             gifvPlay = me.optString("gifv", "play") == "play",
@@ -2042,7 +2041,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** A card's ⋯ as the windows have it (common/actions.menu). */
-    suspend fun postMenu(p: PostItem): JSONObject = Core.postMenu(p.sid, sheet = true)
+    suspend fun postMenu(p: PostItem): JSONObject = Core.postMenu(p.sid, sheet = true,
+        // what stands under the card (and what the sheet's grid and a tap offer anyway):
+        // the rest of a post's actions the menu lists, when the lane took them off the row
+        row = (p.buttons + listOf("reply", "boost", "thread")).joinToString(","))
 
     /** A fedtail: link of the ⋯ menu (edit, delete, mute, report…), done the windows' way. */
     fun runLink(url: String, confirmed: Boolean = false, chosen: JSONObject? = null) {
@@ -2740,6 +2742,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             visibility = str(o, "visibility"),
             lanePrivate = o.optBoolean("lane_private", false),
             canBoost = o.optBoolean("can_boost", true),
+            buttons = o.optJSONArray("buttons")?.let { a -> List(a.length()) { a.optString(it) } }
+                ?: listOf("reply", "like", "boost", "bookmark"),
             chars = str(o, "chars"),
             foldHtml = str(o.optJSONObject("fold"), "html"),
             foldLabel = str(o.optJSONObject("fold"), "label"),

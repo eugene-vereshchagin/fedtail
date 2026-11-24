@@ -578,6 +578,22 @@ class BridgeTest(_Base):
         self.assertTrue(all(t["picture"] for t in sheet["tools"]))
         tools = {t["url"] or t["text"] for t in sheet["tools"]} - {""}
         self.assertFalse([i for i in sheet["items"] if (i["url"] or i["text"]) in tools])
+        # the buttons under a card: the core's list (common/actions.button_words), which
+        # the phone draws — it had its own, in its own order (24.11); the row it shows
+        # goes with the menu's question: what a lane took off it is in the menu then
+        home = self.call("lane", "home")["posts"]
+        self.assertTrue(home)
+        usual = ["reply", "like", "boost", "thread", "bookmark"]
+        for x in home:
+            self.assertEqual(x["buttons"], [w for w in usual
+                                            if w != "boost" or x["can_boost"]])
+
+        def labels(m):
+            return [i["label"] for i in m["items"]] + \
+                [j["label"] for i in m["items"] for j in i.get("items") or ()]
+        self.assertNotIn("Favourite", labels(self.call("post_menu", "103", True)))
+        self.assertIn("Favourite",
+                      labels(self.call("post_menu", "103", True, "reply,boost,thread")))
         self.assertTrue([i for i in sheet["items"] if i["kind"] == "submenu"])
         flat = self.call("post_menu", "103")  # as before: everything, one list
         self.assertFalse([i for i in flat["items"] if i["kind"] == "submenu"])

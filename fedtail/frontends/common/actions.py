@@ -29,7 +29,7 @@ def vis_word(vis):
 
 # fedtail's own pictures (frontends/iconpack.py) for a post's buttons and who sees it
 ACTION_PICTURE = {"reply": "reply", "fav": "star", "boost": "boost", "thread": "thread",
-                  "bookmark": "bookmark"}
+                  "bookmark": "bookmark", "open": "open"}
 
 
 def action_picture(action, active=False):
@@ -56,6 +56,9 @@ class Ctx:
     translates: dict | None = None          # {from: [into]} the server's translator; None — ?
     quote_reply: bool = False               # "Reply with a quote" (needs an editor)
     in_thread: bool = False
+    # the buttons the card's lane names, in order (its rule's `buttons`: CardSpec.buttons),
+    # or None — by what the post is (button_words)
+    buttons: tuple | None = None
 
 
 def can_translate(translates, lang, into=None):
@@ -135,37 +138,89 @@ def thread_count(entry):
     return max(c.thread, c.replies)
 
 
+# a lane's word for a button (atoms.CARD_BUTTONS) → the action of its link
+BUTTON_ACTION = {"reply": "reply", "like": "fav", "boost": "boost", "thread": "thread",
+                 "bookmark": "bookmark", "read": "readone", "open": "open"}
+# what a post of a server offers when its lane names nothing, and what a post no server
+# knows does (an RSS feed's item, core/rss.py: nobody to answer, like or boost it)
+POST_BUTTONS = ("reply", "like", "boost", "thread", "bookmark", "read")
+LOCAL_BUTTONS = ("open", "bookmark", "read")
+
+
+def local_only(p):
+    """Is this a post no server knows — an RSS feed's item (core/rss.py)?"""
+    from ...core.rss import is_rss
+    return is_rss(str(p.id))
+
+
+def _can(word, p, ctx, unread):
+    """Can this post take this button now? Whatever a lane asks, a button that would
+    only be refused isn't drawn."""
+    if word in ("reply", "like"):
+        return not local_only(p)
+    if word == "boost":
+        return not local_only(p) and can_boost(p)
+    if word == "thread":
+        return not ctx.in_thread and not local_only(p)
+    if word == "read":
+        return bool(unread)
+    if word == "open":
+        return bool(p.url or p.uri)
+    return word == "bookmark"
+
+
+def button_words(entry, ctx, unread=False):
+    """Which buttons stand under this post, in order (atoms.CARD_BUTTONS' words) — the
+    one answer of every interface (the page and the phone had lists of their own, each
+    in its own order: 24.11). The lane's own `buttons` when its rule names them
+    (ctx.buttons); else by what the post is — a server's post: reply, like, boost,
+    thread, bookmark (ui.bookmark_button), read (read.read_button); an RSS item: open,
+    bookmark, read. Either way only what this post can take (_can)."""
+    p = real(entry)
+    words = ctx.buttons
+    if words is None:
+        words = LOCAL_BUTTONS if local_only(p) else POST_BUTTONS
+        if not ctx.cfg["ui"].get("bookmark_button", True):
+            words = tuple(w for w in words if w != "bookmark")
+        if not ctx.cfg["read"].get("read_button", False):
+            words = tuple(w for w in words if w != "read")
+    return [w for w in words if w in BUTTON_ACTION and _can(w, p, ctx, unread)]
+
+
 def buttons(entry, ctx, unread=False, open_at="post"):
-    """The buttons under a post, in order. open_at: where its thread opens (the card's
-    CardSpec.open_at)."""
+    """The buttons under a post, in order (button_words decides which). open_at: where
+    its thread opens (the card's CardSpec.open_at)."""
     p = real(entry)
     sid = entry.id  # a boost: its own id (the window finds the post in it)
     n = lambda x: f" · {x}" if x else ""  # noqa: E731
-    fav, boosted = p.mine.liked, p.mine.shared
-    out = [Button("reply", ("mail-reply-sender",), "↩", _("reply"))]
-    out.append(Button("fav", ("rating", "starred-symbolic") if fav else
-                      ("rating-unrated", "non-starred-symbolic"), "★" if fav else "☆",
-                      _("faved") if fav else _("fav"), n(p.counts.likes), fav))
-    if can_boost(p):
-        out.append(Button("boost", ("media-playlist-repeat", "retweet"), "♻",
-                          _("boosted") if boosted else _("boost"), n(p.counts.shares),
-                          boosted))
-    if not ctx.in_thread:
-        out.append(Button("thread", ("view-list-tree", "format-indent-more"), "⤷",
-                          _("thread"), n(thread_count(p))))
-    if ctx.cfg["ui"].get("bookmark_button", True):
-        marked = p.mine.bookmarked
-        out.append(Button("bookmark", ("bookmark-new", "bookmarks"), "🔖",
-                          _("unbookmark") if marked else _("bookmark"), "", marked))
-    if unread and ctx.cfg["read"].get("read_button", False):
-        out.append(Button("readone", ("mail-mark-read", "object-select-symbolic"), "✓",
-                          _("mark_one_read")))
+    fav, boosted, marked = p.mine.liked, p.mine.shared, p.mine.bookmarked
+    made = {
+        "reply": lambda: Button("reply", ("mail-reply-sender",), "↩", _("reply")),
+        "like": lambda: Button("fav", ("rating", "starred-symbolic") if fav else
+                               ("rating-unrated", "non-starred-symbolic"),
+                               "★" if fav else "☆", _("faved") if fav else _("fav"),
+                               n(p.counts.likes), fav),
+        "boost": lambda: Button("boost", ("media-playlist-repeat", "retweet"), "♻",
+                                _("boosted") if boosted else _("boost"),
+                                n(p.counts.shares), boosted),
+        "thread": lambda: Button("thread", ("view-list-tree", "format-indent-more"), "⤷",
+                                 _("thread"), n(thread_count(p))),
+        "bookmark": lambda: Button("bookmark", ("bookmark-new", "bookmarks"), "🔖",
+                                   _("unbookmark") if marked else _("bookmark"), "",
+                                   marked),
+        "read": lambda: Button("readone", ("mail-mark-read", "object-select-symbolic"),
+                               "✓", _("mark_one_read")),
+        "open": lambda: Button("open", ("internet-web-browser", "web-browser-symbolic"),
+                               "↗", _("open_browser")),
+    }
     done = []
-    for b in out:
+    for word in button_words(entry, ctx, unread):
+        b = made[word]()
         who = {"fav": ("favourited_by", p.counts.likes),
                "boost": ("reblogged_by", p.counts.shares)}.get(b.action)
         right = make(who[0], sid) if who and who[1] and ctx.supports(who[0]) else ""
-        url = thread_url(sid, open_at) if b.action == "thread" else make(b.action, sid)
+        url = thread_url(sid, open_at) if b.action == "thread" else \
+            (p.url or p.uri) if b.action == "open" else make(b.action, sid)
         done.append(Button(b.action, b.icons, b.glyph, b.label, b.count, b.active, url,
                            right))
     return done
@@ -359,9 +414,18 @@ def _menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("open", _("fact_check_in", name=name), url=link))
     if ctx.cfg["post"].get("invite", True):
         out.append(Item("link", _("invite"), url=make("invite", sid), group="thread"))
-    if not ctx.cfg["ui"].get("bookmark_button", True):  # under the post already: not twice
-        out.append(Item("link", _("unbookmark") if p.mine.bookmarked else _("bookmark"),
-                        url=make("bookmark", sid)))
+    # what the row under the post doesn't offer here (the lane's `buttons`,
+    # ui.bookmark_button) and this post can take: in the menu, so nothing is lost — and
+    # never twice
+    row = button_words(entry, ctx, unread)
+    for word, label in (("reply", _("reply")),
+                        ("like", _("faved") if p.mine.liked else _("fav")),
+                        ("boost", _("boosted") if p.mine.shared else _("boost")),
+                        ("thread", _("thread")),
+                        ("bookmark", _("unbookmark") if p.mine.bookmarked
+                         else _("bookmark"))):
+        if word not in row and _can(word, p, ctx, unread):
+            out.append(Item("link", label, url=make(BUTTON_ACTION[word], sid)))
     if unread:  # by hand, whatever read.mark_read says
         out.append(Item("link", _("mark_one_read"), url=make("readone", sid)))
         out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid),
@@ -433,5 +497,6 @@ def _menu(entry, ctx, short_id=None, unread=False):
     return out
 
 
-__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "can_translate",
+__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "button_words", "buttons",
+           "can_translate",
            "media_items", "menu", "vis_word"]

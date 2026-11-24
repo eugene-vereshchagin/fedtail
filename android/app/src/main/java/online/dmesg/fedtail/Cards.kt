@@ -165,8 +165,6 @@ class CardActions(
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
     val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
     val pollRefresh: (PostItem) -> Unit = {},
-    val bookmarkButton: Boolean = false,             // ui.bookmark_button: a bookmark beside ↩ ♻ ♡
-    val readButton: Boolean = false,                 // read.read_button: ✓ under an unread post
     val mediaLook: MediaLook = MediaLook(),
     val readOne: (PostItem) -> Unit = {},
     val aliasTaps: Boolean = false,                  // ui.command_line: #alias into the line
@@ -201,8 +199,8 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false)
     mediaMenu = { p, i -> Core.mediaMenu(p.sid, i).optJSONArray("items") ?: JSONArray() },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) },
-    bookmarkButton = bookmarkButton, aliasTaps = commandLine, holdSelects = holdSelects,
-    readButton = readButton, mediaLook = mediaLook, readOne = { markRead(listOf(it.key), inThread = it in threadPosts) },
+    aliasTaps = commandLine, holdSelects = holdSelects,
+    mediaLook = mediaLook, readOne = { markRead(listOf(it.key), inThread = it in threadPosts) },
     directMark = directMark, directColor = hexColor(themeColors["direct"]),
     onDirect = hexColor(themeColors["on-direct"]))
 
@@ -1311,41 +1309,59 @@ private fun Actions(p: PostItem, act: CardActions, menu: Boolean, setMenu: (Bool
         // card.char_count: the core's words, on the left before Reply
         if (p.chars.isNotEmpty()) Text(p.chars, fontSize = 13.sp, color = grey,
             modifier = Modifier.padding(start = 8.dp, end = 4.dp))
-        TextButton(onClick = { act.reply(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-            ThemedIcon("reply", Glyphs.Reply, stringResource(R.string.reply), Modifier.size(18.dp), tint = grey)
-            if (p.replies > 0) Text(" ${p.replies}", fontSize = 13.sp, color = grey)
-        }
-        // a button, as ↩ and ★ beside it: a bare count let the tap through to the card,
-        // which opened the thread instead (31.10); boosted — lit, a tap takes it back
-        // only where the server takes a boost (common/actions.can_boost): public posts
-        if (p.canBoost) TextButton(onClick = { act.share(p) },
-            contentPadding = PaddingValues(horizontal = 8.dp)) {
-            val lit = if (p.shared) MaterialTheme.colorScheme.secondary else grey
-            ThemedIcon("boost", Glyphs.Boost,
-                stringResource(if (p.shared) R.string.unboost else R.string.boost),
-                Modifier.size(18.dp), tint = lit)
-            if (p.shares > 0) Text(" ${p.shares}", fontSize = 13.sp, color = lit)
-        }
-        TextButton(onClick = { act.like(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-            ThemedIcon(if (p.liked) "liked" else "like",
-                if (p.liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                stringResource(if (p.liked) R.string.unlike else R.string.like), Modifier.size(18.dp),
-                tint = if (p.liked) MaterialTheme.colorScheme.secondary else grey)
-            if (p.likes > 0) Text(" ${p.likes}", fontSize = 13.sp, color = grey)
-        }
-        if (act.bookmarkButton) TextButton(onClick = { act.bookmark(p) },
-            contentPadding = PaddingValues(horizontal = 8.dp)) {
-            val said = stringResource(if (p.bookmarked) R.string.unbookmark else R.string.bookmark)
-            ThemedIcon("bookmark", if (p.bookmarked) Glyphs.Bookmarked else Glyphs.Bookmark, said,
-                Modifier.size(18.dp),
-                tint = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey)
-        }
-        // read.read_button: ✓ under an unread post, as the windows' (the phone had none)
-        if (act.readButton && p.unread) TextButton(onClick = { act.readOne(p) },
-            contentPadding = PaddingValues(horizontal = 8.dp)) {
-            val said = stringResource(R.string.mark_one_read)
-            Text("✓", fontSize = 15.sp, color = grey,
-                 modifier = Modifier.semantics { contentDescription = said })
+        // which buttons and in which order: the core's word (p.buttons — common/actions.
+        // button_words: the lane's own `buttons`, else by what the post is), as every
+        // interface's; the phone had its own list in its own order (24.11). No "thread"
+        // here: a tap on the card opens it
+        for (word in p.buttons) when (word) {
+            "reply" -> TextButton(onClick = { act.reply(p) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                ThemedIcon("reply", Glyphs.Reply, stringResource(R.string.reply),
+                    Modifier.size(18.dp), tint = grey)
+                if (p.replies > 0) Text(" ${p.replies}", fontSize = 13.sp, color = grey)
+            }
+            // a button, as ↩ and ★ beside it: a bare count let the tap through to the
+            // card, which opened the thread instead (31.10); boosted — lit, a tap takes
+            // it back
+            "boost" -> TextButton(onClick = { act.share(p) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                val lit = if (p.shared) MaterialTheme.colorScheme.secondary else grey
+                ThemedIcon("boost", Glyphs.Boost,
+                    stringResource(if (p.shared) R.string.unboost else R.string.boost),
+                    Modifier.size(18.dp), tint = lit)
+                if (p.shares > 0) Text(" ${p.shares}", fontSize = 13.sp, color = lit)
+            }
+            "like" -> TextButton(onClick = { act.like(p) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                ThemedIcon(if (p.liked) "liked" else "like",
+                    if (p.liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    stringResource(if (p.liked) R.string.unlike else R.string.like),
+                    Modifier.size(18.dp),
+                    tint = if (p.liked) MaterialTheme.colorScheme.secondary else grey)
+                if (p.likes > 0) Text(" ${p.likes}", fontSize = 13.sp, color = grey)
+            }
+            "bookmark" -> TextButton(onClick = { act.bookmark(p) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                val said = stringResource(if (p.bookmarked) R.string.unbookmark
+                                          else R.string.bookmark)
+                ThemedIcon("bookmark", if (p.bookmarked) Glyphs.Bookmarked else Glyphs.Bookmark,
+                    said, Modifier.size(18.dp),
+                    tint = if (p.bookmarked) MaterialTheme.colorScheme.secondary else grey)
+            }
+            // ✓ under an unread post (read.read_button, or the lane's word)
+            "read" -> if (p.unread) TextButton(onClick = { act.readOne(p) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                val said = stringResource(R.string.mark_one_read)
+                Text("✓", fontSize = 15.sp, color = grey,
+                     modifier = Modifier.semantics { contentDescription = said })
+            }
+            // the post's address in the browser: an RSS item's one action
+            "open" -> if (p.url.isNotEmpty()) TextButton(onClick = { act.browser(p.url) },
+                contentPadding = PaddingValues(horizontal = 8.dp)) {
+                val said = stringResource(R.string.open_browser)
+                Text("↗", fontSize = 15.sp, color = grey,
+                     modifier = Modifier.semantics { contentDescription = said })
+            }
         }
         Spacer(Modifier.weight(1f))
         CardMenu(p, act, menu, setMenu)
