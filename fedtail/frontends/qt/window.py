@@ -53,7 +53,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import diag, version
-from ...core import keys
+from ...core import keys, presets
 from ...core import lanes as lanes_module
 from ...i18n import _
 from ...model import Account, Post, Relationship, Share
@@ -127,12 +127,12 @@ class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
     def __init__(self, name, theme, number, title=None, icon=None, kind="normal",
-                 cfg=None):
+                 cfg=None, tip=None):
         super().__init__()
         self.name, self.theme = name, theme
-        self.title = title or _("lane_" + name)
+        self.title = title or presets.title(name)
         self.current = False
-        self.setToolTip(sidebar.lane_tip(name, number, cfg))
+        self.setToolTip(sidebar.lane_tip(name, number, cfg, tip))
         h = QHBoxLayout(self)
         h.setContentsMargins(10, 8, 10, 8)
         h.setSpacing(10)
@@ -1313,7 +1313,7 @@ class MainWindow(QMainWindow):
     # ---- lanes ------------------------------------------------------------------------
     # ---- lists in the sidebar -----------------------------------------------------------
     def lane_title(self, name):
-        return self.core.lane_title(name) or _("lane_" + name)
+        return self.core.lane_title(name)
 
     def _rebuild_lists(self):
         self._rebuild_sidebar()
@@ -1360,11 +1360,12 @@ class MainWindow(QMainWindow):
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
                 lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
-                # a list's title, a tag lane's or a free lane's own; None — the built-in word
+                # a list's title, a tag lane's, a lane of rules' (its own or its set's)
                 title = lst.title if lst else self.core.lane_title(name)
                 w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title,
                              icon=self.core.lane_icon(name),
-                             kind=sidebar.badge_kind(self.core, name), cfg=self.cfg)
+                             kind=sidebar.badge_kind(self.core, name), cfg=self.cfg,
+                             tip=self.core.lane_tip(name))
                 if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())

@@ -97,6 +97,11 @@ ru = "Раздел боковой панели, где лежит лента: `s
 en = "The sidebar section the lane sits in: `standard`, `personal`, `lists`, `tags`, or a name of your own."
 takes = { ru = "слово: `standard` или своё имя", en = "a word: `standard` or a name of your own" }
 
+[rule.tip]
+ru = "Что это за лента, одной строкой: всплывающая подсказка её строки в боковой панели. Без него — слова наборов для ленты с таким именем, если они есть."
+en = "What the lane is, in a line: the tooltip of its row in the sidebar. Without it the sets' words for a lane of that name, if there are any."
+takes = { ru = "текст или по языкам, как `title`", en = "text, or one per language, as `title`" }
+
 [rule.icon]
 ru = "Картинка ленты: из значков встроенных лент или из библиотеки (`fire`, `book`, `globe`…). Без неё — по имени ленты, у своей — как у списка."
 en = "The lane's picture: one of the built-in lanes' icons or the library's (`fire`, `book`, `globe`…). Without it, by the lane's name; a custom lane gets the list icon."

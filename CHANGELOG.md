@@ -7,6 +7,11 @@
 
 ## What's next
 
+- What a lane is called, what its row says and its picture are data now, not code: the sets'
+  file (`presets.toml`, `[words.<name>]`) holds the title, the tip and the icon of every
+  lane the sets have, and the strings of the interface name no lane. A lane of your own
+  says its own — `title`, `icon` and, new, `tip` (the tooltip of its row; a string or one
+  per language) — and one named as a set's lane keeps the set's words until it does.
 - The buttons under a post are one rule for every interface: the web page and the phone drew
   lists of their own (the phone in another order — reply, boost, like; the page with the
   bookmark before the thread), now they draw what the windows do. A lane of rules may name

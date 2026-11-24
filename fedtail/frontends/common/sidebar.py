@@ -38,7 +38,7 @@ def overview(view, cfg, mode=None):
 
 def tile_text(view, name):
     """A tile's words: (title, count — "" for none)."""
-    title = view.lane_title(name) or _("lane_" + name)
+    title = view.lane_title(name)
     n = count(view, name)
     return title, (str(n) if n else "")
 
@@ -113,7 +113,7 @@ def curtain(view, names, tiles=False):
     (window.tiles): the counts are on the tiles, and a tile opens a lane."""
     if tiles:
         return _("curtain_title"), _("curtain_empty_tiles"), _("curtain_hint_tiles")
-    waiting = [(view.lane_title(n) or _("lane_" + n), count(view, n)) for n in names]
+    waiting = [(view.lane_title(n), count(view, n)) for n in names]
     waiting = [(t, c) for t, c in waiting if c]
     info = _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting)) \
         if waiting else _("curtain_empty")
@@ -123,15 +123,17 @@ def curtain(view, names, tiles=False):
 NUMBER_KEYS = {"alt": ("Alt",), "ctrl": ("Ctrl",), "both": ("Alt", "Ctrl")}
 
 
-def lane_tip(name, number=0, cfg=None):
+def lane_tip(name, number=0, cfg=None, what=None):
     """What a lane's row says when asked (a tooltip): what the lane is, the keys that
     open it — its number in the sidebar with ui.number_keys' modifier, for the first
     nine, where the interface has such keys (number 0: it has none) — and, for a
     built-in lane, the word to find it by in the config. One text for every window:
-    Qt named Alt whatever the key was, GTK said neither key nor word (23.11)."""
-    what = "" if name.startswith("list:") else _("tip_" + name)
-    if what == "tip_" + name:
-        what = ""
+    Qt named Alt whatever the key was, GTK said neither key nor word (23.11).
+    what: what the lane is, as the core says it (Core.lane_tip: its rule's `tip`, else
+    the sets' word for its name)."""
+    if what is None:  # no core's word given (Core.lane_tip): the sets' for the name
+        from ...core import presets
+        what = "" if name.startswith("list:") else presets.tip(name)
     keys = ""
     if 0 < number <= 9:
         mods = NUMBER_KEYS.get(((cfg or {}).get("ui") or {}).get("number_keys", "alt"),
@@ -145,7 +147,7 @@ def lane_tip(name, number=0, cfg=None):
 def lane_label(view, name, width=22):
     """(title, number) of a lane's row, cut to width: the terminal's and the web page's
     sidebar. The number is the core's for every lane alike (count)."""
-    title = view.lane_title(name) or _("lane_" + name)
+    title = view.lane_title(name)
     n = count(view, name)
     number = f" {n}" if n else ""
     room = max(4, width - len(number))

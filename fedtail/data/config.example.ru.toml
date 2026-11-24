@@ -485,6 +485,7 @@ browse_start_hours = 2
 
 # Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
 # name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }),
+# tip (что это за лента, одной строкой: подсказка её строки; по языкам, как title),
 # icon (картинка: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
 # bookmarks, my_likes, activity, requests, list, tags, star_full и библиотека: important,
 # commented, people, heart, fire, news, rss, mountain, fish, car… — список в редакторе лент), any (условия: пост входит, если подходит

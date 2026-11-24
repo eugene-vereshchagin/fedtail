@@ -156,6 +156,7 @@ program knows it.
 | `start` | `true` | `true` makes this lane of a set open first when the start lane in the settings names none of its lanes. |
 | `switches` | `posts_only`, `unread_only` | Quick filters above the lane: “posts only”, “unread only”. `[]` means none. Without the key, as in lanes before 0.22. |
 | `threads_shown` | `all`, `new` | Which threads a `view = "threads"` lane shows: only those with something new, or every one you took part in — the new ones together past the “new below” line. |
+| `tip` | text, or one per language, as `title` | What the lane is, in a line: the tooltip of its row in the sidebar. Without it the sets' words for a lane of that name, if there are any. |
 | `title` | text, or one per language: `{ ru = "Посты", en = "Posts" }` | What the sidebar shows. Without it the name is shown. |
 | `view` | `threads` | `threads` shows one card per thread: its post and the number of new comments; which threads — `threads_shown`. |
 | `window` | `"12h"`, `"2d"` | The lane shows only posts younger than this. In `catch_up` the default is 12 hours. |

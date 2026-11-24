@@ -1002,7 +1002,7 @@ class Card(Gtk.Box):
         c = self.ctx
         return actions.Ctx(cfg=c.cfg, me_id=c.me_id, supports=c.supports,
                            subscribed=c.subscribed, thread_quiet=c.thread_quiet,
-                           in_thread=c.in_thread, buttons=self.buttons,
+                           in_thread=c.in_thread, buttons=getattr(self, "buttons", None),
                            long_form=bool(c.cfg["feed"].get("long_form", True)),
                            lists=True,
                            translate=bool(getattr(c.view.caps, "translation", False)),

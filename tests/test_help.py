@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from fedtail import i18n
-from fedtail.core import config
+from fedtail.core import config, presets
 from fedtail.frontends import helpdocs
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -91,6 +91,10 @@ class HintsTest(unittest.TestCase):
         for lang, table in (("ru", ru), ("en", en)):
             strings = i18n.strings(lang)
             for key, h in table.items():
+                if key.startswith("tip_") and key not in strings:
+                    # a lane's row: what the sets' file says of it (presets.toml)
+                    self.assertTrue(presets.tip(key[4:], lang), f"{lang}: {key}: no such lane")
+                    continue
                 self.assertIn(key, strings, f"{lang}: {key} is no interface string")
                 self.assertTrue(h.get("text", "").strip(), f"{lang}: {key}")
                 for opt in filter(None, (h.get("config") or "").split(",")):
@@ -108,7 +112,7 @@ class HintsTest(unittest.TestCase):
         i18n.setup("ru")
         self.assertEqual(helpdocs.hint_for("Ответить")[0], "reply")
         self.assertEqual(helpdocs.hint_for(i18n._("refresh") + " (F5)")[0], "refresh")
-        lane = i18n._("tip_home") + " (Alt+2)\n" + i18n._("lane_codeword", name="home")
+        lane = presets.tip("home") + " (Alt+2)\n" + i18n._("lane_codeword", name="home")
         self.assertEqual(helpdocs.hint_for(lane)[0], "tip_home")
         self.assertIsNone(helpdocs.hint_for("какая-то чужая подсказка"))
         self.assertEqual(helpdocs.hint_for("", key="cmd_tip")[0], "cmd_tip")

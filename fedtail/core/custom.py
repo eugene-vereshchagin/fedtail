@@ -70,10 +70,13 @@ def infer_sources(cond):
 class Custom:
     """One lane of rules: its rule, the sources that feed it, the stream it is read from."""
 
-    def __init__(self, rule, warnings=(), title=None):
+    def __init__(self, rule, warnings=(), title=None, tip=None):
         self.rule = rule
         self.name = rule.name
-        self._title = title  # None: the interface's word for the name (a set's lanes)
+        # its words: its table's own, else presets.toml's for its name ([words.<name>]),
+        # else the name — a string, or one per language ({"ru": …, "en": …})
+        self._title = title or rule.name
+        self._tip = tip
         self.warnings = list(warnings)
         # conditions of events (likes, follows… — `event = …`): the lane shows those rows
         # of Activity too; they ask no stream of posts
@@ -106,13 +109,14 @@ class Custom:
 
     @property
     def title(self):
-        """The lane's own title (written per language: { ru = …, en = … } — the
-        interface's, else English, else the first one); None — the built-in word."""
-        t = self._title
-        if not isinstance(t, dict):
-            return t
-        from ..i18n import current_language
-        return t.get(current_language()) or t.get("en") or next(iter(t.values()))
+        """The lane's title (written per language: { ru = …, en = … } — the
+        interface's, else English, else the first one)."""
+        return presets.in_language(self._title) or self.name
+
+    @property
+    def tip(self):
+        """What the lane is, in a line (its `tip`, per language as the title); "" — none."""
+        return presets.in_language(self._tip)
 
     def wants_event(self, word):
         """Can this lane show events of this word (atoms.EVENTS: "follow_request"…)? Its
@@ -342,12 +346,16 @@ def load(cfg):
             # every lane of events that takes others too, whatever it's called (a lane
             # of requests alone is asked for: it keeps them)
             rule.none.append(atoms.Condition.parse({"event": "follow_request"}))
-        title = t.get("title") if own else None
+        # its words: the table's own, else the file's for a lane of this name
+        # (presets.toml [words.<name>]: one's own lane named as a set's keeps its words)
+        words = presets.words(n)
+        title = t.get("title")
         if isinstance(title, dict):
             title = {k: v for k, v in title.items() if v} or None
-        if own and not title and n not in presets.known_names():
-            title = n  # one's own lane without a title: its name (a set's: its own word)
-        c = Custom(rule, rule.warnings if own else (), title=title)
+        if not rule.icon and words.get("icon") in atoms.LANE_ICONS:
+            rule.icon = words["icon"]
+        c = Custom(rule, rule.warnings if own else (), title=title or words.get("title"),
+                   tip=t.get("tip") or words.get("tip"))
         if own:
             where = f"lanes.custom[{own_index.get(n, '?')}] {n}"
             warnings += [f"{where}: {w}" for w in c.warnings]

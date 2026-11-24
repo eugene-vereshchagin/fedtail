@@ -261,7 +261,7 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             SLOW_CHOICES, slow, _("slow_off"), "slow_every"))]
         for name in self._calm_lanes():
             n = v.calm(name)
-            title = v.lane_title(name) or _("lane_" + name)
+            title = v.lane_title(name)
             form.append(Field("calm." + name, f"{_('calm_heading')}: {title}", str(n),
                               "choice", _minutes(CALM_CHOICES, n, _("calm_as_comes"),
                                                  "slow_every")))
@@ -310,7 +310,7 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             name = key[len("calm."):]
             if n != v.calm(name):
                 v.set_calm(name, n)
-                said.append(f"{v.lane_title(name) or _('lane_' + name)}: "
+                said.append(f"{v.lane_title(name)}: "
                             + (_("slow_every", n=n) if n else _("calm_as_comes")))
         return Out(refresh=True, message=_("slow_saved", what="; ".join(said)) if said else "")
 

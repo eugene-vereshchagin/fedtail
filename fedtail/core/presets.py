@@ -17,22 +17,69 @@ def _all():
     return tomllib.loads(text)
 
 
+WORDS = "words"  # not a set: the lanes' words by name (title, tip, icon)
+
+
+def _sets():
+    """{set: [its lanes' tables]} — every table of the file that is a list of lanes."""
+    return {k: v for k, v in _all().items() if isinstance(v, list)}
+
+
 def names():
     """The sets one can choose (not "extra")."""
-    return [n for n in _all() if n != EXTRA]
+    return [n for n in _sets() if n != EXTRA]
 
 
 def lanes_of(name):
     """The lanes (tables) of a set, in its order — a copy, safe to change."""
     name = OLD_NAMES.get(name, name)
-    return copy.deepcopy(_all().get(name) or _all()[DEFAULT])
+    return copy.deepcopy(_sets().get(name) or _sets()[DEFAULT])
 
 
 def extra():
-    return copy.deepcopy(_all().get(EXTRA) or [])
+    return copy.deepcopy(_sets().get(EXTRA) or [])
 
 
 @functools.cache
 def known_names():
     """Every lane name some set (or "extra") has."""
-    return frozenset(t["name"] for tables in _all().values() for t in tables if t.get("name"))
+    return frozenset(t["name"] for tables in _sets().values() for t in tables if t.get("name"))
+
+
+def words(name):
+    """What the file says of a lane by its name — {"title": …, "tip": …, "icon": …}, any
+    of them missing ([words.<name>]) — for the lanes of every set, and one's own lane of
+    that name that says none of its own."""
+    got = (_all().get(WORDS) or {}).get(name)
+    return dict(got) if isinstance(got, dict) else {}
+
+
+@functools.cache
+def icons():
+    """Every picture the sets' lanes wear: their words' and their tables' own `icon`."""
+    got = {w.get("icon") for w in (_all().get(WORDS) or {}).values() if isinstance(w, dict)}
+    got |= {t.get("icon") for tables in _sets().values() for t in tables}
+    return frozenset(i for i in got if isinstance(i, str) and i)
+
+
+def in_language(said, lang=None):
+    """A word written per language ({ ru = …, en = … }) in the interface's (lang), else
+    English, else the first; a plain string as it is; nothing — ""."""
+    if isinstance(said, dict):
+        if lang is None:
+            from ..i18n import current_language
+            lang = current_language()
+        said = said.get(lang) or said.get("en") or next(iter(said.values()), "")
+    return said if isinstance(said, str) else ""
+
+
+def title(name, lang=None):
+    """A lane's title by its name alone: the file's word for it, else the name itself —
+    for where no core is at hand (a settings list, a note); a lane's own title is the
+    core's to say (Core.lane_title)."""
+    return in_language(words(name).get("title"), lang) or name
+
+
+def tip(name, lang=None):
+    """What a lane of this name is, in a line ("" — the file says nothing)."""
+    return in_language(words(name).get("tip"), lang)

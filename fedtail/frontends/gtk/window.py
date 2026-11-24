@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from ...core import lanes as lanes_mod
 from ...i18n import _
 from ...model import only_private, real
 from ...version import NAME
@@ -77,7 +76,7 @@ class Ctx:
 
 class LaneRow(Gtk.ListBoxRow):
     def __init__(self, name, title, theme=None, icon=None, kind="normal", number=0,
-                 cfg=None):
+                 cfg=None, what=None):
         super().__init__()
         self.name = name
         box = Gtk.Box(spacing=6)
@@ -97,7 +96,8 @@ class LaneRow(Gtk.ListBoxRow):
         lab.set_hexpand(True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)
         box.append(lab)
-        what = sidebar.lane_tip(name, number, cfg)  # what it is, its keys, its word
+        # what it is (the core's word: Core.lane_tip), its keys, its word in the config
+        what = sidebar.lane_tip(name, number, cfg, what)
         if what:
             tip(self, what)
         self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
@@ -1600,10 +1600,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sections[group] = head
                 self.sidebar.append(head)
             for name in names:
-                title = self.view.lane_title(name) or _("lane_" + _base(name))
+                title = self.view.lane_title(name)
                 row = LaneRow(name, title, self.theme, self.view.lane_icon(name),
                               sidebar.badge_kind(self.view, name),
-                              number=len(self.lane_rows) + 1, cfg=self.cfg)
+                              number=len(self.lane_rows) + 1, cfg=self.cfg,
+                              what=self.view.lane_tip(name))
                 row.set_visible(group not in folded)
                 right = Gtk.GestureClick(button=3)  # a list's menu, as Qt's sidebar
                 right.connect("pressed", lambda *_a, r=row: self.lane_menu(r))
@@ -1689,7 +1690,7 @@ class MainWindow(Gtk.ApplicationWindow):
         return lv
 
     def lane_title(self, name):
-        return self.view.lane_title(name) or _("lane_" + _base(name))
+        return self.view.lane_title(name)
 
     def lane_on_screen(self, name):
         if self.split_mode:
@@ -2622,11 +2623,6 @@ def own_titlebar(cfg):
         return True
     desk = (os.environ.get("XDG_CURRENT_DESKTOP") or "").lower()
     return any(d in desk for d in CSD_DESKTOPS)
-
-
-def _base(name):
-    """lane_<name> strings exist for the built-in lanes; lists and tag lanes have titles."""
-    return lanes_mod.canonical(name) if hasattr(lanes_mod, "canonical") else name
 
 
 def _short(post):

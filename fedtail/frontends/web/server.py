@@ -1319,7 +1319,8 @@ class Web:
                             "badge": sidebar.badge_kind(core, name),
                             "fresh": min(fresh, n), "fresh_words": sidebar.fresh_words(
                                 min(fresh, n)),
-                            "tip": sidebar.lane_tip(name),  # (no number keys here)
+                            # what it is: the core's word (no number keys here)
+                            "tip": sidebar.lane_tip(name, what=core.lane_tip(name)),
                             "counted": bool(wanted) and bool(
                                 core.lane_chosen(name, wanted, skipped)),
                             "group": title if i == 0 else None, "section": group,
@@ -1396,7 +1397,7 @@ class Web:
         from ..common.lane import MEDIA_KINDS, SEPARATOR
         name = self._lane_name(name)
         core = self.core
-        title = core.lane_title(name) or _("lane_" + name)
+        title = core.lane_title(name)
         m = self.model(name)
         built = m.build(bool(keep))
         specs = [sp for sp in built.specs]
@@ -1554,8 +1555,7 @@ class Web:
             return {"hits": [], "text": ""}
         core = self.core
         hits = [{"lane": h["lane"], "item": h["item"], "id": h["status_id"],
-                 "index": h["index"], "title": core.lane_title(h["lane"])
-                 or _("lane_" + h["lane"])}
+                 "index": h["index"], "title": core.lane_title(h["lane"])}
                 for h in core.find_everywhere(query).result()
                 if h["lane"] in core.lane_by_name]
         text, _none = count_text(query, 0 if hits else -1, len(hits),

@@ -580,3 +580,109 @@ source = "mentions"
 sort = "post_time"
 any = [{ me = "mention", author = ["stranger", "not_follower"] }]
 none = [{ author = ["followed", "follower", "me"] }]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# The words of the lanes above, by name: what the sidebar calls a lane (title), what its
+# row says when asked (tip) and its picture (icon) — for every set at once; a lane's own
+# table (here or [[lanes.custom]] in config.toml) may say any of the three itself. A lane
+# without words is called by its name. "unsorted" is the lane of what no lane took
+# (lanes.unsorted).
+
+[words.activity]
+title = { ru = "Активность", en = "Activity" }
+tip = { ru = "Кто лайкнул и продвинул твои посты, кто на тебя подписался", en = "Who liked and boosted your posts, who followed you" }
+icon = "activity"
+
+[words.bookmarks]
+title = { ru = "Закладки", en = "Bookmarks" }
+tip = { ru = "Посты, отложенные в закладки (меню ⋯ у поста)", en = "Posts you put aside (the ⋯ menu of a post)" }
+icon = "bookmarks"
+
+[words.bots]
+title = { ru = "Боты", en = "Bots" }
+tip = { ru = "Боты из тех, кого читаешь", en = "Bots among those you follow" }
+icon = "bots"
+
+[words.commented]
+title = { ru = "Комментарии", en = "Comments" }
+tip = { ru = "Как на Point: твои посты, треды, на которые подписан, и те, где ты комментировал, по карточке на тред; щелчок открывает тред на первом новом", en = "As on Point: your posts, threads you follow and those you commented in, a card a thread; a click opens the thread at the first new comment" }
+icon = "commented"
+
+[words.direct]
+title = { ru = "Личные", en = "Direct" }
+tip = { ru = "Личные сообщения: посты, видные только упомянутым", en = "Private messages: posts only the mentioned can see" }
+icon = "direct"
+
+[words.federated]
+title = { ru = "Федерация", en = "Federated" }
+tip = { ru = "Всё, что твоя нода знает со всех серверов. Листается, без счётчика", en = "Everything your server knows from all servers. Browse, no counter" }
+icon = "federated"
+
+[words.home]
+title = { ru = "Лента", en = "Home" }
+tip = { ru = "Те, кого ты читаешь (и теги, на которые подписан), без ботов", en = "Those you follow (and tags you follow), without bots" }
+icon = "home"
+
+[words.important]
+title = { ru = "Важные люди", en = "Important people" }
+tip = { ru = "Посты тех, на ком колокольчик (🔔 в профиле)", en = "Posts of those you rang the bell on (🔔 in a profile)" }
+icon = "important"
+
+[words.lists]
+
+[words.local]
+title = { ru = "Локальная", en = "Local" }
+tip = { ru = "Вся твоя нода. Листается, без счётчика", en = "Your whole server. Browse, no counter" }
+icon = "local"
+
+[words.mentions]
+title = { ru = "Упоминания", en = "Mentions" }
+tip = { ru = "Где тебя тегнули в чужом разговоре", en = "Where you were tagged in someone else's talk" }
+icon = "mentions"
+
+[words.my_likes]
+title = { ru = "Мои лайки", en = "My likes" }
+tip = { ru = "Посты, которые ты лайкнул", en = "Posts you liked" }
+icon = "my_likes"
+
+[words.my_posts]
+title = { ru = "Мои записи", en = "My posts" }
+tip = { ru = "Твои посты и комменты", en = "Your posts and replies" }
+icon = "my_posts"
+
+[words.network]
+title = { ru = "Сеть", en = "Network" }
+tip = { ru = "Федерация без людей своего сервера", en = "Federated without your own server's people" }
+
+[words.replies]
+title = { ru = "Ответы мне", en = "Replies to me" }
+tip = { ru = "Ответы на твои посты и комменты", en = "Replies to your posts and comments" }
+icon = "replies"
+
+[words.requests]
+title = { ru = "Заявки", en = "Follow requests" }
+tip = { ru = "Кто просится в подписчики", en = "Who asks to follow you" }
+icon = "requests"
+
+[words.stranger_mentions]
+title = { ru = "Упоминания чужих", en = "Strangers' mentions" }
+tip = { ru = "Упоминания от тех, кто не подписан ни на тебя, ни ты на них", en = "Mentions from people who neither follow you nor you them" }
+
+[words.subs]
+title = { ru = "Подписки", en = "Subscriptions" }
+tip = { ru = "Новые комменты в тредах, на которые ты подписан, как на Point", en = "New comments in threads you subscribed to, like on Point" }
+icon = "subs"
+
+[words.tags]
+icon = "tags"
+
+[words.to_me]
+title = { ru = "Ко мне", en = "To me" }
+tip = { ru = "Ответы мне и упоминания меня — в одной ленте; быстрые фильтры их разделяют", en = "Replies to me and mentions of me, in one lane; quick filters part them" }
+icon = "replies"
+
+[words.unsorted]
+title = { ru = "Неразобранное", en = "Unsorted" }
+tip = { ru = "Что пришло, а ни одна лента не взяла (только при своих лентах)", en = "What came and no lane took (only with lanes of your own)" }
+icon = "list"

@@ -113,7 +113,7 @@ def _lane_name(core, name):
 def cmd_lanes(core, out, _args):
     from .common import sidebar
     for name in core.lane_by_name:
-        title = core.lane_title(name) or _("lane_" + name)
+        title = core.lane_title(name)
         n = sidebar.count(core, name)  # the windows' number: a lane of events counts too
         count = out.c("new", str(n)) if n else out.c("dim", "0")
         out.line(f"{name:<24} {title:<28} {count}")

@@ -314,6 +314,9 @@ class MergedCore:
     def lane_icon(self, name):
         return None if lanes_module.is_list(name) else self.primary.lane_icon(name)
 
+    def lane_tip(self, name):
+        return "" if lanes_module.is_list(name) else self.primary.lane_tip(name)
+
     def lane_events(self, name, limit=200, which=None):
         """The events a lane of rules shows: the main account's (Activity is its)."""
         return self.primary.lane_events(name, limit, which)

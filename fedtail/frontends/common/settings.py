@@ -214,19 +214,17 @@ def reference(lang):
 
 
 def _lane_words(view):
-    """A lane's name in words: the interface's own for the standard ones, the view's
-    for the rest (a list, a lane of tags), else the name itself."""
+    """A lane's name in words: the view's (a lane's own title, a list's, a lane of
+    tags'), else the sets' word for the name (presets.toml), else the name itself."""
+    from ...core import presets
     title = getattr(view, "lane_title", None)
 
     def words(name):
-        own = _("lane_" + name)
-        if own != "lane_" + name:
-            return own
         try:
             got = title(name) if title else None
         except Exception:  # noqa: BLE001 — a name the core doesn't know: as it is
             got = None
-        return got or name
+        return got or presets.title(name)
     return words
 
 

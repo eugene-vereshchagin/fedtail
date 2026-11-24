@@ -192,12 +192,10 @@ FREEDESKTOP = {
     "shield": ("security-high",), "wrench": ("tools", "applications-utilities"),
 }
 # a lane (sidebar, roster, a tab) by its name → its picture
-LANE = {"home": "home", "local": "local", "federated": "federated", "mentions": "mentions",
-        "replies": "replies", "subs": "subs", "bots": "bots", "my_posts": "my_posts",
-        "requests": "requests", "list": "list", "activity": "activity",
-        "bookmarks": "bookmarks", "direct": "direct", "my_likes": "my_likes", "tags": "tags",
-        "to_me": "replies", "important": "important", "commented": "commented",
-        "unsorted": "list", "custom": "list"}
+# the picture of a lane the server or the tag groups make, by its kind ("list:12",
+# "tags:…"); every other lane's picture is its rule's or the set's word for its name
+# (presets.toml [words.<name>] icon — Core.lane_icon): no lane is named here
+LANE = {"list": "list", "tags": "tags", "custom": "list"}
 
 
 def lane_picture(name, icon=None):
@@ -206,7 +204,11 @@ def lane_picture(name, icon=None):
     from ..core.atoms import LANE_ICONS
     if isinstance(icon, str) and icon in LANE_ICONS:
         return icon
-    return LANE.get((name or "").split(":")[0])
+    kind = (name or "").split(":")[0]
+    if kind in LANE:
+        return LANE[kind]
+    from ..core import presets  # no core at hand: the file's word for the name
+    return presets.words(kind).get("icon")
 
 
 def mode(cfg, shape):

@@ -228,7 +228,7 @@ class AllThreadsTest(unittest.TestCase):
         core.mark_read(["101"])
         view = View(core)
         self.assertEqual(core.lane_by_name["commented"].threads_shown, "all")
-        self.assertEqual(i18n._("lane_commented"), "Comments")
+        self.assertEqual(core.lane_title("commented"), "Comments")
         built = LaneModel(view, "commented").build(False).specs
         # the read thread too, before the line; the new one after it, though older
         self.assertEqual([s.entry.id if s.entry else s.key for s in built],

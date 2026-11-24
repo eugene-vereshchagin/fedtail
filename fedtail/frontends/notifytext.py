@@ -75,7 +75,8 @@ def desktop_argv(base, note, seconds=0):
 
 
 def _lane_title(lane):
-    return (_titles and _titles(lane)) or _("lane_" + lane)
+    from ..core import presets  # no core's word: the set's for the name, else the name
+    return (_titles and _titles(lane)) or presets.title(lane)
 
 
 def build(items, privacy="full", titles=None, lines=MAX_LINES, rank=None):

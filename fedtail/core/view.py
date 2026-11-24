@@ -74,7 +74,7 @@ def _then(fut, fn):
 
 # Core attributes the frontends may use as they are: nothing in them is a server's JSON
 PASS = {
-    "caps", "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
+    "caps", "cfg", "lanes", "lane_by_name", "lane_title", "lane_tip", "lane_icon", "lanes_saved",
     "set_active_lane", "set_state", "own_hosts", "language_hidden", "on_screen",
     "filter_hidden_unread", "tag_followed",
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
@@ -880,8 +880,7 @@ class View:
                     unread, total = c.unread_count(name), len(entries)
                     if entries:
                         last = real(self.entry(entries[-1][1]))
-                from ..i18n import _
-                title = c.lane_title(name) or _("lane_" + name)  # the built-in ones: by word
+                title = c.lane_title(name)  # the built-in ones: by word
                 items.append(RosterItem("lane", name, title, unread, total, last))
             out.append(RosterGroup(group, tuple(items)))
         # threads I follow and private talks, each a "contact" of its own (as people

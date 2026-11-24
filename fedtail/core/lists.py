@@ -179,27 +179,40 @@ class ListsMixin(CoreState):
         return self.submit(job)
 
     def lane_title(self, name):
-        """A list's title; None for the built-in lanes (their names are translated)."""
+        """What a lane is called: a lane of rules' title (its own, else the set's words
+        for its name — presets.toml), a list's, a tag lane's; any other name — the file's
+        word for it (Unsorted), else the name. Always words: no interface has its own."""
         c = next((c for c in self.customs if c.name == name), None)
         if c is not None:
-            return c.title  # its own, or None: the built-in word
+            return c.title
         if taggroups.is_tags(name):
             g = next((g for g in self.tag_groups if taggroups.lane_name(g) == name), None)
             return (g or {}).get("name") or taggroups.title(taggroups.spec_of(name) or {})
         if lanes.is_list(name):
             lid = name[len(lanes.LIST_PREFIX):]
             return next((x["title"] for x in self.lists if x["id"] == lid), "?")
-        return None
+        return presets.title(name)
+
+    def lane_tip(self, name):
+        """What a lane is, in a line (its row's tooltip): a lane of rules' `tip`, else
+        the file's for its name; "" — nothing to say (a list, a lane of tags)."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is not None:
+            return c.tip
+        if taggroups.is_tags(name) or lanes.is_list(name):
+            return ""
+        return presets.tip(name)
 
     def lane_icon(self, name):
-        """The picture of a lane: a lane of rules' `icon`; else the one its name has
-        (frontends/iconpack.py LANE); a lane of one's own without one — a list's."""
+        """The picture of a lane: a lane of rules' `icon` (its own, else the file's for
+        its name); a lane of one's own without one — a list's; else the file's for the
+        name (Unsorted), or None (a list, a lane of tags: frontends/iconpack.py)."""
         c = next((c for c in self.customs if c.name == name), None)
         if c is not None and c.rule.icon:
             return c.rule.icon
         if c is not None and name not in presets.known_names():
             return "list"
-        return None
+        return presets.words(name).get("icon")
 
     def lists_of(self, acc_id):
         return {lid for lid, m in self.list_members.items() if acc_id in m}

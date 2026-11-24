@@ -1165,7 +1165,8 @@ def pictures():
             put("tool." + name, name)
         # the lanes' pictures for the strip over a lane (phone.lane_strip): always — a
         # theme without a set of its own (system) has the fallback set's, in its accent
-        for name in sorted(set(iconpack.LANE.values())):
+        from fedtail.core import presets
+        for name in sorted(set(iconpack.LANE.values()) | presets.icons()):
             put("lane." + name, name)
         return out
     return _answer(go)

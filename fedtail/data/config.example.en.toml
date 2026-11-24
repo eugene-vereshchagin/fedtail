@@ -486,6 +486,7 @@ browse_start_hours = 2
 
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
 # name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
+# tip (what the lane is, in a line: its row's tooltip; per language as the title),
 # icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
 # bookmarks, my_likes, activity, requests, list, tags, star_full and the library: important,
 # commented, people, heart, fire, news, rss, mountain, fish, car… — the lane editor lists them), any (conditions: a post goes in if it

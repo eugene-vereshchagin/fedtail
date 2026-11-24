@@ -1507,7 +1507,7 @@ class FedtailApp(App, PostsMixin):
                     item.add_class("dm-" + dm)
                 return item
             rows.append((sp.key, e, post))
-        title = core.lane_title(name) or _("lane_" + name)
+        title = core.lane_title(name)
         n_unread = len(unread) + events_unread
         line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=n_unread)}"
                                                 if n_unread else "", style="dim")
@@ -2639,7 +2639,7 @@ class FedtailApp(App, PostsMixin):
         for h in hits[:60]:
             st = self.core.by_id(h["status_id"])
             words = snippet(st, 50) if st is not None else h["status_id"]
-            items.append((f"{self.core.lane_title(h['lane']) or _('lane_' + h['lane'])}: "
+            items.append((f"{self.core.lane_title(h['lane'])}: "
                           + words, h))
 
         def chosen(h):

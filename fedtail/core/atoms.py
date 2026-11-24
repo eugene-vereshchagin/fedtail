@@ -718,7 +718,7 @@ def _author_word(word, have):
 
 
 # what a free lane's table may hold besides its conditions (feeds.md §4)
-RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
+RULE_KEYS = {"name", "title", "tip", "any", "none", "source", "sort", "read", "group", "mode",
              "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
              "start", "hide_empty", "badge", "switches", "threads_shown", "buttons"}
 # the buttons under a post a lane may name (`buttons`), in its order: what its cards offer

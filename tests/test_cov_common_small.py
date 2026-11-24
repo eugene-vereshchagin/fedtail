@@ -280,7 +280,7 @@ class SettingsCornersTest(unittest.TestCase):
         def title(_n):
             raise KeyError
         words = settings._lane_words(types.SimpleNamespace(lane_title=title))
-        self.assertEqual(words("home"), i18n._("lane_home"))
+        self.assertEqual(words("home"), "Home")  # the sets' word (presets.toml)
         self.assertEqual(words("list:7"), "list:7")
         with mock.patch("fedtail.frontends.themefile.available", side_effect=OSError):
             self.assertEqual(settings._theme_names(), [])

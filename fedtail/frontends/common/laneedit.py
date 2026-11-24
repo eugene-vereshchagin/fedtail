@@ -289,8 +289,7 @@ class Editor:
             return str(t)
         if name in ("lists", "tags"):
             return _("lists_header") if name == "lists" else _("grp_tags")
-        key = "lane_" + name
-        return _(key) if _(key) != key else name
+        return presets.title(name)
 
     # ---- changes -------------------------------------------------------------------------
     def move(self, name, step):

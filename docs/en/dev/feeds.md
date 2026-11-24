@@ -172,7 +172,8 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | key | meaning |
 |---|---|
 | `name` | the lane's word (stable: the window, sync and the tiles remember lanes by it) |
-| `title` | what the sidebar shows; no title — the word |
+| `title` | what the sidebar shows, a string or one per language (`{ ru = …, en = … }`); no title — the sets' word for a lane of that name (`[words.<name>]` in `presets.toml`: title, tip, icon), else the name. The interface's strings name no lane: `Core.lane_title` always answers |
+| `tip` | what the lane is, in a line — the tooltip of its row; as `title`, a string or one per language; none — the sets' word for the name (`Core.lane_tip`) |
 | `any` | a list of conditions: a post goes in if it matches **any**; inside a condition every key must match (AND), a list of values means any of them; a condition may hold an `any` of its own — a list of tables, one of which must match too (an AND of ORs: `{ author = "followed", any = [{ has = "image" }, { kind = "reply" }] }`; in the editor's line `author: followed; any: [has: image] [kind: reply]`) |
 | `none` | conditions that keep a post out, even if `any` let it in |
 | `source` | narrows every condition to these sources; no `source` — the core picks the sources that can bring the atoms (§3) |

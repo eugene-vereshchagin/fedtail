@@ -179,7 +179,7 @@ class MergedRoutingTest(TmpDir):
         self.assertIn("list:work~WL", m.lane_by_name)
         self.assertEqual(m.lane_title("list:work~WL"), "Коллеги · @w@work.example")
         self.assertEqual(m.lane_title("list:nope"), "?")
-        self.assertIsNone(m.lane_title("home"))
+        self.assertEqual(m.lane_title("home"), "Home")  # the sets' word (presets.toml)
         self.assertEqual(m._own_lane("list:work~WL"), [(self.w, "work", "list:WL")])
         self.assertEqual(m.lane_entries("list:nope"), [])  # a lane nobody has
 

@@ -762,7 +762,7 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: not self.win._swing_on, 5))
         self.world.add(status("030", BOB, minute=30, text="пока шторка"), home=True)
         self.core.poll_once()
-        self.assertTrue(pump(lambda: i18n._("lane_home") in
+        self.assertTrue(pump(lambda: self.win.view.lane_title("home") in
                              self.win.curtain_info.get_text(), 5),
                         self.win.curtain_info.get_text())
         self.win.set_focus(None)  # (not the Enter of a field: the command line's)

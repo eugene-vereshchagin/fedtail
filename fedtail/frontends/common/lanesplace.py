@@ -10,7 +10,7 @@ place windows, the web page, the terminal)."""
 
 from __future__ import annotations
 
-from ...core import atoms
+from ...core import atoms, presets
 from ...i18n import _, current_language
 from . import laneedit
 
@@ -203,9 +203,7 @@ class LanePlaces:
         elif got:
             page.hint = _("why_hint")
         for g in got:
-            title = g["title"] or _("lane_" + g["lane"])
-            if title == "lane_" + g["lane"]:
-                title = g["lane"]
+            title = g["title"] or presets.title(g["lane"])
             lines = []
             if g["quiet"] == "silenced":
                 lines.append(_("why_silenced"))
@@ -571,7 +569,7 @@ def _table_of(name, old, values):
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
-    builtin = _("lane_" + name)
+    builtin = presets.title(name)
     if title and not was and title in (name, builtin):
         title = ""  # the word it shows anyway: nothing of its own
     if title:

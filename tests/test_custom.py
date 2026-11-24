@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from fedtail import i18n
 from fedtail.core import auth, config, custom, lanes, paths
 from fedtail.core.app import Core
 from fedtail.core.atoms import Rule, World
@@ -132,8 +133,10 @@ class CoreFreeLaneTest(FreeBase):
         core.poll_once()
         self.assertEqual(self.ids(core), ["002", "004", "005"])
         self.assertEqual(core.lane_title("feed"), "Лента")
-        self.assertIsNone(core.lane_title("gone"))
-        self.assertIsNone(core.lane_title("home"))  # a set's lane: the interface's word
+        self.assertEqual(core.lane_title("gone"), "gone")  # no such lane: its name
+        from fedtail.core import presets
+        self.assertEqual(core.lane_title("home"), presets.title("home"))  # the sets' word
+        self.assertIn(core.lane_title("home"), ("Home", "Лента"))
         self.assertTrue(any(n == "lanes_updated" and "feed" in pl
                             for n, pl in self.events))
         # the next round: only what's new goes through the rules
@@ -1046,12 +1049,40 @@ class UnsortedAndListsTest(FreeBase):
 
     def test_set_lane_written_out_keeps_its_word(self):
         """The set written into the config (--lanes-to-config) without titles: the
-        built-in words, not "home", "to_me"."""
+        sets' words for those names (presets.toml [words.<name>]), not "home", "to_me" —
+        and its own words over them."""
         cfg, _ = config.validate({"lanes": {"custom": [
             {"name": "home", "any": [{}]}, {"name": "mine2", "any": [{}]}]}})
-        got = {c.name: c.title for c in custom.load(cfg)[0]}
-        self.assertIsNone(got["home"])
-        self.assertEqual(got["mine2"], "mine2")
+        was = i18n.current_language()
+        self.addCleanup(i18n.setup, was)
+        i18n.setup("ru")
+        by = {c.name: c for c in custom.load(cfg)[0]}
+        self.assertEqual(by["home"].title, "Лента")
+        self.assertTrue(by["home"].tip)
+        self.assertEqual(by["home"].rule.icon, "home")
+        self.assertEqual(by["mine2"].title, "mine2")
+        self.assertEqual(by["mine2"].tip, "")
+        i18n.setup("en")
+        self.assertEqual(by["home"].title, "Home")
+        cfg, _ = config.validate({"lanes": {"custom": [
+            {"name": "home", "any": [{}], "title": {"ru": "Дом", "en": "My home"},
+             "tip": "what I read", "icon": "sun"}]}})
+        mine = next(c for c in custom.load(cfg)[0] if c.name == "home")
+        self.assertEqual((mine.title, mine.tip, mine.rule.icon),
+                         ("My home", "what I read", "sun"))
+        self.assertEqual(mine.rule.warnings, [])  # `tip` is a lane's key
+        # every lane the sets have is called something in both languages, and no lane
+        # is named in the strings of the interface any more
+        from fedtail.core import presets
+        for name in sorted(presets.known_names() - {"lists", "tags"}) + ["unsorted"]:
+            said = presets.words(name)
+            for key in ("title", "tip"):
+                self.assertTrue(said[key]["ru"] and said[key]["en"], f"{name}: {key}")
+            self.assertNotIn("lane_" + name, i18n.strings("en"))
+            self.assertNotIn("tip_" + name, i18n.strings("ru"))
+        self.assertEqual(presets.title("nowhere"), "nowhere")
+        self.assertEqual(presets.tip("nowhere"), "")
+        self.assertNotIn("words", presets.names())
 
     def test_view_lanes_only_still_collect(self):
         """No routed lane (a set of views): Unsorted still catches what none keeps."""
@@ -1179,7 +1210,9 @@ class LaneIconTest(FreeBase):
         self.assertEqual(core.lane_icon("posts"), "my_posts")
         self.assertEqual(core.lane_icon("plain"), "list")  # one's own: a list's picture
         self.assertEqual(core.lane_icon("odd"), "list")
-        self.assertIsNone(core.lane_icon("home"))           # the set's: by its name
+        self.assertEqual(core.lane_icon("home"), "home")    # the set's: its words' (presets.toml)
+        self.assertEqual(core.lane_icon("unsorted"), "list")
+        self.assertIsNone(core.lane_icon("list:7"))         # by its kind: iconpack
         rule = Rule.parse({"name": "odd", "icon": "pizza", "any": [{}]})
         self.assertTrue(any("icon" in w for w in rule.warnings))
         from fedtail.frontends import iconpack
