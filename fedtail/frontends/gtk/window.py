@@ -1594,8 +1594,7 @@ class MainWindow(Gtk.ApplicationWindow):
             if not names:
                 continue
             if group:
-                head = SectionRow(group, _("lists_header") if group == "lists"
-                                  else _("grp_" + group), names,
+                head = SectionRow(group, sidebar.group_title(group), names,
                                   plus=self.new_list if group == "lists" else None)
                 self.sections[group] = head
                 self.sidebar.append(head)

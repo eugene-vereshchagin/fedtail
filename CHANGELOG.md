@@ -7,6 +7,11 @@
 
 ## What's next
 
+- Sidebar sections of your own: a lane's `group` may be any word, and it makes a section
+  called that (the docs said so; the code put every such lane into "Personal"). The lane
+  editor has "…or a new section", and the new `lanes.sections` puts the sections — the
+  sets', the lists', the tags' and your own — in your order. The sets' sections, their
+  order and their titles are data in the sets' file now.
 - What a lane is called, what its row says and its picture are data now, not code: the sets'
   file (`presets.toml`, `[words.<name>]`) holds the title, the tip and the icon of every
   lane the sets have, and the strings of the interface name no lane. A lane of your own

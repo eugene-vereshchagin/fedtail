@@ -93,8 +93,8 @@ ru = "Как лента читается: с метками непрочитан
 en = "How the lane is read: with unread marks and counters, or as a fresh page without them."
 
 [rule.group]
-ru = "Раздел боковой панели, где лежит лента: `standard`, `personal`, `lists`, `tags` или своё имя."
-en = "The sidebar section the lane sits in: `standard`, `personal`, `lists`, `tags`, or a name of your own."
+ru = "Раздел боковой панели, где лежит лента: `standard`, `personal` или своё имя — любое слово заводит раздел с таким названием. Порядок разделов — `lanes.sections`."
+en = "The sidebar section the lane sits in: `standard`, `personal`, or a name of your own — any word makes a section called that. The sections' order is `lanes.sections`."
 takes = { ru = "слово: `standard` или своё имя", en = "a word: `standard` or a name of your own" }
 
 [rule.tip]

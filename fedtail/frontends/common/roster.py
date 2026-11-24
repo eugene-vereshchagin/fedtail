@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from ...i18n import _
 from ...model.text import snippet
+from . import sidebar
 
 # how the roster looks (its menu): the rows slim (compact: no status line, no face);
 # the header, the search and the bottom row can go
@@ -98,7 +99,7 @@ def folded(view):
 
 def group_counts(group):
     """A group's title and how many: (title, lanes with something new, lanes)."""
-    title = _("lists_header") if group.name == "lists" else _("grp_" + group.name)
+    title = sidebar.group_title(group.name)
     return title, sum(1 for i in group.items if i.unread), len(group.items)
 
 

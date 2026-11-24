@@ -133,8 +133,7 @@ class Custom:
     def lane(self):
         if self.events_only:  # no posts: its rows are the events it takes
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
-                              group="standard" if self.rule.group == "standard"
-                              else "personal", events=True, open_at=self.rule.open_at,
+                              group=self.rule.group, events=True, open_at=self.rule.open_at,
                               buttons=self.rule.buttons,
                               start=self.rule.start,
                               hide_empty=self.rule.hide_empty, badge=self.rule.badge,
@@ -149,7 +148,7 @@ class Custom:
                           lazy=self.rule.read == "browse",
                           feeds=tuple(sorted(self.feeds)) if self.routed else (),
                           chips=self.chips(),
-                          group="standard" if self.rule.group == "standard" else "personal",
+                          group=self.rule.group,
                           sort=self.rule.sort,
                           window=self.rule.window.total_seconds() if self.rule.window else 0.0,
                           filter_context=self.rule.filter_context,
@@ -390,7 +389,8 @@ def build(cfg, lists=(), tag_groups=()):
         elif n in rules:
             out.append(rules[n].lane())
     if cfg["lanes"].get("unsorted", True):  # shown only while it holds something (Core)
-        out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all, group="personal"))
+        out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all,
+                              group=presets.words(lanes.UNSORTED).get("group", "")))
     return out
 
 

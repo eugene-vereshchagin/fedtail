@@ -298,7 +298,7 @@ name.ru = "Ленты слева по группам"
 name.en = "The lanes on the left in groups"
 note.ru = "Веб и терминал показывают ленты одним списком — в том же порядке, но без заголовков групп и без сворачивания."
 note.en = "The web page and the terminal list the lanes in one list — in the same order, but without the groups' headings and folding."
-keys = ["grp_people", "grp_personal", "grp_standard", "grp_tags", "grp_talks",
+keys = ["grp_people", "grp_talks",
         "grp_threads", "group_fold_tip"]
 
 [[capability]]

@@ -109,9 +109,57 @@ class SectionsByRuleTest(unittest.TestCase):
                 lanes.Lane("unsorted", "unsorted", lanes._all),
                 lanes.Lane("list:7", "list:7", lanes._all)]
         got = dict(lanes.grouped(made))
-        self.assertEqual(got["personal"], ["home", "feed"])
-        self.assertEqual(got["standard"], ["direct", "unsorted"])
+        # a lane that names no section: the sets' own one (presets.toml [sections] own)
+        self.assertEqual(got["personal"], ["home", "feed", "unsorted"])
+        self.assertEqual(got["standard"], ["direct"])
         self.assertEqual(got["lists"], ["list:7"])
         self.assertNotIn("tags", got)
         every = [n for names in got.values() for n in names]
         self.assertEqual(len(every), len(set(every)))
+
+    def test_sections_of_ones_own_in_ones_order(self):
+        """A lane's `group` is any word: it makes a section called that (the docs said
+        so, the code put such a lane into Personal — 24.11). The order: lanes.sections,
+        then the sets' file's, then one's own by their first lane. No section is named
+        in the code or in the interface's strings."""
+        from fedtail import i18n
+        from fedtail.core import lanes, presets
+        made = [lanes.Lane("work", "home", lanes._all, group="Работа"),
+                lanes.Lane("home", "home", lanes._all, group="standard"),
+                lanes.Lane("mine", "mine", lanes._all, group="personal"),
+                lanes.Lane("list:7", "list:7", lanes._all),
+                lanes.Lane("more", "home", lanes._all, group="Работа"),
+                lanes.Lane("tags:cats", "tags:cats", lanes._all)]
+        self.assertEqual(lanes.grouped(made), [
+            ("standard", ["home"]), ("personal", ["mine"]), ("lists", ["list:7"]),
+            ("tags", ["tags:cats"]), ("Работа", ["work", "more"])])
+        mine = lanes.grouped(made, ["tags", "Работа", "nothing-here", "personal"])
+        self.assertEqual([g for g, _n in mine],
+                         ["tags", "Работа", "personal", "standard", "lists"])
+        # only the sections that hold a lane — and the lists' always (a list is made there)
+        self.assertEqual(lanes.grouped(made[:1]), [("lists", []), ("Работа", ["work"])])
+        v = types.SimpleNamespace(lanes=made)
+        cfg = {"ui": {"sidebar_groups": True}, "lists": {"enabled": True},
+               "lanes": {"sections": ["Работа"]}}
+        self.assertEqual(sidebar.groups(v, cfg)[0], ("Работа", ["work", "more"]))
+        i18n.setup("en")
+        self.assertEqual(sidebar.group_title("standard"), "Timelines")
+        self.assertEqual(sidebar.group_title("lists"), "Lists")
+        self.assertEqual(sidebar.group_title("Работа"), "Работа")  # as its lanes say
+        self.assertEqual(sidebar.group_title("people"), i18n._("grp_people"))  # a roster's
+        self.assertIsNone(sidebar.group_title(None))
+        self.assertEqual(presets.sections(), ["standard", "personal", "lists", "tags"])
+        self.assertEqual(presets.own_section(), "personal")
+        for word in ("grp_standard", "grp_personal", "grp_tags"):
+            self.assertNotIn(word, i18n.strings("en"))
+        self.assertNotIn("sections", presets.names())
+        # the lane editor: a section there is, or a new one by its name
+        from fedtail.frontends.common import lanesplace
+        old = {"name": "x", "any": [{}]}
+        table = lambda **v: lanesplace._table_of("x", old, v)  # noqa: E731
+        self.assertNotIn("group", table(group="personal"))  # the own one: nothing to say
+        self.assertEqual(table(group="standard")["group"], "standard")
+        self.assertEqual(table(group="personal", group_new=" Работа ")["group"], "Работа")
+        ed = types.SimpleNamespace(tables={"a": {"group": "Чтение"}, "b": {}})
+        self.assertEqual(lanesplace._sections(ed, cfg, "Игры"),
+                         ["Работа", "standard", "personal", "Чтение", "Игры"])

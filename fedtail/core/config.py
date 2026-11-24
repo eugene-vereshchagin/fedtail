@@ -209,6 +209,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "detect_among": "auto",   # langdetect's profiles: Latin and Cyrillic, or "all"
         "tag_groups": [],
         "custom": [],
+        "sections": [],           # the sidebar's sections in my order; [] — the sets' own
         "unsorted": True,
         "browse_keep": 200,
         "browse_fill_pages": 5,
@@ -645,7 +646,7 @@ FILE_LAYOUT = (
                            "bookmark open_thread next_comment previous_comment fold_branch")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
                              "browse_fill_pages funnel_fill_pages browse_start "
-                             "browse_start_hours custom "
+                             "browse_start_hours sections custom "
                              "tag_groups languages languages_in "
                              "detect_language "
                              "detect_min_words detect_among federated_extra tags_extra bubble "
@@ -1053,6 +1054,9 @@ def validate(user):
                           "computer or one at home)")
     if url and cfg["sync"]["folder"]:
         errors.append("sync.url and sync.folder are both set: one place to meet, not two")
+    if not isinstance(cfg["lanes"]["sections"], list) or \
+            not all(isinstance(x, str) for x in cfg["lanes"]["sections"]):
+        errors.append("lanes.sections: a list of the sections' names")
     if not isinstance(cfg["lanes"]["custom"], list):
         errors.append("lanes.custom: tables [[lanes.custom]], one per lane")
     else:

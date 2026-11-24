@@ -54,6 +54,26 @@ def words(name):
     return dict(got) if isinstance(got, dict) else {}
 
 
+SECTIONS = "sections"  # not a set: the sidebar's sections, in order
+
+
+def sections():
+    """The sidebar's sections the file has, top to bottom."""
+    return [n for n, t in (_all().get(SECTIONS) or {}).items() if isinstance(t, dict)]
+
+
+def section_title(name, lang=None):
+    """What the file calls a section ("" — it has no such section)."""
+    return in_language(((_all().get(SECTIONS) or {}).get(name) or {}).get("title"), lang)
+
+
+def own_section():
+    """The section of a lane that names none: the file's `own = true`, else its first."""
+    got = _all().get(SECTIONS) or {}
+    return next((n for n, t in got.items() if isinstance(t, dict) and t.get("own")),
+                next(iter(got), ""))
+
+
 @functools.cache
 def icons():
     """Every picture the sets' lanes wear: their words' and their tables' own `icon`."""

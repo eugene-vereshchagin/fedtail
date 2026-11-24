@@ -583,6 +583,27 @@ none = [{ author = ["followed", "follower", "me"] }]
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
+# The sidebar's sections, top to bottom, and what each is called. A lane stands in the
+# section its `group` names — any word: one not here makes a section of that name, after
+# these (lanes.sections in config.toml orders them your way). own = true: where a lane
+# that names no section goes. "lists" and "tags" are where the server's lists and the
+# saved lanes of tags stand.
+
+[sections.standard]
+title = { ru = "Стандартные", en = "Timelines" }
+
+[sections.personal]
+title = { ru = "Личные", en = "Personal" }
+own = true
+
+[sections.lists]
+title = { ru = "Списки", en = "Lists" }
+
+[sections.tags]
+title = { ru = "Теги", en = "Tags" }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
 # The words of the lanes above, by name: what the sidebar calls a lane (title), what its
 # row says when asked (tip) and its picture (icon) — for every set at once; a lane's own
 # table (here or [[lanes.custom]] in config.toml) may say any of the three itself. A lane
@@ -683,6 +704,7 @@ tip = { ru = "Ответы мне и упоминания меня — в одн
 icon = "replies"
 
 [words.unsorted]
+group = "personal"
 title = { ru = "Неразобранное", en = "Unsorted" }
 tip = { ru = "Что пришло, а ни одна лента не взяла (только при своих лентах)", en = "What came and no lane took (only with lanes of your own)" }
 icon = "list"

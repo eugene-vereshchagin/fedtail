@@ -17,7 +17,6 @@ _STRINGS = {
         "chips_main": "Основное",
         "chips_main_tip": "Всё, кроме того, что скрыто правилом ленты (shown = false)",
         "chip_tip": "Только то, что ленте приносит условие «{words}»",
-        "grp_standard": "Стандартные", "grp_personal": "Личные", "grp_tags": "Теги",
         "rss_local_only": "Это запись RSS-ленты, её нет ни на одном сервере: её можно "
                           "открыть и положить в закладки, но не лайкнуть, не продвинуть "
                           "и не ответить",
@@ -903,6 +902,9 @@ _STRINGS = {
         "pic_wrench": "Гаечный ключ",
         "le_f_icon_none": "— своя у ленты",
         "le_f_group": "Раздел",
+        "le_f_group_new": "…или новый раздел",
+        "le_f_group_new_tip": "Название своего раздела боковой панели: лента встанет в него. "
+                              "Порядок разделов — lanes.sections в настройках.",
         "le_f_source": "Откуда (всем условиям)",
         "le_f_source_tip": "Ничего не отмечено — источник у каждого условия свой (или угадывается)",
         "le_f_read": "Как читать",
@@ -1981,7 +1983,6 @@ _STRINGS = {
         "chips_main": "Main",
         "chips_main_tip": "All but what the lane's rule hides (shown = false)",
         "chip_tip": "Only what the condition “{words}” brings to the lane",
-        "grp_standard": "Timelines", "grp_personal": "Personal", "grp_tags": "Tags",
         "rss_local_only": "This is an RSS feed's item, no server has it: it can be opened "
                           "and bookmarked, not liked, boosted or answered",
         "bell_on": "Tell me of posts", "bell_off": "Stop telling me of posts",
@@ -2849,6 +2850,10 @@ _STRINGS = {
         "pic_wrench": "Wrench",
         "le_f_icon_none": "— the lane's own",
         "le_f_group": "Section",
+        "le_f_group_new": "…or a new section",
+        "le_f_group_new_tip": "The name of a sidebar section of your own: the lane goes "
+                              "into it. The sections' order is lanes.sections in the "
+                              "settings.",
         "le_f_source": "From (for every condition)",
         "le_f_source_tip": "None ticked — each condition has its own source (or it is guessed)",
         "le_f_read": "How it's read",

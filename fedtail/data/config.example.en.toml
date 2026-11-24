@@ -484,6 +484,11 @@ browse_start = "last"
 # browse_start = "hours" (and "last" when its place is gone): from how many hours back.
 browse_start_hours = 2
 
+# The sidebar's sections in your order, by their names: "standard" (Timelines), "personal",
+# "lists", "tags" and any of your own (a lane's group = "…" makes one). Those not named
+# here follow in the sets' order, your own after them. [] — the sets' order.
+sections = []
+
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
 # name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
 # tip (what the lane is, in a line: its row's tooltip; per language as the title),
@@ -502,7 +507,7 @@ browse_start_hours = 2
 # status: those rows of Activity, a line each among the posts), buttons (the buttons under its
 # posts, in this order: reply, like, boost, thread, bookmark, read, open; none — by what the
 # item is: an RSS item offers no reply, like or boost). A lane stands in "Personal" (group =
-# "standard" — in "Timelines"): where lanes.enabled names it ("custom:feed"), else at the end.
+# "standard" — in "Timelines", any other word — in a section of that name): where lanes.enabled names it ("custom:feed"), else at the end.
 # The free lanes fill from what is stored already. An example (then take away the
 # custom = [] line below):
 #   [[lanes.custom]]

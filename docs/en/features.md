@@ -117,6 +117,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
 | A library of pictures for your own lanes | has | 0.21.0 | `icon = "…"` in `[[lanes.custom]]`, "Picture" in the lane editor | own | only in fedtail |
+| Sidebar sections of your own, in your order | has | next | `group` of a lane of rules, `lanes.sections` | own | none |
 
 <details><summary>In detail</summary>
 
@@ -214,6 +215,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Rules: for a while, by name, at most N per author, by author, "Not in Home".** A condition's `until = "2026-11-01"`: after that date it's as if it weren't there (a mute for a week, a lane for a trip). `text_in = "name"` — words (and regexes) in the author's name and @nick too. A lane's `per_author = 3`: at most three newest posts of one person; `bundle = "author"`: each one's posts together, the busiest first ("At most from one author" and "Put together" in the editor). `people.home_hide` — on the profile of someone you follow, "Not in Home": their posts leave Home, the follow, lists and the bell stay. The "extra" set has "Strangers' mentions".
 
 **A library of pictures for your own lanes.** 44 pictures — people, a heart, fire, a newspaper, RSS, a magnifier, a camera, film, notes, a book, code, a gamepad, mountains, a fish, a car, a plane, a cup… Each theme colours them in its own style, as its own pictures; a theme's own file of that name wins. In the lane editor — with the picture and its name.
+
+**Sidebar sections of your own, in your order.** A lane stands in the sidebar section its `group` names: `standard`, `personal` or any word of your own — it makes a section called that (in the lane editor: "…or a new section"). `lanes.sections = ["personal", "Work", "standard"]` sets the sections' order: those not named follow in the sets' order, your own after them. The server's lists and the lanes of tags are the sections `lists` and `tags`, and can be moved too. The sets' sections, their order and titles live in the sets' file, not in the code.
 
 </details>
 

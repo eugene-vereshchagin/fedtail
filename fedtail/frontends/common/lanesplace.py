@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from ...core import atoms, presets
 from ...i18n import _, current_language
-from . import laneedit
+from . import laneedit, sidebar
 
 NEW = "new"  # the form's name of the empty line that adds a condition
 
@@ -265,12 +265,17 @@ class LanePlaces:
         icons = (("", _("le_f_icon_none")),) + tuple(sorted(
             ((i, _("pic_" + i)) for i in atoms.LANE_ICONS), key=lambda c: c[1].casefold()))
         sources = sorted(set(laneedit.SOURCES) | set(_words(t.get("source"))))
+        group = str(t.get("group") or presets.own_section())
+        groups = _sections(ed, self.view.cfg, group)
         form = [
             Field("title", _("le_f_title"), str(title or ""), tip=_("le_f_title_tip")),
             Field("icon", _("le_f_icon"), str(t.get("icon") or ""), "choice", icons,
                   pictures=True),
-            Field("group", _("le_f_group"), str(t.get("group") or "personal"), "choice",
-                  tuple((g, _("grp_" + g)) for g in laneedit.GROUPS)),
+            # its section of the sidebar: one of those there are (the sets' and those
+            # the lanes name), or a new one by its name in the line under it
+            Field("group", _("le_f_group"), group, "choice",
+                  tuple((g, sidebar.group_title(g)) for g in groups)),
+            Field("group_new", _("le_f_group_new"), "", tip=_("le_f_group_new_tip")),
             Field("source", _("le_f_source"), _words(t.get("source")), "checks",
                   tuple((s, s) for s in sources), tip=_("le_f_source_tip")),
             Field("read", _("le_f_read"), str(t.get("read") or "through"), "choice",
@@ -552,6 +557,17 @@ def _words(v):
     return [v] if isinstance(v, str) else [str(x) for x in v]
 
 
+def _sections(ed, cfg, own=""):
+    """The sections a lane may stand in: lanes.sections' and the sets' file's (not the
+    lists' and the tags' own), those the lanes name, and the lane's own."""
+    from ...core import lanes as lanes_mod
+    named = [str(t.get("group")) for t in ed.tables.values()
+             if isinstance(t, dict) and t.get("group")]
+    seq = dict.fromkeys([*(cfg["lanes"].get("sections") or ()), *presets.sections(),
+                         *named, own])
+    return [g for g in seq if g and g not in (lanes_mod.LISTS, lanes_mod.TAGS)]
+
+
 def _buttons_text(said):
     """A lane's `buttons` as the form's line: "reply, like"; "-" — none; "" — not said."""
     if not isinstance(said, list):
@@ -577,7 +593,10 @@ def _table_of(name, old, values):
             t["title"] = dict(was, **{current_language(): title})
         else:
             t["title"] = title
-    for key, default in (("icon", ""), ("group", "personal"), ("read", "through"),
+    new = str(values.get("group_new") or "").strip()
+    if new:  # a section of one's own, by its name
+        values = dict(values, group=new)
+    for key, default in (("icon", ""), ("group", presets.own_section()), ("read", "through"),
                          ("sort", "arrival"), ("mode", "lane"), ("window", ""),
                          ("filter_context", ""), ("bundle", ""), ("view", ""),
                          ("threads_shown", ""), ("open_at", "")):

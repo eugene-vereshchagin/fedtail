@@ -9,7 +9,7 @@ import unittest
 from datetime import datetime
 
 from fedtail import i18n
-from fedtail.frontends.common import actions, columns, roster, server, split
+from fedtail.frontends.common import actions, columns, roster, server, sidebar, split
 from fedtail.model import (
     Account,
     Counts,
@@ -212,7 +212,7 @@ class RosterTest(unittest.TestCase):
         g = types.SimpleNamespace(name="lists", items=[self.item(unread=1), self.item()])
         self.assertEqual(roster.group_counts(g), (i18n._("lists_header"), 1, 2))
         g = types.SimpleNamespace(name="standard", items=[])
-        self.assertEqual(roster.group_counts(g)[0], i18n._("grp_standard"))
+        self.assertEqual(roster.group_counts(g)[0], sidebar.group_title("standard"))
         self.assertIn("{lit}", roster.group_word({}, True))
         self.assertNotIn("{lit}", roster.group_word({}, False))
         self.assertEqual(roster.group_word({"roster_group": "X"}, True), "X")

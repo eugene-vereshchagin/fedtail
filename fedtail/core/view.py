@@ -866,7 +866,9 @@ class View:
         from .lanes import grouped
         c = self._core
         out = []
-        for group, names in grouped(c.lanes):
+        for group, names in grouped(c.lanes, c.cfg["lanes"].get("sections") or ()):
+            if not names:
+                continue
             items = []
             for name in names:
                 lane = c.lane_by_name.get(name)

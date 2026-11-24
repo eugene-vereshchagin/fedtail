@@ -26,7 +26,8 @@ class Lane:
     # a lane of rules: its own switches ("posts_only", "unread_only") — only those; None —
     # a lane made of the server's (a list, a lane of tags): the usual ones
     switches: tuple | None = None
-    # the sidebar section a lane goes to when GROUPS doesn't name it (free lanes, Unsorted)
+    # the sidebar's section it stands in (its rule's `group`: any word); "" — the sets'
+    # own section (presets.toml [sections] own)
     group: str = ""
     # the set's lane to open first when ui.start_lane names none there (its rule's `start`)
     start: bool = False
@@ -126,27 +127,31 @@ def canonical(name):
     return RENAMED.get(name, name) if isinstance(name, str) else name
 
 
-# the sidebar's sections, in order. A lane's section is its rule's (`group`: "standard"
-# or "personal", presets.toml / [[lanes.custom]]), never its name; the server's lists
-# and the lanes of tags have sections of their own
-GROUPS = [("standard", []), ("personal", []), ("lists", []), ("tags", [])]
-SECTIONS = ("standard", "personal")
+# The sidebar's sections. A lane's section is its rule's `group` — any word, never its
+# name: the sets' file has the usual ones, their order and what each is called
+# (presets.toml [sections]); the server's lists and the lanes of tags have sections of
+# their own.
+LISTS, TAGS = "lists", "tags"
 
 
-def grouped(lanes):
-    """[(group, [lane names])] for the sidebar, keeping the configured order inside; each
-    lane in one section: a list's, a tag lane's, else its rule's group ("standard" when
-    it says none — Unsorted). "lists" is always there; "tags" only with such lanes."""
-    out = {g: [] for g, _m in GROUPS}
+def grouped(lanes, order=()):
+    """[(section, [lane names])] for the sidebar, the lanes in their order inside; each
+    lane in one section: a list's, a tag lane's, else its rule's `group` (none — the
+    file's own section). The sections: `order` first (lanes.sections), then the file's
+    in its order, then any other by its first lane. Only those that hold a lane — and
+    "lists" always (a list is made from its heading)."""
+    out = {}
     for lane in lanes:
         if is_list(lane.name):
-            out["lists"].append(lane.name)
+            group = LISTS
         elif taggroups.is_tags(lane.name):
-            out["tags"].append(lane.name)
+            group = TAGS
         else:
-            group = getattr(lane, "group", "") or "standard"
-            out[group if group in SECTIONS else "standard"].append(lane.name)
-    return [(g, names) for g, names in out.items() if g != "tags" or names]
+            group = getattr(lane, "group", "") or presets.own_section()
+        out.setdefault(group, []).append(lane.name)
+    out.setdefault(LISTS, [])
+    seq = dict.fromkeys([*(g for g in order if isinstance(g, str)), *presets.sections(), *out])
+    return [(g, out[g]) for g in seq if g in out]
 
 
 LIST_PREFIX = "list:"

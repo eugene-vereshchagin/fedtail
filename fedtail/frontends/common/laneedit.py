@@ -30,7 +30,6 @@ from . import settings
 # the slots, not lanes: where the lists' and tag groups' lanes stand — moved, nothing more
 NOT_RULES = custom.SLOTS
 SOURCES = tuple(sorted(custom.FEEDS))
-GROUPS = ("personal", "standard")
 READS = ("through", "browse")
 SORTS = ("arrival", "post_time", "replies", "likes", "boosts", "density")
 FILTER_CONTEXTS = ("home", "public", "notifications", "thread", "account")
@@ -288,7 +287,7 @@ class Editor:
         if t:
             return str(t)
         if name in ("lists", "tags"):
-            return _("lists_header") if name == "lists" else _("grp_tags")
+            return presets.section_title(name) or name
         return presets.title(name)
 
     # ---- changes -------------------------------------------------------------------------

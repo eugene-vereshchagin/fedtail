@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **What's next:**
 
+- Sidebar sections of your own, in your order
 - A thread's folded branches remembered
 - The Thread button counts the whole thread's comments
 - The buttons under a post follow the lane and what the item is

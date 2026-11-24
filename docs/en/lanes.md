@@ -142,7 +142,7 @@ program knows it.
 | `bundle` | `author` | Each author's posts together, the busiest first: catching up by people. |
 | `buttons` | see below | The buttons under the lane's posts, in the order written. `[]` — none. Without the key they follow what the item is: a server's post gets reply, like, boost, thread, bookmark; an RSS item — “open” and bookmark. A button the post cannot take (boosting a private message) is not drawn; what is off the row stays in the ⋯ menu. |
 | `filter_context` | `account`, `home`, `notifications`, `public`, `thread` | The server's filters of this context hide or fold the lane's posts, whatever source they came from. |
-| `group` | a word: `standard` or a name of your own | The sidebar section the lane sits in: `standard`, `personal`, `lists`, `tags`, or a name of your own. |
+| `group` | a word: `standard` or a name of your own | The sidebar section the lane sits in: `standard`, `personal`, or a name of your own — any word makes a section called that. The sections' order is `lanes.sections`. |
 | `hide_empty` | `true` | `true` shows the lane in the sidebar only when something is in it. |
 | `icon` | see below | The lane's picture: one of the built-in lanes' icons or the library's (`fire`, `book`, `globe`…). Without it, by the lane's name; a custom lane gets the list icon. |
 | `mode` | `catch_up`, `lane` | `lane` is an ordinary lane; `catch_up` shows only what came within `window`: “what I missed”. |

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from ...i18n import _
 from ..common import roster as rules
+from ..common import sidebar
 from ..common.roster import LOOK, row_key  # noqa: F401  (Qt's names)
 from .text import display_name, esc
 
@@ -186,7 +187,7 @@ class RosterHeader(QWidget):
         """The title with how many: "(15)" — nothing new; "(2/15)" — something new in 2,
         the 2 in the theme's colour of the new."""
         lit = sum(1 for i in group.items if i.unread)
-        title = _("lists_header") if group.name == "lists" else _("grp_" + group.name)
+        title = sidebar.group_title(group.name)
         from .card import _fill_html
         theme = self.roster.win.theme
         key = "roster_group" if lit else "roster_group_quiet"

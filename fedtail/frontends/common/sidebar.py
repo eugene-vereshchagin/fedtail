@@ -12,7 +12,7 @@ def groups(view, cfg):
     """[(group | None, [lane names])], top to bottom: ui.sidebar_groups' sections, or
     the lanes and then the lists. "lists" is left out when lists are off."""
     if cfg["ui"]["sidebar_groups"]:
-        out = lanes_mod.grouped(view.lanes)
+        out = lanes_mod.grouped(view.lanes, (cfg.get("lanes") or {}).get("sections") or ())
     else:
         out = [(None, [x.name for x in view.lanes if not lanes_mod.is_list(x.name)]),
                ("lists", [x.name for x in view.lanes if lanes_mod.is_list(x.name)])]
@@ -82,10 +82,17 @@ def peek(view, name, n=90):
 
 
 def group_title(group):
-    """A section's heading, None for the plain list's lanes."""
+    """A section's heading, None for the plain list's lanes: the sets' word for it
+    (presets.toml [sections]), a roster's own group (people, threads, talks), else the
+    word itself — a section of one's own is called as its lanes' `group` says."""
     if not group:
         return None
-    return _("lists_header") if group == "lists" else _("grp_" + group)
+    from ...core import presets
+    said = presets.section_title(group)
+    if said:
+        return said
+    key = "grp_" + group
+    return _(key) if _(key) != key else group
 
 
 def start_lane(view, names, closable=True):

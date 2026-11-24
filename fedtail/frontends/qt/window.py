@@ -1350,11 +1350,11 @@ class MainWindow(QMainWindow):
         titles = {x.id: x for x in self.ctx.view.lists}
         for group, names in groups:
             if group == "lists":
-                self._section_header(_("lists_header"), group, plus=True)
+                self._section_header(sidebar.group_title(group), group, plus=True)
             elif not names:
                 continue
             elif group:
-                self._section_header(_("grp_" + group), group)
+                self._section_header(sidebar.group_title(group), group)
             self.group_rows[group] = names
             for name in names:
                 it = QListWidgetItem()
