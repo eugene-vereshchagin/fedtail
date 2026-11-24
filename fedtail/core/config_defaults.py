@@ -33,13 +33,13 @@ CHANGED = (
     # no default names a lane: "marked" — the lanes whose rules mark themselves (`marks`;
     # the sets' words mark the very lanes these lists named)
     ("ui", "icon_count", [["to_me", "replies", "mentions", "subs", "commented", "important",
-                           "requests"]], "0.23.10"),
+                           "requests"]], "0.24.0"),
     ("notify", "lanes", [["direct", "to_me", "replies", "mentions", "subs", "commented",
-                          "important", "activity", "requests"]], "0.23.10"),
+                          "important", "activity", "requests"]], "0.24.0"),
     ("sound", "lanes", [["direct", "to_me", "replies", "mentions", "subs", "commented",
-                         "important", "requests"]], "0.23.10"),
-    ("lanes", "languages_in", [["federated", "local", "tags"]], "0.23.10"),
-    ("lists", "hide_in", [["home", "bots", "federated", "local"]], "0.23.10"),
+                         "important", "requests"]], "0.24.0"),
+    ("lanes", "languages_in", [["federated", "local", "tags"]], "0.24.0"),
+    ("lists", "hide_in", [["home", "bots", "federated", "local"]], "0.24.0"),
 )
 
 SEEN = "defaults_seen.json"

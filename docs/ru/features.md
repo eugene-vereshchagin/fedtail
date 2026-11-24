@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.23.9 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.24.0**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -120,9 +120,9 @@
 | Ленты из стены человека, поиска и RSS | есть | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` с `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS и Atom без токена | Fedicat, Subway Tooter, Phanpy, Fread |
 | Правила: на время, по имени, не больше N от автора, по авторам, «Убрать из Ленты» | есть | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | своё | feather, Ivory, Subway Tooter (регэкспы, временные), Raccoon for Friendica (лимит на автора), Phanpy (по авторам), Fedilab (убрать из Home) |
 | Библиотека картинок для своих лент | есть | 0.21.0 | `icon = "…"` у `[[lanes.custom]]`, «Картинка» в редакторе лент | своё | только в fedtail |
-| Свои разделы боковой панели и их порядок | есть | дальше | `group` у ленты из правил, `lanes.section_order` | своё | нет |
-| Лента сама отмечает: уведомлять, звенеть, считать на значке | есть | дальше | `marks` у ленты из правил; слово `"marked"` в `notify.lanes`, `sound.lanes`, `tray.icon_count`, `lanes.languages_in`, `lists.hide_in` | своё | нет |
-| Свой набор лент и наборы в самом конфиге | есть | дальше | `lanes.preset`, `[[lanes.sets.<набор>]]`, `[lanes.words.<лента>]` | своё | нет |
+| Свои разделы боковой панели и их порядок | есть | 0.24.0 | `group` у ленты из правил, `lanes.section_order` | своё | нет |
+| Лента сама отмечает: уведомлять, звенеть, считать на значке | есть | 0.24.0 | `marks` у ленты из правил; слово `"marked"` в `notify.lanes`, `sound.lanes`, `tray.icon_count`, `lanes.languages_in`, `lists.hide_in` | своё | нет |
+| Свой набор лент и наборы в самом конфиге | есть | 0.24.0 | `lanes.preset`, `[[lanes.sets.<набор>]]`, `[lanes.words.<лента>]` | своё | нет |
 
 <details><summary>Подробнее</summary>
 
@@ -246,10 +246,10 @@
 | Треды: откуда ответы, сам дорастает, только подписки, по веткам, «Вокруг поста» | есть | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; ActivityPub-коллекция ответов на сервере автора; `timelines/home` с `max_id`/`min_id` | Fedilab, Ivory, Mona (режимы треда), Tuba (сам проверяет), Pipilo (только подписки), Voyager, Thunder (ветки), Subway Tooter (вокруг поста) |
 | Комментарии: тред — одна карточка, открывается на первом новом | есть | 0.21.0 | лента `commented` в наборе fedtail (остальным — из набора extra); `view = "threads"` и `threads_shown` у своей ленты | своё | Point (подписки), Juick |
 | Где открывается тред: на посте или на первом новом комменте | есть | 0.21.0 | `threads.open_at`; у ленты из правил — свой `open_at` | своё | Point, Juick (не клиенты федиверса) |
-| Свёрнутые ветки треда запоминаются | есть | дальше | `threads.remember_folded` | своё | Voyager, Thunder (клиенты Lemmy) |
+| Свёрнутые ветки треда запоминаются | есть | 0.24.0 | `threads.remember_folded` | своё | Voyager, Thunder (клиенты Lemmy) |
 | «К следующему новому» в треде | есть | 0.23.4 | `threads.next_new` | своё | Point, Juick (не клиенты федиверса) |
 | Следить за ответами на все посты человека | есть | 0.22.0 | `people.watch_replies` | своё (его посты и `/context` их тредов) | только в fedtail |
-| Новые комментарии в треде подсвечены, пока он открыт | есть | дальше | `threads.highlight_new` | своё | Point, Juick (не клиенты федиверса) |
+| Новые комментарии в треде подсвечены, пока он открыт | есть | 0.24.0 | `threads.highlight_new` | своё | Point, Juick (не клиенты федиверса) |
 
 <details><summary>Подробнее</summary>
 
@@ -377,7 +377,7 @@
 | Инструменты над постом вместо длинного меню | есть | 0.22.4 | `card.hover_tools` | своё | Mastodon web |
 | Меню поста подменю | есть | 0.22.4 | `card.menu_groups` | своё | — |
 | Числа под постами на экране свежие | есть | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), иначе по одному | только в fedtail |
-| Число на кнопке «Тред» — все комментарии треда | есть | дальше | `card.thread_size_minutes` (60) | `GET /api/v1/statuses/:id/context` | только в fedtail |
+| Число на кнопке «Тред» — все комментарии треда | есть | 0.24.0 | `card.thread_size_minutes` (60) | `GET /api/v1/statuses/:id/context` | только в fedtail |
 | Кто процитировал мой пост | есть | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Сворачивать набивку хэштегами | есть | 0.14.0 | `card.collapse_tags` | своё | Phanpy |
 | `~~текст~~` зачёркнутым, когда сервер Markdown не знает | есть | 0.14.0 | `appearance.text_markup` | своё | — |
@@ -385,7 +385,7 @@
 | Ставить эмодзи-реакции | есть | 0.20.0 | ⋯ → «Реакция…» | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | Число символов в посте | есть | 0.23.1 | `card.char_count` | своё | нет: число символов клиенты показывают только в редакторе |
 | Длинный пост под катом | есть | 0.23.1 | `card.fold_chars` | своё | Tusky и Phanpy сворачивают длинные посты сами; веб Mastodon — нет |
-| Кнопки под постом — по ленте и по тому, что за запись | есть | дальше | `buttons` у ленты из правил; `card.bookmark_button`, `reading.read_button` | своё | нет |
+| Кнопки под постом — по ленте и по тому, что за запись | есть | 0.24.0 | `buttons` у ленты из правил; `card.bookmark_button`, `reading.read_button` | своё | нет |
 
 <details><summary>Подробнее</summary>
 
@@ -563,7 +563,7 @@
 | Ответ с цитатой, по кусочкам | есть | 0.17.0 | `post.quote_prefix` | своё (текст ответа) | Thunderbird и почтовики — для писем; в клиентах федиверса нет |
 | Скопировать ник @user@server | есть | 0.16.0 | — | своё | Mastodon web (Copy handle) |
 | Цитировать пост; кто может цитировать мои | есть | 0.8.0 | `post.quote_action`, `post.quote_policy` | `quoted_status_id`, `quote_approval_policy` | Mastodon 4.5+, Ivory, Phanpy |
-| Цитировать ссылкой — где цитат нет | есть | дальше | `post.quote_link` | — | только в fedtail |
+| Цитировать ссылкой — где цитат нет | есть | 0.24.0 | `post.quote_link` | — | только в fedtail |
 | Кто может отвечать, бустить, лайкать (GoToSocial) | есть | 0.8.0 | `post.who_can_reply`, `post.who_can_boost`, `post.who_can_like` | `interaction_policy` | клиенты GoToSocial |
 | Отложенный пост | есть | 0.8.0 | `post.schedule` | `scheduled_at`, `scheduled_statuses` | Mastodon web, Ivory, Phanpy, Megalodon |
 | Редактировать, удалить, закрепить свой пост | есть | 0.3.0 | — | `PUT statuses/:id`, `statuses/:id/source`, `statuses/:id/pin` | у всех |
@@ -806,7 +806,7 @@
 | Конфиг файлом по главам | есть | 0.6.1 | ключи запуска `--update-config`, `--rebuild-config` | — | tut — тоже TOML, но без сборки по главам |
 | Справочник настроек | есть | 0.13.0 | — | `tools/config_doc.py` | tut (man-страница и сайт), MediaWiki (статья на каждую настройку) |
 | Окно, трей, клавиши | есть | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | клавиши — Mastodon web, Phanpy, Elk, Ivory, tut |
-| Свои клавиши | есть | дальше | `[keys]`, `tui.keys`, `web.keys` | своё | tut |
+| Свои клавиши | есть | 0.24.0 | `[keys]`, `tui.keys`, `web.keys` | своё | tut |
 | Ссылки на посты и профили — внутри | есть | 0.2.0 | `card.links_in_app`, `card.link_chars` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Открыть ссылку в запущенном fedtail | есть | 0.14.0 | `fedtail open URL`; `--install-desktop` ставит обработчик `web+ap://` | своё | Megalodon (поделиться ссылкой в приложение) |
 | Всё хранится локально, читается без сети | есть | 0.1.0 | — | SQLite в папке данных профиля | Tusky — частично, Ice Cubes — кэш Home |

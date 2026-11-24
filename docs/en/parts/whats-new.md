@@ -1,4 +1,4 @@
-**What's next:**
+**0.24.0:**
 
 - Sidebar sections of your own, in your order
 - A lane marks itself: notes, sound, the count on the icon

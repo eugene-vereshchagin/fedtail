@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.23.9 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.24.0**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -117,9 +117,9 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request`, `lanes.rss_items`, `lanes.rss_summary_chars` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
 | A library of pictures for your own lanes | has | 0.21.0 | `icon = "…"` in `[[lanes.custom]]`, "Picture" in the lane editor | own | only in fedtail |
-| Sidebar sections of your own, in your order | has | next | `group` of a lane of rules, `lanes.section_order` | own | none |
-| A lane marks itself: notes, sound, the count on the icon | has | next | `marks` of a lane of rules; the word `"marked"` in `notify.lanes`, `sound.lanes`, `tray.icon_count`, `lanes.languages_in`, `lists.hide_in` | own | none |
-| A set of lanes of your own, the sets in the config itself | has | next | `lanes.preset`, `[[lanes.sets.<set>]]`, `[lanes.words.<lane>]` | own | none |
+| Sidebar sections of your own, in your order | has | 0.24.0 | `group` of a lane of rules, `lanes.section_order` | own | none |
+| A lane marks itself: notes, sound, the count on the icon | has | 0.24.0 | `marks` of a lane of rules; the word `"marked"` in `notify.lanes`, `sound.lanes`, `tray.icon_count`, `lanes.languages_in`, `lists.hide_in` | own | none |
+| A set of lanes of your own, the sets in the config itself | has | 0.24.0 | `lanes.preset`, `[[lanes.sets.<set>]]`, `[lanes.words.<lane>]` | own | none |
 
 <details><summary>In detail</summary>
 
@@ -244,10 +244,10 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_recheck_for_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 | Comments: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` and `threads_shown` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
-| A thread's folded branches remembered | has | next | `threads.remember_folded` | own | Voyager, Thunder (Lemmy clients) |
+| A thread's folded branches remembered | has | 0.24.0 | `threads.remember_folded` | own | Voyager, Thunder (Lemmy clients) |
 | "To the next new one" in a thread | has | 0.23.4 | `threads.next_new` | own | Point, Juick (not fediverse clients) |
 | Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
-| A thread's new comments stay lit while it is open | has | next | `threads.highlight_new` | own | Point, Juick (not fediverse clients) |
+| A thread's new comments stay lit while it is open | has | 0.24.0 | `threads.highlight_new` | own | Point, Juick (not fediverse clients) |
 
 <details><summary>In detail</summary>
 
@@ -375,7 +375,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Tools over the post instead of a long menu | has | 0.22.4 | `card.hover_tools` | own | Mastodon web |
 | A post's menu in submenus | has | 0.22.4 | `card.menu_groups` | own | — |
 | The numbers under the posts on screen kept fresh | has | 0.22.0 | `card.counts_minutes` (5) | `GET /api/v1/statuses?id[]=` (Mastodon 4.3+), else one by one | only in fedtail |
-| The Thread button counts the whole thread's comments | has | next | `card.thread_size_minutes` (60) | `GET /api/v1/statuses/:id/context` | only in fedtail |
+| The Thread button counts the whole thread's comments | has | 0.24.0 | `card.thread_size_minutes` (60) | `GET /api/v1/statuses/:id/context` | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
@@ -383,7 +383,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | A post's character count | has | 0.23.1 | `card.char_count` | own | none: clients show the count only while writing |
 | A long post folded | has | 0.23.1 | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
-| The buttons under a post follow the lane and what the item is | has | next | `buttons` of a lane of rules; `card.bookmark_button`, `reading.read_button` | own | none |
+| The buttons under a post follow the lane and what the item is | has | 0.24.0 | `buttons` of a lane of rules; `card.bookmark_button`, `reading.read_button` | own | none |
 
 <details><summary>In detail</summary>
 
@@ -561,7 +561,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Reply with quotes, piece by piece | has | 0.17.0 | `post.quote_prefix` | own (the reply's text) | Thunderbird and mail clients — for mail; no fediverse client |
 | Copy the handle @user@server | has | 0.16.0 | — | own | Mastodon web (Copy handle) |
 | Quoting a post; who may quote mine | has | 0.8.0 | `post.quote_action`, `post.quote_policy` | `quoted_status_id`, `quote_approval_policy` | Mastodon 4.5+, Ivory, Phanpy |
-| Quote as a link — where quoting isn't | has | next | `post.quote_link` | — | only in fedtail |
+| Quote as a link — where quoting isn't | has | 0.24.0 | `post.quote_link` | — | only in fedtail |
 | Who may reply, boost, like (GoToSocial) | has | 0.8.0 | `post.who_can_reply`, `post.who_can_boost`, `post.who_can_like` | `interaction_policy` | GoToSocial clients |
 | A scheduled post | has | 0.8.0 | `post.schedule` | `scheduled_at`, `scheduled_statuses` | Mastodon web, Ivory, Phanpy, Megalodon |
 | Edit, delete, pin your own post | has | 0.3.0 | — | `PUT statuses/:id`, `statuses/:id/source`, `statuses/:id/pin` | everyone |
@@ -804,7 +804,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
 | The settings reference | has | 0.13.0 | — | `tools/docs_build.py` | tut (a man page and a site), MediaWiki (an article per setting) |
 | Window, tray, keys | has | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
-| Keys of your own | has | next | `[keys]`, `tui.keys`, `web.keys` | own | tut |
+| Keys of your own | has | 0.24.0 | `[keys]`, `tui.keys`, `web.keys` | own | tut |
 | Links to posts and profiles — inside | has | 0.2.0 | `card.links_in_app`, `card.link_chars` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Open a link in the running fedtail | has | 0.14.0 | `fedtail open URL`; `--install-desktop` installs a `web+ap://` handler | own | Megalodon (share a link into the app) |
 | Everything is stored locally, readable offline | has | 0.1.0 | — | SQLite in the profile's data folder | Tusky — partly, Ice Cubes — a Home cache |
