@@ -35,8 +35,13 @@ class MainActivity : ComponentActivity() {
             openPage = if (demo) intent.getStringExtra("page") else null,
             openProfile = if (demo) intent.getStringExtra("profile") else null,
             openCompose = demo && intent.getBooleanExtra("compose", false))
-        handleLogin(intent)
-        handleShared(intent)
+        // the intent that started it, once: turned on its side the activity is made anew
+        // with the same one — a shared link opened its thread again, a login's code
+        // (spent already) was handed in again and left an error
+        if (savedInstanceState == null) {
+            handleLogin(intent)
+            handleShared(intent)
+        }
         if (!demo) askToNotify()  // the demo (CI's emulator): no system dialog over the screens
         setContent {
             FedtailTheme(model.themeColors, model.themeLight, model.themeFont, model.themeScale,
@@ -70,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleLogin(intent)
         handleShared(intent)
         val thread = intent.getStringExtra(Notifier.EXTRA_THREAD)
@@ -96,7 +102,9 @@ class MainActivity : ComponentActivity() {
             Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
             else -> null
         } ?: return
-        model.openShared(text) { url -> view(url) }
+        // (through the model's own way to the browser, set anew by every screen drawn: a
+        // lambda of this activity kept there outlived it after a turn)
+        model.openShared(text) { url -> model.browse(url) }
     }
 
     /** fedtail://oauth?code=… — the server sends the browser back here after "allow". */

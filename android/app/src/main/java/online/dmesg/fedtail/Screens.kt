@@ -326,7 +326,7 @@ fun PlaceScaffold(
 
 @Composable
 private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modifier) {
-    var code by remember { mutableStateOf("") }
+    var code by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     Column(modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(24.dp))

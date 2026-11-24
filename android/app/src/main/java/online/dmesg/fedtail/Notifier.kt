@@ -45,8 +45,11 @@ object Notifier {
             context.getString(R.string.note_channel), NotificationManager.IMPORTANCE_DEFAULT))
     }
 
-    fun allowed(context: Context) = ContextCompat.checkSelfPermission(context,
-        Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    // Android 11 and 12 have no such permission to grant: the check said "denied" there,
+    // and no note ever came, nor a background round (24.11)
+    fun allowed(context: Context) = android.os.Build.VERSION.SDK_INT < 33 ||
+        ContextCompat.checkSelfPermission(context,
+            Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     /** What notes() or background_round() said: shown (unless it says not to), remembered. */
     fun take(context: Context, got: JSONObject) {

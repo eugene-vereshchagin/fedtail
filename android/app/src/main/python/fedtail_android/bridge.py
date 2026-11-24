@@ -193,7 +193,9 @@ def _make(demo):
     for lock in _s.get("held") or ():  # the merged profiles' locks: theirs again
         lock.close()
     _s["held"] = []
-    profile = "demo" if demo else None
+    # the account switched to (Accounts → Open) stays through a rebuild: a setting changed
+    # or the config saved made the core anew — for the first account again (24.11)
+    profile = _s.get("profile") or ("demo" if demo else None)
     where = paths.resolve(profile)
     where.ensure()
     cfg = _config(where)
@@ -579,6 +581,7 @@ def place_act(act_json, confirmed=False, values_json=None, answer=None):
         if got.get("reload"):  # another account: the core was made anew for it
             _s["core"] = _s["web"].core._core if hasattr(_s["web"].core, "_core") \
                 else _s["web"].core
+            _s["profile"] = getattr(_s["core"].paths, "profile", None) or None
         return got
     return _answer(go)
 
@@ -905,7 +908,10 @@ def hub():
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
                 "strip": strip,
                 "lane_strip": core.cfg["phone"].get("lane_strip", "icons"),
-                "pinned": [n for n in core.pinned_tiles() if any(x["name"] == n for x in every)],
+                # (each once: a list doubled by another device's sync crashed the editor
+                # of the tiles — two rows of one key)
+                "pinned": list(dict.fromkeys(
+                    n for n in core.pinned_tiles() if any(x["name"] == n for x in every))),
                 # the sidebar's sections and which are tiles (phone.overview, common/sidebar)
                 "overview": sidebar.overview(view, core.cfg),
                 "order": [x["name"] for x in walk if x["unread"]],
@@ -1271,9 +1277,14 @@ def wait(since, seconds=25):
     """Blocks (call it off the main thread) until something in the lanes changed, a
     poll round began or ended, or the time is up. → the version now: different from
     `since` — reload; the same — status() for the overview's line only."""
-    web = _s["web"]
-    seen = getattr(web, "poll_seq", 0)
-    return int(web.wait(int(since), float(seconds), poll_since=seen))
+    try:
+        web = _s["web"]
+        seen = getattr(web, "poll_seq", 0)
+        return int(web.wait(int(since), float(seconds), poll_since=seen))
+    except Exception:  # noqa: BLE001 — the core being made anew meanwhile: nothing new
+        import logging
+        logging.getLogger("fedtail.android").debug("wait", exc_info=True)
+        return int(since)
 
 
 def status():

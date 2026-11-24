@@ -135,7 +135,9 @@ fun AskDialogs(model: AppModel) {
                 })
         }
         is Asking.Text -> {
-            var text by remember(a) { mutableStateOf(a.text) }
+            // (kept through a turn of the phone: a note being typed came back empty)
+            var text by androidx.compose.runtime.saveable.rememberSaveable(a.title) {
+                mutableStateOf(a.text) }
             AlertDialog(
                 onDismissRequest = { model.asking = null },
                 title = if (a.title.isNotBlank()) { { Text(a.title) } } else null,

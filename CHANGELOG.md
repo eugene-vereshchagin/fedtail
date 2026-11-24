@@ -91,6 +91,14 @@
 - Android: turning the phone on its side with the editor (or a thread, a profile)
   opened straight from the overview closed it — the wide screen brought a lane in and
   swept away what was open. The words were kept as a draft, but nothing said so.
+- **Android 11 and 12: notifications come.** The permission check asked for a permission
+  those versions don't have and took the answer for "no": no note ever reached the shade
+  there, and the background rounds did nothing.
+- Android: the account switched to (Accounts → Open) stays after a setting is changed or
+  the config saved — the core was made anew for the first account; a link shared into
+  fedtail no longer opens again when the phone is turned, nor is a login's code handed
+  in twice; a button tapped twice (a vote, a like, "approve") asks once; a note being
+  typed survives a turn; a doubled list of tiles no longer crashes their editor.
 - Android, found by reading the code after those: "mark all read" in one lane and then in
   another within five seconds left the first one unread for the server; a thread's slow
   answer could fill the thread opened after it (and mark its posts read); a post sent

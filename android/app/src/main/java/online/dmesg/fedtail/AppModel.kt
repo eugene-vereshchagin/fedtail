@@ -1188,7 +1188,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** While on screen: whatever the core learns (a poll, sync) reloads what is shown. */
     private fun watch() {
-        if (watcher?.isActive == true) return
+        if (background || watcher?.isActive == true) return
         watcher = viewModelScope.launch {
             while (isActive) {
                 checkAnnouncements()
@@ -1277,6 +1277,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onForeground() {
+        background = false
         if (screen != Screen.Main) return
         viewModelScope.launch { Core.pause(false); Core.network(onWifi()) }
         watchNetwork()
@@ -1331,7 +1332,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { Core.trimMemory(level) }
     }
 
+    private var background = false
     fun onBackground() {
+        background = true  // (even while it logs in: the watcher started then went on behind)
         if (screen != Screen.Main) return
         watcher?.cancel()
         viewModelScope.launch { Core.pause(true) }
@@ -1616,10 +1619,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** like / share / bookmark, toggled; the card takes what the server says now. */
+    /** One of a kind at a time: a button tapped twice while its request is on its way
+     *  asks once (two votes, a like and an unlike, "approve" twice — the second an error). */
+    private val inflight = mutableSetOf<String>()
+    private fun once(key: String, block: suspend () -> Unit) {
+        if (!inflight.add(key)) return
+        viewModelScope.launch { try { block() } finally { inflight.remove(key) } }
+    }
+
     fun act(p: PostItem, action: String) {
-        viewModelScope.launch {
+        once("act:$action:${p.sid}") {
             val got = Core.act(action, p.sid)
-            Core.failed(got)?.let { message = it; return@launch }
+            Core.failed(got)?.let { message = it; return@once }
             val now = parsePost(got)
             val swap = { x: PostItem ->
                 if (x.sid == p.sid) x.copy(liked = now.liked, likes = now.likes, shared = now.shared,
@@ -1982,7 +1993,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** A place's button with its form's values; what it says to do then — done (handle()). */
     fun pageAct(b: PlaceButton, values: JSONObject?, confirmed: Boolean = false, answer: String? = null) {
-        viewModelScope.launch {
+        once("page:${b.act}:$confirmed:$answer") {
             val got = Core.placeAct(b.act, confirmed, values, answer)
             handle(got) { c, _, a -> pageAct(b, values, c || confirmed, a ?: answer) }
             loadHub()
@@ -2005,7 +2016,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun profileAct(id: String, key: String, answer: String? = null, confirmed: Boolean = false,
                    chosen: JSONObject? = null) {
-        viewModelScope.launch {
+        once("profile:$id:$key:$confirmed:$answer:${chosen != null}") {
             val got = Core.profileAct(id, key, answer, confirmed, chosen)
             handle(got) { c, ch, a -> profileAct(id, key, a ?: answer, c || confirmed, ch ?: chosen) }
         }
@@ -2102,9 +2113,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A poll answered: the card as it is now, wherever it shows. */
     fun vote(p: PostItem, choices: List<Int>) {
         if (choices.isEmpty()) return
-        viewModelScope.launch {
+        once("vote:${p.sid}") {
             val got = Core.vote(p.sid, choices)
-            Core.failed(got)?.let { message = it; return@launch }
+            Core.failed(got)?.let { message = it; return@once }
             val now = parsePost(got)
             val swap = { x: PostItem ->
                 if (x.sid == p.sid) x.copy(poll = now.poll, pollOpen = now.pollOpen) else x

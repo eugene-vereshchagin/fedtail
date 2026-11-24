@@ -856,6 +856,22 @@ class BridgeAccountsTest(_Base):
         self.assertIsNot(now, before)
         self.assertEqual(now.paths.profile, "second")
         self.assertTrue(self.call("open")["lanes"])  # the screens come up on it
+        # …and it stays the account through a rebuild of the core (a setting changed, the
+        # config saved): that made the core anew for the first account again (24.11)
+        self.bridge._make(True)
+        self.assertEqual(self.bridge._s["core"].paths.profile, "second")
+
+    def test_wait_never_raises_and_the_tiles_come_once_each(self):
+        self.demo()
+        web = self.bridge._s["web"]
+        self.bridge._s["web"] = None  # (the core being made anew meanwhile)
+        try:
+            self.assertEqual(self.bridge.wait(7, 0), 7)
+        finally:
+            self.bridge._s["web"] = web
+        core = self.bridge._s["core"]
+        core.set_pinned_tiles(["home", "home", "to_me"])
+        self.assertEqual(self.call("hub")["pinned"], ["home", "to_me"])
 
 
 class BridgeDeviceTranslatorTest(_Base):
