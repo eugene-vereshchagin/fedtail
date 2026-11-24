@@ -307,6 +307,11 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             # threads.remember_folded: the branch folded is folded in the thread opened
             # again; off (the default) the thread opens whole
             async def again():
+                # read first, as on screen: an unread comment inside the folded branch
+                # would open the thread at it, the branch shown (a slow runner, 24.11)
+                now = app.screen
+                await self.wait(pilot, lambda: not app.core.unread([n.post for n in now.nodes]),
+                                timeout=30)
                 await pilot.press("q")
                 s = ThreadScreen("700")
                 app.push_screen(s)
@@ -314,12 +319,26 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                                 len(s.query_one("#posts", ListView).children) == 6,
                                 timeout=30)
                 return s.query_one("#posts", ListView)
-            lv.index = 1
+
+            async def on_701(lv):
+                # the cursor there for sure, twice in a row: a late redraw of the thread
+                # put it back on the root (a slow runner, 24.11)
+                seen = []
+
+                def there():
+                    if getattr(lv.highlighted_child, "key", None) != "701":
+                        lv.index = 1
+                        seen.clear()
+                        return False
+                    seen.append(1)
+                    return len(seen) >= 3
+                await self.wait(pilot, there, timeout=30)
+            await on_701(lv)
             await pilot.press("minus")
             lv = await again()
             self.assertTrue(all(i.display for i in lv.children))
             core.cfg["feed"]["remember_folded"] = True
-            lv.index = 1
+            await on_701(lv)
             await pilot.press("minus")
             lv = await again()
             # folded once drawn: the rows come a moment before their folding (Windows' CI)
@@ -618,12 +637,18 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
                                                for i in app.query_one("#lanes").children))
             from fedtail.frontends.common import sidebar
-            names = [i.lane for i in app.query_one("#lanes").children
-                     if isinstance(i, LaneItem)]
-            want = sidebar.icon_total(app.core, core.cfg, sidebar.counts(app.core, names))
-            self.assertGreater(want, 0)
-            await self.wait(pilot, lambda: app.window_title == f"({want}) FedTail")
-            self.assertIn(f"\x1b]2;({want}) FedTail\x07", wrote)
+
+            def total():  # counted anew each look: the lanes are still being counted
+                names = [i.lane for i in app.query_one("#lanes").children
+                         if isinstance(i, LaneItem)]
+                return sidebar.icon_total(app.core, core.cfg, sidebar.counts(app.core, names))
+            await self.wait(pilot, lambda: total() > 0 and
+                            app.window_title == f"({total()}) FedTail")
+            # said to the terminal by its escape (anew: a busy start may have said it
+            # before the writes were watched)
+            title, app.window_title = app.window_title, None
+            app.update_lane_counts()
+            self.assertIn(f"\x1b]2;{title}\x07", wrote)
             core.cfg["ui"]["icon_count"] = []  # nothing chosen: no number
             app.update_lane_counts()
             self.assertEqual(app.window_title, "FedTail")
@@ -683,7 +708,10 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.press(*line.replace(" ", "\x00").split("\x00")[0], "space",
                                   *line.split(" ")[1])
                 await pilot.press("enter")
-                await self.wait(pilot, lambda: not cmd.disabled)
+                # the line taken and its answer come: typing on before it, the answer
+                # cleared the next line mid-word (a slow runner, 24.11)
+                await self.wait(pilot, lambda ln=line: app.cmd_history.lines[-1:] == [ln]
+                                and not cmd.disabled)
                 cmd.value = ""
             cmd.focus()
             await pilot.press("up")
