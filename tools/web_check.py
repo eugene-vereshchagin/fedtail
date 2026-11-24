@@ -186,7 +186,10 @@ def with_playwright(base, key, out, core):
             main_menu(page, out)
             walk_places(page, out)
             # Ctrl+F: a word every fake post has, and one none has
-            page.click("#posts")
+            # (not a click in the middle of the lane: on a real account that is somebody's
+            # picture, a thread or a card's button — the viewer or the thread's panel
+            # opened over the find bar, 24.11)
+            page.focus("#posts")
             page.keyboard.press("Control+f")
             # your account: the longest word of the first post on screen
             word = "пост номер 1" if not REAL else page.evaluate(
@@ -194,11 +197,27 @@ def with_playwright(base, key, out, core):
                 ".innerText || ''; return t.split(/\\s+/).filter(w => /^[\\p{L}]{4,}$/u"
                 ".test(w)).sort((a, b) => b.length - a.length)[0] || ''; })()")
             page.fill("#find-q", word)
-            page.wait_for_timeout(700)
-            if word and page.locator("#posts .post.found").count() == 0:
-                ERRORS.append(f"Ctrl+F: nothing marked for a word the lane has ({word!r}) — "
-                              f"lane {page.evaluate('state.lane')}, "
-                              f"{page.locator('#posts .post').count()} posts on screen")
+            if word:
+                # a big lane of a real account answers slower than a made-up one: waited
+                # for, and how long said (700 ms flat called a slow answer a miss, 24.11)
+                t0 = time.monotonic()
+                try:
+                    page.wait_for_selector("#posts .post.found", timeout=15000)
+                    NOTES.append(f"Ctrl+F: marked in {time.monotonic() - t0:.1f} s")
+                except Exception:  # noqa: BLE001 — Playwright's timeout
+                    first = page.evaluate(
+                        "(() => { const c = document.querySelector('#posts .post');"
+                        " const b = c && c.querySelector('.body');"
+                        " return c ? {id: c.dataset.id, cls: c.className,"
+                        " quote: !!(b && b.closest('.quote')),"
+                        " hidden: !!(b && b.closest('details:not([open])'))} : null; })()")
+                    ERRORS.append(
+                        f"Ctrl+F: nothing marked for a word the lane has ({word!r}) — "
+                        f"lane {page.evaluate('state.lane')}, "
+                        f"{page.locator('#posts .post').count()} posts on screen, the "
+                        f"count says {page.inner_text('#find-count')!r}, its post: {first}")
+            else:
+                page.wait_for_timeout(700)
             page.screenshot(path=str(out / "desktop-09-find.png"))
             # "Deeper" (what's stored, not only shown) and "in every lane", as the windows
             page.click("#find-deeper")
