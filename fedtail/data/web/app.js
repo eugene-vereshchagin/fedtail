@@ -2219,13 +2219,24 @@ function watchThreadProgress(id, token, show) {
 
 // at: where it stands once drawn — "post", or "first_unread" (common/links.py THREAD_AT:
 // a card's open_at, a fedtail:threadnew/ link)
-async function openThread(id, at, show) {
+// grown: the thread on screen got an answer from elsewhere — drawn again where the reader
+// stands, the branches they folded still folded (it went back to "loading…", jumped to
+// the post it opened at and unfolded everything, every time someone answered).
+async function openThread(id, at, show, grown) {
+  const keep = grown && state.thread && state.thread.id === id ? {
+    top: $("#side-body").scrollTop,
+    folded: [...$("#side-body").querySelectorAll(".post.folded")].map((c) => c.dataset.id),
+    was: [...$("#side-body").childNodes],
+  } : null;
   const token = showSide(w("web_thread"));
   state.thread = { token, id, at };  // drawn again when my answer in it is sent
   // "loading…" with the opossum swinging beside it, as the windows have it
   const wait = loadingBox(w("thread_loading"));
   $("#side-body").textContent = "";
-  $("#side-body").append(wait);
+  if (keep) {  // what was there stays in sight until the new comes
+    $("#side-body").append(...keep.was);
+    $("#side-body").scrollTop = keep.top;
+  } else $("#side-body").append(wait);
   let loading = true;
   watchThreadProgress(id, token, (text) => {
     if (loading) wait.lastChild.textContent = w("thread_loading") + (text ? " " + text : "");
@@ -2253,7 +2264,11 @@ async function openThread(id, at, show) {
       body.append(card);
     }
     if (t.posts.length) $("#side-title").textContent = w("web_thread") + " · @" + t.posts[0].account.handle;
-    if (focus) focus.scrollIntoView({ block: "center" });
+    if (keep) {
+      for (const c of body.querySelectorAll(".post[data-id]"))
+        if (keep.folded.includes(c.dataset.id) && c.querySelector(".fold")) c.querySelector(".fold").click();
+      body.scrollTop = keep.top;
+    } else if (focus) focus.scrollIntoView({ block: "center" });
     const ids = t.read_on_open || [];  // the core's: read as it opens, unless by hand
     if (ids.length) {
       api("/api/read", { ids }).catch(() => {});
@@ -2261,7 +2276,8 @@ async function openThread(id, at, show) {
         if (ids.includes(card.dataset.id)) read(card);
     }
   } catch (e) {
-    if (state.side === token) $("#side-body").textContent = w("web_load_error", { err: e.message });
+    // (a thread only drawn anew stays as it was: an error isn't worth losing it)
+    if (state.side === token && !keep) $("#side-body").textContent = w("web_load_error", { err: e.message });
   }
 }
 
@@ -3853,7 +3869,7 @@ async function follow() {
         const first = state.threadSeq === undefined;
         state.threadSeq = r.t;
         const th = state.thread;
-        if (!first && th && state.side === th.token) openThread(th.id, th.at);
+        if (!first && th && state.side === th.token) openThread(th.id, th.at, undefined, true);
       }
       for (const snd of r.sounds || []) playSound(snd);
       for (const note of r.notes || []) showNote(note);

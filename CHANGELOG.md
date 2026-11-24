@@ -54,6 +54,9 @@
   once; a find's late answer no longer lands in another lane or over newer words; a lane
   that failed to load leaves the page in the lane it shows; an error of a panel left
   doesn't write over the one open now.
+- The web page: a thread open while someone answers in it is drawn again in place — the
+  reader stays where they stood and the folded branches stay folded (it went back to
+  "loading…", jumped to the post it was opened at and unfolded everything).
 - The terminal: a profile's posts of the kind asked before `s` don't replace the new
   kind's; "deeper" answered after a lane change isn't run there; one page of older posts
   at a time; Send works again after a file to attach turned out unreadable.

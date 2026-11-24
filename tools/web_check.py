@@ -462,8 +462,25 @@ def keys_and_title(page, core):
             before = page.evaluate(shown)
             page.click("#side-body .post .fold")
             folded = page.evaluate(shown)
+            # someone answers meanwhile: the thread is drawn again — where the reader
+            # stands, the branch still folded (it unfolded and jumped back, 24.11)
+            from datetime import UTC, datetime
+
+            from tests.fakes import BOB, FakeApi, status
+            w = FakeApi.world
+            new_id = str(max(int(i) for i in w.statuses if i.isdigit()) + 1)
+            st = status(new_id, BOB, "001", "ME", vis="public", text="ещё один ответ")
+            st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+            w.add(st, home=True)  # (brought by a round, as from a server)
+            core.poll_once()
+            page.wait_for_function(
+                "() => [...document.querySelectorAll('#side-body .post')]"
+                ".some(c => c.innerText.includes('ещё один ответ'))", timeout=8000)
+            if not page.evaluate("() => [...document.querySelectorAll('#side-body .post')]"
+                                 ".some(c => c.hidden)"):
+                ERRORS.append("thread: the folded branch unfolded when the thread grew")
             page.click("#side-body .post .fold")
-            if not (folded < before and page.evaluate(shown) == before):
+            if not (folded < before and page.evaluate(shown) == before + 1):  # (+ the answer)
                 ERRORS.append(f"thread: folding a branch showed {before} → {folded} → "
                               f"{page.evaluate(shown)} cards")
         except Exception as e:  # noqa: BLE001 — said as a problem of the walk
