@@ -214,7 +214,7 @@ class ConfigTest(unittest.TestCase):
         d = config.DEFAULTS["lanes"]
         self.assertEqual((d["languages"], d["detect_language"], d["detect_min_words"]),
                          ([], "untagged", 12))
-        self.assertEqual(d["languages_in"], ["federated", "local", "tags"])
+        self.assertEqual(d["languages_in"], ["marked", "tags"])  # the lanes' rules say
 
     def test_bad_values(self):
         for kw in ({"languages": ["Russian"]}, {"languages": [5]},

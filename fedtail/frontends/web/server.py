@@ -1322,7 +1322,7 @@ class Web:
                             # what it is: the core's word (no number keys here)
                             "tip": sidebar.lane_tip(name, what=core.lane_tip(name)),
                             "counted": bool(wanted) and bool(
-                                core.lane_chosen(name, wanted, skipped)),
+                                core.lane_chosen(name, wanted, skipped, "icon_count")),
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})
         first = sidebar.start_lane(core, [x["name"] for x in out])  # None: the curtain

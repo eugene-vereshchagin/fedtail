@@ -196,3 +196,44 @@ class EventLanesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EventsLaneByRuleTest(unittest.TestCase):
+    """The lane the events are read in is found by its rule (Core.events_lane), never by
+    the name "activity": a lane of events called anything else counted nothing beside my
+    name, and its news opened nowhere (24.11)."""
+
+    def make(self, lanes_cfg):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}, "lanes": lanes_cfg})
+        p = paths.resolve("t", config=str(Path(tmp.name) / "c.toml"),
+                          data=str(Path(tmp.name) / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        return core
+
+    def test_found_by_what_it_takes(self):
+        core = self.make({})
+        self.assertEqual(core.events_lane(), "activity")  # the set's lane of events
+        own = [{"name": "bells", "any": [{"event": ["favourite", "reblog", "follow"]}]},
+               {"name": "knocks", "any": [{"event": "follow_request"}]},
+               {"name": "mixed", "source": "home", "any": [{}, {"event": "favourite"}]}]
+        core = self.make({"enabled": ["home", "knocks", "bells", "mixed"], "custom": own})
+        self.assertNotIn("activity", core.lane_by_name)
+        self.assertEqual(core.events_lane(), "bells")  # the widest lane of events only
+        self.assertEqual(core.activity_unread(), core.events_unread("bells"))
+        self.assertEqual(core.activity_entries(), core.lane_events("bells", 300, which="all"))
+        core = self.make({"enabled": ["home"]})
+        self.assertEqual(core.events_lane(), "")
+        self.assertEqual(core.activity_entries(), core.event_items(300))
+
+    def test_followed_threads_by_the_source(self):
+        core = self.make({"enabled": ["home"]})
+        self.assertFalse(core._follows_threads())
+        own = [{"name": "watching", "source": "subs", "any": [{}]}]
+        core = self.make({"enabled": ["home", "watching"], "custom": own})
+        self.assertTrue(core._follows_threads())  # whatever the lane is called

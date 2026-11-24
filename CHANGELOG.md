@@ -7,6 +7,17 @@
 
 ## What's next
 
+- No default names a lane any more. The options that pick lanes — `notify.lanes`,
+  `sound.lanes`, the count on the icon, `lanes.languages_in`, `lists.hide_in` — say
+  `["marked"]` by default: the lanes whose rules mark themselves for it (a lane's new key
+  `marks = ["notify", "sound", "icon_count", "languages", "hide_listed"]`, in the file or in
+  the lane editor). The sets mark the very lanes those lists named, so nothing changes until
+  you change it; a config still at the old lists is brought to the new word, and a list of
+  your own stays as it is. A lane of yours can now ask for notes or the icon's count by
+  its own rule, whatever it is called.
+- The lane the events are read in ("N new" beside your name in the messengers' look, the
+  count of Activity) is found by its rule, not by the name "activity": a lane of events
+  called otherwise counted nothing there. The same for the lanes the followed threads feed.
 - Sidebar sections of your own: a lane's `group` may be any word, and it makes a section
   called that (the docs said so; the code put every such lane into "Personal"). The lane
   editor has "…or a new section", and the new `lanes.sections` puts the sections — the

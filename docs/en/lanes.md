@@ -145,6 +145,7 @@ program knows it.
 | `group` | a word: `standard` or a name of your own | The sidebar section the lane sits in: `standard`, `personal`, or a name of your own — any word makes a section called that. The sections' order is `lanes.sections`. |
 | `hide_empty` | `true` | `true` shows the lane in the sidebar only when something is in it. |
 | `icon` | see below | The lane's picture: one of the built-in lanes' icons or the library's (`fire`, `book`, `globe`…). Without it, by the lane's name; a custom lane gets the list icon. |
+| `marks` | `notify`, `sound`, `icon_count`, `languages`, `hide_listed` | What the word `marked` picks the lane for in the options that choose lanes: notes, sound, the count on the icon, the languages filter, no people of the lists. `[]` — nothing. Without the key, as the sets mark a lane of that name. |
 | `mode` | `catch_up`, `lane` | `lane` is an ordinary lane; `catch_up` shows only what came within `window`: “what I missed”. |
 | `name` | a word: `home_plus` | The lane's name. It never changes: the window, sync and tiles remember the lane by it. |
 | `none` | a list of tables, as in `any` | Conditions that keep a post out: one matching any of them is left out even if `any` let it in. |
@@ -484,6 +485,16 @@ program knows it.
 | `bookmark` | Bookmark. |
 | `read` | “Mark read” under an unread post. |
 | `open` | Open the post's address in the browser. |
+
+### The words of `marks`
+
+| Word | What it means |
+|---|---|
+| `notify` | A note about news in the lane (`notify.lanes = ["marked"]`). |
+| `sound` | A sound about news in the lane (`sound.lanes`). |
+| `icon_count` | Its unread count goes into the number on the icon (`tray.icon_count`). |
+| `languages` | The languages filter works in it (`lanes.languages_in`). |
+| `hide_listed` | Posts of people put in lists leave it (`lists.hide_in`). |
 
 ### Pictures (`icon`)
 

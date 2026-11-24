@@ -1257,12 +1257,20 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
     def _notify_wanted(self, name, wanted, never):
         """notify.lanes names this lane and notify.except doesn't (see lanes.chosen)."""
-        return self.lane_chosen(name, wanted, never)
+        return self.lane_chosen(name, wanted, never, "notify")
 
-    def lane_chosen(self, name, wanted, never=()):
-        """lanes.chosen with this lane's title: "list:Друзья" finds the list by name."""
+    def lane_chosen(self, name, wanted, never=(), mark=None):
+        """lanes.chosen with this lane's title ("list:Друзья" finds the list by name)
+        and its rule's marks: mark — what the option picks lanes for (atoms.MARKS:
+        "notify", "sound", "icon_count"…), its word "marked" takes the lanes whose rules
+        mark themselves for that."""
         return lanes.chosen(name, wanted, never,
-                            self.lane_title(name) if lanes.is_list(name) else None)
+                            self.lane_title(name) if lanes.is_list(name) else None,
+                            self.lane_marked(name, mark))
+
+    def lane_marked(self, name, mark):
+        """Does this lane's rule mark it for this (`marks`: atoms.MARKS)?"""
+        return bool(mark) and mark in getattr(self.lane_by_name.get(name), "marks", ())
 
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",
@@ -1471,7 +1479,9 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
                 str(self.choice(f"media.{name}")),
                 # lists.hide_posts: a list's timeline bringing a post takes it out of here
                 sum(v for k, v in self.store.items_version.items() if k.startswith("list:"))
-                if name in self.cfg["lists"]["hide_in"] else 0,
+                if lanes.in_scope(name, self.cfg["lists"]["hide_in"],
+                                  self.lane_marked(name, "hide_listed")) and
+                not lanes.is_list(name) else 0,
                 # a window moves with the clock (and density with the posts' age): anew
                 # each minute
                 int(time.time() // 60) if getattr(lane, "window", 0)
@@ -1506,7 +1516,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         scanned, full = 0, False
         # lanes.languages: how many it took out, said in the lane's line (a lane showing
         # one post of forty, the rest gone without a word, 29.10)
-        by_lang = bool(ctx.languages) and lanes.in_scope(lane.name, ctx.languages_in)
+        by_lang = bool(ctx.languages) and lanes.in_scope(lane.name, ctx.languages_in,
+                                                         "languages" in lane.marks)
         lang_out = 0
         # what the quick filters and the funnel took out, newest first, as many as the
         # lane shows: still news (feed.count_filtered) — a lane filtered to gifs and

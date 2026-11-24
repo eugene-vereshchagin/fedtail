@@ -457,6 +457,7 @@ def lane_words():
         out[key] = [w for w in sorted(words) if w]
     out["switches"] = list(atoms.SWITCHES)
     out["buttons"] = list(atoms.CARD_BUTTONS)
+    out["marks"] = list(atoms.MARKS)
     return out
 
 

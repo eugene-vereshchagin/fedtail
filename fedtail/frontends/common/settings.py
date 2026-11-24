@@ -220,6 +220,8 @@ def _lane_words(view):
     title = getattr(view, "lane_title", None)
 
     def words(name):
+        if name == config.MARKED:
+            return _("lanes_marked")
         try:
             got = title(name) if title else None
         except Exception:  # noqa: BLE001 — a name the core doesn't know: as it is
@@ -290,6 +292,8 @@ def model(view, lang=None, text=None):
                 items = sorted(config.LANE_NAMES | {
                     x.name for x in (getattr(view, "lanes", None) or ())
                     if not str(x.name).startswith("list:")})
+                if (section, key) in config.MARK_OF:  # "the lanes whose rules say so"
+                    items.insert(0, config.MARKED)
             elif (section, key) in _ITEMS:
                 items = sorted(_ITEMS[(section, key)])
             if items is not None:

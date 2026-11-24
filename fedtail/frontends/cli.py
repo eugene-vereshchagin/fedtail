@@ -154,7 +154,7 @@ def cmd_tail(core, out, args, stop=None):
     else:
         notify = core.cfg["notify"]
         default = [n for n in names if core.lane_chosen(n, notify["lanes"],
-                                                         notify.get("except") or ())]
+                                                         notify.get("except") or (), "notify")]
     first = sidebar.start_lane(core, names, closable=False)
     wanted = [_lane_name(core, n) for n in args.lanes] or default or \
         ([first] if first else [])

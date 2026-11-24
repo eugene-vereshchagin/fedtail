@@ -240,7 +240,9 @@ class RosterWindow(QWidget):
         who.addWidget(self.me_handle)
         self.news = QLabel()
         self.news.setObjectName("rosterNews")
-        self.news.linkActivated.connect(lambda _u: self.open("activity"))
+        # to the lane the events are read in (by its rule: Core.events_lane), if one is shown
+        self.news.linkActivated.connect(
+            lambda _u: self.win.core.events_lane() and self.open(self.win.core.events_lane()))
         who.addWidget(self.news)
         head_row.addLayout(who, 1)
         v.addWidget(head)

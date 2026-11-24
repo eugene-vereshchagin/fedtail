@@ -76,6 +76,10 @@ ru = "`true` — лента видна в боковой панели, толь�
 en = "`true` shows the lane in the sidebar only when something is in it."
 takes = "`true`"
 
+[rule.marks]
+ru = "Для чего ленту берёт слово `marked` в настройках, выбирающих ленты: уведомления, звук, счётчик на значке, фильтр языков, без людей из списков. `[]` — ни для чего. Без ключа — как наборы отмечают ленту с таким именем."
+en = "What the word `marked` picks the lane for in the options that choose lanes: notes, sound, the count on the icon, the languages filter, no people of the lists. `[]` — nothing. Without the key, as the sets mark a lane of that name."
+
 [rule.buttons]
 ru = "Кнопки под постами ленты, в написанном порядке. `[]` — никаких. Без ключа — по тому, что за запись: у поста с сервера ответ, лайк, буст, тред, закладка; у записи RSS — «открыть» и закладка. Кнопка, которую пост принять не может (буст личного сообщения), не рисуется; убранное с ряда остаётся в меню ⋯."
 en = "The buttons under the lane's posts, in the order written. `[]` — none. Without the key they follow what the item is: a server's post gets reply, like, boost, thread, bookmark; an RSS item — “open” and bookmark. A button the post cannot take (boosting a private message) is not drawn; what is off the row stays in the ⋯ menu."
@@ -794,3 +798,18 @@ en = "“Mark read” under an unread post."
 [word.buttons.open]
 ru = "Открыть адрес поста в браузере."
 en = "Open the post's address in the browser."
+[word.marks.notify]
+ru = "Уведомление о новом в ленте (`notify.lanes = [\"marked\"]`)."
+en = "A note about news in the lane (`notify.lanes = [\"marked\"]`)."
+[word.marks.sound]
+ru = "Звук о новом в ленте (`sound.lanes`)."
+en = "A sound about news in the lane (`sound.lanes`)."
+[word.marks.icon_count]
+ru = "Её непрочитанное входит в число на значке (`tray.icon_count`)."
+en = "Its unread count goes into the number on the icon (`tray.icon_count`)."
+[word.marks.languages]
+ru = "В ней работает фильтр языков (`lanes.languages_in`)."
+en = "The languages filter works in it (`lanes.languages_in`)."
+[word.marks.hide_listed]
+ru = "Из неё уходят посты людей, положенных в списки (`lists.hide_in`)."
+en = "Posts of people put in lists leave it (`lists.hide_in`)."

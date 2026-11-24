@@ -353,3 +353,65 @@ class CardButtonsTest(Base):
         self.assertEqual(lanesplace._buttons_text(["reply", "like"]), "reply, like")
         self.assertEqual(lanesplace._buttons_text([]), "-")
         self.assertEqual(lanesplace._buttons_text(None), "")
+
+
+class MarkedLanesTest(Base):
+    """No default names a lane (24.11): the options that pick lanes say "marked" — the
+    lanes whose rules mark themselves (`marks`); the sets' words mark the very lanes the
+    old default lists named."""
+
+    OLD = {"notify": "direct to_me replies mentions subs commented important activity "
+                     "requests",
+           "sound": "direct to_me replies mentions subs commented important requests",
+           "icon_count": "to_me replies mentions subs commented important requests",
+           "languages": "federated local", "hide_listed": "home bots federated local"}
+
+    def test_the_sets_mark_what_the_old_lists_named(self):
+        from fedtail.core import config, custom, presets
+        for name in presets.names():
+            cfg, _ = config.validate({"lanes": {"preset": name}})
+            for c in custom.load(cfg)[0]:
+                for mark, old in self.OLD.items():
+                    self.assertEqual(mark in (c.rule.marks or ()), c.name in old.split(),
+                                     f"{name}: {c.name}: {mark}")
+        d = config.DEFAULTS
+        for (section, key), _mark in config.MARK_OF.items():
+            self.assertIn("marked", d[section][key])
+            self.assertFalse(set(d[section][key]) & presets.known_names() - {"tags", "lists"})
+
+    def test_a_lane_marks_itself(self):
+        core, _w = self.make(lanes={"custom": [
+            {"name": "work", "source": "home", "any": [{}], "marks": ["notify", "icon_count"]},
+            {"name": "to_me", "any": [{"me": "reply"}]},                 # the set's name
+            {"name": "direct", "any": [{"me": "direct"}], "marks": []},  # …its own word
+            {"name": "odd", "source": "home", "any": [{}], "marks": ["notify", "fly"]}]})
+        marks = lambda n: set(core.lane_by_name[n].marks)  # noqa: E731
+        self.assertEqual(marks("work"), {"notify", "icon_count"})
+        self.assertEqual(marks("to_me"), {"notify", "sound", "icon_count"})  # the sets'
+        self.assertEqual(marks("direct"), set())
+        self.assertEqual(marks("odd"), {"notify"})
+        self.assertEqual(marks("home"), {"hide_listed"})
+        n = core.cfg["notify"]
+        n["lanes"] = ["marked"]  # the default (the tests' core names lanes of its own)
+        chosen = lambda name, mark: core.lane_chosen(name, ["marked"], [], mark)  # noqa: E731
+        self.assertTrue(chosen("work", "notify"))
+        self.assertFalse(chosen("work", "sound"))
+        self.assertFalse(chosen("home", "notify"))
+        self.assertFalse(chosen("direct", "notify"))
+        self.assertFalse(chosen("work", None))  # an option without a mark: by names only
+        self.assertTrue(core._notify_wanted("work", n["lanes"], n["except"]))
+        self.assertFalse(core.lane_chosen("work", ["marked"], ["work"], "notify"))  # except
+        self.assertTrue(core.lane_chosen("home", ["marked", "home"], [], "notify"))
+        from fedtail.core import lanes
+        self.assertTrue(lanes.in_scope("x", ["marked"], True))
+        self.assertFalse(lanes.in_scope("x", ["marked"], False))
+        self.assertTrue(lanes.in_scope("list:1", ["lists"]))
+        # the editor: its own word only when it differs from the sets'
+        from fedtail.frontends.common import lanesplace
+        old = {"name": "to_me", "any": [{}]}
+        self.assertNotIn("marks", lanesplace._table_of(
+            "to_me", old, {"marks": ["notify", "sound", "icon_count"]}))
+        self.assertEqual(lanesplace._table_of("to_me", old, {"marks": ["sound"]})["marks"],
+                         ["sound"])
+        self.assertEqual(lanesplace._marks_of("home", {}), ["hide_listed"])
+        self.assertEqual(lanesplace._marks_of("home", {"marks": ["notify"]}), ["notify"])

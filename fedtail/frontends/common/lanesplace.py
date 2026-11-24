@@ -306,6 +306,10 @@ class LanePlaces:
             # the lane's own switches over what it holds (atoms.SWITCHES): its rule says
             Field("switches", _("le_f_switches"), list(t.get("switches") or ()), "checks",
                   tuple((s, _(s)) for s in atoms.SWITCHES), tip=_("le_f_switches_tip")),
+            # what the options' "marked" picks it for (atoms.MARKS): its own, else the
+            # sets' for a lane of this name
+            Field("marks", _("le_f_marks"), _marks_of(name, t), "checks",
+                  tuple((m, _("mark_" + m)) for m in atoms.MARKS), tip=_("le_f_marks_tip")),
             # the buttons under its posts, in the order written (atoms.CARD_BUTTONS)
             Field("buttons", _("le_f_buttons"), _buttons_text(t.get("buttons")),
                   tip=_("le_f_buttons_tip", words=", ".join(atoms.CARD_BUTTONS))),
@@ -568,6 +572,14 @@ def _sections(ed, cfg, own=""):
     return [g for g in seq if g and g not in (lanes_mod.LISTS, lanes_mod.TAGS)]
 
 
+def _marks_of(name, table):
+    """What a lane is marked for: its table's `marks`, else the sets' for its name."""
+    said = table.get("marks")
+    if not isinstance(said, list):
+        said = presets.words(name).get("marks") or ()
+    return [m for m in atoms.MARKS if m in said]
+
+
 def _buttons_text(said):
     """A lane's `buttons` as the form's line: "reply, like"; "-" — none; "" — not said."""
     if not isinstance(said, list):
@@ -581,7 +593,8 @@ def _table_of(name, old, values):
                                                     "sort", "mode", "window", "filter_context",
                                                     "per_author", "bundle", "view",
                                                     "threads_shown", "open_at",
-                                                    "any", "none", "switches", "buttons")}
+                                                    "any", "none", "switches", "buttons",
+                                                    "marks")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
@@ -612,6 +625,9 @@ def _table_of(name, old, values):
     switches = [s for s in values.get("switches") or () if s in atoms.SWITCHES]
     if switches or "switches" in old:
         t["switches"] = switches
+    marks = [m for m in atoms.MARKS if m in (values.get("marks") or ())]
+    if "marks" in values and (marks != _marks_of(name, {}) or "marks" in old):
+        t["marks"] = marks  # its own word; as the sets' for its name — nothing to say
     said = str(values.get("buttons") or "").strip()
     if said:  # "reply, like": those, in that order; "-" — none at all; "" — the usual
         words = [] if said == "-" else [x for x in said.replace(",", " ").split()]

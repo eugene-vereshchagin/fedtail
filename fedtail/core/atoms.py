@@ -720,7 +720,12 @@ def _author_word(word, have):
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "tip", "any", "none", "source", "sort", "read", "group", "mode",
              "window", "filter_context", "icon", "per_author", "bundle", "view", "open_at",
-             "start", "hide_empty", "badge", "switches", "threads_shown", "buttons"}
+             "start", "hide_empty", "badge", "switches", "threads_shown", "buttons", "marks"}
+# what a lane's rule may mark it for (`marks`) — what the options that pick lanes mean by
+# "marked" (lanes.MARKED): a note about its news (notify.lanes), a sound (sound.lanes),
+# its count on the icon (tray.icon_count), the languages read (lanes.languages_in), no
+# posts of people put in a list (lists.hide_in)
+MARKS = ("notify", "sound", "icon_count", "languages", "hide_listed")
 # the buttons under a post a lane may name (`buttons`), in its order: what its cards offer
 # (frontends/common/actions.buttons draws them — each only on a post that can take it)
 CARD_BUTTONS = ("reply", "like", "boost", "thread", "bookmark", "read", "open")
@@ -789,6 +794,8 @@ class Rule:
                                    # none there (common/sidebar.start_lane)
     switches: tuple | None = None  # of SWITCHES: "posts_only" (no replies), "unread_only";
                                    # None — not said (a rule of before 0.22): the usual
+    marks: tuple | None = None     # of MARKS: what the options' "marked" picks it for;
+                                   # None — not said: the sets' words for its name
     buttons: tuple | None = None   # of CARD_BUTTONS, in the order drawn under its posts;
                                    # None — not said: by what the post is (common/actions)
     warnings: list = field(default_factory=list)
@@ -842,6 +849,13 @@ class Rule:
                 warnings.append(f"switches: {table['switches']!r} — a list of "
                                 f"{', '.join(SWITCHES)}")
             rule.switches = tuple(w for w in got if w in SWITCHES)
+        if "marks" in table:
+            said = table["marks"]
+            got = [w for w in said if isinstance(w, str)] if isinstance(said, list) else []
+            if not isinstance(said, list) or [w for w in said if w not in MARKS]:
+                warnings.append(f"marks: {said!r} — a list of {', '.join(MARKS)}")
+            if isinstance(said, list):
+                rule.marks = tuple(w for w in MARKS if w in got)
         if "buttons" in table:
             said = table["buttons"]
             got = [w for w in said if isinstance(w, str)] if isinstance(said, list) else []

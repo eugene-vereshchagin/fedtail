@@ -14,6 +14,7 @@ from __future__ import annotations
 import time
 
 from . import lanes as lanes_mod
+from . import presets
 
 # the weightiest first: a batch chimes with the first of these it has
 EVENTS = ("direct", "reply", "mention", "thread", "request", "activity", "message",
@@ -74,7 +75,9 @@ class Chime:
 
     def __init__(self, cfg, chosen=None, clock=time.monotonic, event_of=None):
         self.cfg = cfg
-        self.chosen = chosen or (lambda n, w, x=(): lanes_mod.chosen(n, w, x))
+        # no core's word (Core.lane_chosen): "marked" by the sets' words for the name
+        self.chosen = chosen or (lambda n, w, x=(), mark=None: lanes_mod.chosen(
+            n, w, x, marked=mark in (presets.words(n).get("marks") or ())))
         self.event_of = event_of or (lambda _name: "message")
         self.clock = clock
         self._last = None
@@ -86,7 +89,7 @@ class Chime:
 
     def lane_wanted(self, name):
         s = self.cfg["sound"]
-        return self.chosen(name, s["lanes"], s.get("except") or ())
+        return self.chosen(name, s["lanes"], s.get("except") or (), "sound")
 
     def for_news(self, lanes_with_news):
         """The event for a batch of news (lane names that got unread posts), or None:

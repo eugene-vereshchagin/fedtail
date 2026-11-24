@@ -256,7 +256,7 @@ def icon_total(view, cfg, numbers):
     """What the tray / launcher icon says: the lanes ui.icon_count chose."""
     return sum(n for name, n in numbers.items()
                if view.lane_chosen(name, cfg["ui"]["icon_count"],
-                                   cfg["ui"].get("icon_count_except", [])))
+                                   cfg["ui"].get("icon_count_except", []), "icon_count"))
 
 
 def badge_kind(view, name):

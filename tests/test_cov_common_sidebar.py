@@ -27,7 +27,7 @@ class View:
             raise KeyError(name)  # a lane the core doesn't count
         return {"requests": 2, "activity": 5}.get(name, 3)  # events not seen: the core's
 
-    def lane_chosen(self, name, chosen, except_):
+    def lane_chosen(self, name, chosen, except_, _mark=None):
         return name in chosen and name not in except_
 
     def get_state(self, key):

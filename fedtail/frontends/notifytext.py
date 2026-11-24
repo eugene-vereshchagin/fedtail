@@ -132,7 +132,7 @@ def due(view, items, cfg, on_screen, titles=None):
     return notes
 
 
-def _activity_note(kind, notifs, privacy, lane="activity"):
+def _activity_note(kind, notifs, privacy, lane):
     """"★ 3 in favourites" — from whom, and (full) on which post."""
     n = len(notifs)
     title = _(ACT_WORDS.get(kind, "notify_act_other_n"), n=n)

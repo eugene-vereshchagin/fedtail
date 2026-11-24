@@ -186,7 +186,9 @@ class RosterWindow(Gtk.Window):
         self.me_handle.set_ellipsize(Pango.EllipsizeMode.END)
         who.append(self.me_handle)
         self.news = Gtk.Label(xalign=0)
-        self.news.connect("activate-link", lambda _l, _u: (self.open("activity"), True)[1])
+        # to the lane the events are read in (by its rule: Core.events_lane), if one is shown
+        self.news.connect("activate-link", lambda _l, _u: (
+            self.win.view.events_lane() and self.open(self.win.view.events_lane()), True)[1])
         who.append(self.news)
         self.head.append(who)
         v.append(self.head)

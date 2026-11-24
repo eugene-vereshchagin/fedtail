@@ -55,6 +55,9 @@ class Lane:
     # the buttons under its posts, in order (its rule's `buttons`, atoms.CARD_BUTTONS);
     # None — not said: by what each post is (frontends/common/actions.buttons)
     buttons: tuple | None = None
+    # what its rule marks it for (`marks`, atoms.MARKS): the options that pick lanes
+    # take it by their word "marked" (MARKED)
+    marks: frozenset = frozenset()
     # it takes events (likes, follows, follow requests… — a condition with `event`):
     # Core.lane_events gives them; with no source it takes nothing else (Activity)
     events: bool = False
@@ -87,7 +90,8 @@ def keeps(lane, st, ctx):
     list's timeline brought — leaves the lanes in lists.hide_in:
     the list is where they're read; a tag lane "not in Home" takes its tags out of Home;
     lanes.languages leaves what isn't read out of lanes.languages_in. Then the lane's rule."""
-    if lane.name in ctx.hide_in and (st["account"]["id"] in ctx.hidden
+    if (lane.name in ctx.hide_in or MARKED in ctx.hide_in and "hide_listed" in lane.marks) \
+            and (st["account"]["id"] in ctx.hidden
                                      or real(st)["account"]["id"] in ctx.hidden
                                      or st["id"] in ctx.listed or real(st)["id"] in ctx.listed):
         return False
@@ -96,15 +100,23 @@ def keeps(lane, st, ctx):
             {(x.get("name") or "").lower() for x in real(st).get("tags") or ()} & \
             ctx.home_hidden_tags:
         return False
-    if ctx.languages and in_scope(lane.name, ctx.languages_in) and \
+    if ctx.languages and in_scope(lane.name, ctx.languages_in, "languages" in lane.marks) \
+            and \
             not langs.wanted(real(st), ctx.languages, ctx.detect, ctx.min_words):
         return False
     return lane.keep(st, ctx)
 
 
-def in_scope(name, names):
-    """Is a lane among `names`, where "lists" names every list and "tags" every tag lane?"""
-    return name in names or "lists" in names and is_list(name) \
+# an option that picks lanes (notify.lanes, lists.hide_in…) says "marked": the lanes
+# whose rules mark themselves for it (`marks`) — so no default names a lane
+MARKED = "marked"
+
+
+def in_scope(name, names, marked=False):
+    """Is a lane among `names`, where "lists" names every list, "tags" every tag lane
+    and "marked" the lanes whose rule marks them for this (marked: this one's does)?"""
+    return name in names or marked and MARKED in names \
+        or "lists" in names and is_list(name) \
         or "tags" in names and taggroups.is_tags(name)
 
 
@@ -167,13 +179,14 @@ def is_list(name):
     return name.startswith(LIST_PREFIX)
 
 
-def chosen(name, wanted, never=(), title=None):
+def chosen(name, wanted, never=(), title=None, marked=False):
     """A lane picked by an option pair such as notify.lanes / notify.except or
     ui.icon_count / ui.icon_count_except: `wanted` names it ("all" names every lane)
     and `never` doesn't. Either may name all the lists at once — "lists" — or one by
-    its title or id: "list:Друзья". title: this lane's title (a list's), if any."""
+    its title or id: "list:Друзья" — and the lanes whose rules mark themselves for the
+    option: "marked" (marked: this lane's does). title: this lane's title (a list's)."""
     def named(names, everything):
-        if name in names or everything and "all" in names:
+        if name in names or everything and "all" in names or marked and MARKED in names:
             return True
         if not is_list(name):
             return False

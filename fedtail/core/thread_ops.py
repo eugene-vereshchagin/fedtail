@@ -165,10 +165,10 @@ class ThreadsMixin(CoreState):
         return e
 
     def _follows_threads(self):
-        """Is a lane shown that the followed threads feed — "subs", or a lane of rules
-        taking from them ("commented", view = "threads")?"""
-        return "subs" in self.lane_by_name or any(
-            "subs" in (lane.feeds or ()) or lane.source == "subs" for lane in self.lanes)
+        """Is a lane shown that the followed threads feed — one whose source they are,
+        alone or among others (by its rule, whatever it is called)?"""
+        return any(subs.SOURCE in (lane.feeds or ()) or lane.source == subs.SOURCE
+                   for lane in self.lanes)
 
     def _auto_subscribe(self, my_statuses):
         """My new posts and comments: follow their threads (flags subs.auto)."""

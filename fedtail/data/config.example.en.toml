@@ -319,10 +319,13 @@ compose_size = 0
 #   unsorted  — Unsorted (shown while not empty)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
+#   "marked" — the lanes whose rules mark themselves for it (marks = ["icon_count"] in a
+#   lane's table; the sets mark To me, Replies, Mentions, Subscriptions, Comments, Important
+#   people and Follow requests).
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # federated and local are never counted (they are browsed, there's no unread in them).
 # For example: ["replies", "mentions", "lists"] or ["all"] + except = ["home", "bots"].
-icon_count = ["to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
+icon_count = ["marked"]
 
 # Which lanes not to count on the icon, even if they are in icon_count (say, with
 # icon_count = ["all"]): the same names — "home", "bots", "lists", "list:News"…
@@ -506,7 +509,8 @@ sections = []
 # text ([["word", "and word"], ["or this"]]), event (favourite, reblog, follow, poll, update,
 # status: those rows of Activity, a line each among the posts), buttons (the buttons under its
 # posts, in this order: reply, like, boost, thread, bookmark, read, open; none — by what the
-# item is: an RSS item offers no reply, like or boost). A lane stands in "Personal" (group =
+# item is: an RSS item offers no reply, like or boost), marks (what the options' word
+# "marked" picks the lane for: notify, sound, icon_count, languages, hide_listed). A lane stands in "Personal" (group =
 # "standard" — in "Timelines", any other word — in a section of that name): where lanes.enabled names it ("custom:feed"), else at the end.
 # The free lanes fill from what is stored already. An example (then take away the
 # custom = [] line below):
@@ -534,8 +538,9 @@ tag_groups = []
 languages = []
 
 # Where the languages filter works: lane words, "lists" — every list, "tags" — every tag lane.
-# Home isn't there by default: whom you follow, you read whole.
-languages_in = ["federated", "local", "tags"]
+# "marked" — the lanes whose rules mark themselves for it (marks = ["languages"]; the sets mark
+# Federated and Local). Home isn't there by default: whom you follow, you read whole.
+languages_in = ["marked", "tags"]
 
 # Telling a post's language when its author didn't — or tagged it wrong:
 #   "untagged" — guess when there is no tag, or when the letters say the tag can't be right
@@ -603,8 +608,9 @@ hide_members = "all"
 # By the lists hide_members names; "off" there — nothing. false — only by who is in a list.
 hide_posts = true
 
-# Which lanes to take them out of (names — as in [lanes]).
-hide_in = ["home", "bots", "federated", "local"]
+# Which lanes to take them out of (names — as in [lanes]); "marked" — the lanes whose rules
+# mark themselves for it (marks = ["hide_listed"]; the sets mark Home, Bots, Federated, Local).
+hide_in = ["marked"]
 
 # How often to reread the lists themselves and who is in them (and your mutes and blocks),
 # minutes.
@@ -1386,9 +1392,12 @@ enabled = true
 #   unsorted  — Unsorted (shown while not empty)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
+#   "marked" — the lanes whose rules mark themselves for it (marks = ["notify"] in a
+#   lane's table; the sets mark Direct, To me, Replies, Mentions, Subscriptions, Comments,
+#   Important people, Activity, Follow requests).
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # For example: ["replies", "mentions", "list:Friends"] or ["all"] + except = ["home", "bots"].
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "activity", "requests"]
+lanes = ["marked"]
 
 # What never to notify about, even if it's in lanes (say, with lanes = ["all"]):
 # the same names — "bots", "federated", "lists", "list:News"…
@@ -1437,10 +1446,11 @@ announcements = "banner"
 # releases and the builds made from them; "on" — always; "off" — never.
 enabled = "auto"
 
-# Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:
+# Chime about news in these lanes (names as in notify.lanes; "marked" — the lanes whose
+# rules mark themselves for it: marks = ["sound"]). Each lane has its sound:
 #   direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",
 #   requests → "request", activity → "activity", every other lane → "message".
-lanes = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important", "requests"]
+lanes = ["marked"]
 
 # Never chime about these, even if lanes names them.
 except = []

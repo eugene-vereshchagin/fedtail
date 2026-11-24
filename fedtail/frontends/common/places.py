@@ -280,8 +280,9 @@ class Places(MorePlaces, AccountPlaces, LanePlaces, SyncPlaces):
             if lane.lazy or lane.source is None:  # browsed, or a lane of events only
                 continue
             if v.lane_chosen(lane.name, cfg["notify"]["lanes"], cfg["notify"].get("except")
-                             or ()) or v.lane_chosen(lane.name, cfg["sound"]["lanes"],
-                                                     cfg["sound"].get("except") or ()):
+                             or (), "notify") or \
+                    v.lane_chosen(lane.name, cfg["sound"]["lanes"],
+                                  cfg["sound"].get("except") or (), "sound"):
                 out.append(lane.name)
         return out
 

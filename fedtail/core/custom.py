@@ -135,6 +135,7 @@ class Custom:
             return lanes.Lane(self.name, None, lanes._all, chips=self.chips(),
                               group=self.rule.group, events=True, open_at=self.rule.open_at,
                               buttons=self.rule.buttons,
+                              marks=frozenset(self.rule.marks or ()),
                               start=self.rule.start,
                               hide_empty=self.rule.hide_empty, badge=self.rule.badge,
                               switches=self._switches())
@@ -155,6 +156,7 @@ class Custom:
                           per_author=self.rule.per_author, bundle=self.rule.bundle,
                           view=self.rule.view, threads_shown=self.rule.threads_shown,
                           open_at=self.rule.open_at, buttons=self.rule.buttons,
+                          marks=frozenset(self.rule.marks or ()),
                           events=bool(self.event_conds), start=self.rule.start,
                           hide_empty=self.rule.hide_empty, badge=self.rule.badge,
                           switches=self._switches())
@@ -353,6 +355,8 @@ def load(cfg):
             title = {k: v for k, v in title.items() if v} or None
         if not rule.icon and words.get("icon") in atoms.LANE_ICONS:
             rule.icon = words["icon"]
+        if rule.marks is None:  # not said: what the sets mark a lane of this name for
+            rule.marks = tuple(w for w in atoms.MARKS if w in (words.get("marks") or ()))
         c = Custom(rule, rule.warnings if own else (), title=title or words.get("title"),
                    tip=t.get("tip") or words.get("tip"))
         if own:

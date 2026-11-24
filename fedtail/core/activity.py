@@ -52,10 +52,11 @@ class ActivityMixin(CoreState):
         return self.api.notifications(types, **page)
 
     def activity_entries(self, limit=300):
-        """Activity newest first: what Activity (the lane of that name) takes — every
+        """Activity newest first: what the lane of events takes (events_lane) — every
         event, follow requests among them while no lane of their own is shown."""
-        if "activity" in self.lane_by_name:
-            return self.lane_events("activity", limit, which="all")
+        name = self.events_lane()
+        if name:
+            return self.lane_events(name, limit, which="all")
         return self.event_items(limit)
 
     def event_items(self, limit=300):
@@ -114,6 +115,18 @@ class ActivityMixin(CoreState):
         """The lanes shown that take events too (a condition with `event`)."""
         return [c for c in self.customs if c.event_conds and c.name in self.lane_by_name]
 
+    def events_lane(self):
+        """The lane the events are read in — what "N new" beside my name counts and
+        opens, what Activity's count speaks of: of the lanes shown that hold events and
+        no posts, the one whose rule takes the most kinds of them (the first shown, when
+        even); "" — none shown. By the rules, never a lane's name."""
+        shown = [x.name for x in self.lanes]
+        own = [c for c in self._event_lanes() if c.events_only]
+        if not own:
+            return ""
+        kinds = lambda c: len({w for cond in c.event_conds for w in cond.sets["event"]})  # noqa: E731
+        return min(own, key=lambda c: (-kinds(c), shown.index(c.name))).name
+
     def _events_only(self, name):
         """A lane of events only (Activity, Requests): no posts, its rows are events."""
         c = next((c for c in self.customs if c.name == name), None)
@@ -167,8 +180,9 @@ class ActivityMixin(CoreState):
 
     def activity_unread(self):
         """Activity's events not seen yet (follow requests: while they wait)."""
-        if "activity" in self.lane_by_name:
-            return self.events_unread("activity")
+        name = self.events_lane()
+        if name:
+            return self.events_unread(name)
         return self.store.activity_count_after(self.activity_seen_mark())
 
     def events_unread(self, name):

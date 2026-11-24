@@ -100,8 +100,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "keep_hidden_lanes": 3,
         "app_icon": "possum",
         "themed_icon": True,
-        "icon_count": ["to_me", "replies", "mentions", "subs", "commented", "important",
-                       "requests"],
+        "icon_count": ["marked"],  # the lanes whose rules mark themselves for it (marks)
         "icon_count_except": [],
         "actions": "both",
         "post_keys": True,
@@ -203,7 +202,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "extra_bots": [],
         "posts_only": [],
         "languages": [],
-        "languages_in": ["federated", "local", "tags"],
+        "languages_in": ["marked", "tags"],
         "detect_language": "untagged",
         "detect_min_words": 12,
         "detect_among": "auto",   # langdetect's profiles: Latin and Cyrillic, or "all"
@@ -269,8 +268,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["direct", "to_me", "replies", "mentions", "subs", "commented", "important",
-                  "activity", "requests"],
+        "lanes": ["marked"],
         "except": [],
         "privacy": "full",
         "max_lines": 3,
@@ -281,8 +279,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "sound": {
         "enabled": "auto",
-        "lanes": ["direct", "to_me", "replies", "mentions", "subs", "commented", "important",
-                  "requests"],
+        "lanes": ["marked"],
         "except": [],
         "online": True,
         "sent": True,
@@ -312,7 +309,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "enabled": True,
         "hide_members": "all",
         "hide_posts": True,   # …and whatever a list's timeline brought (a moved author)
-        "hide_in": ["home", "bots", "federated", "local"],
+        "hide_in": ["marked"],
         "refresh_minutes": 10,
     },
     "subs": {
@@ -520,6 +517,11 @@ CHOICES = {
 }
 # the lanes some set has (fedtail/data/presets.toml), and Unsorted
 LANE_NAMES = set(presets.known_names()) | {"unsorted"}
+MARKED = "marked"  # in an option that picks lanes: those whose rules mark themselves (lanes.py)
+# …and for what each such option reads a lane's `marks` (atoms.MARKS)
+MARK_OF = {("notify", "lanes"): "notify", ("sound", "lanes"): "sound",
+           ("ui", "icon_count"): "icon_count", ("lanes", "languages_in"): "languages",
+           ("lists", "hide_in"): "hide_listed"}
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
@@ -1015,6 +1017,8 @@ def validate(user):
            and not taggroups.is_tags(x)  # a lane of tags ("tags:…"), made in the window
            # notify.lanes = ["all"]: everything, the except list takes away
            and not (x == "all" and x in wanted)
+           # "marked": the lanes whose rules mark themselves for the option (`marks`)
+           and not (x == MARKED and x in picking + cfg["lists"]["hide_in"])
            # one list: "list:Друзья" (its title, or its id)
            and not (x in picking and isinstance(x, str)
                     and x.startswith("list:") and len(x) > 5)]
@@ -1084,7 +1088,7 @@ def validate(user):
         errors.append(f"lanes.languages: {bad_read} — two or three small letters (ISO 639), "
                       f"like \"ru\" or \"en\"")
     bad_in = [x for x in cfg["lanes"]["languages_in"]
-              if x not in LANE_NAMES | {"lists", "tags"}]
+              if x not in LANE_NAMES | {"lists", "tags", MARKED}]
     if bad_in:
         errors.append(f"lanes.languages_in: unknown lanes {bad_in}; known: "
                       f"{', '.join(sorted(LANE_NAMES))}, lists, tags")

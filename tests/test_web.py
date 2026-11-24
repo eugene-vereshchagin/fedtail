@@ -557,7 +557,13 @@ class WebTest(TmpDir):
         chosen = self.core.cfg["ui"]["icon_count"]
         self.assertEqual({x["name"] for x in lanes if x["counted"]},
                          {x["name"] for x in lanes
-                          if self.core.lane_chosen(x["name"], chosen, [])})
+                          if self.core.lane_chosen(x["name"], chosen, [], "icon_count")})
+        # "marked" (the default): the lanes whose rules mark themselves for the count
+        self.assertEqual(chosen, ["marked"])
+        counted = {x["name"] for x in lanes if x["counted"]}
+        self.assertTrue(counted)
+        self.assertEqual(counted, {n for n, lane in self.core.lane_by_name.items()
+                                   if "icon_count" in lane.marks})
         self.core.cfg["ui"]["icon_count"] = []
         self.assertFalse(any(x["counted"] for x in json.loads(self.req("/api/lanes")[2])))
         js = web.static_text("app.js")

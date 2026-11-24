@@ -118,6 +118,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
 | A library of pictures for your own lanes | has | 0.21.0 | `icon = "…"` in `[[lanes.custom]]`, "Picture" in the lane editor | own | only in fedtail |
 | Sidebar sections of your own, in your order | has | next | `group` of a lane of rules, `lanes.sections` | own | none |
+| A lane marks itself: notes, sound, the count on the icon | has | next | `marks` of a lane of rules; the word `"marked"` in `notify.lanes`, `sound.lanes`, `tray.icon_count`, `lanes.languages_in`, `lists.hide_in` | own | none |
 
 <details><summary>In detail</summary>
 
@@ -217,6 +218,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A library of pictures for your own lanes.** 44 pictures — people, a heart, fire, a newspaper, RSS, a magnifier, a camera, film, notes, a book, code, a gamepad, mountains, a fish, a car, a plane, a cup… Each theme colours them in its own style, as its own pictures; a theme's own file of that name wins. In the lane editor — with the picture and its name.
 
 **Sidebar sections of your own, in your order.** A lane stands in the sidebar section its `group` names: `standard`, `personal` or any word of your own — it makes a section called that (in the lane editor: "…or a new section"). `lanes.sections = ["personal", "Work", "standard"]` sets the sections' order: those not named follow in the sets' order, your own after them. The server's lists and the lanes of tags are the sections `lists` and `tags`, and can be moved too. The sets' sections, their order and titles live in the sets' file, not in the code.
+
+**A lane marks itself: notes, sound, the count on the icon.** The options that pick lanes name none by default: they say `marked` — the lanes whose rules mark themselves for it. `marks = ["notify", "sound", "icon_count"]` on a lane of your own (in the file or in the lane editor) — and its news brings a note and a sound, and its unread goes into the number on the icon, whatever the lane is called; `languages` turns the languages filter on in it, `hide_listed` takes out the posts of people put in lists. The sets mark the very lanes those options used to list. A list of lanes by name of your own works as before, and together with `marked`.
 
 </details>
 
@@ -374,7 +377,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | A post's character count | has | 0.23.1 | `card.char_count` | own | none: clients show the count only while writing |
 | A long post folded | has | 0.23.1 | `card.fold_chars` | own | Tusky and Phanpy fold long posts too; Mastodon's web doesn't |
-| The buttons under a post follow the lane and what the item is | has | next | `buttons` of a lane of rules; `card.bookmark_button`, `read.read_button` | own | none |
+| The buttons under a post follow the lane and what the item is | has | next | `buttons` of a lane of rules; `card.bookmark_button`, `reading.read_button` | own | none |
 
 <details><summary>In detail</summary>
 

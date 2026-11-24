@@ -80,10 +80,12 @@ PASS = {
     "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
     "open_at", "card_buttons",
     # lanes by what their rules do, never by their names: plain lists of lane names
-    "private_lanes", "thread_lanes", "lanes_fed_by", "lane_rank", "lane_chosen", "lane_for_event",
+    "private_lanes", "thread_lanes", "lanes_fed_by", "lane_rank", "lane_chosen", "lane_marked",
+    "lane_for_event",
     "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
-    "load_older", "older_ahead", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
+    "load_older", "older_ahead", "auth", "activity_unread", "events_lane",
+    "mark_activity_seen", "answer_follow",
     "sync_key", "sync_key_link", "sync_join", "sync_now", "sync_status",
     # the lanes between devices (sync.lane_rules): sent by hand, turned on, who has it
     "push_lane_rules", "sync_lane_rules_on", "sync_devices",

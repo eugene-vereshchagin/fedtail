@@ -902,6 +902,13 @@ _STRINGS = {
         "pic_wrench": "Гаечный ключ",
         "le_f_icon_none": "— своя у ленты",
         "le_f_group": "Раздел",
+        "lanes_marked": "Отмеченные своим правилом",
+        "le_f_marks": "Отмечена для",
+        "le_f_marks_tip": "Для чего ленту берёт слово «marked» в настройках: уведомления, "
+                          "звук, счётчик на значке, фильтр языков, без людей из списков.",
+        "mark_notify": "уведомлений", "mark_sound": "звука",
+        "mark_icon_count": "счётчика на значке", "mark_languages": "фильтра языков",
+        "mark_hide_listed": "скрытия людей из списков",
         "le_f_group_new": "…или новый раздел",
         "le_f_group_new_tip": "Название своего раздела боковой панели: лента встанет в него. "
                               "Порядок разделов — lanes.sections в настройках.",
@@ -2850,6 +2857,14 @@ _STRINGS = {
         "pic_wrench": "Wrench",
         "le_f_icon_none": "— the lane's own",
         "le_f_group": "Section",
+        "lanes_marked": "Those marked by their rule",
+        "le_f_marks": "Marked for",
+        "le_f_marks_tip": "What the options' word \"marked\" picks this lane for: notes, "
+                          "sound, the count on the icon, the languages filter, no people "
+                          "of the lists.",
+        "mark_notify": "notes", "mark_sound": "sound",
+        "mark_icon_count": "the count on the icon", "mark_languages": "the languages filter",
+        "mark_hide_listed": "hiding people of the lists",
         "le_f_group_new": "…or a new section",
         "le_f_group_new_tip": "The name of a sidebar section of your own: the lane goes "
                               "into it. The sections' order is lanes.sections in the "

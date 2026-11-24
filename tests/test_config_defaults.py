@@ -35,6 +35,20 @@ class BroughtDefaultsTest(TmpDir):
         cfg, _w = config.load(self.path)
         self.assertFalse(cfg["post"]["drafts_place"])
 
+    def test_the_lists_that_named_lanes_become_marked(self):
+        """24.11: no default names a lane — a config still at the old lists of lanes
+        says "marked" (the lanes whose rules mark themselves); a list of one's own stays."""
+        old = ["direct", "to_me", "replies", "mentions", "subs", "commented", "important",
+               "activity", "requests"]
+        config_edit.save(self.path, {("notify", "lanes"): old,
+                                     ("lists", "hide_in"): ["home", "bots", "federated",
+                                                            "local"],
+                                     ("sound", "lanes"): ["direct", "replies"]})
+        cfg, _w = config.load(self.path)
+        self.assertEqual(cfg["notify"]["lanes"], ["marked"])
+        self.assertEqual(cfg["lists"]["hide_in"], ["marked"])
+        self.assertEqual(cfg["sound"]["lanes"], ["direct", "replies"])  # the person's own
+
     def test_a_value_the_person_chose_stays(self):
         config_edit.save(self.path, {("feed", "tag_click"): "everywhere"})
         cfg, _w = config.load(self.path)

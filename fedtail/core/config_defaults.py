@@ -30,6 +30,16 @@ CHANGED = (
     ("sync", "people", [False], "0.23.1"),
     ("ui", "command_line", [True], "0.23.1"),
     ("post", "drafts_place", [False], "0.23.3"),
+    # no default names a lane: "marked" — the lanes whose rules mark themselves (`marks`;
+    # the sets' words mark the very lanes these lists named)
+    ("ui", "icon_count", [["to_me", "replies", "mentions", "subs", "commented", "important",
+                           "requests"]], "0.23.10"),
+    ("notify", "lanes", [["direct", "to_me", "replies", "mentions", "subs", "commented",
+                          "important", "activity", "requests"]], "0.23.10"),
+    ("sound", "lanes", [["direct", "to_me", "replies", "mentions", "subs", "commented",
+                         "important", "requests"]], "0.23.10"),
+    ("lanes", "languages_in", [["federated", "local", "tags"]], "0.23.10"),
+    ("lists", "hide_in", [["home", "bots", "federated", "local"]], "0.23.10"),
 )
 
 SEEN = "defaults_seen.json"
