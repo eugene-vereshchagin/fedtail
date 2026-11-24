@@ -2491,7 +2491,7 @@ activity = true
 tiles = true
 
 # The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled),
-# your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into
+# your own lanes ([[lanes.custom]]), lanes.posts_only, lanes.section_order. A device that gets them writes them into
 # its config.toml. They go out when they change here
 # (by hand or in the lane editor); a device that has just started sends nothing of its own.
 lane_rules = true

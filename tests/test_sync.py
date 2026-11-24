@@ -763,6 +763,24 @@ class LaneRulesSyncTest(Devices):
         self.assertIn("pics", self.phone.lane_by_name)
         self.assertEqual(self.phone.sync_now(), (0, 0))  # nothing goes back
 
+    def test_the_sections_order_travels(self):
+        """24.11: lanes.section_order is the sidebar's arrangement as much as
+        lanes.enabled — it goes with the lanes."""
+        import tomllib
+
+        from fedtail.core import config_edit
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        cfg, _w = config_edit.save(self.desk.paths.config_file,
+                                   {("lanes", "section_order"): ["tags", "standard"]})
+        self.desk.lanes_saved(cfg)
+        self.assertEqual(self.desk.sync_now()[0], 1)
+        self.phone.sync_now()
+        got = tomllib.loads(self.phone.paths.config_file.read_text("utf-8"))["lanes"]
+        self.assertEqual(got["section_order"], ["tags", "standard"])
+        self.assertEqual(self.phone.cfg["lanes"]["section_order"], ["tags", "standard"])
+        self.assertEqual(self.phone.sync_now(), (0, 0))
+
     def test_a_set_of_ones_own_travels_with_its_name(self):
         """24.11: the sets live in the config, a set of one's own among them — chosen on
         one device, its lanes go with its name: the other has no such set otherwise (and

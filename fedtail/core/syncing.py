@@ -158,6 +158,7 @@ class SyncMixin(CoreState):
     LANE_RULE_KEYS = (("lanes", "preset"), ("lanes", "enabled"), ("lanes", "custom"),
                       ("lanes", "posts_only"), ("lanes", "languages"),
                       ("lanes", "languages_in"), ("lanes", "detect_language"),
+                      ("lanes", "section_order"),
                       ("feed", "repeat_boosts"), ("feed", "render_limit"),
                       ("feed", "count_filtered"))
     LANE_RULES = tuple(k for s, k in LANE_RULE_KEYS if s == "lanes")

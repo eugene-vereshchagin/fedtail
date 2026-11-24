@@ -36,7 +36,8 @@
 - The lane editor makes a set of your own: "Save as a set…" writes the lanes as they are
   now — their order, the hidden and the changed ones — under a name into config.toml and
   chooses it; "Delete" takes such a set away. With `sync.lane_rules` a set of your own
-  travels to the other devices with its name.
+  travels to the other devices with its name, and so does the sections' order
+  (`lanes.section_order`).
 - Private messages count on the icon in every set, as they bring a note and a sound: the
   old default list of the icon's count left the Direct lane out.
 - Unsorted stands where `lanes.enabled` names it (`"unsorted"`); it stood last whatever
