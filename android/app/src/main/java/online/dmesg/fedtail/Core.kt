@@ -143,6 +143,7 @@ object Core {
     suspend fun network(wifi: Boolean) = obj("network", wifi)
     suspend fun thread(id: String, at: String = "post") = obj("thread", id, at)
     suspend fun threadProgress(id: String) = obj("thread_progress", id)
+    suspend fun threadFold(root: String, ids: String) = obj("thread_fold", root, ids)
     suspend fun post(body: JSONObject) = obj("post", body.toString())
     suspend fun act(action: String, id: String) = obj("act", action, id)
     suspend fun menu(id: String) = obj("menu", id)

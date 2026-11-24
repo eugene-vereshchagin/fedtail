@@ -143,6 +143,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "thread_recheck_for_minutes": 30,
         "thread_followed_only": False,
         "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
+        "remember_folded": False,  # a thread's folded branches kept for the next time
         "open_at": "post",         # a thread opened from a card: at it, or "first_unread"
         "next_new": True,          # "to the next new one" in an open thread's head
         "comment_ids": "post",     # a comment's #id: its post's and number (#a3f/2), or "own"
@@ -669,7 +670,8 @@ FILE_LAYOUT = (
                      "translate_key fact_check fact_check_private")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
                               "thread_recheck_for_minutes "
-                              "thread_followed_only thread_progress open_at next_new "
+                              "thread_followed_only thread_progress remember_folded open_at "
+                              "next_new "
                               "comment_ids")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "

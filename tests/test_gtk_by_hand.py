@@ -289,6 +289,20 @@ class GtkByHandTest(_ByHand, _GtkBase):
         self.win.thread_next_new("8000")
         self.assertTrue(pump(lambda: deep.get_visible(), 2))
         self.assertEqual(keys.hidden, set())
+        # threads.remember_folded: the branch folded by the key is folded in the thread
+        # opened again (off, the default: nothing kept — keys.restore reads nothing)
+        self.win.cfg["feed"]["remember_folded"] = True
+        self.addCleanup(self.win.cfg["feed"].__setitem__, "remember_folded", False)
+        keys.put_cursor("8001")
+        xdo("key", "minus")
+        self.assertTrue(pump(lambda: not deep.get_visible(), 2))
+        self.win.close_thread("8000")
+        self.win.open_thread("8000")
+        page = self.win.threads["8000"]
+        self.assertTrue(pump(lambda: len(page.items) == 5, 5))
+        self.assertTrue(pump(lambda: page.keys.hidden == {"8003"}, 2))
+        self.assertFalse(page.keys._card("8003").get_visible())
+        keys = page.keys
         # the keys are the config's ([keys]): another's own letter does it, the old doesn't
         self.win.cfg["keys"]["next_comment"] = "n"
         keys.put_cursor("8001")

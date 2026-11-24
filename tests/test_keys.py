@@ -200,6 +200,30 @@ class NewSwitchesTest(unittest.TestCase):
         self.assertEqual(postkeys.unfold_for(folded, hidden, grown, "b", depth.get), "r")
         self.assertEqual(hidden, set())
 
+    def test_folded_branches_remembered_only_when_asked(self):
+        """threads.remember_folded: a thread's folded heads in the profile's state —
+        nothing read or written with the switch off; the oldest threads go."""
+        class V:
+            cfg = {"feed": {"remember_folded": False}}
+            state = {}
+            get_state = lambda self, k, d=None: self.state.get(k, d)  # noqa: E731
+            set_state = lambda self, k, v: self.state.__setitem__(k, v)  # noqa: E731
+        v = V()
+        postkeys.remember(v, "r", {"a"})
+        self.assertEqual(v.state, {})
+        v.cfg["feed"]["remember_folded"] = True
+        postkeys.remember(v, "r", {"b", "a"})
+        self.assertEqual(postkeys.remembered(v, "r"), {"a", "b"})
+        self.assertEqual(postkeys.remembered(v, "other"), set())
+        postkeys.remember(v, "r", set())  # all shown again: the thread forgotten
+        self.assertEqual(v.state["thread_folded"], {})
+        for i in range(postkeys.REMEMBERED + 5):
+            postkeys.remember(v, f"t{i}", {"x"})
+        self.assertEqual(len(v.state["thread_folded"]), postkeys.REMEMBERED)
+        self.assertEqual(postkeys.remembered(v, "t0"), set())
+        v.cfg["feed"]["remember_folded"] = False  # switched off: as if nothing was kept
+        self.assertEqual(postkeys.remembered(v, "t9"), set())
+
 
 if __name__ == "__main__":
     unittest.main()

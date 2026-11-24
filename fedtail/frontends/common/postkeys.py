@@ -113,3 +113,34 @@ def unfold_for(folded, hidden, every, key, depth_of):
             fold(folded, hidden, head, below)
             return head
     return None
+
+
+# threads.remember_folded: which branches of which thread are folded, in the profile's
+# state — the same in every interface, through a restart. Off: nothing read or written.
+REMEMBERED = 300  # threads; the oldest go
+
+
+def remembers(cfg):
+    return bool(((cfg or {}).get("feed") or {}).get("remember_folded"))
+
+
+def remembered(view, root):
+    """The heads folded in the thread of `root` the last time (a set; empty when off)."""
+    if not root or not remembers(view.cfg):
+        return set()
+    return set((view.get_state("thread_folded") or {}).get(str(root)) or ())
+
+
+def remember(view, root, folded):
+    """The thread's folded heads kept (none folded: the thread forgotten)."""
+    if not root or not remembers(view.cfg):
+        return
+    every = dict(view.get_state("thread_folded") or {})
+    before = every.pop(str(root), None)
+    if folded:
+        every[str(root)] = sorted(str(k) for k in folded)  # (last touched: last to go)
+    elif before is None:
+        return
+    for old in list(every)[:max(0, len(every) - REMEMBERED)]:
+        del every[old]
+    view.set_state("thread_folded", every)

@@ -561,7 +561,9 @@ def demo_happen(what, target, text):
     tests/scenario.py's watch_thread holds every interface to); "requests": text more
     follow requests come (target: their names' start); "token_refused": the server
     refuses the token, as a round's 401 says it; "mention": target's author writes to me
-    (a note for the shade). → {id}."""
+    (a note for the shade); "post": target's author writes a post of their own (Home has
+    news); "slow": the made-up server's method `target` (favourite…) takes
+    text seconds and counts its calls — "0" puts it back, → {id: how many calls}. → {id}."""
     def go():
         if not _s.get("demo"):
             raise RuntimeError("the demo world only")
@@ -578,10 +580,32 @@ def demo_happen(what, target, text):
                 w.requests.append(acct(f"{target}{i}", f"{target}{i}@example.org"))
             _core().poll_once()
             return {"id": ""}
-        if what not in ("answer", "mention") or target not in w.statuses:
+        if what == "slow":
+            calls, real = _s.setdefault("demo_calls", {}), _s.setdefault("demo_real", {})
+            if target not in real:
+                real[target] = getattr(FakeApi, target)
+            secs = float(text or 0)
+            if secs <= 0:
+                setattr(FakeApi, target, real.pop(target))
+                return {"id": str(calls.pop(target, 0))}
+            calls[target] = 0
+
+            def slow(self, *a, _real=real[target], **kw):
+                calls[target] += 1
+                time.sleep(secs)
+                return _real(self, *a, **kw)
+            setattr(FakeApi, target, slow)
+            return {"id": "0"}
+        if what not in ("answer", "mention", "post") or target not in w.statuses:
             raise ValueError(f"{what} {target}")
         parent = w.statuses[target]
         sid = str(max(int(i) for i in w.statuses if i.isdigit()) + 1)  # newer than any
+        if what == "post":
+            st = status(sid, parent["account"], vis="public", text=text)
+            st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+            w.add(st, home=True)
+            _core().poll_once()
+            return {"id": sid}
         if what == "mention":
             me = _core().me or {}
             st = status(sid, parent["account"], vis="public", text=text)
@@ -1369,6 +1393,12 @@ def thread(post_id, at="post"):
         _texts(got.get("posts", []))
         return got
     return _answer(go)
+
+
+def thread_fold(root, ids_json):
+    """The thread's folded branches (their top comments) kept for the next time —
+    threads.remember_folded, the page's own call."""
+    return _answer(lambda: _s["web"].thread_fold(root, json.loads(ids_json or "[]")))
 
 
 def post(body_json):

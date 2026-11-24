@@ -317,6 +317,123 @@ class FlowTest {
     }
 
     @Test
+    fun aFoldedBranchIsRememberedWhenAsked() {
+        // threads.remember_folded (off by default): the branch folded is folded when the
+        // thread is opened again — the core keeps it, the same for the windows
+        val fold = "Fold or unfold this comment's branch"
+        fun second() = compose.onAllNodesWithText("/2").fetchSemanticsNodes()
+        fun kept() = kotlinx.coroutines.runBlocking { Core.thread("101") }
+            .optJSONArray("folded")?.length() ?: 0
+        launch()
+        overview()
+        // (into the config file, as the settings page does: the next launch makes the
+        // core anew with it)
+        kotlinx.coroutines.runBlocking { Core.settingSet("threads", "remember_folded", "true") }
+        try {
+            scenario?.close()
+            launch("thread" to "101")
+            waitText("/2")
+            waitDescription(fold)
+            compose.onAllNodesWithContentDescription(fold).onFirst().performClick()
+            waitFor("the branch folded away", 10_000) { second().isEmpty() }
+            waitFor("the core told what is folded", 10_000) { kept() == 1 }
+            scenario?.close()
+            launch("thread" to "101")
+            waitText("/1")
+            waitText("+ 2")
+            assertTrue("folded as it was left", second().isEmpty())
+            compose.onAllNodesWithContentDescription(fold).onFirst().performClick()
+            waitFor("the branch back", 10_000) { second().isNotEmpty() }
+            waitFor("the core told nothing is folded", 10_000) { kept() == 0 }
+        } finally {
+            kotlinx.coroutines.runBlocking {
+                Core.settingSet("threads", "remember_folded", "null") }
+        }
+    }
+
+    @Test
+    fun aLikeTappedTwiceIsAskedOnce() {
+        // a slow server and an impatient thumb: the second tap, the first still on its
+        // way, sent the same request again (24.11). The made-up server takes 2 s and
+        // counts what it was asked.
+        launch("thread" to "101")
+        waitText("/1")
+        fun likes() = compose.onAllNodesWithContentDescription("Like").fetchSemanticsNodes().size
+        fun unlikes() = compose.onAllNodesWithContentDescription("Unlike")
+            .fetchSemanticsNodes().size
+        waitFor("a like button", 20_000) { likes() + unlikes() > 0 }
+        val what = if (likes() > 0) "Like" else "Unlike"  // (liked by an earlier run)
+        val before = if (what == "Like") likes() else unlikes()
+        kotlinx.coroutines.runBlocking { Core.demoHappen("slow", "favourite", "2") }
+        var asked = "?"
+        try {
+            val button = compose.onAllNodesWithContentDescription(what).onFirst()
+            button.performClick()
+            button.performClick()
+            waitFor("the like taken", 20_000) {
+                (if (what == "Like") likes() else unlikes()) == before - 1 }
+            Thread.sleep(3_000)  // (a second request would be on its way still)
+        } finally {
+            asked = kotlinx.coroutines.runBlocking {
+                Core.demoHappen("slow", "favourite", "0") }.optString("id")
+        }
+        org.junit.Assert.assertEquals("requests to the server", "1", asked)
+    }
+
+    @Test
+    fun allReadInTwoLanesInARowKeepsBoth() {
+        // "Mark all read" waits 5 s for its Undo; the same in another lane within them
+        // cancelled the first — that lane came back unread after a refresh (24.11)
+        fun unread(): Map<String, Int> {
+            val a = kotlinx.coroutines.runBlocking { Core.lanes() }
+            return (0 until a.length()).associate {
+                a.getJSONObject(it).let { o -> o.optString("name") to o.optInt("unread") } }
+        }
+        fun markAllRead() {
+            waitDescription("More: find", substring = true)
+            compose.onAllNodesWithContentDescription("More: find", substring = true).onFirst()
+                .performClick()
+            waitText("Mark all read", 10_000)
+            compose.onAllNodesWithText("Mark all read").onFirst().performClick()
+        }
+        launch()
+        overview()
+        val stamp = System.currentTimeMillis()
+        kotlinx.coroutines.runBlocking {
+            // more than a screen of them: not read by being seen
+            repeat(12) { Core.demoHappen("post", "101", "news $it for home $stamp") }
+            repeat(12) { Core.demoHappen("mention", "101", "news $it for me $stamp") }
+        }
+        val now = unread()
+        assertTrue("Home has news: $now", (now["home"] ?: 0) >= 12)
+        val other = listOf("to_me", "mentions", "replies").firstOrNull { (now[it] ?: 0) > 0 }
+            ?: throw AssertionError("no lane took the mention: $now")
+        scenario?.close()
+        launch("lane" to "home")
+        waitDescription("open now", substring = true)
+        waitFor("a card", 90_000) { compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty() }
+        markAllRead()
+        // within the 5 s of Undo: the other lane (as a note's tap opens it), all read too
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.startActivity(Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(Notifier.EXTRA_LANE, other).putExtra(Notifier.EXTRA_THREAD, ""))
+        // (its news may be below the screen: the lane opens where it was left)
+        waitFor("the other lane open", 20_000) {
+            val open = compose.onAllNodesWithContentDescription("open now", substring = true)
+                .fetchSemanticsNodes().map {
+                    it.config.getOrNull(SemanticsProperties.ContentDescription)
+                        ?.joinToString(" ") ?: "" }
+            open.isNotEmpty() && open.none { it.startsWith("Home") }
+        }
+        markAllRead()
+        waitFor("both lanes read", 30_000) {
+            val u = unread()
+            u["home"] == 0 && u[other] == 0
+        }
+    }
+
+    @Test
     fun aReplyInAThreadStaysInSight() {
         launch("thread" to "101")
         waitText("/1")

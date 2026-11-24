@@ -1656,8 +1656,21 @@ class Web:
         return {"focus": core.thread_focus(sid, items, at if at in ("post", "first_unread")
                                            else "post"),
                 "posts": out, "head": head,
+                # threads.remember_folded: the branches folded the last time (their top
+                # comments), and whether the page says back what it folds
+                "folded": sorted(postkeys.remembered(core, keys_in_order[0]))
+                if keys_in_order else [],
+                "remember_folded": postkeys.remembers(core.cfg),
                 # read as it opens, unless by hand: decided once (common/lane.py)
                 "read_on_open": thread_read_on_open(core.cfg, unread)}
+
+    def thread_fold(self, root, folded):
+        """The page's (and the phone's) folded branches of a thread, kept for the next
+        time — threads.remember_folded (common/postkeys.remember; nothing when off)."""
+        from ..common import postkeys
+        ids = [one_id(i) for i in (folded or []) if isinstance(i, str)][:500]
+        postkeys.remember(self.core, one_id(root), ids)
+        return {"ok": True}
 
     def thread_head(self, posts, short):
         """The head the windows put over a thread (qt/feed.py ThreadWidget,
@@ -2815,6 +2828,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/lane_clear": lambda: web.lane_clear(body.get("name"),
                                                       body.get("confirmed") is True),
             "/api/lane_set": lambda: web.lane_set(body),
+            "/api/thread_fold": lambda: web.thread_fold(str(body.get("root") or ""),
+                                                        body.get("folded")),
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/client_error": lambda: web.client_error(body),
             # what a reply starts with — who sees it, its warning (common/compose.start)

@@ -1024,10 +1024,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (id == null || threadFolded.isEmpty()) return
         val over = threadPosts.filter { it.id in threadFolded &&
             it.branch.any { b -> b == id || threadPosts.any { p -> p.id == b && p.sid == id } } }
-        if (over.isNotEmpty()) threadFolded = threadFolded - over.map { it.id }.toSet()
+        if (over.isNotEmpty()) {
+            threadFolded = threadFolded - over.map { it.id }.toSet()
+            keepFolds()
+        }
     }
     fun toggleFold(id: String) {
         threadFolded = if (id in threadFolded) threadFolded - id else threadFolded + id
+        keepFolds()
+    }
+    /** threads.remember_folded: what is folded now, kept by the core for the next time
+     *  this thread is opened — here or in a window (the core says whether it keeps). */
+    private var threadRemember = false
+    private fun keepFolds() {
+        if (!threadRemember) return
+        val root = threadPosts.firstOrNull()?.id ?: return
+        val ids = JSONArray(threadFolded.toList()).toString()
+        viewModelScope.launch { Core.threadFold(root, ids) }
     }
 
     var laneOlder by mutableStateOf(false)   // "earlier" can bring older posts
@@ -1404,6 +1417,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (threadOnTop() != postId) return@launch
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
+            // folded as it was left (threads.remember_folded), but not over the post it
+            // opens at
+            threadRemember = got.optBoolean("remember_folded")
+            threadFolded = got.optJSONArray("folded")?.let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }.toSet() } ?: emptySet()
+            unfoldFor(got.optString("focus").ifBlank { postId })
             // read as it opens, unless by hand — the core's decision (common/lane.py)
             got.optJSONArray("read_on_open")?.let { arr ->
                 val now = (0 until arr.length()).map { arr.getString(it) }.toSet()

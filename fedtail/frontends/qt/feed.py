@@ -887,7 +887,15 @@ class ThreadWidget(QWidget):
                                   "lane_private": private}) for n in items]
         # a big thread: only the cards near the screen, as a lane (FeedView.windowed)
         self.view.windowed = len(specs) > THREAD_WINDOWED
-        self.view.set_specs(specs, keep_position=self.loaded)
+        if not self.loaded and posts:  # threads.remember_folded: as it was left
+            from ..common import postkeys
+            root_id = posts[0].id
+            self.view._folded = postkeys.remembered(self.core, root_id)
+            self.view.on_fold = lambda folded: postkeys.remember(self.core, root_id, folded)
+            self.view.set_specs(specs, keep_position=False)
+            self.view.unfold_for(self.focus_id)  # (but not over the post it opens at)
+        else:
+            self.view.set_specs(specs, keep_position=self.loaded)
         root = posts[0] if posts else None
         self.root, self.posts = root, posts
         dock = getattr(self.win, "dock", None)

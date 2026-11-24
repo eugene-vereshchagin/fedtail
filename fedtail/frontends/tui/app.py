@@ -607,11 +607,12 @@ class ThreadScreen(Screen, PostsMixin):
         depth = {k: getattr(it, "depth", 0) for k, it in zip(keys, items, strict=True)}
         head, below = postkeys.branch(keys, keys[lv.index], depth.get)
         hidden = {k for k, it in zip(keys, items, strict=True) if it.disabled}
-        self._folded = getattr(self, "_folded", set())
+        self._folded = getattr(self, "_folded", None) or set()
         if not postkeys.fold(self._folded, hidden, head, below):
             return
         self._hide(items, hidden)
         lv.index = keys.index(head)
+        postkeys.remember(self.app.core, keys[0], self._folded)
 
     @staticmethod
     def _hide(items, hidden):
@@ -633,6 +634,7 @@ class ThreadScreen(Screen, PostsMixin):
             depth = {k: getattr(it, "depth", 0) for k, it in zip(keys, items, strict=True)}
             if postkeys.unfold_for(self._folded, hidden, keys, sid, depth.get) is not None:
                 self._hide(items, hidden)  # (folded away with its branch: shown again)
+                postkeys.remember(self.app.core, keys[0], self._folded)
         if sid in keys:
             lv.index = keys.index(sid)
         else:  # nothing new (or no such key): say what the key does
@@ -692,9 +694,16 @@ class ThreadScreen(Screen, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         keys = [it.key for it in items]
+        from ..common import postkeys
+        depth = {it.key: it.depth for it in items}
+        if getattr(self, "_folded", None) is None and keys:
+            # the first time — threads.remember_folded: folded as it was left, but not
+            # over the post it opens at
+            self._folded = postkeys.remembered(core, keys[0])
+            hidden = postkeys.hidden_under(self._folded, keys, depth.get)
+            if postkeys.unfold_for(self._folded, hidden, keys, keys[focus], depth.get):
+                postkeys.remember(core, keys[0], self._folded)
         if getattr(self, "_folded", None):  # the thread anew: its folded branches stay so
-            from ..common import postkeys
-            depth = {it.key: it.depth for it in items}
             self._hide(items, postkeys.hidden_under(self._folded, keys, depth.get))
         lv.index = keys.index(keep) if keep in keys else focus
         self.app.load_pictures(items)

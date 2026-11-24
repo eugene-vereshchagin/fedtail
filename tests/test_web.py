@@ -506,6 +506,17 @@ class WebTest(TmpDir):
         self.assertNotIn("branch", by["302"])  # (its top comment's is the one folded)
         js = web.static_text("app.js")
         self.assertIn("card.append(foldButton(card, p.branch))", js)
+        # threads.remember_folded: off — nothing kept, the page told not to say; on — what
+        # the page says it folded comes back with the thread the next time
+        self.req("/api/thread_fold", {"root": "300", "folded": ["301"]})
+        got = json.loads(self.req("/api/thread?id=300")[2])
+        self.assertEqual((got["folded"], got["remember_folded"]), ([], False))
+        self.core.cfg["feed"]["remember_folded"] = True
+        self.req("/api/thread_fold", {"root": "300", "folded": ["301"]})
+        got = json.loads(self.req("/api/thread?id=302")[2])  # (opened from any post of it)
+        self.assertEqual((got["folded"], got["remember_folded"]), (["301"], True))
+        self.assertEqual(self.req("/api/thread_fold", {"root": "../x", "folded": []})[0], 400)
+        self.assertIn('api("/api/thread_fold"', js)
 
     def test_the_page_asks_for_a_round_only_by_hand(self):
         """The long poll reads the lanes anew when the core has news; it called the ⟳'s

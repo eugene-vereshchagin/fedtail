@@ -853,6 +853,35 @@ class BridgeAccountsTest(_Base):
             for word in ("~/", "--install-desktop", "--lanes-to-config"):
                 self.assertNotIn(word, about, place)
 
+    def test_a_folded_branch_is_remembered_when_asked(self):
+        """threads.remember_folded on the phone: what it folds comes back with the thread."""
+        self.demo()
+        got = self.call("thread", "101")
+        root = got["posts"][0]["id"]
+        head = next(p["id"] for p in got["posts"] if p.get("branch"))
+        self.assertEqual((got["folded"], got["remember_folded"]), ([], False))
+        self.bridge._core().cfg["feed"]["remember_folded"] = True
+        self.call("thread_fold", root, json.dumps([head]))
+        got = self.call("thread", "101")
+        self.assertEqual((got["folded"], got["remember_folded"]), ([head], True))
+
+    def test_what_the_emulators_tests_ask_of_the_demo(self):
+        """demo_happen's "post" and "slow": what FlowTest's double tap and
+        "all read in two lanes" stand on."""
+        self.demo()
+        unread = lambda: {x["name"]: x["unread"] for x in self.call("lanes")}  # noqa: E731
+        before = unread()["home"]
+        for i in range(3):
+            self.call("demo_happen", "post", "101", f"news {i}")
+        self.assertEqual(unread()["home"], before + 3)
+        from tests.fakes import FakeApi
+        real = FakeApi.favourite
+        self.addCleanup(setattr, FakeApi, "favourite", real)
+        self.call("demo_happen", "slow", "favourite", "0.01")
+        self.call("act", "like", "101")
+        self.assertEqual(self.call("demo_happen", "slow", "favourite", "0")["id"], "1")
+        self.assertIs(FakeApi.favourite, real)
+
     def test_a_mention_is_a_note_for_the_shade(self):
         """What the emulator's test of the shade stands on: someone writes to me — notes()
         has it for the notification, with its lane to open."""

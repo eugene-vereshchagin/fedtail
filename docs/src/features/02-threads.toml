@@ -203,6 +203,23 @@ details.ru = "Одна настройка для всех карточек: `\"p
 details.en = "One setting for every card: `\"post\"` — the thread stands at the post, `\"first_unread\"` — at the first unread comment (none — at the post). A lane of rules may decide for itself (\"Commented posts\" — at the first new one); \"🔔 N new in the thread\" always goes to the first new one. Every interface and the phone."
 
 [[feature]]
+id = "thread-fold-kept"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Свёрнутые ветки треда запоминаются"
+name.en = "A thread's folded branches remembered"
+config.ru = "`threads.remember_folded`"
+config.en = "`threads.remember_folded`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Voyager, Thunder (клиенты Lemmy)"
+others.en = "Voyager, Thunder (Lemmy clients)"
+clients = []
+details.ru = "Ветка комментария сворачивается: `-` в окнах и терминале, «− N» на веб-странице и на телефоне. Пока тред открыт, она остаётся свёрнутой, даже когда тред дорастает; «к следующему новому» в свёрнутую ветку её раскрывает. С `remember_folded = true` (по умолчанию выключено) свёрнутое помнится и между запусками, одно на все интерфейсы профиля; хранится для последних 300 тредов."
+details.en = "A comment's branch folds: `-` in the windows and the terminal, “− N” on the web page and the phone. While the thread is open it stays folded, even as the thread grows; “to the next new one” into a folded branch shows it again. With `remember_folded = true` (off by default) what is folded is remembered between runs too, one for every interface of the profile; kept for the last 300 threads."
+
+[[feature]]
 id = "thread-next-new"
 status = "has"
 android = "has"

@@ -2264,11 +2264,20 @@ async function openThread(id, at, show, grown) {
       body.append(card);
     }
     if (t.posts.length) $("#side-title").textContent = w("web_thread") + " · @" + t.posts[0].account.handle;
-    if (keep) {
-      for (const c of body.querySelectorAll(".post[data-id]"))
-        if (keep.folded.includes(c.dataset.id) && c.querySelector(".fold")) c.querySelector(".fold").click();
-      body.scrollTop = keep.top;
-    } else if (focus) focus.scrollIntoView({ block: "center" });
+    // folded again: what the reader folded before it was drawn anew, or — the first
+    // time, threads.remember_folded — what was folded the last time (but not over the
+    // post it opens at); the page says back what it folds only with that switch on
+    const again = keep ? keep.folded : (t.folded || []);
+    state.thread.root = t.posts.length ? t.posts[0].id : "";
+    state.thread.remember = false;
+    for (const c of body.querySelectorAll(".post[data-id]")) {
+      if (!again.includes(c.dataset.id) || !c.querySelector(".fold")) continue;
+      if (!keep && focus && (c.foldedBranch || []).includes(focus.dataset.id)) continue;
+      c.querySelector(".fold").click();
+    }
+    state.thread.remember = !!t.remember_folded;
+    if (keep) body.scrollTop = keep.top;
+    else if (focus) focus.scrollIntoView({ block: "center" });
     const ids = t.read_on_open || [];  // the core's: read as it opens, unless by hand
     if (ids.length) {
       api("/api/read", { ids }).catch(() => {});
@@ -2297,6 +2306,11 @@ function foldButton(card, branch) {
     card.classList.toggle("folded", folded);
     for (const c of $("#side-body").querySelectorAll(".post[data-id]"))
       if (branch.includes(c.dataset.id)) c.hidden = folded;
+    if (state.thread && state.thread.remember && state.thread.root)
+      api("/api/thread_fold", {
+        root: state.thread.root,
+        folded: [...$("#side-body").querySelectorAll(".post.folded")].map((c) => c.dataset.id),
+      }).catch(() => {});
   };
   return b;
 }

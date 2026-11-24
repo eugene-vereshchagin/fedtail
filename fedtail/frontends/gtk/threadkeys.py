@@ -54,6 +54,22 @@ class ThreadKeys:
         head = postkeys.unfold_for(self.folded, self.hidden, every, sid, self._depth_of)
         if head is not None:
             self._show_hidden(postkeys.branch(every, head, self._depth_of)[1])
+            self._remember()
+
+    def _root(self):
+        items = self.page.items
+        return items[0].post.id if items else None
+
+    def _remember(self):
+        postkeys.remember(self.win.view, self._root(), self.folded)
+
+    def restore(self):
+        """The thread drawn: the branches folded the last time folded again
+        (threads.remember_folded; nothing when it is off)."""
+        self.folded = postkeys.remembered(self.win.view, self._root())
+        if self.folded:
+            self.hidden = postkeys.hidden_under(self.folded, self._ids(), self._depth_of)
+            self._show_hidden(self.hidden)
 
     # ---- the posts --------------------------------------------------------------------
     def _ids(self):
@@ -128,6 +144,7 @@ class ThreadKeys:
             if not postkeys.fold(self.folded, self.hidden, head, below):
                 return False
             self._show_hidden(below)
+            self._remember()
             sid = head
         else:
             action = value

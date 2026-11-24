@@ -938,6 +938,11 @@ thread_followed_only = false
 # thread's head, then "replies fetched: N" (for a few seconds). Every interface and the phone.
 thread_progress = false
 
+# A branch folded in a thread ("-" in the windows and the terminal, "− N" on the page and
+# the phone) is folded the next time the thread is opened too — after a restart, and in
+# every interface of this profile. false — a thread opens whole each time.
+remember_folded = false
+
 # Where a thread opened from a card opens: "post" — at that post, "first_unread" — at the
 # first unread comment (none — at the post). A lane of rules may decide for itself:
 # open_at = "…" in its table ("Commented posts" — "first_unread"); the line "🔔 N new in

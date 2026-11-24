@@ -2143,6 +2143,37 @@ class QtSmokeTest(unittest.TestCase):
         tab.focus_on("8005")  # what the head's "↓ N new" does with the post the core names
         self.assertNotIn(late, view._hidden)
         self.assertNotIn(deep, view._hidden)
+        # threads.remember_folded: off — the thread opened again is whole; on — the branch
+        # folded by the key is folded in the thread opened anew
+        def again():
+            self.win.tabs.removeTab(self.win.tabs.indexOf(self.win.tabs.currentWidget()))
+            self.pump(0.2)
+            self.win.open_thread("8000")
+            self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                        for w in tabs()), timeout=15)
+            new = next(w for w in tabs() if isinstance(w, ThreadWidget) and w.loaded)
+            self.win.tabs.setCurrentWidget(new)
+            self.pump(0.3)
+            return new
+        view.put_cursor(deep)
+        key(Qt.Key.Key_Minus)
+        self.assertIn(deep, view._hidden)
+        tab = again()
+        view = tab.view
+        self.assertEqual(view._hidden, set())
+        self.core.cfg["feed"]["remember_folded"] = True
+        view.put_cursor(deep)
+        key(Qt.Key.Key_Minus)
+        tab = again()
+        view = tab.view
+        self.assertEqual(view._hidden, {deep, late})
+        view.put_cursor(next(s.key for s in view.model if s.entry is not None
+                             and s.entry.id == "8001"))
+        key(Qt.Key.Key_Minus)  # shown again: forgotten
+        tab = again()
+        view = tab.view
+        self.assertEqual(view._hidden, set())
+        self.core.cfg["feed"]["remember_folded"] = False
         # the keys are the config's ([keys]): another's own letter does it, the old doesn't
         self.core.cfg["keys"]["next_comment"] = "n"
         view.put_cursor(next(s.key for s in view.model

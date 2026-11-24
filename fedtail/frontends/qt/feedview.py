@@ -649,7 +649,14 @@ class FeedView(QScrollArea):
         if not postkeys.fold(self._folded, self._hidden, head, below):
             return False
         self._lay_out()
+        self._fold_changed()
         return True
+
+    on_fold = None  # a thread's: its folded heads changed (threads.remember_folded)
+
+    def _fold_changed(self):
+        if self.on_fold is not None:
+            self.on_fold(set(self._folded))
 
     def _thread_keys(self):
         return [s.key for s in self.model if s.entry is not None]
@@ -661,6 +668,7 @@ class FeedView(QScrollArea):
         if folded and postkeys.unfold_for(folded, self._hidden, self._thread_keys(), key,
                                           self._depth_of) is not None:
             self._lay_out()
+            self._fold_changed()
 
     def put_cursor(self, key):
         old = self.rows.get(self.cursor_key)

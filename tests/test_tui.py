@@ -273,6 +273,25 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(at(), "705")
             self.assertTrue(all(i.display for i in lv.children))
+            # threads.remember_folded: the branch folded is folded in the thread opened
+            # again; off (the default) the thread opens whole
+            async def again():
+                await pilot.press("q")
+                s = ThreadScreen("700")
+                app.push_screen(s)
+                await self.wait(pilot, lambda: app.screen is s and
+                                len(s.query_one("#posts", ListView).children) == 6,
+                                timeout=30)
+                return s.query_one("#posts", ListView)
+            lv.index = 1
+            await pilot.press("minus")
+            lv = await again()
+            self.assertTrue(all(i.display for i in lv.children))
+            core.cfg["feed"]["remember_folded"] = True
+            lv.index = 1
+            await pilot.press("minus")
+            lv = await again()
+            self.assertEqual([i.key for i in lv.children if not i.display], ["703", "705"])
             await pilot.press("q")
 
     async def test_thread_to_the_next_new_one(self):

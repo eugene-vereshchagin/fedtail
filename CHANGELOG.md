@@ -94,11 +94,17 @@
 - **Android 11 and 12: notifications come.** The permission check asked for a permission
   those versions don't have and took the answer for "no": no note ever reached the shade
   there, and the background rounds did nothing.
+- **A thread's folded branches remembered** — `threads.remember_folded = true` (off by
+  default): a branch folded in a thread is folded the next time the thread is opened,
+  after a restart too, in every interface of the profile and on the phone. Kept for the
+  last 300 threads; a thread opened at a post inside a folded branch shows that branch.
 - A thread's folded branch ("-", the page's and the phone's "− N") stays folded when the
   thread is drawn anew, the replies that came meanwhile inside it: Qt left a new reply
   alone under the folded head, the terminal unfolded everything. "To the next new one"
   into a folded branch shows the branch again — in Qt, GTK, the terminal and on the page
   it went to a card out of sight (the phone did it already).
+- Behind the scenes, the phone's tests on the emulator: a like tapped twice asks the
+  server once; "all read" in two lanes in a row keeps both; a folded branch remembered.
 - Android: the settings page no longer sends the reader to `~/.config/fedtail/themes`,
   the tray or `--lanes-to-config` — the theme, the number on the icon and the set of
   lanes are explained in the phone's own words.

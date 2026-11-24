@@ -1938,6 +1938,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
                 page.head.news(self.view.thread_next_unread(items, root, new=page.new)[1])
+                page.keys.restore()  # threads.remember_folded: folded as it was left
+                page.keys.unfold_for(stand)  # (but not over the post it opens at)
             # read as it opens — unless read.mark_read = "manual" (common/lane.py)
             from ..common.lane import thread_read_on_open
             ids = thread_read_on_open(self.cfg, unread)
