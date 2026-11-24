@@ -7,6 +7,22 @@
 
 ## What's next
 
+- The sets of lanes live in config.toml now, not in a file of the program: its first chapter
+  is "Lanes", its first option `preset`, and every set fedtail comes with — fedtail,
+  mastodon, tusky, phanpy, fedilab, the "extra" lanes — is written out there, a table a
+  lane (`[[lanes.sets.<set>]]`), with the lanes' words (`[lanes.words.<lane>]`), the
+  sidebar's sections and a line about each set. Read them, change them, or write a set of
+  your own beside them and name it in `preset`. A config written before works as it did
+  (the sets come from the reference config); `--update-config` writes them into it. A set
+  written in your file is yours from then on: a later version's change to that set does
+  not reach it. The chapters of the file are renumbered (Lanes first); `lanes.sections` of
+  this unreleased series is `lanes.section_order`.
+- The lane editor makes a set of your own: "Save as a set…" writes the lanes as they are
+  now — their order, the hidden and the changed ones — under a name into config.toml and
+  chooses it; "Delete" takes such a set away. With `sync.lane_rules` a set of your own
+  travels to the other devices with its name.
+- Private messages count on the icon in every set, as they bring a note and a sound: the
+  old default list of the icon's count left the Direct lane out.
 - Unsorted stands where `lanes.enabled` names it (`"unsorted"`); it stood last whatever
   the order said. Not named — at the very end, as before.
 - No default names a lane any more. The options that pick lanes — `notify.lanes`,
@@ -22,7 +38,7 @@
   called otherwise counted nothing there. The same for the lanes the followed threads feed.
 - Sidebar sections of your own: a lane's `group` may be any word, and it makes a section
   called that (the docs said so; the code put every such lane into "Personal"). The lane
-  editor has "…or a new section", and the new `lanes.sections` puts the sections — the
+  editor has "…or a new section", and the new `lanes.section_order` puts the sections — the
   sets', the lists', the tags' and your own — in your order. The sets' sections, their
   order and their titles are data in the sets' file now.
 - What a lane is called, what its row says and its picture are data now, not code: the sets'

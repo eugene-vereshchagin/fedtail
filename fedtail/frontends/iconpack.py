@@ -194,7 +194,7 @@ FREEDESKTOP = {
 # a lane (sidebar, roster, a tab) by its name → its picture
 # the picture of a lane the server or the tag groups make, by its kind ("list:12",
 # "tags:…"); every other lane's picture is its rule's or the set's word for its name
-# (presets.toml [words.<name>] icon — Core.lane_icon): no lane is named here
+# (the config's [lanes.words.<name>] icon — Core.lane_icon): no lane is named here
 LANE = {"list": "list", "tags": "tags", "custom": "list"}
 
 

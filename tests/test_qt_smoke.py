@@ -70,7 +70,7 @@ class QtSmokeTest(unittest.TestCase):
         pic["spoiler_text"] = "осторожно"
         w.add(pic, home=True, mention=True)
         # a reply to someone else whose post is gone; it mentions me, so Home takes it
-        # (strangers' talk without me stays out of Home: presets.toml)
+        # (strangers' talk without me stays out of Home: the config's [lanes.sets])
         talk = status("014", BOB, "gone", "X", minute=14, text="чужой разговор")
         talk["mentions"] = [{"id": "ME", "acct": "mira"}]
         w.add(talk, home=True)
@@ -2981,7 +2981,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.show()
         self.pump(0.1)
         self.assertEqual(dlg.list.count(), len(dlg.chapters))
-        o = settings.option(dlg.chapters, "appearance.emoji")
+        o = settings.option(dlg.chapters, "lanes.unsorted")
         before = f.read_text("utf-8")
         dlg.controls[o.name].setChecked(not o.value)
         self.pump(until=lambda: f.read_text("utf-8") != before)
@@ -2995,7 +2995,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.search.setText("шрифт")
         dlg._searched()
         self.assertIn("appearance.font_size", dlg.controls)
-        self.assertNotIn("appearance.emoji", dlg.controls)
+        self.assertNotIn("lanes.unsorted", dlg.controls)
         dlg.close()
 
     def test_menu_keeps_only_what_is_not_on_screen(self):

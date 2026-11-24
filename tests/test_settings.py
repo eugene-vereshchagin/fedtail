@@ -250,7 +250,8 @@ class PlaceTest(unittest.TestCase):
         self.pl = Places(_view(self.file))
 
     def test_save_writes_only_what_changed(self):
-        page = self.pl.page("settings")
+        self.assertEqual(self.pl.page("settings").tab, "lanes")  # the first chapter
+        page = self.pl.page("settings", "", "appearance")
         self.assertEqual(page.tab, "appearance")
         values = {f.name: f.value for f in page.form}
         values["appearance.font_size"] = "13"
@@ -261,12 +262,12 @@ class PlaceTest(unittest.TestCase):
         self.assertEqual(changed_lines(USER, text), ["-#font_size = 0", "+font_size = 13"])
 
     def test_reset_and_a_bad_number(self):
-        page = self.pl.page("settings")
+        page = self.pl.page("settings", "", "appearance")
         self.assertIn("appearance.theme", [r.key for r in page.rows])  # other than default
         out = self.pl.act("settings", "reset", "appearance.theme")
         self.assertEqual(out.error, "")
         self.assertNotIn("theme", tomllib.loads(self.file.read_text("utf-8"))["appearance"])
-        values = {f.name: f.value for f in self.pl.page("settings").form}
+        values = {f.name: f.value for f in self.pl.page("settings", "", "appearance").form}
         values["appearance.font_size"] = "-5"
         out = self.pl.act("settings", "save", "", values)
         self.assertTrue(out.error)

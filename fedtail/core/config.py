@@ -208,7 +208,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "detect_among": "auto",   # langdetect's profiles: Latin and Cyrillic, or "all"
         "tag_groups": [],
         "custom": [],
-        "sections": [],           # the sidebar's sections in my order; [] — the sets' own
+        "section_order": [],      # the sidebar's sections in my order; [] — the sets' own
         "unsorted": True,
         "browse_keep": 200,
         "browse_fill_pages": 5,
@@ -513,9 +513,9 @@ CHOICES = {
     ("sound", "enabled"): {"auto", "on", "off"},
     ("lanes", "detect_language"): {"off", "untagged", "always"},
     ("lanes", "detect_among"): {"auto", "all"},
-    ("lanes", "preset"): set(presets.names()),
 }
-# the lanes some set has (fedtail/data/presets.toml), and Unsorted
+# the lanes some set of the reference config has, and Unsorted (a config's own sets add
+# theirs: validate asks presets.known_names(cfg))
 LANE_NAMES = set(presets.known_names()) | {"unsorted"}
 MARKED = "marked"  # in an option that picks lanes: those whose rules mark themselves (lanes.py)
 # …and for what each such option reads a lane's `marks` (atoms.MARKS)
@@ -630,6 +630,15 @@ def _keys(section, names):
 
 
 FILE_LAYOUT = (
+    ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
+                             "browse_fill_pages funnel_fill_pages browse_start "
+                             "browse_start_hours section_order custom "
+                             "tag_groups languages languages_in "
+                             "detect_language "
+                             "detect_min_words detect_among federated_extra tags_extra bubble "
+                             "extra_minutes extra_posts rss_items rss_summary_chars "
+                             "tags_one_request")),
+    ("lists", _keys("lists", "enabled hide_members hide_posts hide_in refresh_minutes")),
     ("appearance", _keys("ui", "language theme font_size fonts font mono_font max_width "
                                "faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
@@ -646,15 +655,6 @@ FILE_LAYOUT = (
     ("keys", _keys("keys", "new_post send search find find_next find_previous command_line "
                            "refresh close_tab quit next_post previous_post reply like boost "
                            "bookmark open_thread next_comment previous_comment fold_branch")),
-    ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
-                             "browse_fill_pages funnel_fill_pages browse_start "
-                             "browse_start_hours sections custom "
-                             "tag_groups languages languages_in "
-                             "detect_language "
-                             "detect_min_words detect_among federated_extra tags_extra bubble "
-                             "extra_minutes extra_posts rss_items rss_summary_chars "
-                             "tags_one_request")),
-    ("lists", _keys("lists", "enabled hide_members hide_posts hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new count_filtered page_size catch_up_limit "
                               "late_hours late_minutes render_limit "
                               "older_ahead remember_choices first_run_mark_read "
@@ -907,6 +907,15 @@ def validate(user):
     """Merge user config over defaults. Returns (config, warnings) or raises ConfigError."""
     cfg = copy.deepcopy(DEFAULTS)
     warnings, errors = [], []
+    # the sets of lanes and their words ([[lanes.sets.<set>]], [lanes.words.<lane>]…):
+    # not options — tables of [lanes], the file's own over the reference's (presets.py)
+    user = dict(user)
+    own_sets = {}
+    if isinstance(user.get("lanes"), dict):
+        user["lanes"] = dict(user["lanes"])
+        own_sets = {k: user["lanes"].pop(k) for k in presets.TABLES if k in user["lanes"]}
+    errors += presets.problems(own_sets)
+    cfg["lanes"].update(presets.merged({} if errors else own_sets))
     user = _older_values(user, warnings)
     user, older, unknown = from_file(user)
     warnings += [GONE.get(name, f"unknown key {name} — ignored") for name in unknown]
@@ -982,6 +991,8 @@ def validate(user):
                                     "ui.open_columns = true now")
                 val = "split" if val == "qip" else "single"
             choices = CHOICES.get((section, key))
+            if (section, key) == ("lanes", "preset"):  # a set the config has
+                choices = set(presets.names(cfg))
             if choices and val not in choices:
                 errors.append(f"{section}.{key} = {val!r}; allowed: {', '.join(sorted(choices))}")
                 continue
@@ -1005,6 +1016,8 @@ def validate(user):
         else:
             cfg[section][key] = canonical(val)
     # pairs that pick lanes (lanes.chosen): "all" in the first, "list:Друзья" in both
+    # the lanes some set of this config has (its own sets too), and Unsorted
+    lane_names = set(presets.known_names(cfg)) | {"unsorted"}
     wanted = cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["sound"]["lanes"]
     picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"] + \
         cfg["sound"]["except"]
@@ -1013,7 +1026,7 @@ def validate(user):
             if isinstance(c, dict) and c.get("name")}
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
-           if x not in LANE_NAMES | {"lists"} and x not in free
+           if x not in lane_names | {"lists"} and x not in free
            and not taggroups.is_tags(x)  # a lane of tags ("tags:…"), made in the window
            # notify.lanes = ["all"]: everything, the except list takes away
            and not (x == "all" and x in wanted)
@@ -1023,7 +1036,7 @@ def validate(user):
            and not (x in picking and isinstance(x, str)
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
-        errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+        errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(lane_names))}")
     if "all" in cfg["activity"]["types"]:  # everything there is, now and later
         cfg["activity"]["types"] = sorted(ACTIVITY_TYPES)
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]
@@ -1058,9 +1071,9 @@ def validate(user):
                           "computer or one at home)")
     if url and cfg["sync"]["folder"]:
         errors.append("sync.url and sync.folder are both set: one place to meet, not two")
-    if not isinstance(cfg["lanes"]["sections"], list) or \
-            not all(isinstance(x, str) for x in cfg["lanes"]["sections"]):
-        errors.append("lanes.sections: a list of the sections' names")
+    if not isinstance(cfg["lanes"]["section_order"], list) or \
+            not all(isinstance(x, str) for x in cfg["lanes"]["section_order"]):
+        errors.append("lanes.section_order: a list of the sections' names")
     if not isinstance(cfg["lanes"]["custom"], list):
         errors.append("lanes.custom: tables [[lanes.custom]], one per lane")
     else:
@@ -1074,9 +1087,9 @@ def validate(user):
     if bad_merge:
         errors.append(f"ui.merge: {bad_merge} — profile names, or [\"all\"]")
     start = cfg["ui"]["start_lane"]
-    if start not in {"none", "last"} | LANE_NAMES | free:
+    if start not in {"none", "last"} | lane_names | free:
         errors.append(f"ui.start_lane = {start!r}; allowed: none, last or a lane: "
-                      f"{', '.join(sorted(LANE_NAMES))}")
+                      f"{', '.join(sorted(lane_names))}")
     bad_lang = [x for x in langs
                 if x and not (isinstance(x, str) and re.fullmatch(r"[a-z]{2,3}", x))]
     if bad_lang:
@@ -1088,10 +1101,10 @@ def validate(user):
         errors.append(f"lanes.languages: {bad_read} — two or three small letters (ISO 639), "
                       f"like \"ru\" or \"en\"")
     bad_in = [x for x in cfg["lanes"]["languages_in"]
-              if x not in LANE_NAMES | {"lists", "tags", MARKED}]
+              if x not in lane_names | {"lists", "tags", MARKED}]
     if bad_in:
         errors.append(f"lanes.languages_in: unknown lanes {bad_in}; known: "
-                      f"{', '.join(sorted(LANE_NAMES))}, lists, tags")
+                      f"{', '.join(sorted(lane_names))}, lists, tags")
     errors = [file_names(e) for e in errors]
     warnings = [w if w.startswith("options in their places") else file_names(w)
                 for w in warnings]

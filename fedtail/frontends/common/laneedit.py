@@ -235,10 +235,16 @@ class Editor:
         except (tomllib.TOMLDecodeError, config.ConfigError):
             cfg = copy.deepcopy(config.DEFAULTS)
         self.cfg = cfg
+        # the sets this file writes itself ([[lanes.sets.<name>]]), not the reference's
+        try:
+            wrote = (tomllib.loads(text).get("lanes") or {}).get("sets") or {}
+        except tomllib.TOMLDecodeError:
+            wrote = {}
+        self.file_sets = [n for n in wrote if n != presets.EXTRA]
         self.preset = cfg["lanes"]["preset"]
         defs = custom.definitions(cfg)
-        self.base = {custom._name(t): t for t in presets.lanes_of(self.preset)}
-        self.base.update({custom._name(t): t for t in presets.extra()
+        self.base = {custom._name(t): t for t in presets.lanes_of(self.preset, cfg)}
+        self.base.update({custom._name(t): t for t in presets.extra(cfg)
                           if custom._name(t) not in self.base})
         self.tables = {n: copy.deepcopy(t) for n, t, _own in defs}
         self.own = [n for n, _t, own in defs if own]  # the file's, in its order
@@ -361,6 +367,40 @@ class Editor:
         self.order = [n for n in self.order if n != name]
 
     # ---- writing -------------------------------------------------------------------------
+    def as_set(self, name):
+        """{(section, key): value} that make the lanes shown now a set called `name`
+        and choose it: the lanes in their order, each whole (a set's lane with one's own
+        changes, one's own lanes), the lists' and the tags' places among them — and
+        nothing over it: no [[lanes.custom]], no lanes.enabled. ValueError: a name that
+        won't do."""
+        name = str(name or "").strip().lower()
+        if not name.replace("_", "").isalnum() or not name.isascii() or \
+                name in presets.TABLES or name == presets.EXTRA:
+            raise ValueError(_("le_set_name_bad"))
+        if name in presets.shipped():  # fedtail's own stay as they come
+            raise ValueError(_("le_set_name_taken", name=name))
+        tables = []
+        for n in self.order:
+            if n not in self.shown:
+                continue
+            t = copy.deepcopy(self.tables.get(n) or {})
+            tables.append({"name": n, "slot": n} if n in NOT_RULES and not t.get("any")
+                          else dict(t, name=n))
+        if not tables:
+            raise ValueError(_("le_set_empty"))
+        return {("lanes", config_edit.SET + name): tables, ("lanes", "preset"): name,
+                ("lanes", "custom"): [], ("lanes", "enabled"): config_edit.UNSET}
+
+    def drop_set(self, name):
+        """{(section, key): value} that take a set of the file's own away (the set at
+        work: back to the default one)."""
+        if name not in self.file_sets or name in presets.shipped():
+            raise ValueError(name)
+        out = {("lanes", config_edit.SET + name): config_edit.UNSET}
+        if self.preset == name:
+            out[("lanes", "preset")] = config_edit.UNSET
+        return out
+
     def changes(self):
         """{(section, key): value} for config_edit.save."""
         # a set's lane copied into the file as it is isn't one's own: left to the set

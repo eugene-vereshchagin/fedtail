@@ -609,7 +609,7 @@ def demo_happen(what, target, text):
         if what == "mention":
             me = _core().me or {}
             st = status(sid, parent["account"], vis="public", text=text)
-            st["mentions"] = [{"id": me.get("id"), "acct": me.get("acct"),
+            st["mentions"] = [{"id": me.get("id"), "acct": me.get("acct"),  # ours: the demo's
                                "username": me.get("username"), "url": me.get("url")}]
             st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
             w.add(st, mention=True)

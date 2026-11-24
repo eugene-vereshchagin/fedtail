@@ -41,14 +41,22 @@ class LanePlaces:
         # the set first: "as in fedtail / Mastodon / Tusky / Phanpy", then one's own on top
         own = bool(ed.own) or ed.cfg["lanes"].get("enabled")
         page.rows.append(Row("heading", _("le_sets")))
-        for name in presets.names():
+        for name in presets.names(ed.cfg):
             on = name == ed.preset
-            words = _("le_set_" + name) if _("le_set_" + name) != "le_set_" + name else name
+            mine = name in ed.file_sets and name not in presets.shipped()
+            # what the set is: the config's line for it ([lanes.about]); one's own — so said
+            words = presets.about(name, ed.cfg) or (_("le_set_own") if mine else name)
             line = (_("le_set_now_own") if own else _("le_set_now")) if on else ""
+            buttons = [] if on else [self._btn(_("le_set_take"), "lanes", "preset", name,
+                                               primary=True, tip=_("le_set_take_tip"))]
+            if mine:
+                buttons.append(self._btn(_("le_set_delete"), "lanes", "dropset", name))
             page.rows.append(Row("item", ("● " if on else "○ ") + name, words + (
-                " · " + line if line else ""), key="set:" + name, buttons=() if on else (
-                self._btn(_("le_set_take"), "lanes", "preset", name, primary=True,
-                          tip=_("le_set_take_tip")),)))
+                " · " + line if line else ""), key="set:" + name, buttons=tuple(buttons)))
+        # a set of one's own: the lanes as they are shown now, under a name
+        page.rows.append(Row("item", _("le_set_save"), _("le_set_save_line"), key="_saveset",
+                             buttons=(self._btn(_("le_set_save_btn"), "lanes", "saveset", "",
+                                                tip=_("le_set_save_tip")),)))
         if own:
             page.rows.append(Row("item", _("le_own_title"), _("le_own_line", n=len(ed.own)),
                                  key="_own", buttons=(self._btn(
@@ -101,7 +109,7 @@ class LanePlaces:
         from ...core import config_edit, presets
         from .places import Out
         from .settings import SaveError, config_file
-        if name not in presets.names():
+        if name not in presets.names(self._editor().cfg):
             return Out(error=name)
         if not confirmed:
             return Out(confirm=_("le_set_q", name=name))
@@ -115,6 +123,45 @@ class LanePlaces:
         if saved is not None:
             saved(cfg)
         return Out(message=_("le_set_done", name=name), refresh=True)
+
+    def _write(self, changes, message):
+        """Changes into config.toml and into the running program → what to say."""
+        from ...core import config_edit
+        from .places import Out
+        from .settings import SaveError, config_file
+        try:
+            cfg, _w = config_edit.save(config_file(self.view), changes)
+        except SaveError as e:
+            return Out(error=str(e))
+        saved = getattr(self.view, "lanes_saved", None)
+        if saved is not None:
+            saved(cfg)
+        return Out(message=message, refresh=True)
+
+    def _a_lanes_saveset(self, _d, _v, _c, answer):
+        """The lanes shown now as a set of one's own, by a name asked for — written into
+        config.toml ([[lanes.sets.<name>]]) and chosen."""
+        from .places import Out
+        ed = self._editor()
+        if answer is None:
+            mine = [n for n in ed.file_sets if n not in presets.shipped()]
+            return Out(ask=(_("le_set_save"), _("le_set_save_q"),
+                            ed.preset if ed.preset in mine else "mine"))
+        try:
+            changes = ed.as_set(answer)
+        except ValueError as e:
+            return Out(error=str(e))
+        return self._write(changes, _("le_set_saved", name=str(answer).strip().lower()))
+
+    def _a_lanes_dropset(self, name, _v, confirmed, _ans):
+        from .places import Out
+        if not confirmed:
+            return Out(confirm=_("le_set_delete_q", name=name))
+        try:
+            changes = self._editor().drop_set(name)
+        except ValueError as e:
+            return Out(error=str(e))
+        return self._write(changes, _("le_set_deleted", name=name))
 
     def _a_lanes_clean(self, _d, _v, confirmed, _ans):
         """One's own changes all gone: the set as it is."""
@@ -567,7 +614,7 @@ def _sections(ed, cfg, own=""):
     from ...core import lanes as lanes_mod
     named = [str(t.get("group")) for t in ed.tables.values()
              if isinstance(t, dict) and t.get("group")]
-    seq = dict.fromkeys([*(cfg["lanes"].get("sections") or ()), *presets.sections(),
+    seq = dict.fromkeys([*(cfg["lanes"].get("section_order") or ()), *presets.sections(),
                          *named, own])
     return [g for g in seq if g and g not in (lanes_mod.LISTS, lanes_mod.TAGS)]
 

@@ -695,17 +695,22 @@ _STRINGS = {
         "tags_in_home_tip": "Посты с этими тегами и в Ленте тоже (снято — только в ленте "
                             "тегов, как список «только здесь»)",
         "le_sets": "Набор лент",
-        "le_set_fedtail": "по умолчанию: «Ко мне» с быстрыми фильтрами, подписки на треды, "
-                          "важные люди, боты отдельно",
-        "le_set_mastodon": "как веб Мастодона: Лента со всем, Упоминания и Активность, Личные, "
-                           "Локальная, Федерация, Закладки, Избранное",
-        "le_set_tusky": "как вкладки Tusky: Лента, Упоминания (и личные) и Активность, "
-                        "Локальная, Федерация, Личные",
-        "le_set_phanpy": "как Phanpy: Лента, Упоминания (и личные), Личные, Активность, "
-                         "Закладки, Лайки, Локальная",
-        "le_set_fedilab": "как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания "
-                          "(и личные) и Активность, Личные, Закладки, Избранное",
         "le_set_now": "сейчас",
+        "le_set_own": "свой набор",
+        "le_set_save": "Свой набор",
+        "le_set_save_line": "Ленты как сейчас — их порядок, скрытые и изменённые — под своим "
+                            "именем: набор запишется в config.toml, и его можно будет править "
+                            "дальше или вернуться к готовому",
+        "le_set_save_btn": "Сохранить как набор…",
+        "le_set_save_tip": "Записать ленты, как они сейчас, отдельным набором и выбрать его",
+        "le_set_save_q": "Имя набора (латиницей, без пробелов). То же имя — перезаписать:",
+        "le_set_saved": "Набор «{name}» записан и выбран",
+        "le_set_delete": "Удалить",
+        "le_set_delete_q": "Удалить набор «{name}» из config.toml?",
+        "le_set_deleted": "Набор «{name}» удалён",
+        "le_set_name_bad": "Имя набора — латинские буквы, цифры и «_», одно слово",
+        "le_set_name_taken": "«{name}» — набор, с которым приходит fedtail: выбери другое имя",
+        "le_set_empty": "Ни одной ленты не показано: набору не из чего состоять",
         "le_set_now_own": "сейчас, с твоими изменениями",
         "le_set_take": "Взять",
         "le_set_take_tip": "Ленты этого набора, в его порядке; твои свои ленты остаются",
@@ -911,7 +916,7 @@ _STRINGS = {
         "mark_hide_listed": "скрытия людей из списков",
         "le_f_group_new": "…или новый раздел",
         "le_f_group_new_tip": "Название своего раздела боковой панели: лента встанет в него. "
-                              "Порядок разделов — lanes.sections в настройках.",
+                              "Порядок разделов — lanes.section_order в настройках.",
         "le_f_source": "Откуда (всем условиям)",
         "le_f_source_tip": "Ничего не отмечено — источник у каждого условия свой (или угадывается)",
         "le_f_read": "Как читать",
@@ -2649,17 +2654,24 @@ _STRINGS = {
         "tags_in_home_tip": "Posts with these tags in Home too (off — only in the tag lane, "
                             "as an exclusive list)",
         "le_sets": "The set of lanes",
-        "le_set_fedtail": "the default: To me with quick filters, followed threads, important "
-                          "people, bots apart",
-        "le_set_mastodon": "as Mastodon's web page: Home with everything, Mentions and "
-                           "Activity, Direct, Local, Federated, Bookmarks, Favourites",
-        "le_set_tusky": "as Tusky's tabs: Home, Mentions (private too) and Activity, Local, "
-                        "Federated, Direct",
-        "le_set_phanpy": "as Phanpy: Home, Mentions (private too), Direct, Activity, Bookmarks, "
-                         "Likes, Local",
-        "le_set_fedilab": "as Fedilab's tabs: Home, Local, Federated, Mentions (private too) "
-                          "and Activity, Direct, Bookmarks, Favourites",
         "le_set_now": "now",
+        "le_set_own": "a set of your own",
+        "le_set_save": "A set of your own",
+        "le_set_save_line": "The lanes as they are now — their order, the hidden and the "
+                            "changed ones — under a name of yours: the set is written into "
+                            "config.toml, to change further or to leave for a ready one",
+        "le_set_save_btn": "Save as a set…",
+        "le_set_save_tip": "Write the lanes as they are now as a set of their own and "
+                           "choose it",
+        "le_set_save_q": "The set's name (Latin letters, no spaces). The same name writes "
+                         "over it:",
+        "le_set_saved": "The set “{name}” is written and chosen",
+        "le_set_delete": "Delete",
+        "le_set_delete_q": "Delete the set “{name}” from config.toml?",
+        "le_set_deleted": "The set “{name}” is deleted",
+        "le_set_name_bad": "A set's name: Latin letters, digits and “_”, one word",
+        "le_set_name_taken": "“{name}” is a set fedtail comes with: choose another name",
+        "le_set_empty": "No lane is shown: nothing to make a set of",
         "le_set_now_own": "now, with your changes",
         "le_set_take": "Take",
         "le_set_take_tip": "This set's lanes, in its order; your own lanes stay",
@@ -2867,7 +2879,7 @@ _STRINGS = {
         "mark_hide_listed": "hiding people of the lists",
         "le_f_group_new": "…or a new section",
         "le_f_group_new_tip": "The name of a sidebar section of your own: the lane goes "
-                              "into it. The sections' order is lanes.sections in the "
+                              "into it. The sections' order is lanes.section_order in the "
                               "settings.",
         "le_f_source": "From (for every condition)",
         "le_f_source_tip": "None ticked — each condition has its own source (or it is guessed)",

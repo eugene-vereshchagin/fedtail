@@ -133,7 +133,7 @@ fedtail/
                      (paths.main_profile: метка главного профиля) передаётся при выходе
     atoms.py         что различимо в посте/событии; правила свободных лент (feeds.md)
     custom.py        ленты из правил: наборов и [[lanes.custom]]; виды или потоки custom:<имя>
-    presets.py       наборы лент (fedtail/data/presets.toml)
+    presets.py       наборы лент (config.toml: [lanes.sets], [lanes.words])
     lanes.py         Lane = источник (или поток) + фильтр; разделы; ленты списков
     model.py         помощники над словарями статусов и аккаунтов (real(), snippet(), …)
     paths.py         где лежат файлы профиля (XDG)
@@ -369,7 +369,7 @@ docs/                ru/dev/, en/dev/ — документы для разраб
 
 ## 8. Ленты (`core/lanes.py`, `core/custom.py`)
 
-Каждую ленту делает правило (docs/ru/dev/feeds.md): в `fedtail/data/presets.toml` — наборы
+Каждую ленту делает правило (docs/ru/dev/feeds.md): в конфиге (`[[lanes.sets.<набор>]]`; в эталонном конфиге они все) — наборы
 (`lanes.preset`), `[[lanes.custom]]` добавляет ленты или встаёт на место ленты набора.
 `custom.load` делает из каждого правила `Lane(name, source, keep, …)`: над одним источником
 это вид на него (`keep` спрашивает правило), над несколькими — свой поток, который

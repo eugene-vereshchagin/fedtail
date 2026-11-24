@@ -183,7 +183,9 @@ def _title(about, key):
 def reference(lang):
     """[(chapter number, title, section, group, key, comment lines)] in file order."""
     out, chapter, title, section, group, pending = [], 0, "", None, "", []
-    lines = config.example_text(lang).splitlines()
+    # (the sets of lanes are tables, not options: the lane editor is their window)
+    from ...core.config_update import cut_sets
+    lines = cut_sets(config.example_text(lang))[0].splitlines()
     for i, line in enumerate(lines):
         m = _BANNER.match(line)
         if m and i > 0 and _RULE.match(lines[i - 1]):
@@ -215,7 +217,7 @@ def reference(lang):
 
 def _lane_words(view):
     """A lane's name in words: the view's (a lane's own title, a list's, a lane of
-    tags'), else the sets' word for the name (presets.toml), else the name itself."""
+    tags'), else the sets' word for the name (the config's [lanes.sets]), else the name itself."""
     from ...core import presets
     title = getattr(view, "lane_title", None)
 
@@ -281,6 +283,9 @@ def model(view, lang=None, text=None):
                    about=about, in_file=is_set(text, table, key), group=group,
                    minimum=config.MINIMUM.get((section, key)))
         known = config.CHOICES.get((section, key))
+        if (section, key) == ("lanes", "preset"):  # the sets this config has
+            from ...core import presets
+            known = set(presets.names(cfg))
         if isinstance(default, bool):
             o.kind = "bool"
         elif isinstance(default, int):

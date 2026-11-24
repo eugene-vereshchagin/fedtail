@@ -73,7 +73,7 @@ class Custom:
     def __init__(self, rule, warnings=(), title=None, tip=None):
         self.rule = rule
         self.name = rule.name
-        # its words: its table's own, else presets.toml's for its name ([words.<name>]),
+        # its words: its table's own, else the config's for its name ([lanes.words.<name>]),
         # else the name — a string, or one per language ({"ru": …, "en": …})
         self._title = title or rule.name
         self._tip = tip
@@ -282,7 +282,7 @@ def definitions(cfg):
     """[(name, table, own)] every lane a config can show, in the set's order — its own
     [[lanes.custom]] in the place of a set's lane of that name, new ones after; then the
     lanes of "extra" (shown only when lanes.enabled names them). own: from config.toml."""
-    out = [(_name(t), t, False) for t in presets.lanes_of(cfg["lanes"].get("preset"))]
+    out = [(_name(t), t, False) for t in presets.lanes_of(cfg["lanes"].get("preset"), cfg)]
     names = [n for n, _t, _o in out]
     own = set()
     for t in cfg["lanes"].get("custom") or []:
@@ -298,7 +298,7 @@ def definitions(cfg):
         else:
             out.append((n, t, True))
             names.append(n)
-    for t in presets.extra():
+    for t in presets.extra(cfg):
         if _name(t) not in names:
             out.append((_name(t), t, False))
     return out
@@ -309,7 +309,7 @@ def shown_names(cfg):
     defs = definitions(cfg)
     order = [lanes.canonical(n) for n in cfg["lanes"].get("enabled") or []]
     if not order:  # the set's own lanes and one's own; "extra" only when named
-        theirs = {_name(t) for t in presets.lanes_of(cfg["lanes"].get("preset"))}
+        theirs = {_name(t) for t in presets.lanes_of(cfg["lanes"].get("preset"), cfg)}
         order = [n for n, _t, own in defs if own or n in theirs]
     else:
         order += [n for n, _t, own in defs if own and n not in order]
@@ -348,8 +348,8 @@ def load(cfg):
             # of requests alone is asked for: it keeps them)
             rule.none.append(atoms.Condition.parse({"event": "follow_request"}))
         # its words: the table's own, else the file's for a lane of this name
-        # (presets.toml [words.<name>]: one's own lane named as a set's keeps its words)
-        words = presets.words(n)
+        # (the config's [lanes.words.<name>]: one's own lane named as a set's keeps its words)
+        words = presets.words(n, cfg)
         title = t.get("title")
         if isinstance(title, dict):
             title = {k: v for k, v in title.items() if v} or None
@@ -395,17 +395,17 @@ def build(cfg, lists=(), tag_groups=()):
         elif n in rules:
             out.append(rules[n].lane())
         elif n == lanes.UNSORTED and unsorted_on:  # named: it stands here
-            out.append(_unsorted_lane())
+            out.append(_unsorted_lane(cfg))
     if unsorted_on and lanes.UNSORTED not in seen:
-        out.append(_unsorted_lane())
+        out.append(_unsorted_lane(cfg))
     return out
 
 
-def _unsorted_lane():
+def _unsorted_lane(cfg):
     """The lane of what came and no lane took (lanes.unsorted): its section is the
-    sets' word for it (presets.toml [words.unsorted] group)."""
+    config's word for it ([lanes.words.unsorted] group)."""
     return lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all,
-                      group=presets.words(lanes.UNSORTED).get("group", ""))
+                      group=presets.words(lanes.UNSORTED, cfg).get("group", ""))
 
 
 def _activity_like(rule):

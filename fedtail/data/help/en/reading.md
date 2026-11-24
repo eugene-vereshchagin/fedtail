@@ -26,7 +26,7 @@ Over a lane, two switches: "All / Posts only / New" and "Feed / Conversations"
 videos or boosts — until a restart. The ❯ button at the top left puts lanes side by side, in
 columns.
 
-In detail → [Lanes](ref/features.md#lanes) · [which lanes to turn on](ref/config.md#3-lanes)
+In detail → [Lanes](ref/features.md#lanes) · [which lanes to turn on](ref/config.md#1-lanes)
 
 ## Your place and read marks
 

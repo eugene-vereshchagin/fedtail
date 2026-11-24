@@ -50,8 +50,10 @@ class ConfigTest(TmpDir):
             ref = config.example_text(lang)
             for key in re.findall(r'add_argument\((?:"-\w", )?"(--[a-z-]+)"', src):
                 self.assertIn(key, ref.split("[appearance]")[0], f"{lang}: {key}")
-            # one option, one block: a blank line before the next explanation
-            lines = ref.splitlines()
+            # one option, one block: a blank line before the next explanation (the sets
+            # of lanes aside: tables, a lane's keys together)
+            from fedtail.core.config_update import cut_sets
+            lines = cut_sets(ref)[0].splitlines()
             for i, line in enumerate(lines[:-1]):
                 if re.match(r"^[a-z_]+ = ", line) and lines[i + 1].startswith("# "):
                     self.fail(f"{lang}: no blank line after {line!r}")
@@ -67,6 +69,10 @@ class ConfigTest(TmpDir):
             parsed = tomllib.loads(config.example_text(lang))
             cfg, warns = config.validate(parsed)
             self.assertEqual(warns, [], lang)
+            # …and the sets of lanes it writes out are the reference's own
+            from fedtail.core import presets
+            sets = {k: cfg["lanes"].pop(k) for k in presets.TABLES}
+            self.assertEqual(sets, presets.reference(), lang)
             self.assertEqual(cfg, config.DEFAULTS, lang)
 
     def test_examples_are_twins(self):

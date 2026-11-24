@@ -763,6 +763,33 @@ class LaneRulesSyncTest(Devices):
         self.assertIn("pics", self.phone.lane_by_name)
         self.assertEqual(self.phone.sync_now(), (0, 0))  # nothing goes back
 
+    def test_a_set_of_ones_own_travels_with_its_name(self):
+        """24.11: the sets live in the config, a set of one's own among them — chosen on
+        one device, its lanes go with its name: the other has no such set otherwise (and
+        the name alone would not pass its config)."""
+        import tomllib
+
+        from fedtail.core import config_edit, presets
+        self.addCleanup(presets.use, None)
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        mine = [{"name": "home", "source": "home", "any": [{}]},
+                {"name": "pics", "source": "home", "any": [{"has": "image"}]}]
+        cfg, _w = config_edit.save(self.desk.paths.config_file,
+                                   {("lanes", "sets.reading"): mine,
+                                    ("lanes", "preset"): "reading"})
+        self.desk.lanes_saved(cfg)
+        self.assertEqual([x.name for x in self.desk.lanes if x.source][:2], ["home", "pics"])
+        self.assertEqual(self.desk.sync_now()[0], 1)
+        self.phone.sync_now()
+        got = tomllib.loads(self.phone.paths.config_file.read_text("utf-8"))["lanes"]
+        self.assertEqual(got["preset"], "reading")
+        self.assertEqual(got["sets"]["reading"], mine)
+        self.assertIn("pics", self.phone.lane_by_name)
+        self.assertEqual(self.phone.sync_now(), (0, 0))
+        # a set fedtail comes with: its name alone, as before
+        self.assertNotIn("set", self.device("third", self.world, lane_rules=True)._lane_rules())
+
     def test_on_by_default(self):
         """12.11: the lanes travel unless the file says sync.lane_rules = false."""
         cfg, _ = config.validate({})

@@ -246,10 +246,23 @@ def set_tables(text, section, key, tables):
                 out[n] = "#" + line.lstrip()
     block = []
     for t in tables:
-        if key == "custom":
-            block += _lane_table(t) + [""]
+        if key == "custom" or key.startswith(SET):  # a lane: its keys in a readable order
+            block += [f"[[{name}]]"] + _lane_table(t)[1:] + [""]
         else:
             block += [f"[[{name}]]"] + [f"{k} = {_toml(v)}" for k, v in t.items()] + [""]
+    if at is None and key.startswith(SET) and block:
+        # a new set: after the last set the file has (before whatever follows it, with
+        # the comments above that), not at the far end of the file
+        found = ((n, _HEADER.match(x)) for n, x in enumerate(out)
+                 if not x.lstrip().startswith("#"))
+        heads = [(n, m.group(1)) for n, m in found if m]
+        last = max((i for i, (_n, h) in enumerate(heads) if h.startswith("lanes." + SET)),
+                   default=None)
+        if last is not None and last + 1 < len(heads):
+            at = heads[last + 1][0]
+            while at > 0 and (not out[at - 1].strip() or _is_comment(out[at - 1])):
+                at -= 1
+            block = block + [""]
     if at is None:
         while out and not out[-1].strip():
             out.pop()
@@ -265,6 +278,9 @@ def apply(text, changes, example_text=""):
     """Every change {(section, key): value or UNSET} put in the text."""
     from .config import DEFAULTS, file_place, internal_place, older_place
     for (named, key), value in changes.items():
+        if named == "lanes" and key.startswith(SET):  # a set of lanes: its tables, whole
+            text = set_tables(text, named, key, [] if value is UNSET else list(value))
+            continue
         # where the file's layout keeps it; its line in an older place goes
         section, _k = file_place(named, key)
         older = older_place(named, key)
@@ -280,6 +296,10 @@ def apply(text, changes, example_text=""):
     return text
 
 
+# a change's key for a whole set of lanes: ("lanes", "sets.<name>") → [[lanes.sets.<name>]]
+SET = "sets."
+
+
 class SaveError(Exception):
     pass
 
@@ -293,6 +313,11 @@ def check(new_text, changes):
     except tomllib.TOMLDecodeError as e:
         raise SaveError(f"the file wouldn't read: {e}") from None
     for (named, key), value in changes.items():
+        if named == "lanes" and key.startswith(SET):
+            got = ((user.get("lanes") or {}).get("sets") or {}).get(key[len(SET):], [])
+            if got != ([] if value is UNSET else list(value)):
+                raise SaveError(f"lanes.{key}: the set reads back otherwise")
+            continue
         section = config.file_place(named, key)[0]
         got = user.get(section, {}).get(key, UNSET)
         want = UNSET if value is UNSET else (list(value) if isinstance(value, tuple)

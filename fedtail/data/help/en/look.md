@@ -114,4 +114,4 @@ the list of all pictures in `themes/builtin/PICTURES.txt`.
 - `card.actions` — the buttons under a post with an icon and a label, icons only or labels only.
 - `appearance.emoji = false` — not a single emoji in the feed.
 
-In detail → [The application](ref/features.md#the-application) · [Appearance](ref/config.md#1-appearance)
+In detail → [The application](ref/features.md#the-application) · [Appearance](ref/config.md#2-appearance)

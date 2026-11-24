@@ -180,7 +180,7 @@ class ListsMixin(CoreState):
 
     def lane_title(self, name):
         """What a lane is called: a lane of rules' title (its own, else the set's words
-        for its name — presets.toml), a list's, a tag lane's; any other name — the file's
+        for its name — [lanes.words]), a list's, a tag lane's; any other name — the file's
         word for it (Unsorted), else the name. Always words: no interface has its own."""
         c = next((c for c in self.customs if c.name == name), None)
         if c is not None:

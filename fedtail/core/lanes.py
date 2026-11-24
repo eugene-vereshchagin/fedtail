@@ -27,7 +27,7 @@ class Lane:
     # a lane made of the server's (a list, a lane of tags): the usual ones
     switches: tuple | None = None
     # the sidebar's section it stands in (its rule's `group`: any word); "" — the sets'
-    # own section (presets.toml [sections] own)
+    # own section (the config's [lanes.sections] own)
     group: str = ""
     # the set's lane to open first when ui.start_lane names none there (its rule's `start`)
     start: bool = False
@@ -121,12 +121,12 @@ def in_scope(name, names, marked=False):
 
 
 # every name a set of lanes has (core/presets.py): the lanes "built in", that is written
-# in fedtail/data/presets.toml — the config's word for each is its name
+# in the reference config's [lanes.sets] — the config's word for each is its name
 LANES = {n: None for n in presets.known_names()}
 
 
 # lanes once named otherwise: the old names still work wherever a lane is named — the
-# config, the command line, what a window remembered (presets.toml [renamed])
+# config, the command line, what a window remembered (the config's [lanes.renamed])
 RENAMED = presets.renamed()
 
 
@@ -140,7 +140,7 @@ def canonical(name):
 
 # The sidebar's sections. A lane's section is its rule's `group` — any word, never its
 # name: the sets' file has the usual ones, their order and what each is called
-# (presets.toml [sections]); the server's lists and the lanes of tags have sections of
+# (the config's [lanes.sections]); the server's lists and the lanes of tags have sections of
 # their own.
 LISTS, TAGS = "lists", "tags"
 
@@ -148,7 +148,7 @@ LISTS, TAGS = "lists", "tags"
 def grouped(lanes, order=()):
     """[(section, [lane names])] for the sidebar, the lanes in their order inside; each
     lane in one section: a list's, a tag lane's, else its rule's `group` (none — the
-    file's own section). The sections: `order` first (lanes.sections), then the file's
+    file's own section). The sections: `order` first (lanes.section_order), then the file's
     in its order, then any other by its first lane. Only those that hold a lane — and
     "lists" always (a list is made from its heading)."""
     out = {}

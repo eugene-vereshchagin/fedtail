@@ -106,6 +106,9 @@ def _anchor(title):
 
 def build(example_text, lang="ru"):
     lab = L[lang]
+    # the sets of lanes and their words are tables, not options: no rows of theirs here
+    from fedtail.core.config_update import cut_sets
+    example_text = cut_sets(example_text)[0]
     defaults = tomllib.loads(example_text)
     lines = example_text.splitlines()
     first = next(i for i, x in enumerate(lines) if BANNER.match(x))

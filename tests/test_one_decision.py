@@ -363,7 +363,9 @@ class MarkedLanesTest(Base):
     OLD = {"notify": "direct to_me replies mentions subs commented important activity "
                      "requests",
            "sound": "direct to_me replies mentions subs commented important requests",
-           "icon_count": "to_me replies mentions subs commented important requests",
+           # …and private messages, which the old list of the icon's count left out
+           # though a note and a sound spoke of them (24.11)
+           "icon_count": "direct to_me replies mentions subs commented important requests",
            "languages": "federated local", "hide_listed": "home bots federated local"}
 
     def test_the_sets_mark_what_the_old_lists_named(self):

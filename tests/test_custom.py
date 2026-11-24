@@ -1049,7 +1049,7 @@ class UnsortedAndListsTest(FreeBase):
 
     def test_set_lane_written_out_keeps_its_word(self):
         """The set written into the config (--lanes-to-config) without titles: the
-        sets' words for those names (presets.toml [words.<name>]), not "home", "to_me" —
+        sets' words for those names (the config's [lanes.words.<name>]), not "home", "to_me" —
         and its own words over them."""
         cfg, _ = config.validate({"lanes": {"custom": [
             {"name": "home", "any": [{}]}, {"name": "mine2", "any": [{}]}]}})
@@ -1094,7 +1094,7 @@ class UnsortedAndListsTest(FreeBase):
         cfg, _ = config.validate({"lanes": {"enabled": ["unsorted", "home"],
                                             "unsorted": False}})
         self.assertNotIn("unsorted", [x.name for x in custom.build(cfg)])
-        # the lanes once named otherwise are data too (presets.toml [renamed])
+        # the lanes once named otherwise are data too (the config's [lanes.renamed])
         from fedtail.core import presets
         self.assertEqual(lanes.canonical("people"), "home")
         self.assertEqual(lanes.RENAMED, presets.renamed())
@@ -1226,7 +1226,7 @@ class LaneIconTest(FreeBase):
         self.assertEqual(core.lane_icon("posts"), "my_posts")
         self.assertEqual(core.lane_icon("plain"), "list")  # one's own: a list's picture
         self.assertEqual(core.lane_icon("odd"), "list")
-        self.assertEqual(core.lane_icon("home"), "home")    # the set's: its words' (presets.toml)
+        self.assertEqual(core.lane_icon("home"), "home")    # the set's: its words' icon
         self.assertEqual(core.lane_icon("unsorted"), "list")
         self.assertIsNone(core.lane_icon("list:7"))         # by its kind: iconpack
         rule = Rule.parse({"name": "odd", "icon": "pizza", "any": [{}]})
@@ -1355,3 +1355,109 @@ class ThreadNewsLaneTest(FreeBase):
         self.assertEqual(core.thread_news(), {})
         core.cfg["feed"]["thread_news"] = False
         self.assertEqual(core.thread_news(), {})
+
+
+class SetsInTheConfigTest(unittest.TestCase):
+    """The sets of lanes live in the config (24.11): every one written out in config.toml,
+    `preset` at the top of its first chapter choosing; a set of one's own goes beside
+    them. No file of sets apart, no lane in the code."""
+
+    def tearDown(self):
+        from fedtail.core import presets
+        presets.use(None)
+
+    def test_the_reference_holds_every_set_first(self):
+        import tomllib
+
+        from fedtail.core import presets
+        for lang in config.EXAMPLE_LANGS:
+            text = config.example_text(lang)
+            first = next(x for x in text.splitlines() if x and not x.startswith("#"))
+            self.assertEqual(first, "[lanes]", lang)  # the first chapter: the lanes
+            option = next(x for x in text.split("\n[lanes]\n", 1)[1].splitlines()
+                          if x and not x.startswith("#"))
+            self.assertEqual(option, 'preset = "fedtail"', lang)  # …its first option
+            lanes_tables = tomllib.loads(text)["lanes"]
+            self.assertEqual({k: lanes_tables[k] for k in presets.TABLES},
+                             presets.reference(), lang)
+        self.assertEqual(presets.names(), ["fedtail", "mastodon", "tusky", "phanpy",
+                                           "fedilab"])
+        from importlib import resources
+        self.assertFalse(resources.files("fedtail").joinpath("data", "presets.toml").is_file())
+
+    def test_a_set_of_ones_own_and_a_set_changed(self):
+        from fedtail.core import presets
+        self.addCleanup(i18n.setup, i18n.current_language())
+        i18n.setup("en")
+        mine = [{"name": "reading", "source": "home", "any": [{}], "group": "Чтение",
+                 "title": {"ru": "Читаю", "en": "Reading"}, "marks": ["notify"]},
+                {"name": "to_me", "source": "mentions", "any": [{}]},
+                {"name": "lists", "slot": "lists"}]
+        cfg, warnings = config.validate({"lanes": {
+            "preset": "mine", "sets": {"mine": mine, "tusky": [
+                {"name": "home", "source": "home", "any": [{}]}]},
+            "words": {"to_me": {"title": "Мне"}, "reading": {"tip": "what I read"}}}})
+        self.assertEqual(warnings, [])
+        self.assertEqual(presets.names(cfg)[-1], "mine")
+        self.assertIn("fedilab", presets.names(cfg))  # the reference's stay
+        self.assertEqual([t["name"] for t in presets.lanes_of("tusky", cfg)], ["home"])
+        by = {c.name: c for c in custom.load(cfg)[0]}
+        self.assertEqual(by["reading"].title, "Reading")
+        self.assertEqual(by["reading"].tip, "what I read")
+        self.assertEqual(by["to_me"].title, "Мне")           # the config's word…
+        self.assertEqual(by["to_me"].rule.icon, "replies")    # …the rest the reference's
+        built = [x.name for x in custom.build(cfg)]
+        self.assertEqual(built, ["reading", "to_me", "unsorted"])
+        self.assertEqual(lanes.grouped(custom.build(cfg))[-1][0], "Чтение")
+        # a name of the set's lanes is a lane's name in the options that pick lanes
+        cfg, _w = config.validate({"lanes": {"preset": "mine", "sets": {"mine": mine}},
+                                   "notify": {"lanes": ["reading"]}})
+        self.assertEqual(cfg["notify"]["lanes"], ["reading"])
+        with self.assertRaises(config.ConfigError):  # no such set
+            config.validate({"lanes": {"preset": "nowhere"}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"lanes": {"sets": {"mine": "home, local"}}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"lanes": {"sets": {"words": []}}})
+        # a config written before, without the sets: the reference's
+        cfg, _w = config.validate({"lanes": {"preset": "phanpy"}})
+        self.assertEqual(presets.lanes_of("phanpy", cfg), presets.reference()["sets"]["phanpy"])
+
+    def test_the_file_keeps_its_sets_through_update_and_rebuild(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        ref = config.example_text("en")
+        old = '[lanes]\npreset = "tusky"\n\n[appearance]\ntheme = "point"\n'
+        out = u.update(old, ref)
+        got = tomllib.loads(out)
+        self.assertEqual(got["lanes"]["preset"], "tusky")
+        self.assertEqual(list(got["lanes"]["sets"]), ["fedtail", "mastodon", "tusky",
+                                                      "phanpy", "fedilab", "extra"])
+        # after the lanes' own tables ([lists] was added at the end of this old file)
+        self.assertLess(out.index("\n[lists]\n"), out.index("[[lanes.sets.fedtail]]"))
+        config.validate(got)
+        self.assertEqual(u.update(out, ref), out)  # once: nothing more to add
+        self.assertEqual(u.missing(old, ref)[:1], ["lanes.enabled"])  # options only
+        self.assertFalse([x for x in u.missing(old, ref) if x.startswith("lanes.sets")])
+        own = old + '''
+# mine: what I read
+[[lanes.sets.mine]]
+name = "reading"
+source = "home"
+any = [{}]
+
+[lanes.words.reading]
+title = "Reading"
+'''
+        for fn in (u.update, u.rebuild):
+            out = fn(own, ref)
+            out = out if isinstance(out, str) else out[0]
+            got = tomllib.loads(out)["lanes"]
+            self.assertEqual(list(got["sets"]), ["mine"], fn.__name__)  # its own, as it is
+            self.assertEqual(got["words"], {"reading": {"title": "Reading"}})
+            self.assertIn("# mine: what I read", out)
+            config.validate(tomllib.loads(out))
+        rest, sets = u.cut_sets(ref)
+        self.assertNotIn("lanes.sets", rest)
+        self.assertEqual(u.with_sets(rest, sets), ref)

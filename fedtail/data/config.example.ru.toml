@@ -42,9 +42,9 @@
 #                        (fedtail КОМАНДА -h — подробно про каждую)
 #
 # Главы:
-#   1. Внешний вид ................. [appearance]
-#   2. Окно и раскладка ............ [window] [keys]
-#   3. Ленты ....................... [lanes] [lists]
+#   1. Ленты ....................... [lanes] [lists]
+#   2. Внешний вид ................. [appearance]
+#   3. Окно и раскладка ............ [window] [keys]
 #   4. Чтение ...................... [reading]
 #   5. Карточка поста .............. [card]
 #   6. Треды и подписки на них ..... [threads]
@@ -63,7 +63,968 @@
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
-#  1. Внешний вид
+#  1. Ленты
+# ══════════════════════════════════════════════════════════════════════════════════════
+
+
+[lanes]
+# Каждая лента — правило (docs/ru/dev/feeds.md); с fedtail идут наборы таких — выбери:
+#   "fedtail"  — в духе Point: Ко мне (ответы и упоминания, быстрые фильтры для каждого),
+#                подписки на треды, Важные люди, боты отдельно;
+#   "mastodon" — как веб-страница Mastodon: Лента со всем, Упоминания + Активность (заявки
+#                сверху), Личные, Локальная, Федерация, Закладки, Избранное;
+#   "tusky"    — как вкладки Tusky: Лента, Упоминания (и личные) + Активность, Локальная,
+#                Федерация, Личные;
+#   "phanpy"   — как Phanpy: Лента, Упоминания (и личные), Личные, Активность, Закладки,
+#                Лайки, Локальная;
+#   "fedilab"  — как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания (и личные) +
+#                Активность, Личные, Закладки, Избранное.
+# Каждый набор выписан в конце этой главы («Наборы лент»), по таблице на ленту: читай,
+# меняй — или напиши там свой набор и назови его здесь. [[lanes.custom]] с тем же именем
+# встаёт на место ленты набора; с новым именем — добавляет ленту.
+preset = "fedtail"
+
+# Какие ленты показывать, в этом порядке (внутри раздела слева: Стандартные, Личные);
+# [] — все из набора, в его порядке. Слово ленты есть и в подсказке к ней слева:
+#   federated — «Федерация» (Federated): всё, что нода знает со всех серверов
+#   home      — «Лента» (Home): те, на кого и на какие теги подписан (у fedtail — без ботов)
+#   local     — «Локальная» (Local): вся твоя нода
+#   bots      — «Боты» (Bots): подписки, только боты
+#   my_posts  — «Мои записи» (My posts)
+#   direct    — «Личные» (Direct): личные сообщения (видны только упомянутым)
+#   to_me     — «Ко мне» (To me): ответы и упоминания в одной ленте, с быстрыми фильтрами
+#   important — «Важные люди» (Important people): посты тех, на ком колокольчик (🔔 в
+#               профиле); видна, когда в ней что-то есть
+#   subs      — «Подписки» (Subscriptions): новое в тредах, на которые подписан (как на Point)
+#   bookmarks — «Закладки»          my_likes — «Мои лайки»
+#   activity  — «Активность»: кто лайкнул, бустнул, подписался; заявки сверху
+#   mentions, replies, requests — ленты до «Ко мне» и заявки отдельной лентой: ни в одном
+#               наборе, но этот список может их назвать
+#   "lists", "tags" — где стоят списки сервера и сохранённые ленты тегов (иначе — в конце);
+#   своя лента — по имени ("posts").
+# Старые имена тоже понимаются: people = home, comments = replies, global = federated,
+# mine = my_posts, favourites = my_likes, "custom:posts" = posts.
+# federated и local тянутся, только пока открыты, и без счётчиков: их листают.
+enabled = []
+
+# Аккаунты, которые считать ботами, даже если у них нет галки «бот».
+# Свой сервер — просто "ник", чужой — "ник@сервер".
+extra_bots = []
+
+# В каких лентах на старте включено «только посты» (без комментов/ответов).
+# Галка над лентой тоже это переключает — выбор запоминается.
+posts_only = []
+
+# «Неразобранное»: что пришло из лент, читаемых подряд (Лента, Упоминания, списки…), а ни одна
+# лента не взяла, — чтобы правило не потеряло ни поста. Видно, только когда в нём что-то есть.
+# false — спрятано насовсем и не собирается.
+unsorted = true
+
+# Ленты, которые листают, а не читают подряд (Федерация, Локальная, пока ленивая): столько
+# самых новых из всего потока, пока лента открыта, — чтобы было что полистать, как бы быстро ни
+# лил релей. «Раньше» уходит дальше назад; что за этим числом — уходит при следующем обновлении.
+browse_keep = 200
+
+# Лента для просмотра (Федерация, Локальная), в которой фильтр языков оставил меньше страницы
+# постов, сама догружает столько страниц постарше, пока открыта; догруженное держится сверх
+# browse_keep. 0 — нет.
+browse_fill_pages = 5
+
+# Воронка над лентой («только видео», «без бустов») оставляет от страницы мало постов:
+# «Старее» (и конец ленты в виду) просит сразу до стольких страниц, пока не наберётся с
+# десяток прошедших её; лента для просмотра так же догружается сама. 1 — по странице за раз,
+# как без воронки.
+funnel_fill_pages = 5
+
+# Где открывается лента для просмотра (Федерация, Локальная): "last" — где стоял в ней
+# прошлый раз; если того места уже нет (за сутки релеи нанесут тысячи постов, и старое
+# уходит) — как "hours"; "hours" — на первом посте последних browse_start_hours часов;
+# "newest" — на самом свежем, старое — прокруткой назад.
+browse_start = "last"
+
+# browse_start = "hours" (и "last", когда места уже нет): со скольких часов назад.
+browse_start_hours = 2
+
+# Разделы боковой панели в твоём порядке, по именам: "standard" (Стандартные), "personal"
+# (Личные), "lists", "tags" и любые свои (group = "…" у ленты заводит раздел). Не названные
+# здесь идут следом в порядке наборов, свои — после них. [] — порядок наборов.
+section_order = []
+
+# Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
+# name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }),
+# tip (что это за лента, одной строкой: подсказка её строки; по языкам, как title),
+# icon (картинка: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
+# bookmarks, my_likes, activity, requests, list, tags, star_full и библиотека: important,
+# commented, people, heart, fire, news, rss, mountain, fish, car… — список в редакторе лент), any (условия: пост входит, если подходит
+# под любое; внутри условия должны совпасть все ключи), none (условия, которые не пускают).
+# Ключи условия: source (home, local, federated, mentions, mine, bookmarks, favourites, subs,
+# "list:<id>"; нет — догадывается по остальным), author (me, followed, local, remote, bot,
+# stranger, "@ник@сервер", "domain:сервер"…), kind (post, reply, self_reply, boost, self_boost,
+# quote, poll), me (reply, reply_to_post, reply_to_comment, mention, direct), visibility, has
+# (media, image, video, cw, link, "tag:x"), lang, state (unread, bookmarked…), target (для
+# бустов: my_post, my_comment, post, comment, seen, read), age ("<1d", ">2d"; age_of =
+# "original" — у бустнутого поста), likes / boosts / replies (">10"), text ([["слово", "и
+# слово"], ["или это"]]), event (favourite, reblog, follow, poll, update, status: эти строки
+# Активности, каждая строкой среди постов), buttons (кнопки под её постами, в этом порядке:
+# reply, like, boost, thread, bookmark, read, open; нет — по тому, что за запись: запись RSS не
+# предлагает ни ответа, ни лайка, ни буста), marks (для чего ленту берёт слово "marked" в
+# настройках: notify, sound, icon_count, languages, hide_listed). Лента встаёт в «Личные» (group = "standard" — в «Стандартные», любое другое слово — в раздел с таким именем): туда,
+# где её назвал lanes.enabled ("custom:feed"), иначе в конец. Свободные ленты наполняются из
+# того, что уже лежит в базе. Пример (тогда убери строку custom = [] ниже):
+#   [[lanes.custom]]
+#   name = "feed"
+#   title = "Лента"
+#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
+#   none = [{ kind = "boost", target = "seen" }]
+custom = []
+
+# Ленты из нескольких тегов — в боковой панели, группой «Теги» (подгружаются, пока
+# открыты, как «Федерация»). Каждая — таблица [[lanes.tag_groups]]: name — как назвать,
+# any — любой из тегов, all — все сразу, none — кроме. То же можно набрать в поиске
+# («#грузия #georgia -#политика») и сохранить кнопкой «＋ в ленты» — тогда здесь писать не
+# нужно. Пример (строку tag_groups = [] ниже тогда убери — TOML не даст и то, и то):
+#   [[lanes.tag_groups]]
+#   name = "Грузия"
+#   any = ["грузия", "georgia", "tbilisi"]
+#   none = ["политика"]
+tag_groups = []
+
+# Языки, которые ты читаешь: посты на других уходят из лент languages_in. Пусто — все языки.
+# Две-три маленькие буквы (ISO 639), например ["ru", "en"]. Пост, язык которого не понять
+# (метки нет, слишком короткий для догадки), остаётся всегда.
+languages = []
+
+# Где работает фильтр языков: слова лент, "lists" — все списки, "tags" — все ленты тегов.
+# "marked" — ленты, правила которых сами это отмечают (marks = ["languages"]; наборы отмечают
+# «Федерацию» и «Локальную»). Ленты (home) по умолчанию нет: на кого подписан, того читаешь целиком.
+languages_in = ["marked", "tags"]
+
+# Как узнать язык поста, если автор его не указал — или указал неправильно:
+#   "untagged" — угадывать, когда метки нет или буквы говорят, что метка врёт
+#                (пост с "en" кириллицей или иероглифами);
+#   "always"   — догадка всегда главнее метки автора;
+#   "off"      — только метка автора.
+# Письменности, которые выдают язык (китайский, японский, корейский, арабский, грузинский,
+# кириллица…), узнаются даром; латиница — через python3-langdetect, если он установлен.
+detect_language = "untagged"
+
+# Самый короткий пост (в словах), на котором пробуется догадка по словам: на коротких она врёт.
+detect_min_words = 12
+
+# Среди каких языков угадывает python3-langdetect: "auto" — латиница и кириллица (только их
+# тексты и доходят до догадки по словам, остальные узнаются по письменности) — около 11 МБ
+# памяти; "all" — все его 55 языков, около 60 МБ, ответы те же.
+detect_among = "auto"
+
+# Шире, чем знает твой сервер. Серверы, чья публичная лента (посты их людей) тоже идёт в
+# Федерацию, пока она открыта, и серверы, чьи ленты тегов идут в твои ленты тегов (лента #linux
+# берёт #linux и у них): читается без аккаунта, каждый новый пост подтягивается на твой сервер
+# по адресу — на него отвечают и ставят лайк, как на любой другой, и твой сервер с тех пор его
+# знает. Сервер — не чаще раза в extra_minutes, до 20 постов за раз. Многие закрывают такие
+# ленты от чужих (GoToSocial — всегда): тогда сервер оставляется в покое на несколько часов.
+# Например ["mastodon.social", "fosstodon.org"].
+federated_extra = []
+tags_extra = []
+
+# Серверы твоего «пузыря»: лента из правил с source = "bubble" читает Федерацию, только посты
+# их людей (как bubble-лента Akkoma). Например ["fosstodon.org", "mas.to"].
+bubble = []
+extra_minutes = 10
+
+# Сколько постов за раз берётся в твой сервер из ленты другого сервера (federated_extra,
+# tags_extra, bubble).
+extra_posts = 20
+
+# Сколько записей берётся из RSS-ленты и сколько символов её описания (rss_summary_chars).
+rss_items = 60
+
+# Описание записи RSS: столько символов.
+rss_summary_chars = 1200
+
+# Ленту тегов (несколько тегов в одной) спрашивать одним запросом, а не запросом на каждый
+# тег, — где сервер это умеет (Mastodon: any[], all[], none[]). false — по тегу.
+tags_one_request = false
+
+
+[lists]
+# Списки с сервера (Mastodon, GoToSocial) — отдельными лентами под основными.
+# Завести список и добавить в него человека — правым кликом по посту.
+enabled = true
+
+# Добавил человека или бота в список — его посты, его бусты и чужие бусты его постов
+# читаются в ленте списка и уходят из общих лент, чтобы не мусорили:
+#   "all"       — так с любым списком;
+#   "exclusive" — только со списками с галкой «исключающий» (сервер и сам убирает
+#                 таких из домашней ленты);
+#   "off"       — не убирать ниоткуда.
+hide_members = "all"
+
+# …и всё, что принесла лента списка, кто бы ни написал: пост того, кто переехал на другой
+# аккаунт (в списке остался старый), буст поста из списка. По спискам, которые называет
+# hide_members; там "off" — ничего. false — только по тому, кто в списке.
+hide_posts = true
+
+# Из каких лент убирать (названия — как в [lanes]); "marked" — ленты, правила которых сами это
+# отмечают (marks = ["hide_listed"]; наборы отмечают «Ленту», «Ботов», «Федерацию», «Локальную»).
+hide_in = ["marked"]
+
+# Как часто перечитывать сами списки и кто в них (и твоих заглушённых и заблокированных),
+# минут.
+refresh_minutes = 10
+
+
+# Наборы лент. Набор — список лент, сверху вниз, как их показывает боковая панель;
+# `preset` в начале этой главы называет тот, что работает. Все наборы, с которыми приходит
+# fedtail, выписаны ниже — читай, меняй или напиши свой: скопируй набор, впиши своё имя в
+# каждый заголовок копии ([[lanes.sets.mine]]) и поставь preset = "mine".
+#
+# Лента — таблица. name — слово, по нему ленту называют настройки. Что она берёт: source
+# (откуда: home, local, federated, mentions, mine, bookmarks…), any (условия: пост входит,
+# если подходит под любое; внутри условия должны совпасть все ключи), none (условия,
+# которые не пускают). Как показывается: group (раздел боковой панели), read, sort, view,
+# buttons, marks… — ключи своих лент ([[lanes.custom]] выше), каждый объяснён в
+# docs/ru/lanes.md. Условие с `event` берёт лайки, подписки, заявки: лента из одних событий
+# показывает их строками, любая лента может брать их среди постов.
+# Таблица со slot = "lists" / "tags" — не лента: место, где среди остальных стоят списки
+# сервера и сохранённые ленты тегов.
+# Поменять одну ленту, не трогая набор: [[lanes.custom]] с тем же именем встаёт на место
+# ленты набора.
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Собственный набор fedtail (preset = "fedtail"), в духе Point: ответы и упоминания мне в
+# одной ленте, треды, где я отметился, — карточками, боты отдельно, «Лента» без чужих
+# разговоров.
+
+[[lanes.sets.fedtail]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+# «Лента»: ответ — только мой, мне или в треде, который мой или на который я подписан.
+# Домашняя лента Mastodon приносит ещё разговоры тех, на кого подписан, друг с другом и
+# ответы автора самому себе; здесь они не входят и ждут в «Неразобранном»
+# (lanes.unsorted). `kind = "self_thread"` в первом условии возвращает треды авторов.
+any = [
+  { any = [
+    { kind = ["post", "boost"] },
+    { author = "me" },
+    { me = ["reply", "mention", "in_my_thread"] },
+    { state = "subscribed" },
+  ] },
+  { via = "tag", switch = "@chip_tags" },
+  { kind = "boost", switch = "@chip_boosts" },
+  { state = "new_replies", switch = "@chip_threads_new" },
+]
+none = [{ author = "hidden_home" }, { author = "bot" }]
+
+[[lanes.sets.fedtail]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "bots"
+switches = ["posts_only", "unread_only"]
+badge = "quiet"
+group = "standard"
+source = "home"
+any = [{ author = "bot" }]
+
+[[lanes.sets.fedtail]]
+name = "my_posts"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mine"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.fedtail]]
+name = "to_me"
+switches = ["unread_only"]
+badge = "hot"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [
+  {},
+  { me = "reply", switch = "@chip_replies" },
+  { me = ["mention", "direct"], switch = "@chip_mentions" },
+]
+none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
+
+# «Комментарии», как на Point: треды, где я отметился, по карточке на тред, с новым —
+# вместе там, где начинается чтение.
+[[lanes.sets.fedtail]]
+name = "commented"
+switches = ["unread_only"]
+group = "personal"
+source = ["subs", "mentions"]
+view = "threads"
+threads_shown = "all"
+open_at = "first_unread"
+icon = "commented"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.fedtail]]
+name = "important"
+switches = ["posts_only", "unread_only"]
+hide_empty = true
+group = "personal"
+source = "watched"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.fedtail]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Все события, какие знает fedtail, с быстрыми фильтрами; заявки стоят здесь, пока для них
+# не показана своя лента.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.fedtail]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.fedtail]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Как веб-страница Mastodon (preset = "mastodon"): «Лента» со всем подряд, уведомления
+# (здесь: «Упоминания» + «Активность» с заявками), личные упоминания отдельно, живые
+# ленты, закладки, избранное, списки.
+
+[[lanes.sets.mastodon]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.mastodon]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.mastodon]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.mastodon]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.mastodon]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.mastodon]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Все события, какие знает fedtail, с быстрыми фильтрами; заявки стоят здесь, пока для них
+# не показана своя лента.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.mastodon]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.mastodon]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.mastodon]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.mastodon]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Как вкладки Tusky (preset = "tusky"): «Лента», уведомления (здесь: «Упоминания» вместе с
+# личными + «Активность»), локальная, федерация, личные сообщения; списки и теги вкладками.
+
+[[lanes.sets.tusky]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.tusky]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[lanes.sets.tusky]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Все события, какие знает fedtail, с быстрыми фильтрами; заявки стоят здесь, пока для них
+# не показана своя лента.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.tusky]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.tusky]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.tusky]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.tusky]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.tusky]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Как Phanpy (preset = "phanpy"): «Лента», «Упоминания» (вместе с личными), личные,
+# уведомления с заявками сверху, закладки, лайки; локальная — ярлыком.
+
+[[lanes.sets.phanpy]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.phanpy]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.phanpy]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}, { author = "followed", switch = "@chip_followed" }]
+none = [{ author = "me" }]
+
+[[lanes.sets.phanpy]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.phanpy]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Все события, какие знает fedtail, с быстрыми фильтрами; заявки стоят здесь, пока для них
+# не показана своя лента.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.phanpy]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.phanpy]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.phanpy]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.phanpy]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Как вкладки Fedilab (preset = "fedilab"): «Лента», локальная, федерация, уведомления
+# (здесь: «Упоминания» вместе с личными + «Активность»), личные сообщения; закладки и
+# избранное из его бокового меню, списки и теги.
+
+[[lanes.sets.fedilab]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.fedilab]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedilab]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedilab]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[lanes.sets.fedilab]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Все события, какие знает fedtail, с быстрыми фильтрами; заявки стоят здесь, пока для них
+# не показана своя лента.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.fedilab]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.fedilab]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.fedilab]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.fedilab]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.fedilab]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Ленты, которых нет ни в одном наборе, но которые может взять любой: назови ленту в
+# `enabled` в начале этой главы или скопируй её в свой набор.
+
+# Подписанные треды потоком комментариев (набор fedtail показывает их карточками, по
+# одной на тред: «commented»).
+[[lanes.sets.extra]]
+name = "subs"
+switches = ["unread_only"]
+group = "personal"
+source = "subs"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }]
+
+# «Комментарии», как на Point, только треды с новым — в наборе fedtail все треды.
+[[lanes.sets.extra]]
+name = "commented"
+switches = ["unread_only"]
+group = "personal"
+source = ["subs", "mentions"]
+view = "threads"
+open_at = "first_unread"
+icon = "commented"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "replies"
+switches = ["unread_only"]
+badge = "hot"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "reply" }]
+none = [{ visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }, { author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.extra]]
+name = "requests"
+switches = ["unread_only"]
+group = "personal"
+any = [{ event = "follow_request" }]
+
+# «Сеть»: федерация без людей своего сервера — то, что приносят другие серверы.
+[[lanes.sets.extra]]
+name = "network"
+switches = ["posts_only"]
+group = "standard"
+icon = "federated"
+source = "federated"
+read = "browse"
+any = [{ author = "remote" }]
+
+# Упоминания от чужих (ни они на меня, ни я на них не подписан): оттуда приходит спам —
+# лента, чтобы смотреть на него отдельно, или (в `none` у «Ко мне») не пускать.
+[[lanes.sets.extra]]
+name = "stranger_mentions"
+switches = ["unread_only"]
+group = "personal"
+icon = "mentions"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "mention", author = ["stranger", "not_follower"] }]
+none = [{ author = ["followed", "follower", "me"] }]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Что это за набор, одной строкой: редактор лент показывает её рядом с именем набора.
+# Своему набору тоже можно дать здесь строку.
+
+[lanes.about]
+fedtail = { ru = "по умолчанию: «Ко мне» с быстрыми фильтрами, подписки на треды, важные люди, боты отдельно", en = "the default: To me with quick filters, followed threads, important people, bots apart" }
+mastodon = { ru = "как веб Мастодона: Лента со всем, Упоминания и Активность, Личные, Локальная, Федерация, Закладки, Избранное", en = "as Mastodon's web page: Home with everything, Mentions and Activity, Direct, Local, Federated, Bookmarks, Favourites" }
+tusky = { ru = "как вкладки Tusky: Лента, Упоминания (и личные) и Активность, Локальная, Федерация, Личные", en = "as Tusky's tabs: Home, Mentions (private too) and Activity, Local, Federated, Direct" }
+phanpy = { ru = "как Phanpy: Лента, Упоминания (и личные), Личные, Активность, Закладки, Лайки, Локальная", en = "as Phanpy: Home, Mentions (private too), Direct, Activity, Bookmarks, Likes, Local" }
+fedilab = { ru = "как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания (и личные) и Активность, Личные, Закладки, Избранное", en = "as Fedilab's tabs: Home, Local, Federated, Mentions (private too) and Activity, Direct, Bookmarks, Favourites" }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Ленты, которые раньше назывались иначе (до 0.15): старые имена работают везде, где
+# называют ленту — в настройках, в командной строке, в том, что запомнило окно.
+
+[lanes.renamed]
+people = "home"
+comments = "replies"
+global = "federated"
+favourites = "my_likes"
+mine = "my_posts"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Разделы боковой панели, сверху вниз, и как каждый называется. Лента стоит в разделе,
+# который называет её `group` — любое слово: то, которого здесь нет, заводит раздел с таким
+# именем, после этих (section_order в начале главы расставляет их по-своему). own = true:
+# куда идёт лента, не назвавшая раздел. "lists" и "tags" — где стоят списки сервера и
+# сохранённые ленты тегов.
+
+[lanes.sections.standard]
+title = { ru = "Стандартные", en = "Timelines" }
+
+[lanes.sections.personal]
+title = { ru = "Личные", en = "Personal" }
+own = true
+
+[lanes.sections.lists]
+title = { ru = "Списки", en = "Lists" }
+
+[lanes.sections.tags]
+title = { ru = "Теги", en = "Tags" }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Слова лент, по именам, сразу для всех наборов: title (как ленту называет боковая панель),
+# tip (что говорит её строка по запросу), icon (картинка), marks (для чего её берёт слово
+# "marked" в настройках: notify — уведомление о новом, sound — звук, icon_count — её число
+# на значке, languages — только читаемые языки, hide_listed — без постов людей из списков),
+# group (раздел ленты, у которой нет таблицы: "unsorted" — то, что не взяла ни одна лента).
+# Таблица самой ленты может сказать любое из них сама; лента без слов называется именем.
+
+[lanes.words.activity]
+marks = ["notify"]
+title = { ru = "Активность", en = "Activity" }
+tip = { ru = "Кто лайкнул и продвинул твои посты, кто на тебя подписался", en = "Who liked and boosted your posts, who followed you" }
+icon = "activity"
+
+[lanes.words.bookmarks]
+title = { ru = "Закладки", en = "Bookmarks" }
+tip = { ru = "Посты, отложенные в закладки (меню ⋯ у поста)", en = "Posts you put aside (the ⋯ menu of a post)" }
+icon = "bookmarks"
+
+[lanes.words.bots]
+marks = ["hide_listed"]
+title = { ru = "Боты", en = "Bots" }
+tip = { ru = "Боты из тех, кого читаешь", en = "Bots among those you follow" }
+icon = "bots"
+
+[lanes.words.commented]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Комментарии", en = "Comments" }
+tip = { ru = "Как на Point: твои посты, треды, на которые подписан, и те, где ты комментировал, по карточке на тред; щелчок открывает тред на первом новом", en = "As on Point: your posts, threads you follow and those you commented in, a card a thread; a click opens the thread at the first new comment" }
+icon = "commented"
+
+[lanes.words.direct]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Личные", en = "Direct" }
+tip = { ru = "Личные сообщения: посты, видные только упомянутым", en = "Private messages: posts only the mentioned can see" }
+icon = "direct"
+
+[lanes.words.federated]
+marks = ["languages", "hide_listed"]
+title = { ru = "Федерация", en = "Federated" }
+tip = { ru = "Всё, что твоя нода знает со всех серверов. Листается, без счётчика", en = "Everything your server knows from all servers. Browse, no counter" }
+icon = "federated"
+
+[lanes.words.home]
+marks = ["hide_listed"]
+title = { ru = "Лента", en = "Home" }
+tip = { ru = "Те, кого ты читаешь (и теги, на которые подписан), без ботов", en = "Those you follow (and tags you follow), without bots" }
+icon = "home"
+
+[lanes.words.important]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Важные люди", en = "Important people" }
+tip = { ru = "Посты тех, на ком колокольчик (🔔 в профиле)", en = "Posts of those you rang the bell on (🔔 in a profile)" }
+icon = "important"
+
+[lanes.words.local]
+marks = ["languages", "hide_listed"]
+title = { ru = "Локальная", en = "Local" }
+tip = { ru = "Вся твоя нода. Листается, без счётчика", en = "Your whole server. Browse, no counter" }
+icon = "local"
+
+[lanes.words.mentions]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Упоминания", en = "Mentions" }
+tip = { ru = "Где тебя тегнули в чужом разговоре", en = "Where you were tagged in someone else's talk" }
+icon = "mentions"
+
+[lanes.words.my_likes]
+title = { ru = "Мои лайки", en = "My likes" }
+tip = { ru = "Посты, которые ты лайкнул", en = "Posts you liked" }
+icon = "my_likes"
+
+[lanes.words.my_posts]
+title = { ru = "Мои записи", en = "My posts" }
+tip = { ru = "Твои посты и комменты", en = "Your posts and replies" }
+icon = "my_posts"
+
+[lanes.words.network]
+title = { ru = "Сеть", en = "Network" }
+tip = { ru = "Федерация без людей своего сервера", en = "Federated without your own server's people" }
+
+[lanes.words.replies]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Ответы мне", en = "Replies to me" }
+tip = { ru = "Ответы на твои посты и комменты", en = "Replies to your posts and comments" }
+icon = "replies"
+
+[lanes.words.requests]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Заявки", en = "Follow requests" }
+tip = { ru = "Кто просится в подписчики", en = "Who asks to follow you" }
+icon = "requests"
+
+[lanes.words.stranger_mentions]
+title = { ru = "Упоминания чужих", en = "Strangers' mentions" }
+tip = { ru = "Упоминания от тех, кто не подписан ни на тебя, ни ты на них", en = "Mentions from people who neither follow you nor you them" }
+
+[lanes.words.subs]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Подписки", en = "Subscriptions" }
+tip = { ru = "Новые комменты в тредах, на которые ты подписан, как на Point", en = "New comments in threads you subscribed to, like on Point" }
+icon = "subs"
+
+[lanes.words.tags]
+icon = "tags"
+
+[lanes.words.to_me]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Ко мне", en = "To me" }
+tip = { ru = "Ответы мне и упоминания меня — в одной ленте; быстрые фильтры их разделяют", en = "Replies to me and mentions of me, in one lane; quick filters part them" }
+icon = "replies"
+
+[lanes.words.unsorted]
+group = "personal"
+title = { ru = "Неразобранное", en = "Unsorted" }
+tip = { ru = "Что пришло, а ни одна лента не взяла (только при своих лентах)", en = "What came and no lane took (only with lanes of your own)" }
+icon = "list"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+#  2. Внешний вид
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [appearance]
@@ -167,7 +1128,7 @@ text_markup = true
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
-#  2. Окно и раскладка
+#  3. Окно и раскладка
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [window]
@@ -401,217 +1362,6 @@ previous_comment = "["
 # В треде: свернуть ветку (и из глубокого ответа — всю ветку его верхнего комментария),
 # ещё раз — развернуть.
 fold_branch = "-"
-
-
-# ══════════════════════════════════════════════════════════════════════════════════════
-#  3. Ленты
-# ══════════════════════════════════════════════════════════════════════════════════════
-
-
-[lanes]
-# Каждая лента — правило (docs/ru/dev/feeds.md); с fedtail идут наборы таких — выбери:
-#   "fedtail"  — в духе Point: Ко мне (ответы и упоминания, быстрые фильтры для каждого),
-#                подписки на треды, Важные люди, боты отдельно;
-#   "mastodon" — как веб-страница Mastodon: Лента со всем, Упоминания + Активность (заявки
-#                сверху), Личные, Локальная, Федерация, Закладки, Избранное;
-#   "tusky"    — как вкладки Tusky: Лента, Упоминания (и личные) + Активность, Локальная,
-#                Федерация, Личные;
-#   "phanpy"   — как Phanpy: Лента, Упоминания (и личные), Личные, Активность, Закладки,
-#                Лайки, Локальная;
-#   "fedilab"  — как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания (и личные) +
-#                Активность, Личные, Закладки, Избранное.
-# Правила каждого — в fedtail/data/presets.toml; `fedtail --lanes-to-config` выписывает ленты
-# выбранного набора сюда, таблицами [[lanes.custom]], — читать и менять. [[lanes.custom]] с тем
-# же именем встаёт на место ленты набора; с новым именем — добавляет ленту.
-preset = "fedtail"
-
-# Какие ленты показывать, в этом порядке (внутри раздела слева: Стандартные, Личные);
-# [] — все из набора, в его порядке. Слово ленты есть и в подсказке к ней слева:
-#   federated — «Федерация» (Federated): всё, что нода знает со всех серверов
-#   home      — «Лента» (Home): те, на кого и на какие теги подписан (у fedtail — без ботов)
-#   local     — «Локальная» (Local): вся твоя нода
-#   bots      — «Боты» (Bots): подписки, только боты
-#   my_posts  — «Мои записи» (My posts)
-#   direct    — «Личные» (Direct): личные сообщения (видны только упомянутым)
-#   to_me     — «Ко мне» (To me): ответы и упоминания в одной ленте, с быстрыми фильтрами
-#   important — «Важные люди» (Important people): посты тех, на ком колокольчик (🔔 в
-#               профиле); видна, когда в ней что-то есть
-#   subs      — «Подписки» (Subscriptions): новое в тредах, на которые подписан (как на Point)
-#   bookmarks — «Закладки»          my_likes — «Мои лайки»
-#   activity  — «Активность»: кто лайкнул, бустнул, подписался; заявки сверху
-#   mentions, replies, requests — ленты до «Ко мне» и заявки отдельной лентой: ни в одном
-#               наборе, но этот список может их назвать
-#   "lists", "tags" — где стоят списки сервера и сохранённые ленты тегов (иначе — в конце);
-#   своя лента — по имени ("posts").
-# Старые имена тоже понимаются: people = home, comments = replies, global = federated,
-# mine = my_posts, favourites = my_likes, "custom:posts" = posts.
-# federated и local тянутся, только пока открыты, и без счётчиков: их листают.
-enabled = []
-
-# Аккаунты, которые считать ботами, даже если у них нет галки «бот».
-# Свой сервер — просто "ник", чужой — "ник@сервер".
-extra_bots = []
-
-# В каких лентах на старте включено «только посты» (без комментов/ответов).
-# Галка над лентой тоже это переключает — выбор запоминается.
-posts_only = []
-
-# «Неразобранное»: что пришло из лент, читаемых подряд (Лента, Упоминания, списки…), а ни одна
-# лента не взяла, — чтобы правило не потеряло ни поста. Видно, только когда в нём что-то есть.
-# false — спрятано насовсем и не собирается.
-unsorted = true
-
-# Ленты, которые листают, а не читают подряд (Федерация, Локальная, пока ленивая): столько
-# самых новых из всего потока, пока лента открыта, — чтобы было что полистать, как бы быстро ни
-# лил релей. «Раньше» уходит дальше назад; что за этим числом — уходит при следующем обновлении.
-browse_keep = 200
-
-# Лента для просмотра (Федерация, Локальная), в которой фильтр языков оставил меньше страницы
-# постов, сама догружает столько страниц постарше, пока открыта; догруженное держится сверх
-# browse_keep. 0 — нет.
-browse_fill_pages = 5
-
-# Воронка над лентой («только видео», «без бустов») оставляет от страницы мало постов:
-# «Старее» (и конец ленты в виду) просит сразу до стольких страниц, пока не наберётся с
-# десяток прошедших её; лента для просмотра так же догружается сама. 1 — по странице за раз,
-# как без воронки.
-funnel_fill_pages = 5
-
-# Где открывается лента для просмотра (Федерация, Локальная): "last" — где стоял в ней
-# прошлый раз; если того места уже нет (за сутки релеи нанесут тысячи постов, и старое
-# уходит) — как "hours"; "hours" — на первом посте последних browse_start_hours часов;
-# "newest" — на самом свежем, старое — прокруткой назад.
-browse_start = "last"
-
-# browse_start = "hours" (и "last", когда места уже нет): со скольких часов назад.
-browse_start_hours = 2
-
-# Разделы боковой панели в твоём порядке, по именам: "standard" (Стандартные), "personal"
-# (Личные), "lists", "tags" и любые свои (group = "…" у ленты заводит раздел). Не названные
-# здесь идут следом в порядке наборов, свои — после них. [] — порядок наборов.
-sections = []
-
-# Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
-# name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }),
-# tip (что это за лента, одной строкой: подсказка её строки; по языкам, как title),
-# icon (картинка: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
-# bookmarks, my_likes, activity, requests, list, tags, star_full и библиотека: important,
-# commented, people, heart, fire, news, rss, mountain, fish, car… — список в редакторе лент), any (условия: пост входит, если подходит
-# под любое; внутри условия должны совпасть все ключи), none (условия, которые не пускают).
-# Ключи условия: source (home, local, federated, mentions, mine, bookmarks, favourites, subs,
-# "list:<id>"; нет — догадывается по остальным), author (me, followed, local, remote, bot,
-# stranger, "@ник@сервер", "domain:сервер"…), kind (post, reply, self_reply, boost, self_boost,
-# quote, poll), me (reply, reply_to_post, reply_to_comment, mention, direct), visibility, has
-# (media, image, video, cw, link, "tag:x"), lang, state (unread, bookmarked…), target (для
-# бустов: my_post, my_comment, post, comment, seen, read), age ("<1d", ">2d"; age_of =
-# "original" — у бустнутого поста), likes / boosts / replies (">10"), text ([["слово", "и
-# слово"], ["или это"]]), event (favourite, reblog, follow, poll, update, status: эти строки
-# Активности, каждая строкой среди постов), buttons (кнопки под её постами, в этом порядке:
-# reply, like, boost, thread, bookmark, read, open; нет — по тому, что за запись: запись RSS не
-# предлагает ни ответа, ни лайка, ни буста), marks (для чего ленту берёт слово "marked" в
-# настройках: notify, sound, icon_count, languages, hide_listed). Лента встаёт в «Личные» (group = "standard" — в «Стандартные», любое другое слово — в раздел с таким именем): туда,
-# где её назвал lanes.enabled ("custom:feed"), иначе в конец. Свободные ленты наполняются из
-# того, что уже лежит в базе. Пример (тогда убери строку custom = [] ниже):
-#   [[lanes.custom]]
-#   name = "feed"
-#   title = "Лента"
-#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
-#   none = [{ kind = "boost", target = "seen" }]
-custom = []
-
-# Ленты из нескольких тегов — в боковой панели, группой «Теги» (подгружаются, пока
-# открыты, как «Федерация»). Каждая — таблица [[lanes.tag_groups]]: name — как назвать,
-# any — любой из тегов, all — все сразу, none — кроме. То же можно набрать в поиске
-# («#грузия #georgia -#политика») и сохранить кнопкой «＋ в ленты» — тогда здесь писать не
-# нужно. Пример (строку tag_groups = [] ниже тогда убери — TOML не даст и то, и то):
-#   [[lanes.tag_groups]]
-#   name = "Грузия"
-#   any = ["грузия", "georgia", "tbilisi"]
-#   none = ["политика"]
-tag_groups = []
-
-# Языки, которые ты читаешь: посты на других уходят из лент languages_in. Пусто — все языки.
-# Две-три маленькие буквы (ISO 639), например ["ru", "en"]. Пост, язык которого не понять
-# (метки нет, слишком короткий для догадки), остаётся всегда.
-languages = []
-
-# Где работает фильтр языков: слова лент, "lists" — все списки, "tags" — все ленты тегов.
-# "marked" — ленты, правила которых сами это отмечают (marks = ["languages"]; наборы отмечают
-# «Федерацию» и «Локальную»). Ленты (home) по умолчанию нет: на кого подписан, того читаешь целиком.
-languages_in = ["marked", "tags"]
-
-# Как узнать язык поста, если автор его не указал — или указал неправильно:
-#   "untagged" — угадывать, когда метки нет или буквы говорят, что метка врёт
-#                (пост с "en" кириллицей или иероглифами);
-#   "always"   — догадка всегда главнее метки автора;
-#   "off"      — только метка автора.
-# Письменности, которые выдают язык (китайский, японский, корейский, арабский, грузинский,
-# кириллица…), узнаются даром; латиница — через python3-langdetect, если он установлен.
-detect_language = "untagged"
-
-# Самый короткий пост (в словах), на котором пробуется догадка по словам: на коротких она врёт.
-detect_min_words = 12
-
-# Среди каких языков угадывает python3-langdetect: "auto" — латиница и кириллица (только их
-# тексты и доходят до догадки по словам, остальные узнаются по письменности) — около 11 МБ
-# памяти; "all" — все его 55 языков, около 60 МБ, ответы те же.
-detect_among = "auto"
-
-# Шире, чем знает твой сервер. Серверы, чья публичная лента (посты их людей) тоже идёт в
-# Федерацию, пока она открыта, и серверы, чьи ленты тегов идут в твои ленты тегов (лента #linux
-# берёт #linux и у них): читается без аккаунта, каждый новый пост подтягивается на твой сервер
-# по адресу — на него отвечают и ставят лайк, как на любой другой, и твой сервер с тех пор его
-# знает. Сервер — не чаще раза в extra_minutes, до 20 постов за раз. Многие закрывают такие
-# ленты от чужих (GoToSocial — всегда): тогда сервер оставляется в покое на несколько часов.
-# Например ["mastodon.social", "fosstodon.org"].
-federated_extra = []
-tags_extra = []
-
-# Серверы твоего «пузыря»: лента из правил с source = "bubble" читает Федерацию, только посты
-# их людей (как bubble-лента Akkoma). Например ["fosstodon.org", "mas.to"].
-bubble = []
-extra_minutes = 10
-
-# Сколько постов за раз берётся в твой сервер из ленты другого сервера (federated_extra,
-# tags_extra, bubble).
-extra_posts = 20
-
-# Сколько записей берётся из RSS-ленты и сколько символов её описания (rss_summary_chars).
-rss_items = 60
-
-# Описание записи RSS: столько символов.
-rss_summary_chars = 1200
-
-# Ленту тегов (несколько тегов в одной) спрашивать одним запросом, а не запросом на каждый
-# тег, — где сервер это умеет (Mastodon: any[], all[], none[]). false — по тегу.
-tags_one_request = false
-
-
-[lists]
-# Списки с сервера (Mastodon, GoToSocial) — отдельными лентами под основными.
-# Завести список и добавить в него человека — правым кликом по посту.
-enabled = true
-
-# Добавил человека или бота в список — его посты, его бусты и чужие бусты его постов
-# читаются в ленте списка и уходят из общих лент, чтобы не мусорили:
-#   "all"       — так с любым списком;
-#   "exclusive" — только со списками с галкой «исключающий» (сервер и сам убирает
-#                 таких из домашней ленты);
-#   "off"       — не убирать ниоткуда.
-hide_members = "all"
-
-# …и всё, что принесла лента списка, кто бы ни написал: пост того, кто переехал на другой
-# аккаунт (в списке остался старый), буст поста из списка. По спискам, которые называет
-# hide_members; там "off" — ничего. false — только по тому, кто в списке.
-hide_posts = true
-
-# Из каких лент убирать (названия — как в [lanes]); "marked" — ленты, правила которых сами это
-# отмечают (marks = ["hide_listed"]; наборы отмечают «Ленту», «Ботов», «Федерацию», «Локальную»).
-hide_in = ["marked"]
-
-# Как часто перечитывать сами списки и кто в них (и твоих заглушённых и заблокированных),
-# минут.
-refresh_minutes = 10
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════

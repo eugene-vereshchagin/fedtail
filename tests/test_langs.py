@@ -315,7 +315,7 @@ if __name__ == "__main__":
 
 class PresetTest(unittest.TestCase):
     """lanes.preset: the sets of lanes fedtail comes with, every lane a rule
-    (fedtail/data/presets.toml)."""
+    (the config's [lanes.sets] (the reference: fedtail/data/config.example.en.toml))."""
 
     def check(self, **lanes_kw):
         return config.validate({"lanes": lanes_kw})
@@ -329,7 +329,7 @@ class PresetTest(unittest.TestCase):
                 built = [x.name for x in lanes.enabled(cfg)]
                 self.assertIn("home", built)
                 self.assertIn("activity", built)
-                self.assertIn(name, config.CHOICES[("lanes", "preset")])
+                self.assertIn(name, presets.names())
                 rules, w = custom.load(cfg)
                 self.assertEqual(w, [])
                 self.assertTrue(all(not c.warnings for c in rules), name)

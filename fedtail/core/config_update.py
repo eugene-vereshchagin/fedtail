@@ -89,7 +89,64 @@ def _has(have, sec, key):
     return old is not None and key in have.get(old[0], set())
 
 
+# The sets of lanes and their words ([[lanes.sets.<set>]], [lanes.words.<lane>],
+# [lanes.sections.<section>], [lanes.renamed]) are not options: tables read whole. What
+# follows adds, refreshes and rebuilds options a line at a time — so the sets are cut out
+# first and put back in one piece: the file's own when it has any, else the reference's.
+_SETS = re.compile(r"^\s*\[\[?lanes\.(?:sets|words|sections|renamed|about)"
+                   r"(?:\.[A-Za-z0-9_.]+)?\]\]?")
+
+
+def cut_sets(text):
+    """(the text without the sets' tables, their lines): each such table with the
+    comments above it."""
+    lines = text.splitlines()
+    heads = [i for i, x in enumerate(lines) if _HEADER.match(x)]
+    starts = []
+    for n, h in enumerate(heads):
+        low = heads[n - 1] + 1 if n else 0
+        start = h
+        while start > low and (not lines[start - 1].strip() or _is_comment(lines[start - 1])):
+            start -= 1
+        starts.append(start)
+    rest, sets = lines[:starts[0]] if starts else list(lines), []
+    for n, h in enumerate(heads):
+        part = lines[starts[n]:starts[n + 1] if n + 1 < len(heads) else len(lines)]
+        (sets if _SETS.match(lines[h]) else rest).extend(part)
+    while sets and not sets[-1].strip():
+        sets.pop()
+    while sets and not sets[0].strip():
+        sets.pop(0)
+    return "\n".join(rest) + ("\n" if text.endswith("\n") else ""), sets
+
+
+def with_sets(text, sets):
+    """The text with the sets' tables put in: after the chapter of the lanes ([lanes],
+    [lists]) — before whatever section follows them — or at the end."""
+    if not sets:
+        return text
+    lines = text.splitlines()
+    plain = [(i, _HEADER.match(x).group(1)) for i, x in enumerate(lines)
+             if _HEADER.match(x) and not x.lstrip().startswith("#")
+             and "." not in _HEADER.match(x).group(1)]
+    last = max((n for n, (_i, name) in enumerate(plain) if name in ("lanes", "lists")),
+               default=None)
+    at = len(lines)
+    if last is not None and last + 1 < len(plain):
+        at = plain[last + 1][0]
+        while at > 0 and (not lines[at - 1].strip() or _is_comment(lines[at - 1])):
+            at -= 1
+    while at > 0 and not lines[at - 1].strip():
+        at -= 1
+    after = lines[at:]
+    while after and not after[0].strip():
+        after.pop(0)
+    out = lines[:at] + ["", ""] + list(sets) + (["", ""] + after if after else [])
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
 def missing(user_text, example_text):
+    user_text, example_text = cut_sets(user_text)[0], cut_sets(example_text)[0]
     have = mentioned(user_text)
     return [f"{sec}.{key}" for sec, opts in parse_example(example_text).items()
             for key, _ in opts if not _has(have, sec, key)]
@@ -195,8 +252,17 @@ def refresh(user_text, example_text, report=None):
 
 def update(user_text, example_text, report=None):
     """User text with every missing option added (commented) to its section, the
-    explanations refreshed and options of older versions dropped (see refresh)."""
+    explanations refreshed and options of older versions dropped (see refresh). The sets
+    of lanes: the file's own as they are; a file without them gets the reference's."""
+    user_text, own = cut_sets(user_text)
+    example_text, theirs = cut_sets(example_text)
     rep = {} if report is None else report
+    if not own:
+        rep["sets"] = True  # the sets of lanes written into the file
+    return with_sets(_update(user_text, example_text, rep), own or theirs)
+
+
+def _update(user_text, example_text, rep):
     user_text = renamed(user_text, rep)
     rep["added"] = missing(user_text, example_text)
     user_text = refresh(user_text, example_text, rep)
@@ -286,7 +352,14 @@ def _tables(value):
 def rebuild(user_text, example_text, report=None):
     """The reference file, chapter by chapter, with every value the user set put in
     its place. Options this version doesn't know are kept at the end of their
-    section with a note. The user's own comments are not carried over."""
+    section with a note. The user's own comments are not carried over — but the sets of
+    lanes are the file's own as they are (the reference's, when it has none)."""
+    user_text, own = cut_sets(user_text)
+    example_text, theirs = cut_sets(example_text)
+    return with_sets(_rebuild(user_text, example_text, report), own or theirs)
+
+
+def _rebuild(user_text, example_text, report=None):
     import tomllib
 
     from .config import from_file, to_file
@@ -379,7 +452,7 @@ def lanes_to_config(user_text, report=None):
             if isinstance(x, dict) and x.get("name")}
     from .custom import shown_names
     shown = set(shown_names(cfg))  # what lanes.enabled hides stays the set's (and hidden)
-    todo = [x for x in presets.lanes_of(preset) if x.get("name") not in mine
+    todo = [x for x in presets.lanes_of(preset, cfg) if x.get("name") not in mine
             and x.get("name") in shown]
     if report is not None:
         report["written"] = [x["name"] for x in todo]

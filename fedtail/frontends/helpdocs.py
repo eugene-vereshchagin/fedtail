@@ -216,7 +216,7 @@ def _index(lang):
         for key, value in i18n.strings(lang).items():
             if isinstance(value, str) and value:
                 idx.setdefault(_norm(value), []).append(key)
-        # a lane's row says what the sets' file says of it (presets.toml [words.<name>]
+        # a lane's row says what the sets' file says of it (the config's [lanes.words.<name>]
         # tip): its hint is "tip_<name>", as when those words were strings here
         from ..core import presets
         for name in sorted(presets.known_names()):

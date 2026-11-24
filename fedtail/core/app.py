@@ -282,6 +282,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._lists_checked = None  # monotonic time of the last check; None: never
         self._announced_at = None   # poll.announcements_minutes: asked last (monotonic)
         self._announced_sig = None
+        from . import presets
+        presets.use(cfg)  # the sets and the lanes' words at work: this config's
         self.customs = custom.load(cfg)[0]  # free lanes, [[lanes.custom]]
         self._following = None    # account ids I follow, for the free lanes' atoms
         self._world_version = 0   # bumped when what the rules know around posts changes

@@ -42,9 +42,9 @@
 #                        (fedtail COMMAND -h — about each one in detail)
 #
 # Chapters:
-#   1. Appearance .................. [appearance]
-#   2. Window and layout ........... [window] [keys]
-#   3. Lanes ....................... [lanes] [lists]
+#   1. Lanes ....................... [lanes] [lists]
+#   2. Appearance .................. [appearance]
+#   3. Window and layout ........... [window] [keys]
 #   4. Reading ..................... [reading]
 #   5. The post card ............... [card]
 #   6. Threads and following them .. [threads]
@@ -63,7 +63,971 @@
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
-#  1. Appearance
+#  1. Lanes
+# ══════════════════════════════════════════════════════════════════════════════════════
+
+
+[lanes]
+# Every lane is a rule (docs/en/dev/feeds.md); a set of them comes with fedtail — pick one:
+#   "fedtail"  — Point-style: To me (replies and mentions, quick filters for each), followed
+#                threads, Important people, bots apart;
+#   "mastodon" — as Mastodon's web page: Home with everything, Mentions + Activity (follow
+#                requests on top), Direct, Local, Federated, Bookmarks, Favourites;
+#   "tusky"    — as Tusky's tabs: Home, Mentions (private ones too) + Activity, Local,
+#                Federated, Direct;
+#   "phanpy"   — as Phanpy: Home, Mentions (private ones too), Direct, Activity, Bookmarks,
+#                Likes, Local;
+#   "fedilab"  — as Fedilab's tabs: Home, Local, Federated, Mentions (private ones too) +
+#                Activity, Direct, Bookmarks, Favourites.
+# Every set is written out at the end of this chapter ("The sets of lanes"), a table a lane:
+# read them, change them — or write a set of your own there and name it here. A
+# [[lanes.custom]] of the same name takes a set's lane's place; a new name adds a lane.
+preset = "fedtail"
+
+# Which lanes to show, in this order (within a section on the left: Timelines, Personal);
+# [] — all of the set's, in its order. A lane's word is in its tooltip on the left too:
+#   federated — "Federated": everything your server knows from all servers
+#   home      — "Home": the people and tags you follow (fedtail's: without bots)
+#   local     — "Local": your whole server
+#   bots      — "Bots": the people you follow, bots only
+#   my_posts  — "My posts"
+#   direct    — "Direct": private messages (visible to the mentioned only)
+#   to_me     — "To me": replies and mentions in one lane, with quick filters for each
+#   important — "Important people": posts of those you rang the bell on (a profile's 🔔);
+#               shown once there is any
+#   subs      — "Subscriptions": what's new in threads you follow (as on Point)
+#   bookmarks — "Bookmarks"         my_likes — "My likes"
+#   activity  — "Activity": who liked, boosted, followed you; follow requests on top
+#   mentions, replies, requests — the lanes before To me, and follow requests as a lane:
+#               in no set, any list here may name them
+#   "lists", "tags" — where the server's lists and the saved tag lanes stand (else at the end);
+#   a lane of your own — by its name ("posts").
+# The old names are understood too: people = home, comments = replies, global = federated,
+# mine = my_posts, favourites = my_likes, "custom:posts" = posts.
+# federated and local are fetched only while open, and without counts: they are browsed.
+enabled = []
+
+# Accounts to count as bots even if they have no "bot" tick.
+# Your server — just "nick", another one — "nick@server".
+extra_bots = []
+
+# In which lanes "posts only" (without comments/replies) is on at start.
+# The tick over a lane switches it too — the choice is remembered.
+posts_only = []
+
+# "Unsorted": what came from the lanes read through (Home, Mentions, lists…) and no lane took,
+# so a rule never loses a post. Shown only while something is in it. false — hidden for good
+# and not collected.
+unsorted = true
+
+# Lanes you browse rather than read through (Federated, Local while lazy): the newest this
+# many of the whole stream, taken while the lane is open — something to scroll through however
+# fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update.
+browse_keep = 200
+
+# A browse lane (Federated, Local) the languages filter left with less than a page asks this
+# many pages older by itself while it is open; what they bring is kept beyond browse_keep.
+# 0 — no.
+browse_fill_pages = 5
+
+# The funnel over a lane ("only video", "no boosts") leaves few posts of a page: "Older" (and
+# the lane's end in sight) asks up to this many pages at once, till it has some ten that
+# pass it; a browse lane fills itself so too. 1 — a page each time, as without the funnel.
+funnel_fill_pages = 5
+
+# Where a browse lane (Federated, Local) opens: "last" — where you stood in it last time;
+# that place gone (relays bring thousands of posts a day, and the old ones go) — as "hours";
+# "hours" — at the first post of the last browse_start_hours hours; "newest" — at the
+# freshest, the older ones a scroll back.
+browse_start = "last"
+
+# browse_start = "hours" (and "last" when its place is gone): from how many hours back.
+browse_start_hours = 2
+
+# The sidebar's sections in your order, by their names: "standard" (Timelines), "personal",
+# "lists", "tags" and any of your own (a lane's group = "…" makes one). Those not named
+# here follow in the sets' order, your own after them. [] — the sets' order.
+section_order = []
+
+# Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
+# name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
+# tip (what the lane is, in a line: its row's tooltip; per language as the title),
+# icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
+# bookmarks, my_likes, activity, requests, list, tags, star_full and the library: important,
+# commented, people, heart, fire, news, rss, mountain, fish, car… — the lane editor lists them), any (conditions: a post goes in if it
+# matches any of them; inside a condition every key must match), none (conditions that keep a
+# post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
+# favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,
+# remote, bot, stranger, "@nick@server", "domain:server"…), kind (post, reply, self_reply,
+# boost, self_boost, quote, poll), me (reply, reply_to_post, reply_to_comment, mention,
+# direct), visibility, has (media, image, video, cw, link, "tag:x"), lang, state (unread,
+# bookmarked…), target (for boosts: my_post, my_comment, post, comment, seen, read), age
+# ("<1d", ">2d"; age_of = "original" — of a boosted post), likes / boosts / replies (">10"),
+# text ([["word", "and word"], ["or this"]]), event (favourite, reblog, follow, poll, update,
+# status: those rows of Activity, a line each among the posts), buttons (the buttons under its
+# posts, in this order: reply, like, boost, thread, bookmark, read, open; none — by what the
+# item is: an RSS item offers no reply, like or boost), marks (what the options' word
+# "marked" picks the lane for: notify, sound, icon_count, languages, hide_listed). A lane stands in "Personal" (group =
+# "standard" — in "Timelines", any other word — in a section of that name): where lanes.enabled names it ("custom:feed"), else at the end.
+# The free lanes fill from what is stored already. An example (then take away the
+# custom = [] line below):
+#   [[lanes.custom]]
+#   name = "feed"
+#   title = "Feed"
+#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
+#   none = [{ kind = "boost", target = "seen" }]
+custom = []
+
+# Lanes of several tags — in the sidebar, in the "Tags" group (fetched while
+# open, like "Federated"). Each is a table [[lanes.tag_groups]]: name — what to call it,
+# any — any of the tags, all — all at once, none — without. The same can be typed in the search
+# ("#грузия #georgia -#politics") and kept with the "＋ to lanes" button — then there's no need
+# to write it here. An example (then take away the tag_groups = [] line below — TOML won't allow both):
+#   [[lanes.tag_groups]]
+#   name = "Georgia"
+#   any = ["грузия", "georgia", "tbilisi"]
+#   none = ["politics"]
+tag_groups = []
+
+# Languages you read: posts in others leave the lanes of languages_in. Empty — every language.
+# Two or three small letters (ISO 639), like ["ru", "en"]. A post in a language that can't be
+# told (no tag, too short to guess) always stays.
+languages = []
+
+# Where the languages filter works: lane words, "lists" — every list, "tags" — every tag lane.
+# "marked" — the lanes whose rules mark themselves for it (marks = ["languages"]; the sets mark
+# Federated and Local). Home isn't there by default: whom you follow, you read whole.
+languages_in = ["marked", "tags"]
+
+# Telling a post's language when its author didn't — or tagged it wrong:
+#   "untagged" — guess when there is no tag, or when the letters say the tag can't be right
+#                (an "en" post in Cyrillic or in Chinese characters);
+#   "always"   — the guess beats the author's tag whenever there is one;
+#   "off"      — the author's tag only.
+# Scripts that give the language away (Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic…)
+# are told for free; Latin text — by python3-langdetect, if it is installed.
+detect_language = "untagged"
+
+# The shortest post (in words) the guess by words is tried on: shorter ones it gets wrong.
+detect_min_words = 12
+
+# Which languages python3-langdetect guesses among: "auto" — Latin and Cyrillic ones (only
+# their texts reach the guess by words, the others are told by their script) — some 11 MB
+# of memory; "all" — all of its 55, some 60 MB, the same answers.
+detect_among = "auto"
+
+# Wider than your server knows. Servers whose public lane (their own people's posts) also comes
+# into Federated while it's open, and servers whose tag lanes come into your lanes of tags
+# (a lane of #linux takes #linux from them too): read without an account, each new post fetched
+# into your server by its address — so it is answered and liked as any other, and your server
+# knows it from then on. A server at most every extra_minutes, up to 20 posts a time. Many keep
+# these lanes closed to strangers (GoToSocial always): then it's left for a few hours.
+# Like ["mastodon.social", "fosstodon.org"].
+federated_extra = []
+tags_extra = []
+
+# The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only
+# their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"].
+bubble = []
+extra_minutes = 10
+
+# How many posts at a time are fetched into your server from another server's lane
+# (federated_extra, tags_extra, bubble).
+extra_posts = 20
+
+# How many entries are taken from an RSS feed, and how many characters of each summary
+# (rss_summary_chars).
+rss_items = 60
+
+# An RSS entry's summary: this many characters.
+rss_summary_chars = 1200
+
+# Ask a lane of tags (several tags in one) in one request, not one per tag — where the
+# server can (Mastodon: any[], all[], none[]). false — a tag at a time.
+tags_one_request = false
+
+
+[lists]
+# The server's lists (Mastodon, GoToSocial) — as lanes of their own under the main ones.
+# Make a list and put a person in it — with a right click on a post.
+enabled = true
+
+# You put a person or a bot in a list — their posts, their boosts and others' boosts of their posts
+# are read in the list's lane and leave the general lanes, so they don't clutter them:
+#   "all"       — so with any list;
+#   "exclusive" — only with lists ticked "exclusive" (the server itself takes
+#                 such people out of Home);
+#   "off"       — don't take them out of anywhere.
+hide_members = "all"
+
+# …and whatever a list's timeline brought, whoever wrote it: a post of someone who moved
+# to another account (the list still names the old one), a boost of a list member's post.
+# By the lists hide_members names; "off" there — nothing. false — only by who is in a list.
+hide_posts = true
+
+# Which lanes to take them out of (names — as in [lanes]); "marked" — the lanes whose rules
+# mark themselves for it (marks = ["hide_listed"]; the sets mark Home, Bots, Federated, Local).
+hide_in = ["marked"]
+
+# How often to reread the lists themselves and who is in them (and your mutes and blocks),
+# minutes.
+refresh_minutes = 10
+
+
+# The sets of lanes. A set is a list of lanes, top to bottom as the sidebar shows them;
+# `preset` at the top of this chapter names the one at work. All the sets fedtail comes
+# with are written out below — read them, change them, or write one of your own: copy a
+# set, put your name into every header of the copy ([[lanes.sets.mine]]) and choose it:
+# `preset = "mine"`.
+#
+# A lane is a table. name — a word, the options name the lane by it. What it takes: source
+# (where from: home, local, federated, mentions, mine, bookmarks…), any (conditions: a post
+# goes in if it matches any of them; inside a condition every key must match), none
+# (conditions that keep a post out). How it is shown: group (its section of the sidebar),
+# read, sort, view, buttons, marks… — the keys of your own lanes ([[lanes.custom]] above),
+# each explained in docs/en/lanes.md. A condition of `event` takes likes, follows, follow
+# requests: a lane of events only shows them as rows, any lane may take them among its posts.
+# A table with slot = "lists" / "tags" is not a lane: where the server's lists and the
+# saved lanes of tags stand among the others.
+# To change one lane and leave the set alone: a [[lanes.custom]] of the same name takes the
+# set's lane's place.
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# fedtail's own set (preset = "fedtail"), in the spirit of Point: replies and mentions to
+# me in one lane, the threads I took part in as cards, bots apart, Home without strangers'
+# talk.
+
+[[lanes.sets.fedtail]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+# Home: a reply only when it is mine, to me, or in a thread of mine or one I follow.
+# Mastodon's home also brings what the followed say to each other in their threads and an
+# author's replies to themselves; left out here, they wait in Unsorted (lanes.unsorted).
+# `kind = "self_thread"` in the first condition takes the authors' own threads back.
+any = [
+  { any = [
+    { kind = ["post", "boost"] },
+    { author = "me" },
+    { me = ["reply", "mention", "in_my_thread"] },
+    { state = "subscribed" },
+  ] },
+  { via = "tag", switch = "@chip_tags" },
+  { kind = "boost", switch = "@chip_boosts" },
+  { state = "new_replies", switch = "@chip_threads_new" },
+]
+none = [{ author = "hidden_home" }, { author = "bot" }]
+
+[[lanes.sets.fedtail]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "bots"
+switches = ["posts_only", "unread_only"]
+badge = "quiet"
+group = "standard"
+source = "home"
+any = [{ author = "bot" }]
+
+[[lanes.sets.fedtail]]
+name = "my_posts"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mine"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.fedtail]]
+name = "to_me"
+switches = ["unread_only"]
+badge = "hot"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [
+  {},
+  { me = "reply", switch = "@chip_replies" },
+  { me = ["mention", "direct"], switch = "@chip_mentions" },
+]
+none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
+
+# "Comments", as on Point: the threads I took part in, a card each, those with news
+# together where reading starts.
+[[lanes.sets.fedtail]]
+name = "commented"
+switches = ["unread_only"]
+group = "personal"
+source = ["subs", "mentions"]
+view = "threads"
+threads_shown = "all"
+open_at = "first_unread"
+icon = "commented"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.fedtail]]
+name = "important"
+switches = ["posts_only", "unread_only"]
+hide_empty = true
+group = "personal"
+source = "watched"
+any = [{}]
+
+[[lanes.sets.fedtail]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.fedtail]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Every event fedtail knows of, by the quick filters; follow requests stand here while no
+# lane of their own is shown.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.fedtail]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.fedtail]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Mastodon's web page (preset = "mastodon"): Home with everything, Notifications (here:
+# Mentions + Activity, follow requests among them), Private mentions apart, the live
+# feeds, Bookmarks, Favourites, the lists.
+
+[[lanes.sets.mastodon]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.mastodon]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.mastodon]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.mastodon]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.mastodon]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.mastodon]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Every event fedtail knows of, by the quick filters; follow requests stand here while no
+# lane of their own is shown.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.mastodon]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.mastodon]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.mastodon]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.mastodon]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Tusky's tabs (preset = "tusky"): Home, Notifications (here: Mentions, private ones
+# among them, + Activity), Local, Federated, Direct messages; lists and tags as tabs.
+
+[[lanes.sets.tusky]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.tusky]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[lanes.sets.tusky]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Every event fedtail knows of, by the quick filters; follow requests stand here while no
+# lane of their own is shown.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.tusky]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.tusky]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.tusky]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.tusky]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.tusky]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Phanpy (preset = "phanpy"): Home, Mentions (private ones among them), Direct,
+# Notifications with follow requests on top, Bookmarks, Likes; Local as a shortcut.
+
+[[lanes.sets.phanpy]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.phanpy]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.phanpy]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}, { author = "followed", switch = "@chip_followed" }]
+none = [{ author = "me" }]
+
+[[lanes.sets.phanpy]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.phanpy]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Every event fedtail knows of, by the quick filters; follow requests stand here while no
+# lane of their own is shown.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.phanpy]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.phanpy]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.phanpy]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.phanpy]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Fedilab's tabs (preset = "fedilab"): Home, Local, Federated, Notifications (here:
+# Mentions, private ones among them, + Activity), Direct messages; Bookmarks and
+# Favourites from its drawer, lists and tags.
+
+[[lanes.sets.fedilab]]
+name = "home"
+switches = ["posts_only", "unread_only"]
+start = true
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+none = [{ author = "hidden_home" }]
+
+[[lanes.sets.fedilab]]
+name = "local"
+switches = ["posts_only"]
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedilab]]
+name = "federated"
+switches = ["posts_only"]
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[lanes.sets.fedilab]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[lanes.sets.fedilab]]
+name = "activity"
+switches = ["unread_only"]
+badge = "quiet"
+group = "personal"
+# Every event fedtail knows of, by the quick filters; follow requests stand here while no
+# lane of their own is shown.
+any = [
+  { event = ["favourite", "reblog", "quote", "unliked"], switch = "@actf_reactions" },
+  { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
+  { event = ["follow_request", "pending"], switch = "@actf_requests" },
+  { event = "i_followed", switch = "@actf_mine" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+]
+none = [{ event = "follow_request", apart = "requests" }]
+
+[[lanes.sets.fedilab]]
+name = "direct"
+switches = ["unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[lanes.sets.fedilab]]
+name = "bookmarks"
+switches = ["posts_only"]
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[lanes.sets.fedilab]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.fedilab]]
+name = "lists"
+slot = "lists"
+
+[[lanes.sets.fedilab]]
+name = "tags"
+slot = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Lanes no set shows, any set may take: name one in `enabled` at the top of this chapter,
+# or copy it into a set of your own.
+
+# Followed threads read as a stream of comments (fedtail's set shows them as cards, one a
+# thread: "commented").
+[[lanes.sets.extra]]
+name = "subs"
+switches = ["unread_only"]
+group = "personal"
+source = "subs"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }]
+
+# "Comments", as on Point, the threads with news only — fedtail's set has every thread.
+[[lanes.sets.extra]]
+name = "commented"
+switches = ["unread_only"]
+group = "personal"
+source = ["subs", "mentions"]
+view = "threads"
+open_at = "first_unread"
+icon = "commented"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "replies"
+switches = ["unread_only"]
+badge = "hot"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "reply" }]
+none = [{ visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "mentions"
+switches = ["posts_only", "unread_only"]
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }, { author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[lanes.sets.extra]]
+name = "my_likes"
+switches = ["posts_only"]
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[lanes.sets.extra]]
+name = "requests"
+switches = ["unread_only"]
+group = "personal"
+any = [{ event = "follow_request" }]
+
+# "The network": Federated without my own server's people — what other servers bring.
+[[lanes.sets.extra]]
+name = "network"
+switches = ["posts_only"]
+group = "standard"
+icon = "federated"
+source = "federated"
+read = "browse"
+any = [{ author = "remote" }]
+
+# Mentions from strangers (who neither follow me nor I them): where spam comes from — a
+# lane to look at it apart, or (in `none` of To me) to keep it away.
+[[lanes.sets.extra]]
+name = "stranger_mentions"
+switches = ["unread_only"]
+group = "personal"
+icon = "mentions"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "mention", author = ["stranger", "not_follower"] }]
+none = [{ author = ["followed", "follower", "me"] }]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# What each set is, in a line: the lane editor says it beside the set's name. A set of
+# your own may have its line here too.
+
+[lanes.about]
+fedtail = { ru = "по умолчанию: «Ко мне» с быстрыми фильтрами, подписки на треды, важные люди, боты отдельно", en = "the default: To me with quick filters, followed threads, important people, bots apart" }
+mastodon = { ru = "как веб Мастодона: Лента со всем, Упоминания и Активность, Личные, Локальная, Федерация, Закладки, Избранное", en = "as Mastodon's web page: Home with everything, Mentions and Activity, Direct, Local, Federated, Bookmarks, Favourites" }
+tusky = { ru = "как вкладки Tusky: Лента, Упоминания (и личные) и Активность, Локальная, Федерация, Личные", en = "as Tusky's tabs: Home, Mentions (private too) and Activity, Local, Federated, Direct" }
+phanpy = { ru = "как Phanpy: Лента, Упоминания (и личные), Личные, Активность, Закладки, Лайки, Локальная", en = "as Phanpy: Home, Mentions (private too), Direct, Activity, Bookmarks, Likes, Local" }
+fedilab = { ru = "как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания (и личные) и Активность, Личные, Закладки, Избранное", en = "as Fedilab's tabs: Home, Local, Federated, Mentions (private too) and Activity, Direct, Bookmarks, Favourites" }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Lanes once named otherwise (before 0.15): the old names still work wherever a lane is
+# named — the options, the command line, what a window remembered.
+
+[lanes.renamed]
+people = "home"
+comments = "replies"
+global = "federated"
+favourites = "my_likes"
+mine = "my_posts"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# The sidebar's sections, top to bottom, and what each is called. A lane stands in the
+# section its `group` names — any word: one not here makes a section of that name, after
+# these (section_order at the top of this chapter orders them your way). own = true: where
+# a lane that names no section goes. "lists" and "tags" are where the server's lists and
+# the saved lanes of tags stand.
+
+[lanes.sections.standard]
+title = { ru = "Стандартные", en = "Timelines" }
+
+[lanes.sections.personal]
+title = { ru = "Личные", en = "Personal" }
+own = true
+
+[lanes.sections.lists]
+title = { ru = "Списки", en = "Lists" }
+
+[lanes.sections.tags]
+title = { ru = "Теги", en = "Tags" }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# The words of the lanes, by name, for every set at once: title (what the sidebar calls
+# the lane), tip (what its row says when asked), icon (its picture), marks (what the
+# options' word "marked" picks it for: notify — a note about its news, sound, icon_count —
+# its count on the icon, languages — only the languages read, hide_listed — no posts of
+# people put in a list), group (the section of a lane that is no table: "unsorted", the
+# lane of what no lane took). A lane's own table may say any of them itself; a lane
+# without words is called by its name.
+
+[lanes.words.activity]
+marks = ["notify"]
+title = { ru = "Активность", en = "Activity" }
+tip = { ru = "Кто лайкнул и продвинул твои посты, кто на тебя подписался", en = "Who liked and boosted your posts, who followed you" }
+icon = "activity"
+
+[lanes.words.bookmarks]
+title = { ru = "Закладки", en = "Bookmarks" }
+tip = { ru = "Посты, отложенные в закладки (меню ⋯ у поста)", en = "Posts you put aside (the ⋯ menu of a post)" }
+icon = "bookmarks"
+
+[lanes.words.bots]
+marks = ["hide_listed"]
+title = { ru = "Боты", en = "Bots" }
+tip = { ru = "Боты из тех, кого читаешь", en = "Bots among those you follow" }
+icon = "bots"
+
+[lanes.words.commented]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Комментарии", en = "Comments" }
+tip = { ru = "Как на Point: твои посты, треды, на которые подписан, и те, где ты комментировал, по карточке на тред; щелчок открывает тред на первом новом", en = "As on Point: your posts, threads you follow and those you commented in, a card a thread; a click opens the thread at the first new comment" }
+icon = "commented"
+
+[lanes.words.direct]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Личные", en = "Direct" }
+tip = { ru = "Личные сообщения: посты, видные только упомянутым", en = "Private messages: posts only the mentioned can see" }
+icon = "direct"
+
+[lanes.words.federated]
+marks = ["languages", "hide_listed"]
+title = { ru = "Федерация", en = "Federated" }
+tip = { ru = "Всё, что твоя нода знает со всех серверов. Листается, без счётчика", en = "Everything your server knows from all servers. Browse, no counter" }
+icon = "federated"
+
+[lanes.words.home]
+marks = ["hide_listed"]
+title = { ru = "Лента", en = "Home" }
+tip = { ru = "Те, кого ты читаешь (и теги, на которые подписан), без ботов", en = "Those you follow (and tags you follow), without bots" }
+icon = "home"
+
+[lanes.words.important]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Важные люди", en = "Important people" }
+tip = { ru = "Посты тех, на ком колокольчик (🔔 в профиле)", en = "Posts of those you rang the bell on (🔔 in a profile)" }
+icon = "important"
+
+[lanes.words.local]
+marks = ["languages", "hide_listed"]
+title = { ru = "Локальная", en = "Local" }
+tip = { ru = "Вся твоя нода. Листается, без счётчика", en = "Your whole server. Browse, no counter" }
+icon = "local"
+
+[lanes.words.mentions]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Упоминания", en = "Mentions" }
+tip = { ru = "Где тебя тегнули в чужом разговоре", en = "Where you were tagged in someone else's talk" }
+icon = "mentions"
+
+[lanes.words.my_likes]
+title = { ru = "Мои лайки", en = "My likes" }
+tip = { ru = "Посты, которые ты лайкнул", en = "Posts you liked" }
+icon = "my_likes"
+
+[lanes.words.my_posts]
+title = { ru = "Мои записи", en = "My posts" }
+tip = { ru = "Твои посты и комменты", en = "Your posts and replies" }
+icon = "my_posts"
+
+[lanes.words.network]
+title = { ru = "Сеть", en = "Network" }
+tip = { ru = "Федерация без людей своего сервера", en = "Federated without your own server's people" }
+
+[lanes.words.replies]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Ответы мне", en = "Replies to me" }
+tip = { ru = "Ответы на твои посты и комменты", en = "Replies to your posts and comments" }
+icon = "replies"
+
+[lanes.words.requests]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Заявки", en = "Follow requests" }
+tip = { ru = "Кто просится в подписчики", en = "Who asks to follow you" }
+icon = "requests"
+
+[lanes.words.stranger_mentions]
+title = { ru = "Упоминания чужих", en = "Strangers' mentions" }
+tip = { ru = "Упоминания от тех, кто не подписан ни на тебя, ни ты на них", en = "Mentions from people who neither follow you nor you them" }
+
+[lanes.words.subs]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Подписки", en = "Subscriptions" }
+tip = { ru = "Новые комменты в тредах, на которые ты подписан, как на Point", en = "New comments in threads you subscribed to, like on Point" }
+icon = "subs"
+
+[lanes.words.tags]
+icon = "tags"
+
+[lanes.words.to_me]
+marks = ["notify", "sound", "icon_count"]
+title = { ru = "Ко мне", en = "To me" }
+tip = { ru = "Ответы мне и упоминания меня — в одной ленте; быстрые фильтры их разделяют", en = "Replies to me and mentions of me, in one lane; quick filters part them" }
+icon = "replies"
+
+[lanes.words.unsorted]
+group = "personal"
+title = { ru = "Неразобранное", en = "Unsorted" }
+tip = { ru = "Что пришло, а ни одна лента не взяла (только при своих лентах)", en = "What came and no lane took (only with lanes of your own)" }
+icon = "list"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+#  2. Appearance
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [appearance]
@@ -169,7 +1133,7 @@ text_markup = true
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
-#  2. Window and layout
+#  3. Window and layout
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [window]
@@ -403,218 +1367,6 @@ previous_comment = "["
 # In a thread: fold the branch (from a deep reply — its top comment's whole branch),
 # again — unfold.
 fold_branch = "-"
-
-
-# ══════════════════════════════════════════════════════════════════════════════════════
-#  3. Lanes
-# ══════════════════════════════════════════════════════════════════════════════════════
-
-
-[lanes]
-# Every lane is a rule (docs/en/dev/feeds.md); a set of them comes with fedtail — pick one:
-#   "fedtail"  — Point-style: To me (replies and mentions, quick filters for each), followed
-#                threads, Important people, bots apart;
-#   "mastodon" — as Mastodon's web page: Home with everything, Mentions + Activity (follow
-#                requests on top), Direct, Local, Federated, Bookmarks, Favourites;
-#   "tusky"    — as Tusky's tabs: Home, Mentions (private ones too) + Activity, Local,
-#                Federated, Direct;
-#   "phanpy"   — as Phanpy: Home, Mentions (private ones too), Direct, Activity, Bookmarks,
-#                Likes, Local;
-#   "fedilab"  — as Fedilab's tabs: Home, Local, Federated, Mentions (private ones too) +
-#                Activity, Direct, Bookmarks, Favourites.
-# The rules of each are in fedtail/data/presets.toml; `fedtail --lanes-to-config` writes the
-# chosen set's lanes here, as [[lanes.custom]], to read and change. A [[lanes.custom]] of the
-# same name takes a set's lane's place; a new name adds a lane.
-preset = "fedtail"
-
-# Which lanes to show, in this order (within a section on the left: Timelines, Personal);
-# [] — all of the set's, in its order. A lane's word is in its tooltip on the left too:
-#   federated — "Federated": everything your server knows from all servers
-#   home      — "Home": the people and tags you follow (fedtail's: without bots)
-#   local     — "Local": your whole server
-#   bots      — "Bots": the people you follow, bots only
-#   my_posts  — "My posts"
-#   direct    — "Direct": private messages (visible to the mentioned only)
-#   to_me     — "To me": replies and mentions in one lane, with quick filters for each
-#   important — "Important people": posts of those you rang the bell on (a profile's 🔔);
-#               shown once there is any
-#   subs      — "Subscriptions": what's new in threads you follow (as on Point)
-#   bookmarks — "Bookmarks"         my_likes — "My likes"
-#   activity  — "Activity": who liked, boosted, followed you; follow requests on top
-#   mentions, replies, requests — the lanes before To me, and follow requests as a lane:
-#               in no set, any list here may name them
-#   "lists", "tags" — where the server's lists and the saved tag lanes stand (else at the end);
-#   a lane of your own — by its name ("posts").
-# The old names are understood too: people = home, comments = replies, global = federated,
-# mine = my_posts, favourites = my_likes, "custom:posts" = posts.
-# federated and local are fetched only while open, and without counts: they are browsed.
-enabled = []
-
-# Accounts to count as bots even if they have no "bot" tick.
-# Your server — just "nick", another one — "nick@server".
-extra_bots = []
-
-# In which lanes "posts only" (without comments/replies) is on at start.
-# The tick over a lane switches it too — the choice is remembered.
-posts_only = []
-
-# "Unsorted": what came from the lanes read through (Home, Mentions, lists…) and no lane took,
-# so a rule never loses a post. Shown only while something is in it. false — hidden for good
-# and not collected.
-unsorted = true
-
-# Lanes you browse rather than read through (Federated, Local while lazy): the newest this
-# many of the whole stream, taken while the lane is open — something to scroll through however
-# fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update.
-browse_keep = 200
-
-# A browse lane (Federated, Local) the languages filter left with less than a page asks this
-# many pages older by itself while it is open; what they bring is kept beyond browse_keep.
-# 0 — no.
-browse_fill_pages = 5
-
-# The funnel over a lane ("only video", "no boosts") leaves few posts of a page: "Older" (and
-# the lane's end in sight) asks up to this many pages at once, till it has some ten that
-# pass it; a browse lane fills itself so too. 1 — a page each time, as without the funnel.
-funnel_fill_pages = 5
-
-# Where a browse lane (Federated, Local) opens: "last" — where you stood in it last time;
-# that place gone (relays bring thousands of posts a day, and the old ones go) — as "hours";
-# "hours" — at the first post of the last browse_start_hours hours; "newest" — at the
-# freshest, the older ones a scroll back.
-browse_start = "last"
-
-# browse_start = "hours" (and "last" when its place is gone): from how many hours back.
-browse_start_hours = 2
-
-# The sidebar's sections in your order, by their names: "standard" (Timelines), "personal",
-# "lists", "tags" and any of your own (a lane's group = "…" makes one). Those not named
-# here follow in the sets' order, your own after them. [] — the sets' order.
-sections = []
-
-# Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
-# name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
-# tip (what the lane is, in a line: its row's tooltip; per language as the title),
-# icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
-# bookmarks, my_likes, activity, requests, list, tags, star_full and the library: important,
-# commented, people, heart, fire, news, rss, mountain, fish, car… — the lane editor lists them), any (conditions: a post goes in if it
-# matches any of them; inside a condition every key must match), none (conditions that keep a
-# post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
-# favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,
-# remote, bot, stranger, "@nick@server", "domain:server"…), kind (post, reply, self_reply,
-# boost, self_boost, quote, poll), me (reply, reply_to_post, reply_to_comment, mention,
-# direct), visibility, has (media, image, video, cw, link, "tag:x"), lang, state (unread,
-# bookmarked…), target (for boosts: my_post, my_comment, post, comment, seen, read), age
-# ("<1d", ">2d"; age_of = "original" — of a boosted post), likes / boosts / replies (">10"),
-# text ([["word", "and word"], ["or this"]]), event (favourite, reblog, follow, poll, update,
-# status: those rows of Activity, a line each among the posts), buttons (the buttons under its
-# posts, in this order: reply, like, boost, thread, bookmark, read, open; none — by what the
-# item is: an RSS item offers no reply, like or boost), marks (what the options' word
-# "marked" picks the lane for: notify, sound, icon_count, languages, hide_listed). A lane stands in "Personal" (group =
-# "standard" — in "Timelines", any other word — in a section of that name): where lanes.enabled names it ("custom:feed"), else at the end.
-# The free lanes fill from what is stored already. An example (then take away the
-# custom = [] line below):
-#   [[lanes.custom]]
-#   name = "feed"
-#   title = "Feed"
-#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
-#   none = [{ kind = "boost", target = "seen" }]
-custom = []
-
-# Lanes of several tags — in the sidebar, in the "Tags" group (fetched while
-# open, like "Federated"). Each is a table [[lanes.tag_groups]]: name — what to call it,
-# any — any of the tags, all — all at once, none — without. The same can be typed in the search
-# ("#грузия #georgia -#politics") and kept with the "＋ to lanes" button — then there's no need
-# to write it here. An example (then take away the tag_groups = [] line below — TOML won't allow both):
-#   [[lanes.tag_groups]]
-#   name = "Georgia"
-#   any = ["грузия", "georgia", "tbilisi"]
-#   none = ["politics"]
-tag_groups = []
-
-# Languages you read: posts in others leave the lanes of languages_in. Empty — every language.
-# Two or three small letters (ISO 639), like ["ru", "en"]. A post in a language that can't be
-# told (no tag, too short to guess) always stays.
-languages = []
-
-# Where the languages filter works: lane words, "lists" — every list, "tags" — every tag lane.
-# "marked" — the lanes whose rules mark themselves for it (marks = ["languages"]; the sets mark
-# Federated and Local). Home isn't there by default: whom you follow, you read whole.
-languages_in = ["marked", "tags"]
-
-# Telling a post's language when its author didn't — or tagged it wrong:
-#   "untagged" — guess when there is no tag, or when the letters say the tag can't be right
-#                (an "en" post in Cyrillic or in Chinese characters);
-#   "always"   — the guess beats the author's tag whenever there is one;
-#   "off"      — the author's tag only.
-# Scripts that give the language away (Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic…)
-# are told for free; Latin text — by python3-langdetect, if it is installed.
-detect_language = "untagged"
-
-# The shortest post (in words) the guess by words is tried on: shorter ones it gets wrong.
-detect_min_words = 12
-
-# Which languages python3-langdetect guesses among: "auto" — Latin and Cyrillic ones (only
-# their texts reach the guess by words, the others are told by their script) — some 11 MB
-# of memory; "all" — all of its 55, some 60 MB, the same answers.
-detect_among = "auto"
-
-# Wider than your server knows. Servers whose public lane (their own people's posts) also comes
-# into Federated while it's open, and servers whose tag lanes come into your lanes of tags
-# (a lane of #linux takes #linux from them too): read without an account, each new post fetched
-# into your server by its address — so it is answered and liked as any other, and your server
-# knows it from then on. A server at most every extra_minutes, up to 20 posts a time. Many keep
-# these lanes closed to strangers (GoToSocial always): then it's left for a few hours.
-# Like ["mastodon.social", "fosstodon.org"].
-federated_extra = []
-tags_extra = []
-
-# The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only
-# their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"].
-bubble = []
-extra_minutes = 10
-
-# How many posts at a time are fetched into your server from another server's lane
-# (federated_extra, tags_extra, bubble).
-extra_posts = 20
-
-# How many entries are taken from an RSS feed, and how many characters of each summary
-# (rss_summary_chars).
-rss_items = 60
-
-# An RSS entry's summary: this many characters.
-rss_summary_chars = 1200
-
-# Ask a lane of tags (several tags in one) in one request, not one per tag — where the
-# server can (Mastodon: any[], all[], none[]). false — a tag at a time.
-tags_one_request = false
-
-
-[lists]
-# The server's lists (Mastodon, GoToSocial) — as lanes of their own under the main ones.
-# Make a list and put a person in it — with a right click on a post.
-enabled = true
-
-# You put a person or a bot in a list — their posts, their boosts and others' boosts of their posts
-# are read in the list's lane and leave the general lanes, so they don't clutter them:
-#   "all"       — so with any list;
-#   "exclusive" — only with lists ticked "exclusive" (the server itself takes
-#                 such people out of Home);
-#   "off"       — don't take them out of anywhere.
-hide_members = "all"
-
-# …and whatever a list's timeline brought, whoever wrote it: a post of someone who moved
-# to another account (the list still names the old one), a boost of a list member's post.
-# By the lists hide_members names; "off" there — nothing. false — only by who is in a list.
-hide_posts = true
-
-# Which lanes to take them out of (names — as in [lanes]); "marked" — the lanes whose rules
-# mark themselves for it (marks = ["hide_listed"]; the sets mark Home, Bots, Federated, Local).
-hide_in = ["marked"]
-
-# How often to reread the lists themselves and who is in them (and your mutes and blocks),
-# minutes.
-refresh_minutes = 10
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════

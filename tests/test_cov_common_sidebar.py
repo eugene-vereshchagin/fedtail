@@ -109,7 +109,7 @@ class SectionsByRuleTest(unittest.TestCase):
                 lanes.Lane("unsorted", "unsorted", lanes._all),
                 lanes.Lane("list:7", "list:7", lanes._all)]
         got = dict(lanes.grouped(made))
-        # a lane that names no section: the sets' own one (presets.toml [sections] own)
+        # a lane that names no section: the sets' own one (the config's [lanes.sections] own)
         self.assertEqual(got["personal"], ["home", "feed", "unsorted"])
         self.assertEqual(got["standard"], ["direct"])
         self.assertEqual(got["lists"], ["list:7"])
@@ -119,7 +119,7 @@ class SectionsByRuleTest(unittest.TestCase):
 
     def test_sections_of_ones_own_in_ones_order(self):
         """A lane's `group` is any word: it makes a section called that (the docs said
-        so, the code put such a lane into Personal — 24.11). The order: lanes.sections,
+        so, the code put such a lane into Personal — 24.11). The order: lanes.section_order,
         then the sets' file's, then one's own by their first lane. No section is named
         in the code or in the interface's strings."""
         from fedtail import i18n
@@ -140,7 +140,7 @@ class SectionsByRuleTest(unittest.TestCase):
         self.assertEqual(lanes.grouped(made[:1]), [("lists", []), ("Работа", ["work"])])
         v = types.SimpleNamespace(lanes=made)
         cfg = {"ui": {"sidebar_groups": True}, "lists": {"enabled": True},
-               "lanes": {"sections": ["Работа"]}}
+               "lanes": {"section_order": ["Работа"]}}
         self.assertEqual(sidebar.groups(v, cfg)[0], ("Работа", ["work", "more"]))
         i18n.setup("en")
         self.assertEqual(sidebar.group_title("standard"), "Timelines")

@@ -167,7 +167,15 @@ class SyncMixin(CoreState):
         return key if section == "lanes" else f"{section}.{key}"
 
     def _lane_rules(self):
-        return {self._rule_name(s, k): self.cfg[s].get(k) for s, k in self.LANE_RULE_KEYS}
+        """What travels: the lanes' settings — and, when the set at work is one of my own
+        (not one fedtail comes with), its lanes too ("set"): the other device has no
+        such set to choose otherwise."""
+        from . import presets
+        out = {self._rule_name(s, k): self.cfg[s].get(k) for s, k in self.LANE_RULE_KEYS}
+        name = self.cfg["lanes"].get("preset")
+        if name not in presets.shipped():
+            out["set"] = presets.lanes_of(name, self.cfg)
+        return out
 
     def push_lane_rules(self):
         """"Send my lanes to the other devices" (≡ → Sync): this device's lanes go out as
@@ -219,6 +227,12 @@ class SyncMixin(CoreState):
         them at once, and they travel (sync.lane_rules)."""
         for s, k in self.LANE_RULE_KEYS:
             self.cfg[s][k] = cfg[s][k]
+        # …and the sets themselves, their words and the sections' order: the file's
+        from . import presets
+        for k in (*presets.TABLES, "section_order"):
+            if k in cfg["lanes"]:
+                self.cfg["lanes"][k] = cfg["lanes"][k]
+        presets.use(self.cfg)
         self._note_lane_rules()
         self._apply_lists(list(self.lists), self.list_members)
 
@@ -233,9 +247,18 @@ class SyncMixin(CoreState):
             name = self._rule_name(s, k)
             if name in got:  # (an older device sends [lanes]' own only: the rest stays)
                 changes[(s, k)] = got[name] if got[name] is not None else config_edit.UNSET
+        from . import presets
+        theirs = got.get("preset")
+        if isinstance(theirs, str) and theirs not in presets.shipped() and \
+                isinstance(got.get("set"), list) and theirs.replace("_", "").isalnum():
+            # a set of the other device's own: its lanes come with its name
+            changes[("lanes", config_edit.SET + theirs)] = got["set"]
         cfg, _w = config_edit.save(self.paths.config_file, changes)
         for s, k in self.LANE_RULE_KEYS:
             self.cfg[s][k] = cfg[s][k]
+        for k in presets.TABLES:
+            self.cfg["lanes"][k] = cfg["lanes"][k]
+        presets.use(self.cfg)
         self._lane_cache.clear()  # other languages, another window: every lane anew
         self.store.kv_set("lane_rules", self._lane_rules())  # as this file reads them
 

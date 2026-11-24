@@ -92,7 +92,7 @@ class HintsTest(unittest.TestCase):
             strings = i18n.strings(lang)
             for key, h in table.items():
                 if key.startswith("tip_") and key not in strings:
-                    # a lane's row: what the sets' file says of it (presets.toml)
+                    # a lane's row: what the sets' file says of it (the config's [lanes.sets])
                     self.assertTrue(presets.tip(key[4:], lang), f"{lang}: {key}: no such lane")
                     continue
                 self.assertIn(key, strings, f"{lang}: {key} is no interface string")

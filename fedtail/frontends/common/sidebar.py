@@ -12,7 +12,7 @@ def groups(view, cfg):
     """[(group | None, [lane names])], top to bottom: ui.sidebar_groups' sections, or
     the lanes and then the lists. "lists" is left out when lists are off."""
     if cfg["ui"]["sidebar_groups"]:
-        out = lanes_mod.grouped(view.lanes, (cfg.get("lanes") or {}).get("sections") or ())
+        out = lanes_mod.grouped(view.lanes, (cfg.get("lanes") or {}).get("section_order") or ())
     else:
         out = [(None, [x.name for x in view.lanes if not lanes_mod.is_list(x.name)]),
                ("lists", [x.name for x in view.lanes if lanes_mod.is_list(x.name)])]
@@ -83,7 +83,7 @@ def peek(view, name, n=90):
 
 def group_title(group):
     """A section's heading, None for the plain list's lanes: the sets' word for it
-    (presets.toml [sections]), a roster's own group (people, threads, talks), else the
+    (the config's [lanes.sections]), a roster's own group (people, threads, talks), else the
     word itself — a section of one's own is called as its lanes' `group` says."""
     if not group:
         return None
@@ -101,7 +101,7 @@ def start_lane(view, names, closable=True):
     curtain(); closable=False — Enter on the curtain, the phone, the columns — takes the
     lane of last time); "last" — the lane of last time; or a lane by
     name. A lane not there (the first start, a lane off) gives the set's own (its rule's
-    `start = true`, presets.toml), else the sidebar's first — no lane's name assumed.
+    `start = true`, the config's [lanes.sets]), else the sidebar's first — no lane's name assumed.
     names: the lanes the sidebar has."""
     want = view.cfg["ui"].get("start_lane") or "none"
     if want == "none" and closable:

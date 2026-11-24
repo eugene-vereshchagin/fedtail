@@ -1243,6 +1243,9 @@ def redact_config(text):
     return _USERINFO.sub(r"\1***@", text)
 
 
+SETS_TABLES = ("sets", "words", "sections", "renamed", "about")  # core/presets.TABLES
+
+
 def changed_options(cfg):
     """{"section.key": value} of the options that differ from the defaults (secrets
     redacted: SECRET_OPTIONS, a URL's password)."""
@@ -1253,6 +1256,8 @@ def changed_options(cfg):
         if not isinstance(values, dict) or not isinstance(base, dict):
             continue
         for key, val in values.items():
+            if section == "lanes" and key in SETS_TABLES:
+                continue  # the sets of lanes and their words: tables, not options
             if key not in base or base[key] != val:
                 out[f"{section}.{key}"] = "***" if key in SECRET_OPTIONS and val \
                     else redact(val)

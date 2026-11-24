@@ -5,6 +5,7 @@ import tomllib
 import unittest
 
 from fedtail import i18n
+from fedtail.core import config
 from fedtail.frontends.common import laneedit
 from fedtail.frontends.common.places import Places
 
@@ -306,3 +307,93 @@ class PlaceTest(FreeBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OwnSetTest(unittest.TestCase):
+    """A set of one's own from the lane editor (24.11): the lanes as they are now under a
+    name, written into config.toml beside fedtail's sets and chosen; deleted again."""
+
+    def make(self, text):
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        from fedtail.frontends.common.places import Places
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.file = Path(tmp.name) / "config.toml"
+        self.file.write_text(text, "utf-8")
+        self.saved = []
+        from fedtail.core import presets
+        self.addCleanup(presets.use, None)
+        view = SimpleNamespace(paths=SimpleNamespace(config_file=self.file),
+                               cfg=config.validate({})[0], lanes_saved=self.saved.append,
+                               supports=lambda _x: True, lane_title=lambda n: n)
+        return Places(view)
+
+    def lanes(self):
+        import tomllib
+        return tomllib.loads(self.file.read_text("utf-8"))["lanes"]
+
+    def test_saved_chosen_changed_and_deleted(self):
+        from fedtail import i18n
+        from fedtail.core import custom
+        i18n.setup("en")
+        pl = self.make(config.example_text("en"))  # a new config: every set written out
+        page = pl.page("lanes")
+        rows = {r.key: r for r in page.rows}
+        self.assertIn("as Tusky's tabs", rows["set:tusky"].line)  # the config's own line
+        self.assertEqual([b.label for b in rows["_saveset"].buttons], ["Save as a set…"])
+        self.assertEqual(pl.act("lanes", "saveset").ask[2], "mine")  # asks for a name
+        # what is shown now: the bots hidden, Local first, a lane changed
+        self.assertEqual(pl.act("lanes", "toggle", "bots").error, "")
+        for _ in range(2):
+            pl.act("lanes", "up", "local")
+        for bad in ("my set", "words", "extra", "Набор", ""):
+            self.assertTrue(pl.act("lanes", "saveset", answer=bad).error, bad)
+        self.assertIn("fedtail comes with", pl.act("lanes", "saveset", answer="tusky").error)
+        out = pl.act("lanes", "saveset", answer="Mine")
+        self.assertEqual(out.error, "")
+        got = self.lanes()
+        self.assertEqual(got["preset"], "mine")
+        names = [t["name"] for t in got["sets"]["mine"]]
+        self.assertEqual(names[:3], ["local", "federated", "home"])
+        self.assertNotIn("bots", names)
+        self.assertEqual(names[-2:], ["lists", "tags"])
+        self.assertEqual(got["sets"]["mine"][-1], {"name": "tags", "slot": "tags"})
+        self.assertNotIn("enabled", got)  # nothing over the set: it is the order
+        self.assertFalse(got.get("custom"))
+        self.assertEqual(list(got["sets"])[:5], ["fedtail", "mastodon", "tusky", "phanpy",
+                                                 "fedilab"])  # fedtail's own untouched
+        text = self.file.read_text("utf-8")
+        self.assertLess(text.index("[[lanes.sets.mine]]"), text.index("[lanes.about]"))
+        cfg = self.saved[-1]  # …and the running program has it
+        self.assertEqual([x.name for x in custom.build(cfg)][:3], ["local", "federated", "home"])
+        rows = {r.key: r for r in pl.page("lanes").rows}
+        self.assertTrue(rows["set:mine"].title.startswith("●"))
+        self.assertIn("a set of your own", rows["set:mine"].line)
+        self.assertEqual([b.label for b in rows["set:mine"].buttons], ["Delete"])
+        self.assertNotIn("Delete", [b.label for b in rows["set:tusky"].buttons])
+        # the same name again writes over it
+        pl.act("lanes", "toggle", "local")
+        self.assertEqual(pl.act("lanes", "saveset", answer="mine").error, "")
+        self.assertNotIn("local", [t["name"] for t in self.lanes()["sets"]["mine"]])
+        # deleted: asked first, then gone, the default set at work
+        self.assertTrue(pl.act("lanes", "dropset", "mine").confirm)
+        self.assertEqual(pl.act("lanes", "dropset", "mine", confirmed=True).error, "")
+        got = self.lanes()
+        self.assertNotIn("mine", got["sets"])
+        self.assertEqual(self.saved[-1]["lanes"]["preset"], "fedtail")
+        self.assertTrue(pl.act("lanes", "dropset", "tusky", confirmed=True).error)
+
+    def test_into_a_config_written_before(self):
+        pl = self.make('[lanes]\npreset = "phanpy"\n\n[appearance]\ntheme = "point"\n')
+        self.assertEqual(pl.act("lanes", "saveset", answer="reading").error, "")
+        got = self.lanes()
+        self.assertEqual(list(got["sets"]), ["reading"])  # the file's own; fedtail's — the
+        self.assertEqual(got["preset"], "reading")         # reference's, still to choose
+        self.assertEqual([t["name"] for t in got["sets"]["reading"]][:3],
+                         ["home", "local", "mentions"])
+        keys = [r.key for r in pl.page("lanes").rows if r.key.startswith("set:")]
+        self.assertEqual(keys, ["set:fedtail", "set:mastodon", "set:tusky", "set:phanpy",
+                                "set:fedilab", "set:reading"])

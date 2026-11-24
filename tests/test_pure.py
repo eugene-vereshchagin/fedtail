@@ -216,7 +216,10 @@ class DocsBuildTest(unittest.TestCase):
             example = (root / "fedtail" / "data" / f"config.example.{lang}.toml").read_text(
                 "utf-8")
             live = [f"{sec}.{key}" for sec, table in tomllib.loads(example).items()
-                    if isinstance(table, dict) for key in table]
+                    if isinstance(table, dict) for key in table
+                    # the sets of lanes and their words: tables, not options
+                    if (sec, key) not in {("lanes", t) for t in
+                                          ("sets", "words", "sections", "renamed", "about")}]
             self.assertEqual(sorted(rows[lang]), sorted(live), lang)
         self.assertEqual(rows["ru"], rows["en"])
 

@@ -200,11 +200,11 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             app.open_thing({"page": "settings"})
             await self.wait(pilot, lambda: isinstance(app.screen, PlaceScreen) and
                             app.screen.page is not None, what="settings")
-            box = app.screen.form_widgets["appearance.emoji"]
+            box = app.screen.form_widgets["lanes.unsorted"]
             box.value = not box.value
             await pilot.press("ctrl+s")
             cfg_file = core.paths.config_file
-            await self.wait(pilot, lambda: "emoji = " + (
+            await self.wait(pilot, lambda: "unsorted = " + (
                 "true" if box.value else "false") in cfg_file.read_text("utf-8"),
                 what="settings saved")
             await pilot.press("escape")

@@ -868,7 +868,7 @@ class View:
         from .lanes import grouped
         c = self._core
         out = []
-        for group, names in grouped(c.lanes, c.cfg["lanes"].get("sections") or ()):
+        for group, names in grouped(c.lanes, c.cfg["lanes"].get("section_order") or ()):
             if not names:
                 continue
             items = []

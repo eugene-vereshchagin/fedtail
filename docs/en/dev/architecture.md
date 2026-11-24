@@ -132,7 +132,7 @@ fedtail/
                      (paths.main_profile: the main-profile mark) handed over on logout
     atoms.py         what can be told apart about a post/event; free lanes' rules (feeds.md)
     custom.py        lanes of rules: the sets' and [[lanes.custom]]; views, or streams custom:<name>
-    presets.py       the sets of lanes (fedtail/data/presets.toml)
+    presets.py       the sets of lanes (config.toml: [lanes.sets], [lanes.words])
     lanes.py         Lane = a source (or a stream) + a filter; sections; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
     paths.py         where a profile's files live (XDG)
@@ -365,7 +365,7 @@ has `fetch(limit, max_id, min_id)` and `entry(raw) → (item_id, status, created
 
 ## 8. Lanes (`core/lanes.py`, `core/custom.py`)
 
-Every lane is made by a rule (docs/en/dev/feeds.md): `fedtail/data/presets.toml` holds the
+Every lane is made by a rule (docs/en/dev/feeds.md): the config (`[[lanes.sets.<set>]]`; the reference config has them all) holds the
 sets (`lanes.preset`), `[[lanes.custom]]` adds lanes or takes a set's lane's place.
 `custom.load` makes each rule a `Lane(name, source, keep, …)`: over one source it is a view
 of it (`keep` asks the rule), over several a stream of its own that routing fills
