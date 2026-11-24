@@ -167,7 +167,8 @@ def pasted_files(text):
     of a file that is there → [paths]; anything else (words, a link, a path that isn't
     a file) → [] — it is text. For an editor without a clipboard of pictures."""
     from pathlib import Path
-    from urllib.parse import unquote, urlsplit
+    from urllib.parse import urlsplit
+    from urllib.request import url2pathname
     lines = [x.strip() for x in str(text or "").splitlines() if x.strip()]
     if not lines or len(lines) > 20:
         return []
@@ -175,7 +176,8 @@ def pasted_files(text):
     for line in lines:
         line = line.strip("'\"")
         if line.startswith("file://"):
-            line = unquote(urlsplit(line).path)
+            # file:///C:/x%20y.png on Windows, file:///home/x%20y.png elsewhere
+            line = url2pathname(urlsplit(line).path)
         else:
             line = line.replace("\\ ", " ")  # a shell's escaped spaces
         try:

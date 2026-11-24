@@ -322,7 +322,9 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             lv.index = 1
             await pilot.press("minus")
             lv = await again()
-            self.assertEqual([i.key for i in lv.children if not i.display], ["703", "705"])
+            # folded once drawn: the rows come a moment before their folding (Windows' CI)
+            await self.wait(pilot, lambda: [i.key for i in lv.children if not i.display]
+                            == ["703", "705"], timeout=30)
             await pilot.press("q")
 
     async def test_thread_to_the_next_new_one(self):
@@ -727,7 +729,8 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         one, two = self.tmp / "кот 1.png", self.tmp / "b.png"
         for f in (one, two):
             f.write_bytes(b"png")
-        self.assertEqual(pasted_files(f"'{one}'\nfile://{two}\n"), [str(one), str(two)])
+        # a file manager's "copy": a URI (file:///C:/… on Windows, 24.11's CI)
+        self.assertEqual(pasted_files(f"'{one}'\n{two.as_uri()}\n"), [str(one), str(two)])
         self.assertEqual(pasted_files(str(one).replace(" ", "\\ ")), [str(one)])
         for words in ("just words", "/no/such/file.png", f"{one} and more", "b.png", ""):
             self.assertEqual(pasted_files(words), [], words)

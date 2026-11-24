@@ -222,10 +222,11 @@ class GtkSmokeTest(_GtkBase):
         lane = self._lane("home")
         self.assertTrue(pump(lambda: "030" in lane.rows, 5))
 
-        def thread_label():
-            return next((x.get_label() for x in _walk(lane.rows["030"])
+        def thread_label():  # (a glyph before the word where the picture can't be loaded)
+            word = i18n._("thread")
+            return next((t[t.index(word):] for x in _walk(lane.rows["030"])
                          if isinstance(x, Gtk.Label) and
-                         (x.get_label() or "").startswith(i18n._("thread"))), None)
+                         word in (t := x.get_label() or "")), None)
         self.view.on_screen(["030"])  # what the lane says of a card in sight
         self.assertTrue(pump(lambda: thread_label() == i18n._("thread") + " · 3", 5),
                         thread_label())

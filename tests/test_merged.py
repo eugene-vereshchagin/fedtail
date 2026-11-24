@@ -3,6 +3,7 @@ every call the window makes is routed to the account the post, person or list ca
 — ids prefixed on the way out, unprefixed on the way in — and every event of the other
 account reaches the window in the window's terms."""
 
+import importlib.util
 import unittest
 from concurrent.futures import Future
 
@@ -485,6 +486,7 @@ class MergedRoutingTest(TmpDir):
         self.assertEqual(len(self.m.followed_tags().result(timeout=T)), 1)
 
     # ---- the web page (and the phone, through it) -----------------------------------
+    @unittest.skipUnless(importlib.util.find_spec("textual"), "Textual is not installed")
     def test_the_terminal_acts_as_the_other_account_too(self):
         """The terminal's ⋯ menu left "As…" out ("one account a terminal"), though it
         merges accounts as the windows do (23.11): the item is there, and does it."""

@@ -404,8 +404,13 @@ class FlowTest {
             repeat(12) { Core.demoHappen("post", "101", "news $it for home $stamp") }
             repeat(12) { Core.demoHappen("mention", "101", "news $it for me $stamp") }
         }
+        // the counts follow the posts a moment later (CI's emulator saw 11 of 12: 24.11)
+        try {
+            waitFor("Home's news counted", 30_000) { (unread()["home"] ?: 0) >= 12 }
+        } catch (e: AssertionError) {
+            throw AssertionError("Home has news: ${unread()}", e)
+        }
         val now = unread()
-        assertTrue("Home has news: $now", (now["home"] ?: 0) >= 12)
         val other = listOf("to_me", "mentions", "replies").firstOrNull { (now[it] ?: 0) > 0 }
             ?: throw AssertionError("no lane took the mention: $now")
         scenario?.close()

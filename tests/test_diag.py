@@ -66,7 +66,9 @@ class DiagTest(unittest.TestCase):
         while True:
             for h in logging.getLogger().handlers:
                 h.flush()
-            text = (tmp_logs / "latest.log").read_text("utf-8")
+            # every file of the session: a new hour starts a new one (15:00:00 in CI)
+            text = "".join(f.read_text("utf-8")
+                           for f in sorted(tmp_logs.glob("2[0-9][0-9][0-9]-*.log")))
             if "hasn't answered" in text or time.time() > end:
                 break
             time.sleep(0.05)
