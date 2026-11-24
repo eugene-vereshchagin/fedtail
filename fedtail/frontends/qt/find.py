@@ -246,18 +246,29 @@ class FindBar(QWidget):
         self.deeper.setEnabled(False)
         self.count.setText(_("find_searching"))
 
+        def shown():
+            self.count.setText(_("find_count", i=self.pos + 1, n=len(self.hits))
+                               if self.hits else "")
+
         def done(res):
             self.deeper.setEnabled(True)
+            if self._lane_name() != name:  # another lane in front by now: not its answer
+                shown()
+                return
             if not res["more"]:
                 self.count.setText(_("find_archive_none") if not res["total"]
                                    else _("find_count", i=self.pos + 1, n=len(self.hits)))
                 return
             # the lane grows when the core says so; then stand on the first new match
-            QTimer.singleShot(400, self, lambda: self._after_deeper(before))
+            QTimer.singleShot(400, self, lambda: self._after_deeper(before, name))
+        # (a failure: "searching…" stayed in the count for good)
         self.win.bridge.call(self.win.core.deep_find(name, query), ok=done,
-                             fail=lambda e: (self.deeper.setEnabled(True), self.win.error(e)))
+                             fail=lambda e: (self.deeper.setEnabled(True), shown(),
+                                             self.win.error(e)))
 
-    def _after_deeper(self, before):
+    def _after_deeper(self, before, name=None):
+        if name is not None and self._lane_name() != name:
+            return
         self.search(jump=False)
         fresh = [i for i, k in enumerate(self.hits) if k not in before]
         if fresh:

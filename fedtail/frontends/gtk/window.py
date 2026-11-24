@@ -353,7 +353,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.slow_label.add_css_class("ft-status")
         self.slow_label.set_visible(False)
         bar.append(self.slow_label)
-        GLib.timeout_add_seconds(30, lambda: (self._slow_text(), True)[1])
+        self._slow_src = GLib.timeout_add_seconds(30, lambda: (self._slow_text(), True)[1])
         self.sync_label = Gtk.Label(xalign=1)
         self.sync_label.add_css_class("ft-status")
         click = Gtk.GestureClick()  # a click: ≡ → Sync
@@ -1894,6 +1894,10 @@ class MainWindow(Gtk.ApplicationWindow):
         box.append(wait)
 
         def got(items):
+            # the tab closed before its answer came: nothing to draw into — and nothing
+            # read: its posts were marked read unseen (24.11)
+            if self.threads.get(root) is not page:
+                return
             if wait.get_parent() is not None:
                 box.remove(wait)
             ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True,
@@ -2115,6 +2119,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def close_account(self, acc_id):
         page = self.accounts.pop(acc_id, None)
         if page is not None:
+            patient = getattr(page, "patient", None)
+            if patient is not None:  # no more tries for a tab that is gone
+                patient.done = True
             self._drop_tab(page)
         self._tab_switched()
 
@@ -2586,6 +2593,9 @@ class MainWindow(Gtk.ApplicationWindow):
             self.composer.close()
         for lv in self.lane_views.values():
             lv.stop()
+        if getattr(self, "_slow_src", 0):  # (it went on asking the core after the close)
+            GLib.source_remove(self._slow_src)
+            self._slow_src = 0
         self.images.shutdown()
 
 

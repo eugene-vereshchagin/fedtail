@@ -554,7 +554,8 @@ class InputDock(QWidget):
             self.follow(self.win.tabs.currentWidget())
             return
         text = self.text.toPlainText()
-        if not text.strip() or not self.send_btn.isEnabled():
+        if not text.strip() or not self.send_btn.isEnabled() or \
+                getattr(self, "_sending", False):  # (one on its way: Enter again waits)
             return
         # the editor's own questions (a file without its words, another language than
         # marked): the line has no room to ask — the full editor does, with these words
@@ -565,16 +566,24 @@ class InputDock(QWidget):
         target = self.target
         warning = self.cw.text().strip() if self.cw_btn.isChecked() else ""
         self.send_btn.setEnabled(False)
+        self._sending = True
+        had = list(self.media)
         log.info("dock: %s", "reply to " + target.id if target else "new post")
 
         def sent(st):
-            self.media, self.sensitive = [], False
+            self._sending = False
+            # words typed (or another post picked) while this one was on its way stay:
+            # a slow server's answer wiped the next message being written (24.11)
+            fresh = self.text.toPlainText() != text or self.target is not target
+            if self.media == had:
+                self.media, self.sensitive = [], False
             self.dress()
-            self.text.clear()
-            self._prefill = ""
-            self.cw.clear()
-            self.cw_btn.setChecked(split.line_warning_shown(self.win.cfg))
-            self.target = None
+            if not fresh:
+                self.text.clear()
+                self._prefill = ""
+                self.cw.clear()
+                self.cw_btn.setChecked(split.line_warning_shown(self.win.cfg))
+                self.target = None
             front = self.win.tabs.currentWidget()
             if isinstance(front, TalkWidget) and st is not None and \
                     not isinstance(st, Scheduled):
@@ -582,9 +591,12 @@ class InputDock(QWidget):
                 self.win.statusBar().showMessage(_("sent"), 4000)
             else:
                 self.win.after_post(st, target)
-            self.follow(self.win.tabs.currentWidget())
+            if not fresh:
+                self.follow(self.win.tabs.currentWidget())
+            self._count()
 
         def failed(err):
+            self._sending = False
             self._count()
             self.win.error(err)
 

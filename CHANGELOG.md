@@ -46,6 +46,13 @@
   layout's line is saved a moment after the last key and is there again after a crash or
   a restart — as the same draft the full editor opens for that post. A draft written in
   the full editor is never shown in the line nor written over by it.
+- The input line (Qt and GTK): what is typed while a post is still on its way to a slow
+  server stays — the first post's answer cleared the line; Enter again meanwhile waits.
+- GTK: a thread's tab closed before its answer came no longer marks the thread read;
+  a closed profile stops asking its server again; a profile's "older from their server"
+  doesn't write over the list switched to meanwhile; timers go with the window.
+- Find (Qt and GTK): "deeper" answered after another lane came in front no longer jumps
+  in that lane, and a failed search doesn't leave "searching…" standing.
 - Qt, the debugging mode: the status bar's corner (theme · Qt · style · font…) was cut
   mid-word in a narrow window with a wide font — its last fields go until it fits, the
   whole of it is in the tooltip.

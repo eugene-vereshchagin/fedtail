@@ -171,6 +171,9 @@ class FindBar(Gtk.Box):
 
         def done(res):
             self.deeper.set_sensitive(True)
+            if self._lane() != name:  # another lane in front by now: not its answer
+                self._show_count()
+                return
             if not res["more"]:
                 if not res["total"]:
                     self.count.set_text(_("find_archive_none"))
@@ -178,11 +181,16 @@ class FindBar(Gtk.Box):
                     self._show_count()
                 return
             # the lane grows when the core says so; then stand on the first new match
-            GLib.timeout_add(400, lambda: (self._after_deeper(before), GLib.SOURCE_REMOVE)[1])
+            GLib.timeout_add(400, lambda: (self._after_deeper(before, name),
+                                           GLib.SOURCE_REMOVE)[1])
+        # (a failure: "searching…" stayed in the count for good)
         self.win.call(self.win.view.deep_find(name, query), done,
-                      lambda e: (self.deeper.set_sensitive(True), self.win.error(e)))
+                      lambda e: (self.deeper.set_sensitive(True), self._show_count(),
+                                 self.win.error(e)))
 
-    def _after_deeper(self, before):
+    def _after_deeper(self, before, name=None):
+        if name is not None and self._lane() != name:
+            return
         view = self.win.current_lane_view()
         if view is not None and getattr(view, "dirty", False):
             view.refresh()

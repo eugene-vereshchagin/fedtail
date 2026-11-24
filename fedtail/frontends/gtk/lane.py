@@ -981,7 +981,7 @@ class LaneView(Gtk.Box):
         """The window closes: whatever is queued is dropped (the core may close too)."""
         self.stopped = True
         self._waiting = []
-        for attr in ("_more", "_seen_timer"):
+        for attr in ("_more", "_seen_timer", "_unload_src"):
             src = getattr(self, attr, 0)
             if src:
                 GLib.source_remove(src)

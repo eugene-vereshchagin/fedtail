@@ -173,10 +173,17 @@ class ProfilePosts:
         btn.set_label(_("origin_asking", host=host))
         have = [real(e).uri for e in self.items if real(e).uri]
         shown = [0]
+        # which posts were asked for: "posts / all / media" switched meanwhile starts
+        # anew, and this fetch's answers aren't that list's — they wrote the button's
+        # words over the new list's (24.11)
+        want = self.show
+        stale = lambda: self.show != want  # noqa: E731
 
         def listed(r):
             # the addresses come fast; my server fetching each post is the slow part,
             # so they come in a few at a time and show as they come
+            if stale():
+                return None
             uris, self.origin_next = r
             if not uris:
                 return done()
@@ -187,6 +194,8 @@ class ProfilePosts:
             batch, rest = left[:BATCH], left[BATCH:]
 
             def got(entries):
+                if stale():
+                    return
                 shown[0] += len(self._merge(entries))
                 if rest:
                     btn.set_label(_("origin_fetching", n=total - len(rest), total=total,
@@ -197,6 +206,8 @@ class ProfilePosts:
             self.win.call(self.view.resolve_statuses(batch), got, failed)
 
         def done():
+            if stale():
+                return
             if self.origin_next:
                 btn.set_label(_("older_from_origin", host=host))
                 btn.set_sensitive(True)
@@ -206,6 +217,8 @@ class ProfilePosts:
                             _("older_from_origin_note"), seconds=8)
 
         def failed(e):
+            if stale():
+                return
             btn.set_label(_("older_from_origin", host=host))
             btn.set_sensitive(True)
             self.win.error(e)

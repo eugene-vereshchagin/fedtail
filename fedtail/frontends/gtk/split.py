@@ -984,7 +984,8 @@ class InputDock(Gtk.Box):
             self.follow(win.tabs.get_nth_page(win.tabs.get_current_page()))
             return
         text = self._text()
-        if not text.strip() or not self.send_btn.get_sensitive():
+        if not text.strip() or not self.send_btn.get_sensitive() or \
+                getattr(self, "_sending", False):  # (one on its way: Enter again waits)
             return
         # the editor's own questions (a file without its words, another language than
         # marked): the line has no room to ask — the full editor does, with these words
@@ -1013,21 +1014,33 @@ class InputDock(Gtk.Box):
         if self.account is not None:  # "From": another account of the window
             kw["account"] = self.account
 
+        self._sending = True
+        had = list(self.media)
+
         def sent(st):
-            self.media, self.sensitive = [], False
+            self._sending = False
+            # words typed (or another post picked) while this one was on its way stay:
+            # a slow server's answer wiped the next message being written (24.11)
+            fresh = self._text() != text or self.target is not target
+            if self.media == had:
+                self.media, self.sensitive = [], False
             self.dress()
-            self._set_text("")
-            self._prefill = ""
-            self.cw.set_text("")
-            self.cw_btn.set_active(split.line_warning_shown(win.cfg))
-            self.target = None
+            if not fresh:
+                self._set_text("")
+                self._prefill = ""
+                self.cw.set_text("")
+                self.cw_btn.set_active(split.line_warning_shown(win.cfg))
+                self.target = None
             page = win.tabs.get_nth_page(win.tabs.get_current_page())
             if isinstance(page, TalkPage) and st is not None and not isinstance(st, Scheduled):
                 page.add_sent(st)
             win.status(_("sent"))
-            self.follow(page)
+            if not fresh:
+                self.follow(page)
+            self._count()
 
         def failed(err):
+            self._sending = False
             self._count()
             win.error(err)
         win.call(win.view.post(text, self.visibility, target, warning, **kw), sent, failed)

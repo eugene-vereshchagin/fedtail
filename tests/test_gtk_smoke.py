@@ -2587,6 +2587,57 @@ class GtkSplitTest(_GtkBase):
         self.assertTrue(dock.sensitive)
         dock.media, dock.sensitive = [], False
 
+    def test_words_typed_while_a_post_is_on_its_way_stay(self):
+        """Enter in the input line on a slow server, the next message begun: the first
+        one's answer cleared the line with the new words in it (24.11). And Enter again
+        meanwhile sends nothing twice."""
+        from concurrent.futures import Future
+        dock = self.win.dock
+        held, asked = Future(), []
+        real_post = self.win.view.post
+
+        def slow(text, *a, **kw):
+            asked.append(text)
+            return held
+        self.win.view.post = slow
+        self.addCleanup(setattr, self.win.view, "post", real_post)
+        dock.set_target(None, fresh=True, restore=False)
+        dock._set_text("the first one")
+        dock.send()
+        self.assertEqual(asked, ["the first one"])
+        dock._set_text("and the next, being written")
+        dock.send()  # Enter again while the first is on its way: waits
+        self.assertEqual(len(asked), 1)
+        held.set_result(None)
+        pump(timeout=0.3)
+        self.assertEqual(dock._text(), "and the next, being written")
+        dock._set_text("")
+        dock.keep_draft()
+
+    def test_a_thread_closed_before_its_answer_reads_nothing(self):
+        """A thread opened on a slow server and its tab closed: the answer drew cards
+        into the page that was gone and marked the thread's posts read — unseen."""
+        from concurrent.futures import Future
+        self.world.add(status("9100", BOB, minute=40, vis="public", text="a thread"), home=True)
+        self.world.add(status("9101", BOB, "9100", "B", minute=41, vis="public"))
+        self.core.poll_once()
+        view = self.win.view
+        real_thread, held = view.thread, Future()
+        got = real_thread("9100").result()
+        view.thread = lambda root: held
+        self.addCleanup(setattr, view, "thread", real_thread)
+        marked = []
+        real_mark = view.mark_read
+        view.mark_read = lambda ids, *a, **kw: marked.append(list(ids))
+        self.addCleanup(setattr, view, "mark_read", real_mark)
+        self.win.open_thread("9100")
+        pump(timeout=0.1)
+        self.win.close_thread("9100")
+        held.set_result(got)
+        pump(timeout=0.3)
+        self.assertEqual(marked, [])
+        self.assertNotIn("9100", self.win.threads)
+
     def test_the_input_line_asks_what_the_editor_asks(self):
         """Send from the line with a file that has no words (post.alt_reminder), or in
         another language than marked (post.lang_check): the editor's questions — the
