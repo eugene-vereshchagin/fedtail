@@ -46,7 +46,8 @@ class RosterRow(Gtk.ListBoxRow):
         if pic is None and icons.pictures(t):  # else the lane's picture
             kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(
                 item.kind, (item.key or "").split(":")[0])
-            pic = icons.image(iconpack.lane_picture(kind), t)
+            own_icon = roster.win.view.lane_icon(item.key) if item.kind == "lane" else kind
+            pic = icons.image(iconpack.lane_picture(kind, own_icon), t)
         if pic is not None:
             pic.set_valign(Gtk.Align.START)
             pic.set_margin_top(2)

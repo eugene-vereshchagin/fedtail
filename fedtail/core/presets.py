@@ -54,6 +54,12 @@ def words(name):
     return dict(got) if isinstance(got, dict) else {}
 
 
+def renamed():
+    """{old name: the name now} — the lanes once named otherwise ([renamed])."""
+    got = _all().get("renamed")
+    return dict(got) if isinstance(got, dict) else {}
+
+
 SECTIONS = "sections"  # not a set: the sidebar's sections, in order
 
 

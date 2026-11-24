@@ -370,10 +370,12 @@ def build(cfg, lists=(), tag_groups=()):
     """The lanes to show, in order: lanes.enabled's (a name of the set's, "extra"'s or
     one's own; "lists" and "tags" — where those stand), or — empty — the set's own order;
     one's own lanes lanes.enabled doesn't name come after; the lists and the tag lanes
-    where their kind stands (else at the end); Unsorted at the very end."""
+    where their kind stands (else at the end); Unsorted where lanes.enabled names it,
+    else at the very end."""
     rules = {c.name: c for c in load(cfg)[0]}
     kinds = {n: slot_of(t) for n, t, _o in definitions(cfg) if slot_of(t)}
     order = shown_names(cfg)
+    unsorted_on = cfg["lanes"].get("unsorted", True)  # shown only while it holds something
     out, seen = [], set()
     for n in order:
         if n in seen:
@@ -392,10 +394,18 @@ def build(cfg, lists=(), tag_groups=()):
                     out.append(lane)
         elif n in rules:
             out.append(rules[n].lane())
-    if cfg["lanes"].get("unsorted", True):  # shown only while it holds something (Core)
-        out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all,
-                              group=presets.words(lanes.UNSORTED).get("group", "")))
+        elif n == lanes.UNSORTED and unsorted_on:  # named: it stands here
+            out.append(_unsorted_lane())
+    if unsorted_on and lanes.UNSORTED not in seen:
+        out.append(_unsorted_lane())
     return out
+
+
+def _unsorted_lane():
+    """The lane of what came and no lane took (lanes.unsorted): its section is the
+    sets' word for it (presets.toml [words.unsorted] group)."""
+    return lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all,
+                      group=presets.words(lanes.UNSORTED).get("group", ""))
 
 
 def _activity_like(rule):

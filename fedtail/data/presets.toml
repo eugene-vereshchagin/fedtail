@@ -583,6 +583,18 @@ none = [{ author = ["followed", "follower", "me"] }]
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
+# Lanes once named otherwise (before 0.15): the old names still work wherever a lane is
+# named — the config, the command line, what a window remembered.
+
+[renamed]
+people = "home"
+comments = "replies"
+global = "federated"
+favourites = "my_likes"
+mine = "my_posts"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
 # The sidebar's sections, top to bottom, and what each is called. A lane stands in the
 # section its `group` names — any word: one not here makes a section of that name, after
 # these (lanes.sections in config.toml orders them your way). own = true: where a lane

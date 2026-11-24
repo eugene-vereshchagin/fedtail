@@ -7,6 +7,8 @@
 
 ## What's next
 
+- Unsorted stands where `lanes.enabled` names it (`"unsorted"`); it stood last whatever
+  the order said. Not named — at the very end, as before.
 - No default names a lane any more. The options that pick lanes — `notify.lanes`,
   `sound.lanes`, the count on the icon, `lanes.languages_in`, `lists.hide_in` — say
   `["marked"]` by default: the lanes whose rules mark themselves for it (a lane's new key

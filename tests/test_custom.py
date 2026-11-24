@@ -1084,6 +1084,22 @@ class UnsortedAndListsTest(FreeBase):
         self.assertEqual(presets.tip("nowhere"), "")
         self.assertNotIn("words", presets.names())
 
+    def test_unsorted_stands_where_it_is_named(self):
+        """Any order: lanes.enabled may name Unsorted too — it stood last whatever the
+        order said (24.11); not named — at the very end, as before."""
+        cfg, _ = config.validate({"lanes": {"enabled": ["unsorted", "home", "direct"]}})
+        self.assertEqual([x.name for x in custom.build(cfg)][:2], ["unsorted", "home"])
+        cfg, _ = config.validate({"lanes": {"enabled": ["home", "direct"]}})
+        self.assertEqual([x.name for x in custom.build(cfg)][-1], "unsorted")
+        cfg, _ = config.validate({"lanes": {"enabled": ["unsorted", "home"],
+                                            "unsorted": False}})
+        self.assertNotIn("unsorted", [x.name for x in custom.build(cfg)])
+        # the lanes once named otherwise are data too (presets.toml [renamed])
+        from fedtail.core import presets
+        self.assertEqual(lanes.canonical("people"), "home")
+        self.assertEqual(lanes.RENAMED, presets.renamed())
+        self.assertNotIn("renamed", presets.names())
+
     def test_view_lanes_only_still_collect(self):
         """No routed lane (a set of views): Unsorted still catches what none keeps."""
         rule = {"name": "plain", "any": [{"source": "home", "author": "local"}]}

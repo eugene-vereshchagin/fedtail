@@ -125,10 +125,9 @@ def in_scope(name, names, marked=False):
 LANES = {n: None for n in presets.known_names()}
 
 
-# lanes once named otherwise (before 0.15): the old names still work wherever a lane is
-# named — the config, the command line, what a window remembered
-RENAMED = {"people": "home", "comments": "replies", "global": "federated",
-           "favourites": "my_likes", "mine": "my_posts"}
+# lanes once named otherwise: the old names still work wherever a lane is named — the
+# config, the command line, what a window remembered (presets.toml [renamed])
+RENAMED = presets.renamed()
 
 
 def canonical(name):

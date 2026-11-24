@@ -55,7 +55,8 @@ class RosterRow(QWidget):
         if ic.isNull():  # else the lane's picture
             kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(item.kind,
                                                              item.key.split(":")[0])
-            ic = pictures.icon(iconpack.lane_picture(kind), win.theme, 18)
+            own_icon = win.core.lane_icon(item.key) if item.kind == "lane" else kind
+            ic = pictures.icon(iconpack.lane_picture(kind, own_icon), win.theme, 18)
         if not ic.isNull():
             icon.setPixmap(ic.pixmap(16 if own else 18, 16 if own else 18))
         h.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
