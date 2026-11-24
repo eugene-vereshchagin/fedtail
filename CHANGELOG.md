@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.24.0 — 2026-11-24
 
 - In config.toml the sets of lanes say what may be written: after every line that takes
