@@ -1493,6 +1493,17 @@ class ComposeScreen(Screen):
             self._ask_lang(said, lang or core.cfg["post"].get("language"))
             return
         self.sending = True
+        try:
+            fut = self._send_future(core, cc, text, cw, vis, lang)
+        except Exception as e:  # noqa: BLE001 — a file gone since it was attached, a picture
+            # that can't be read: said, and Send works again (it stayed dead, the draft
+            # no longer kept, 24.11)
+            self.sending = False
+            self.app.show_error(_("send_failed_text", err=f"{type(e).__name__}: {e}"))
+            return
+        self._sent_soon(core, fut)
+
+    def _send_future(self, core, cc, text, cw, vis, lang):
         if self.edit is not None:
             changed = self._media_changes()
             fut = core.edit(self.edit, text, cw, media=changed) if changed else \
@@ -1509,7 +1520,9 @@ class ComposeScreen(Screen):
                             scheduled_at=cc.when_utc(self.when),
                             **({"account": self.query_one("#c-from", Select).value}
                                if self.accounts else {}))
+        return fut
 
+    def _sent_soon(self, core, fut):
         away = self.edit is None and core.cfg["post"].get("send_in_background")
         app = self.app
 
@@ -1517,7 +1530,7 @@ class ComposeScreen(Screen):
             self.sending = False
             core.delete_draft(self.key)
             app.notify(_("edited_msg") if self.edit is not None else _("sent"))
-            if not away:
+            if not away and self.is_attached:  # (left with Esc meanwhile: gone already)
                 self.dismiss(True)
             app.refresh_lane()
 

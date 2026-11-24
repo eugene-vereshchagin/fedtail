@@ -770,7 +770,7 @@ async function linkAct(url, p, confirmed, chosen) {
   if (r.compose) composeFrom(r.compose, p);
   if (r.read) paintRead(r.read);
   if (r.message) toast(r.message);
-  if (r.refresh) await refresh();
+  if (r.refresh) await reload();
 }
 
 // ★ / ♻ / ↩ from another account of this page: the post found on its server
@@ -827,7 +827,7 @@ function paintRead(ids) {  // marked read on the server ("read up to here"): sho
 }
 
 async function threadAct(action, p) {
-  try { toast((await api("/api/thread_act", { action, id: p.sid })).message); await refresh(); }
+  try { toast((await api("/api/thread_act", { action, id: p.sid })).message); await reload(); }
   catch (e) { toast(e.message); }
 }
 
@@ -1227,11 +1227,12 @@ async function laneClear(name, confirmed) {
   try { r = await api("/api/lane_clear", { name, confirmed: !!confirmed }); }
   catch (e) { toast(e.message); return; }
   if (r.confirm) { if (window.confirm(r.confirm)) await laneClear(name, true); return; }
-  await refresh();
+  await reload();
 }
 
 async function selectLane(name, keep) {
   const changed = state.lane !== name;
+  const was = state.lane;
   // another lane: the find bar goes — unless it is looking in every lane, which leads here
   if (changed && $("#find") && !$("#find").hidden && !finder.hits) closeFind();
   state.lane = name;
@@ -1243,7 +1244,18 @@ async function selectLane(name, keep) {
   try {
     data = await api("/api/lane?name=" + encodeURIComponent(name) + (keep ? "&keep=1" : ""));
     if (changed) api("/api/active", { name: data.name }).catch(() => {});  // a POST: GET only reads
-  } catch (e) { toast(w("web_load_error", { err: e.message })); return; }
+  } catch (e) {
+    toast(w("web_load_error", { err: e.message }));
+    // it didn't come: the lane on screen is still the one before — the keys, "older"
+    // and the find went on to work on the lane named here, under the other's posts
+    if (changed && state.lane === name && was) {
+      state.lane = was;
+      history.replaceState(null, "", "#" + encodeURIComponent(was));
+      for (const a of document.querySelectorAll("#lanes a"))
+        a.classList.toggle("on", a.dataset.lane === was);
+    }
+    return;
+  }
   if (state.lane !== name) return;  // another lane was picked meanwhile
   const newestFirst = state.me.order === "newest_first";
   if (newestFirst) data.posts.reverse();
@@ -1609,7 +1621,10 @@ async function loadPane(p, keep) {
   let data;
   try {
     data = await api("/api/lane?name=" + encodeURIComponent(p.name) + (keep ? "&keep=1" : ""));
-  } catch (e) { p.body.textContent = w("web_load_error", { err: e.message }); return; }
+  } catch (e) {
+    if (cols.panes.get(p.name) === p) p.body.textContent = w("web_load_error", { err: e.message });
+    return;
+  }
   if (cols.panes.get(p.name) !== p) return;  // closed or focused meanwhile
   p.head.textContent = data.title;
   const newestFirst = state.me.order === "newest_first";
@@ -2036,8 +2051,12 @@ async function findNow() {
   finder.hits = null;
   if ($("#find-every") && $("#find-every").checked) return findEverywhere(q);
   let r = { ids: [], text: "" };
-  try { if (q.trim()) r = await api("/api/find?" + new URLSearchParams({ lane: state.lane, q })); }
+  const lane = state.lane;
+  const turn = finder.turn = (finder.turn || 0) + 1;
+  try { if (q.trim()) r = await api("/api/find?" + new URLSearchParams({ lane, q })); }
   catch (e) { toast(e.message); }
+  // an answer for the words typed before, or for the lane left meanwhile: not this one's
+  if (turn !== finder.turn || lane !== state.lane) return;
   finder.ids = r.ids;
   finder.at = -1;
   for (const c of document.querySelectorAll("#posts .post"))
@@ -2053,8 +2072,10 @@ async function findDeeper() {
   b.disabled = true;
   $("#find-count").textContent = w("find_searching");
   try {
-    const r = await api("/api/find_deeper?" + new URLSearchParams({ lane: state.lane, q }));
-    if (r.more) { await selectLane(state.lane, true); await findNow(); }
+    const lane = state.lane;
+    const r = await api("/api/find_deeper?" + new URLSearchParams({ lane, q }));
+    if (lane !== state.lane) return;  // another lane by now: its own find, not this one's
+    if (r.more) { await selectLane(lane, true); await findNow(); }
     else $("#find-count").textContent = r.text || w("find_count", { i: finder.at + 1, n: finder.ids.length });
   } catch (e) { toast(e.message); }
   finally { b.disabled = false; }
@@ -2239,7 +2260,9 @@ async function openThread(id, at, show) {
       for (const card of document.querySelectorAll("#posts .post.unread"))
         if (ids.includes(card.dataset.id)) read(card);
     }
-  } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+  } catch (e) {
+    if (state.side === token) $("#side-body").textContent = w("web_load_error", { err: e.message });
+  }
 }
 
 // A top comment's branch folded away and shown again — the windows' and the terminal's
@@ -2420,7 +2443,9 @@ async function openAccount(id, show) {
     body.append(box);
     body.append(profileShows(a, id));
     profilePosts(body, a, id, on ? on.key : "");
-  } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+  } catch (e) {
+    if (state.side === token) $("#side-body").textContent = w("web_load_error", { err: e.message });
+  }
 }
 
 // what the windows add under the name: a move, whom of mine they follow, what they put
@@ -2635,7 +2660,12 @@ async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
   const q = new URLSearchParams({ name, arg: arg || "", tab: tab || "", cursor: cursor || "" });
   let pg;
   try { pg = await api("/api/page?" + q); }
-  catch (e) { box.textContent = w("web_load_error", { err: e.message }); return; }
+  catch (e) {
+    // (a failure that comes after another panel opened isn't that panel's)
+    if (into === "side" ? state.side === token : state.side_main === token)
+      box.textContent = w("web_load_error", { err: e.message });
+    return;
+  }
   if (into === "side" ? state.side !== token : state.side_main !== token) return;
   if (into === "main" && state.lane && name !== state.lane) return;
   state.place = { name, arg: arg || "", tab: pg.tab, into };
@@ -2845,9 +2875,15 @@ async function placeAct(act, values, confirmed, answer) {
 }
 
 // ---- doing things -----------------------------------------------------------------------
+const acting = new Set();  // "like:ID" on its way: a second press waits for the answer
 async function act(action, p) {
+  // (like and boost toggle: a double click or a key held down sent it twice — on and off)
+  const mark = action + ":" + p.sid;
+  if (acting.has(mark)) return;
+  acting.add(mark);
   try { redraw(await api("/api/act", { action, id: p.sid })); }
   catch (e) { toast(e.message); }
+  finally { acting.delete(mark); }
 }
 
 // ---- writing ------------------------------------------------------------------------------
@@ -3630,7 +3666,12 @@ document.addEventListener("keydown", (e) => {
     all_read: markAllRead, refresh, quote: () => p && quoteReply(p),
     search: () => openPlace("search"), command: () => cmdInput().focus(),
   };
-  if (means && posts[means]) { e.preventDefault(); posts[means](); return; }
+  if (means && posts[means]) {
+    e.preventDefault();
+    // held down: walking the posts repeats; liking, boosting, opening don't
+    if (!e.repeat || means === "next_post" || means === "previous_post") posts[means]();
+    return;
+  }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const keys = {
     ArrowDown: () => setCursor(state.cursor + 1), ArrowUp: () => setCursor(state.cursor - 1),
@@ -3657,14 +3698,25 @@ function isNavOpen() { return $("#nav").classList.contains("open"); }
 function openNav() { $("#nav").classList.add("open"); $("#scrim").hidden = false; }
 function closeNav() { $("#nav").classList.remove("open"); $("#scrim").hidden = true; }
 
-async function refresh() {
+// What the page shows read anew from the core — nothing asked of the server: the lanes,
+// the one open, the columns. For news the core says it has (the long poll), and after an
+// action here.
+async function reload() {
   await flushRead();
-  // a round now (answered when it's over); held new posts come in; how it went, said
-  const r = await api("/api/refresh", {}).catch(() => null);
-  if (r && r.message) toast(r.message);
   await loadLanes().catch((e) => toast(e.message));
   if (state.lane) await selectLane(state.lane, true);
   if (cols.on) await Promise.all([...cols.panes.values()].map((p) => loadPane(p, true)));
+}
+
+// ⟳ pressed: a round now (answered when it's over); held new posts come in; how it went,
+// said. Only by hand: the long poll called this for every change the core told of — a
+// round of its own after every round, the held posts let in unasked, a toast each time
+// (since 30.10; found 24.11).
+async function refresh() {
+  await flushRead();
+  const r = await api("/api/refresh", {}).catch(() => null);
+  if (r && r.message) toast(r.message);
+  await reload();
 }
 
 // ---- sounds: the theme's, sent by the server with the news (fedtail sound.*) -----------
@@ -3813,7 +3865,7 @@ async function follow() {
       if (r.v !== state.version) {
         const first = state.version < 0;
         state.version = r.v;
-        if (!first && !$("#compose").open) await refresh();
+        if (!first && !$("#compose").open) await reload();
       }
     } catch (e) {
       await new Promise((ok) => setTimeout(ok, 5000));

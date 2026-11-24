@@ -823,7 +823,10 @@ class ProfileScreen(Screen, PostsMixin):
         head = self.query_one("#posts-head", Static)
         head.update(Text(self.posts_head()))
         head.tooltip = _("profile_show_tip")
-        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
+        # ("s" pressed again before the answer: that one's posts aren't this kind's)
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show),
+                   ok=lambda page, show=self.show: self.fill(page) if show == self.show
+                   else None)
 
     def action_more(self):
         """M: their older posts — my server's next page, then (feed.remote_profiles)
@@ -1055,7 +1058,10 @@ class ProfileScreen(Screen, PostsMixin):
         self.query_one("#cmd", Input).focus()
 
     def status_changed(self, st):
-        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
+        # ("s" pressed again before the answer: that one's posts aren't this kind's)
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show),
+                   ok=lambda page, show=self.show: self.fill(page) if show == self.show
+                   else None)
 
     async def on_input_submitted(self, e: Input.Submitted):
         e.stop()
@@ -2568,9 +2574,12 @@ class FedtailApp(App, PostsMixin):
         if not f or not self.lane:
             return
         query = f["query"]
+        lane = self.lane
         self.notify(_("find_searching"))
 
         def done(res):
+            if self.lane != lane:  # another lane by now: not searched with these words
+                return
             if not res.get("more"):
                 self.notify(_("find_archive_none") if not res.get("total") else
                             _("find_count", i=f["at"] + 1, n=len(f["hits"])))
@@ -2767,7 +2776,16 @@ class FedtailApp(App, PostsMixin):
         """j past the last post: older ones from the server, or "nothing older"."""
         if not self.lane or self.lane_model(self.lane).events_only():
             return  # no posts: nothing older on a server
-        n = await asyncio.wrap_future(self.core.load_older(self.lane))
+        if getattr(self, "_older_busy", False):
+            return  # (j held at the last post: one page at a time)
+        self._older_busy = True
+        lane = self.lane
+        try:
+            n = await asyncio.wrap_future(self.core.load_older(lane))
+        finally:
+            self._older_busy = False
+        if self.lane != lane:
+            return
         if not n:
             self.notify(_("no_older"))
         else:

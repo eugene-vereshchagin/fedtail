@@ -46,6 +46,17 @@
   layout's line is saved a moment after the last key and is there again after a crash or
   a restart — as the same draft the full editor opens for that post. A draft written in
   the full editor is never shown in the line nor written over by it.
+- **The web page no longer presses "Refresh" by itself.** For every change the core told
+  it of, the page asked for a round of its own (since 0.22): a round of the server after
+  every round, posts held by `feed.on_new = "hold"` let in unasked, a "nothing new" toast
+  each time. It reads the lanes from the core now; a round is asked only by ⟳.
+- The web page: a like or a boost pressed twice (a double click, a key held down) goes
+  once; a find's late answer no longer lands in another lane or over newer words; a lane
+  that failed to load leaves the page in the lane it shows; an error of a panel left
+  doesn't write over the one open now.
+- The terminal: a profile's posts of the kind asked before `s` don't replace the new
+  kind's; "deeper" answered after a lane change isn't run there; one page of older posts
+  at a time; Send works again after a file to attach turned out unreadable.
 - The input line (Qt and GTK): what is typed while a post is still on its way to a slow
   server stays — the first post's answer cleared the line; Enter again meanwhile waits.
 - GTK: a thread's tab closed before its answer came no longer marks the thread read;

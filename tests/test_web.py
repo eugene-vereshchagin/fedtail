@@ -507,6 +507,17 @@ class WebTest(TmpDir):
         js = web.static_text("app.js")
         self.assertIn("card.append(foldButton(card, p.branch))", js)
 
+    def test_the_page_asks_for_a_round_only_by_hand(self):
+        """The long poll reads the lanes anew when the core has news; it called the ⟳'s
+        own function for that — a round of the server after every round, the held posts
+        let in unasked (30.10 … 24.11). One place asks for a round: refresh()."""
+        js = web.static_text("app.js")
+        self.assertEqual(js.count('"/api/refresh"'), 1)
+        loop = js[js.index("if (r.v !== state.version) {"):]
+        loop = loop[:loop.index("} catch")]
+        self.assertIn("await reload();", loop)
+        self.assertNotIn("refresh()", loop)
+
     def test_a_push_pressed_goes_to_its_lane(self):
         """A press on a window's note goes to its lane; the page's push opened "/"
         (23.11). The core says which lane a kind of event is read in — by the lanes'

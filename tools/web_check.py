@@ -379,6 +379,17 @@ def keys_and_title(page, core):
     tab's title carries the unread number; ≡ → Debug has the snapshot and the sound
     test, "Try a theme" the two file items."""
     page.keyboard.press("Escape")
+    # news the core tells the page of are read from the core — no round asked of the
+    # server for them (the long poll pressed "Refresh" for every change, since 30.10)
+    if not REAL:
+        from tests.fakes import BOB, FakeApi, status
+        before = core.hand_refreshes
+        FakeApi.world.add(status("0900", BOB, minute=58, vis="public", text="news"), home=True)
+        core.poll_once()
+        page.wait_for_timeout(2500)
+        if core.hand_refreshes != before:
+            ERRORS.append(f"the page asked for {core.hand_refreshes - before} round(s) of its "
+                          "own after the core's news")
     page.locator("#posts").focus()
     page.evaluate("() => setCursor(0)")
     page.keyboard.press("j")
