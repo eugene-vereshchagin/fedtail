@@ -1385,6 +1385,32 @@ class SetsInTheConfigTest(unittest.TestCase):
         from importlib import resources
         self.assertFalse(resources.files("fedtail").joinpath("data", "presets.toml").is_file())
 
+    def test_every_choice_is_written_beside_its_line(self):
+        """25.11: nobody should guess which word a lane's key takes — in the reference
+        config a line of a set that takes words of a list says the whole list after
+        itself, and a block before the first set lists every key of a lane and of a
+        condition with all its words (tools/docs_build.py writes both, --check holds)."""
+        import re
+
+        from fedtail.core import atoms
+        from fedtail.core.config_update import cut_sets
+        for lang in config.EXAMPLE_LANGS:
+            sets = cut_sets(config.example_text(lang))[1]
+            lines = [x for x in sets if re.match(r"^(switches|read|sort|marks|badge) = ", x)]
+            self.assertGreater(len(lines), 60, lang)
+            for line in lines:
+                self.assertIn("  # ⇠ ", line, lang)
+            said = [x for x in sets if x.startswith("switches = ")][0].split("# ⇠ ")[1]
+            self.assertEqual(said, ", ".join(atoms.SWITCHES))
+            a = next(i for i, x in enumerate(sets) if "words:begin" in x)
+            b = next(i for i, x in enumerate(sets) if "words:end" in x)
+            block = " ".join(x.lstrip("# ") for x in sets[a:b])
+            for word in (*atoms.SWITCHES, *atoms.MARKS, *atoms.CARD_BUTTONS, *atoms.KIND,
+                         *atoms.ME, *atoms.EVENTS, *atoms.STATE, *atoms.VISIBILITY):
+                self.assertIn(word, block, f"{lang}: {word}")
+            for x in sets[a:b + 1]:  # explanations, never mistaken for options
+                self.assertFalse(re.match(r"^\s*#?\s*[A-Za-z0-9_]+\s*=", x), x)
+
     def test_a_set_of_ones_own_and_a_set_changed(self):
         from fedtail.core import presets
         self.addCleanup(i18n.setup, i18n.current_language())

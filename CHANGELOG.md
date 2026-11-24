@@ -7,6 +7,10 @@
 
 ## What's next
 
+- In config.toml the sets of lanes say what may be written: after every line that takes
+  words of a list — `switches`, `read`, `sort`, `source`, `marks`, `buttons`… — the whole
+  list stands ("⇠ posts_only, unread_only"), and before the first set a block lists every
+  key of a lane and of a condition with all its words.
 - A thread's new comments stay lit. Opened on a thread with new answers, they were read on
   screen at once and their mark of the new went before you looked — nothing said which
   were new. Now the comments new as the thread opened (and those that come while it is

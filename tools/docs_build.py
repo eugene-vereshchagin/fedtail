@@ -467,6 +467,106 @@ def lane_keys():
     return sorted(atoms.RULE_KEYS), sorted(atoms.CONDITION_KEYS)
 
 
+# ---- the reference config: the words a lane's keys take, written beside them -------------
+# In the sets of lanes a line that takes words from a fixed list says the whole list after
+# itself ("# ⇠ posts_only, unread_only"), and a block before the first set lists every key
+# of a lane and of a condition with its words — from the core, so nobody has to guess
+# which word works. Written here, checked by --check.
+WORDS_BEGIN, WORDS_END = "words:begin", "words:end"
+WORDS_MARK = "  # ⇠ "
+# a lane's keys whose words go on their own line (the others: in the block only)
+LINE_KEYS = ("switches", "group", "source", "read", "sort", "mode", "view", "threads_shown",
+             "open_at", "badge", "marks", "buttons", "filter_context", "bundle")
+_WORDS_TEXT = {
+    "en": ("The words a lane's keys take — all of them (after a line of a set, \"⇠\" says the "
+           "same for that line). A list in [ ] takes several of them.",
+           "Keys of a lane", "Keys of a condition (inside any = [...] and none = [...])",
+           "any word: a section of that name", "free", "a picture's word: the lane editor "
+           "lists them", "the numbers and the text: age = \"<1d\", likes / boosts / replies = "
+           "\">10\", lang = \"ru\", text = [[\"word\"]], switch = \"@key\" or words, shown, "
+           "apart, priority, until, id"),
+    "ru": ("Слова, которые берут ключи ленты, — все до одного (после строки набора «⇠» говорит "
+           "то же для этой строки). Список в [ ] берёт несколько.",
+           "Ключи ленты", "Ключи условия (внутри any = [...] и none = [...])",
+           "любое слово: раздел с таким именем", "свободно", "слово картинки: их перечисляет "
+           "редактор лент", "числа и текст: age = \"<1d\", likes / boosts / replies = \">10\", "
+           "lang = \"ru\", text = [[\"слово\"]], switch = \"@ключ\" или слова, shown, apart, "
+           "priority, until, id"),
+}
+
+
+def _key_words(key, words):
+    """The words of a lane's key as one line says them."""
+    from fedtail.core import presets
+    if key == "group":
+        own = [s for s in presets.sections() if s not in ("lists", "tags")]
+        return ", ".join(own) + ", …"
+    return ", ".join(w + "…" if w.endswith(":") else w for w in words.get(key, ()))
+
+
+def _wrapped(head, text, width=92):
+    import textwrap
+    lines = textwrap.wrap(f"{head}: {text}", width=width, subsequent_indent="    ",
+                          break_long_words=False, break_on_hyphens=False)
+    return ["#   " + x for x in lines]
+
+
+def words_block(lang):
+    """The block of every key and its words, as comment lines (between its marks)."""
+    words = lane_words()
+    t = _WORDS_TEXT[lang]
+    import textwrap
+    out = [f"# ---- {WORDS_BEGIN} (tools/docs_build.py) ----"]
+    out += ["# " + x for x in textwrap.wrap(t[0], 92)]
+    out.append(f"# {t[1]}:")
+    for key in LINE_KEYS:
+        text = t[3] + " (" + _key_words(key, words) + ")" if key == "group" \
+            else _key_words(key, words)
+        out += _wrapped(key, text)
+    out += _wrapped("icon", t[5])
+    out.append(f"# {t[2]}:")
+    for key in ("source", "author", "kind", "me", "visibility", "has", "state", "via",
+                "target", "parent", "event", "text_in", "age_of"):
+        out += _wrapped(key, _key_words(key, words))
+    out += ["#   " + x for x in textwrap.wrap(t[6], 92, subsequent_indent="    ")]
+    out.append(f"# ---- {WORDS_END} ----")
+    assert not [x for x in out if re.match(r"^\s*#?\s*[A-Za-z0-9_]+\s*=", x)], out
+    return out
+
+
+def annotate_example(text, lang):
+    """A reference config with the words written in: the block before the first set, and
+    after every line of the sets whose key takes words of a list."""
+    import re as _re
+    words = lane_words()
+    lines = text.split("\n")
+    # the block: where it stands (between its marks), or before the first set's banner
+    begin = next((i for i, x in enumerate(lines) if WORDS_BEGIN in x), None)
+    if begin is not None:
+        end = next(i for i, x in enumerate(lines) if WORDS_END in x and i > begin)
+        lines[begin:end + 1] = words_block(lang)
+    else:
+        first = next(i for i, x in enumerate(lines) if x.startswith("[[lanes.sets."))
+        at = first
+        while not lines[at - 1].startswith("# ══"):
+            at -= 1
+        at -= 1
+        while not lines[at - 1].strip():
+            at -= 1
+        lines[at:at] = ["#"] + words_block(lang)
+    inside = False
+    for i, line in enumerate(lines):
+        if _re.match(r"^\[\[?[A-Za-z0-9_.]+\]\]?\s*$", line):
+            # a set's lane, or a lane's words by its name (its marks, its section)
+            inside = line.startswith(("[[lanes.sets.", "[lanes.words."))
+            continue
+        m = _re.match(r"^([a-z_]+) = ", line) if inside else None
+        if m and m.group(1) in LINE_KEYS:
+            lines[i] = line.split(WORDS_MARK)[0].rstrip() + WORDS_MARK + \
+                _key_words(m.group(1), words)
+    return "\n".join(lines)
+
+
 def load_lane_words():
     with open(LANES / "words.toml", "rb") as f:
         return tomllib.load(f)
@@ -721,7 +821,9 @@ def build():
         out[d / "lanes.md"] = render_lanes(lang)
         out[d / "parts" / "stats.md"] = render_stats(lang)
         example = config_doc.example_path(lang)
-        out[d / "config.md"] = config_doc.build(example.read_text("utf-8"), lang)
+        # the reference config itself: the words its lanes' keys take, written in
+        out[example] = annotate_example(example.read_text("utf-8"), lang)
+        out[d / "config.md"] = config_doc.build(out[example], lang)
     # parts first (they include nothing), then the generated pages, then the rest — so
     # whatever a file includes is already up to date when it is read
     everything = set(doc_files()) | set(out)

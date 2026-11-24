@@ -291,6 +291,53 @@ refresh_minutes = 10
 # saved lanes of tags stand among the others.
 # To change one lane and leave the set alone: a [[lanes.custom]] of the same name takes the
 # set's lane's place.
+#
+# ---- words:begin (tools/docs_build.py) ----
+# The words a lane's keys take — all of them (after a line of a set, "⇠" says the same for
+# that line). A list in [ ] takes several of them.
+# Keys of a lane:
+#   switches: posts_only, unread_only
+#   group: any word: a section of that name (standard, personal, …)
+#   source: bookmarks, bubble, context, direct, favourites, federated, home, local, mentions,
+#       mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…,
+#       search:…, rss:…
+#   read: browse, through
+#   sort: arrival, boosts, density, likes, post_time, replies
+#   mode: catch_up, lane
+#   view: threads
+#   threads_shown: all, new
+#   open_at: first_unread, post
+#   badge: hot, quiet
+#   marks: notify, sound, icon_count, languages, hide_listed
+#   buttons: reply, like, boost, thread, bookmark, read, open
+#   filter_context: account, home, notifications, public, thread
+#   bundle: author
+#   icon: a picture's word: the lane editor lists them
+# Keys of a condition (inside any = [...] and none = [...]):
+#   source: bookmarks, bubble, context, direct, favourites, federated, home, local, mentions,
+#       mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…,
+#       search:…, rss:…
+#   author: bell, boosts_off, bot, followed, follower, hidden_home, in_list, limited, local, me,
+#       mutual, new, new_follower, not_follower, remote, stranger, @nick@host, domain:…
+#   kind: boost, edited, poll, post, quote, reply, self_boost, self_reply, self_thread
+#   me: boost_of_mine, direct, in_my_thread, mention, my_boost, quote_of_mine, reply,
+#       reply_to_comment, reply_to_post
+#   visibility: direct, followers, local_only, mutuals, public, unlisted
+#   has: alt_missing, audio, cw, followed_tag, image, link, media, poll, sensitive, video,
+#       tag:…, link:…, word:…
+#   state: bookmarked, boosted, deleted, filtered_warn, in_list, liked, muted_thread,
+#       new_replies, read, replied, subscribed, unbookmarked, unliked, unread
+#   via: boost, followed, list, mine, tag
+#   target: comment, my_comment, my_post, post, read, seen
+#   parent: followed, mine, stranger, unknown
+#   event: admin, annual_report, device, favourite, follow, follow_request, gone, i_followed,
+#       lost, moved, pending, poll, quote, quoted_update, reblog, release, removed_follower,
+#       severed, status, unfollow, unfollowed_back, unliked, update, warning
+#   text_in: alt, cw, name, poll, text
+#   age_of: post, original
+#   the numbers and the text: age = "<1d", likes / boosts / replies = ">10", lang = "ru", text =
+#       [["word"]], switch = "@key" or words, shown, apart, priority, until, id
+# ---- words:end ----
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -300,18 +347,18 @@ refresh_minutes = 10
 
 [[lanes.sets.fedtail]]
 name = "federated"
-switches = ["posts_only"]
-group = "standard"
-source = "federated"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "federated"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.fedtail]]
 name = "home"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 start = true
-group = "standard"
-source = "home"
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 # Home: a reply only when it is mine, to me, or in a thread of mine or one I follow.
 # Mastodon's home also brings what the followed say to each other in their threads and an
 # author's replies to themselves; left out here, they wait in Unsorted (lanes.unsorted).
@@ -331,42 +378,42 @@ none = [{ author = "hidden_home" }, { author = "bot" }]
 
 [[lanes.sets.fedtail]]
 name = "local"
-switches = ["posts_only"]
-group = "standard"
-source = "local"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "local"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.fedtail]]
 name = "bots"
-switches = ["posts_only", "unread_only"]
-badge = "quiet"
-group = "standard"
-source = "home"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [{ author = "bot" }]
 
 [[lanes.sets.fedtail]]
 name = "my_posts"
-switches = ["posts_only"]
-group = "personal"
-source = "mine"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mine"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [{}]
 
 [[lanes.sets.fedtail]]
 name = "direct"
-switches = ["unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ visibility = "direct" }]
 
 [[lanes.sets.fedtail]]
 name = "to_me"
-switches = ["unread_only"]
-badge = "hot"
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "hot"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [
   {},
   { me = "reply", switch = "@chip_replies" },
@@ -378,38 +425,38 @@ none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
 # together where reading starts.
 [[lanes.sets.fedtail]]
 name = "commented"
-switches = ["unread_only"]
-group = "personal"
-source = ["subs", "mentions"]
-view = "threads"
-threads_shown = "all"
-open_at = "first_unread"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = ["subs", "mentions"]  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+view = "threads"  # ⇠ threads
+threads_shown = "all"  # ⇠ all, new
+open_at = "first_unread"  # ⇠ first_unread, post
 icon = "commented"
 any = [{ state = "subscribed" }]
 none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 
 [[lanes.sets.fedtail]]
 name = "important"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 hide_empty = true
-group = "personal"
-source = "watched"
+group = "personal"  # ⇠ standard, personal, …
+source = "watched"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [{}]
 
 [[lanes.sets.fedtail]]
 name = "bookmarks"
-switches = ["posts_only"]
-group = "personal"
-source = "bookmarks"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "bookmarks"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unbookmarked" }]
 
 [[lanes.sets.fedtail]]
 name = "activity"
-switches = ["unread_only"]
-badge = "quiet"
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
 # Every event fedtail knows of, by the quick filters; follow requests stand here while no
 # lane of their own is shown.
 any = [
@@ -437,10 +484,10 @@ slot = "tags"
 
 [[lanes.sets.mastodon]]
 name = "home"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 start = true
-group = "standard"
-source = "home"
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [
   {},
   { kind = "boost", switch = "@chip_boosts" },
@@ -450,42 +497,42 @@ none = [{ author = "hidden_home" }]
 
 [[lanes.sets.mastodon]]
 name = "local"
-switches = ["posts_only"]
-group = "standard"
-source = "local"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "local"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.mastodon]]
 name = "federated"
-switches = ["posts_only"]
-group = "standard"
-source = "federated"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "federated"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.mastodon]]
 name = "mentions"
-switches = ["posts_only", "unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}]
 none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 
 [[lanes.sets.mastodon]]
 name = "direct"
-switches = ["unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ visibility = "direct" }]
 
 [[lanes.sets.mastodon]]
 name = "activity"
-switches = ["unread_only"]
-badge = "quiet"
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
 # Every event fedtail knows of, by the quick filters; follow requests stand here while no
 # lane of their own is shown.
 any = [
@@ -499,19 +546,19 @@ none = [{ event = "follow_request", apart = "requests" }]
 
 [[lanes.sets.mastodon]]
 name = "bookmarks"
-switches = ["posts_only"]
-group = "personal"
-source = "bookmarks"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "bookmarks"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unbookmarked" }]
 
 [[lanes.sets.mastodon]]
 name = "my_likes"
-switches = ["posts_only"]
-group = "personal"
-source = "favourites"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "favourites"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unliked" }]
 
@@ -530,10 +577,10 @@ slot = "tags"
 
 [[lanes.sets.tusky]]
 name = "home"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 start = true
-group = "standard"
-source = "home"
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [
   {},
   { kind = "boost", switch = "@chip_boosts" },
@@ -543,18 +590,18 @@ none = [{ author = "hidden_home" }]
 
 [[lanes.sets.tusky]]
 name = "mentions"
-switches = ["posts_only", "unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}]
 none = [{ author = "me" }]
 
 [[lanes.sets.tusky]]
 name = "activity"
-switches = ["unread_only"]
-badge = "quiet"
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
 # Every event fedtail knows of, by the quick filters; follow requests stand here while no
 # lane of their own is shown.
 any = [
@@ -568,26 +615,26 @@ none = [{ event = "follow_request", apart = "requests" }]
 
 [[lanes.sets.tusky]]
 name = "local"
-switches = ["posts_only"]
-group = "standard"
-source = "local"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "local"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.tusky]]
 name = "federated"
-switches = ["posts_only"]
-group = "standard"
-source = "federated"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "federated"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.tusky]]
 name = "direct"
-switches = ["unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ visibility = "direct" }]
 
 [[lanes.sets.tusky]]
@@ -605,10 +652,10 @@ slot = "tags"
 
 [[lanes.sets.phanpy]]
 name = "home"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 start = true
-group = "standard"
-source = "home"
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [
   {},
   { kind = "boost", switch = "@chip_boosts" },
@@ -617,34 +664,34 @@ none = [{ author = "hidden_home" }]
 
 [[lanes.sets.phanpy]]
 name = "local"
-switches = ["posts_only"]
-group = "standard"
-source = "local"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "local"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.phanpy]]
 name = "mentions"
-switches = ["posts_only", "unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}, { author = "followed", switch = "@chip_followed" }]
 none = [{ author = "me" }]
 
 [[lanes.sets.phanpy]]
 name = "direct"
-switches = ["unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ visibility = "direct" }]
 
 [[lanes.sets.phanpy]]
 name = "activity"
-switches = ["unread_only"]
-badge = "quiet"
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
 # Every event fedtail knows of, by the quick filters; follow requests stand here while no
 # lane of their own is shown.
 any = [
@@ -658,19 +705,19 @@ none = [{ event = "follow_request", apart = "requests" }]
 
 [[lanes.sets.phanpy]]
 name = "bookmarks"
-switches = ["posts_only"]
-group = "personal"
-source = "bookmarks"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "bookmarks"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unbookmarked" }]
 
 [[lanes.sets.phanpy]]
 name = "my_likes"
-switches = ["posts_only"]
-group = "personal"
-source = "favourites"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "favourites"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unliked" }]
 
@@ -690,10 +737,10 @@ slot = "tags"
 
 [[lanes.sets.fedilab]]
 name = "home"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
 start = true
-group = "standard"
-source = "home"
+group = "standard"  # ⇠ standard, personal, …
+source = "home"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
 any = [
   {},
   { kind = "boost", switch = "@chip_boosts" },
@@ -703,34 +750,34 @@ none = [{ author = "hidden_home" }]
 
 [[lanes.sets.fedilab]]
 name = "local"
-switches = ["posts_only"]
-group = "standard"
-source = "local"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "local"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.fedilab]]
 name = "federated"
-switches = ["posts_only"]
-group = "standard"
-source = "federated"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
+source = "federated"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 
 [[lanes.sets.fedilab]]
 name = "mentions"
-switches = ["posts_only", "unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}]
 none = [{ author = "me" }]
 
 [[lanes.sets.fedilab]]
 name = "activity"
-switches = ["unread_only"]
-badge = "quiet"
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "quiet"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
 # Every event fedtail knows of, by the quick filters; follow requests stand here while no
 # lane of their own is shown.
 any = [
@@ -744,27 +791,27 @@ none = [{ event = "follow_request", apart = "requests" }]
 
 [[lanes.sets.fedilab]]
 name = "direct"
-switches = ["unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ visibility = "direct" }]
 
 [[lanes.sets.fedilab]]
 name = "bookmarks"
-switches = ["posts_only"]
-group = "personal"
-source = "bookmarks"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "bookmarks"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unbookmarked" }]
 
 [[lanes.sets.fedilab]]
 name = "my_likes"
-switches = ["posts_only"]
-group = "personal"
-source = "favourites"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "favourites"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unliked" }]
 
@@ -785,78 +832,78 @@ slot = "tags"
 # thread: "commented").
 [[lanes.sets.extra]]
 name = "subs"
-switches = ["unread_only"]
-group = "personal"
-source = "subs"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "subs"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}]
 none = [{ me = "reply" }]
 
 # "Comments", as on Point, the threads with news only — fedtail's set has every thread.
 [[lanes.sets.extra]]
 name = "commented"
-switches = ["unread_only"]
-group = "personal"
-source = ["subs", "mentions"]
-view = "threads"
-open_at = "first_unread"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = ["subs", "mentions"]  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+view = "threads"  # ⇠ threads
+open_at = "first_unread"  # ⇠ first_unread, post
 icon = "commented"
 any = [{ state = "subscribed" }]
 none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 
 [[lanes.sets.extra]]
 name = "replies"
-switches = ["unread_only"]
-badge = "hot"
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+badge = "hot"  # ⇠ hot, quiet
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ me = "reply" }]
 none = [{ visibility = "direct", apart = "direct" }]
 
 [[lanes.sets.extra]]
 name = "mentions"
-switches = ["posts_only", "unread_only"]
-group = "personal"
-source = "mentions"
-sort = "post_time"
+switches = ["posts_only", "unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{}]
 none = [{ me = "reply" }, { author = "me" }, { visibility = "direct", apart = "direct" }]
 
 [[lanes.sets.extra]]
 name = "my_likes"
-switches = ["posts_only"]
-group = "personal"
-source = "favourites"
-read = "browse"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
+source = "favourites"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{}]
 none = [{ state = "unliked" }]
 
 [[lanes.sets.extra]]
 name = "requests"
-switches = ["unread_only"]
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
 any = [{ event = "follow_request" }]
 
 # "The network": Federated without my own server's people — what other servers bring.
 [[lanes.sets.extra]]
 name = "network"
-switches = ["posts_only"]
-group = "standard"
+switches = ["posts_only"]  # ⇠ posts_only, unread_only
+group = "standard"  # ⇠ standard, personal, …
 icon = "federated"
-source = "federated"
-read = "browse"
+source = "federated"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+read = "browse"  # ⇠ browse, through
 any = [{ author = "remote" }]
 
 # Mentions from strangers (who neither follow me nor I them): where spam comes from — a
 # lane to look at it apart, or (in `none` of To me) to keep it away.
 [[lanes.sets.extra]]
 name = "stranger_mentions"
-switches = ["unread_only"]
-group = "personal"
+switches = ["unread_only"]  # ⇠ posts_only, unread_only
+group = "personal"  # ⇠ standard, personal, …
 icon = "mentions"
-source = "mentions"
-sort = "post_time"
+source = "mentions"  # ⇠ bookmarks, bubble, context, direct, favourites, federated, home, local, mentions, mine, subs, trends, watched, list:…, tags:…, account:…, remote:…, link:…, quotes:…, search:…, rss:…
+sort = "post_time"  # ⇠ arrival, boosts, density, likes, post_time, replies
 any = [{ me = "mention", author = ["stranger", "not_follower"] }]
 none = [{ author = ["followed", "follower", "me"] }]
 
@@ -966,7 +1013,7 @@ title = { ru = "Теги", en = "Tags" }
 # without words is called by its name.
 
 [lanes.words.activity]
-marks = ["notify"]
+marks = ["notify"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Активность", en = "Activity" }
 tip = { ru = "Кто лайкнул и продвинул твои посты, кто на тебя подписался", en = "Who liked and boosted your posts, who followed you" }
 icon = "activity"
@@ -977,49 +1024,49 @@ tip = { ru = "Посты, отложенные в закладки (меню ⋯
 icon = "bookmarks"
 
 [lanes.words.bots]
-marks = ["hide_listed"]
+marks = ["hide_listed"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Боты", en = "Bots" }
 tip = { ru = "Боты из тех, кого читаешь", en = "Bots among those you follow" }
 icon = "bots"
 
 [lanes.words.commented]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Комментарии", en = "Comments" }
 tip = { ru = "Как на Point: твои посты, треды, на которые подписан, и те, где ты комментировал, по карточке на тред; щелчок открывает тред на первом новом", en = "As on Point: your posts, threads you follow and those you commented in, a card a thread; a click opens the thread at the first new comment" }
 icon = "commented"
 
 [lanes.words.direct]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Личные", en = "Direct" }
 tip = { ru = "Личные сообщения: посты, видные только упомянутым", en = "Private messages: posts only the mentioned can see" }
 icon = "direct"
 
 [lanes.words.federated]
-marks = ["languages", "hide_listed"]
+marks = ["languages", "hide_listed"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Федерация", en = "Federated" }
 tip = { ru = "Всё, что твоя нода знает со всех серверов. Листается, без счётчика", en = "Everything your server knows from all servers. Browse, no counter" }
 icon = "federated"
 
 [lanes.words.home]
-marks = ["hide_listed"]
+marks = ["hide_listed"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Лента", en = "Home" }
 tip = { ru = "Те, кого ты читаешь (и теги, на которые подписан), без ботов", en = "Those you follow (and tags you follow), without bots" }
 icon = "home"
 
 [lanes.words.important]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Важные люди", en = "Important people" }
 tip = { ru = "Посты тех, на ком колокольчик (🔔 в профиле)", en = "Posts of those you rang the bell on (🔔 in a profile)" }
 icon = "important"
 
 [lanes.words.local]
-marks = ["languages", "hide_listed"]
+marks = ["languages", "hide_listed"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Локальная", en = "Local" }
 tip = { ru = "Вся твоя нода. Листается, без счётчика", en = "Your whole server. Browse, no counter" }
 icon = "local"
 
 [lanes.words.mentions]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Упоминания", en = "Mentions" }
 tip = { ru = "Где тебя тегнули в чужом разговоре", en = "Where you were tagged in someone else's talk" }
 icon = "mentions"
@@ -1039,13 +1086,13 @@ title = { ru = "Сеть", en = "Network" }
 tip = { ru = "Федерация без людей своего сервера", en = "Federated without your own server's people" }
 
 [lanes.words.replies]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Ответы мне", en = "Replies to me" }
 tip = { ru = "Ответы на твои посты и комменты", en = "Replies to your posts and comments" }
 icon = "replies"
 
 [lanes.words.requests]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Заявки", en = "Follow requests" }
 tip = { ru = "Кто просится в подписчики", en = "Who asks to follow you" }
 icon = "requests"
@@ -1055,7 +1102,7 @@ title = { ru = "Упоминания чужих", en = "Strangers' mentions" }
 tip = { ru = "Упоминания от тех, кто не подписан ни на тебя, ни ты на них", en = "Mentions from people who neither follow you nor you them" }
 
 [lanes.words.subs]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Подписки", en = "Subscriptions" }
 tip = { ru = "Новые комменты в тредах, на которые ты подписан, как на Point", en = "New comments in threads you subscribed to, like on Point" }
 icon = "subs"
@@ -1064,13 +1111,13 @@ icon = "subs"
 icon = "tags"
 
 [lanes.words.to_me]
-marks = ["notify", "sound", "icon_count"]
+marks = ["notify", "sound", "icon_count"]  # ⇠ notify, sound, icon_count, languages, hide_listed
 title = { ru = "Ко мне", en = "To me" }
 tip = { ru = "Ответы мне и упоминания меня — в одной ленте; быстрые фильтры их разделяют", en = "Replies to me and mentions of me, in one lane; quick filters part them" }
 icon = "replies"
 
 [lanes.words.unsorted]
-group = "personal"
+group = "personal"  # ⇠ standard, personal, …
 title = { ru = "Неразобранное", en = "Unsorted" }
 tip = { ru = "Что пришло, а ни одна лента не взяла (только при своих лентах)", en = "What came and no lane took (only with lanes of your own)" }
 icon = "list"
