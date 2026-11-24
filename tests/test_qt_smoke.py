@@ -2113,6 +2113,54 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(overlay.problem.isHidden())
         self.assertEqual(overlay.player.error(), QMediaPlayer.Error.NoError)
 
+    def test_a_threads_new_comments_stay_lit(self):
+        """25.11: a thread's comments new as it opened are read on screen at once, and
+        their mark of the new went before one looked — they stay lit (the card's
+        "fresh", a tinted background) till the thread closes; threads.highlight_new off —
+        only the mark."""
+        from fedtail.frontends.qt.feed import ThreadWidget
+        self.world.add(status("8100", BOB, minute=1, text="корень"), home=True)
+        for i in (1, 2):
+            self.world.add(status(f"810{i}", NEWS, "8100", "B", minute=1 + i,
+                                  text=f"ответ {i}"))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.mark_read(["8100", "8101"])  # read before: the post and one comment
+        tabs = lambda: [self.win.tabs.widget(i) for i in range(self.win.tabs.count())]  # noqa: E731
+
+        def opened():
+            self.win.open_thread("8100")
+            self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                        for w in tabs()), timeout=15)
+            tab = next(w for w in tabs() if isinstance(w, ThreadWidget))
+            self.win.tabs.setCurrentWidget(tab)
+            self.pump(0.3)
+            return tab
+        tab = opened()
+        self.assertEqual(tab.fresh, {"8102"})
+        lit = lambda: {s.entry.id for s in tab.view.model if s.extra.get("fresh")}  # noqa: E731
+        self.assertEqual(lit(), {"8102"})
+        card = tab.view.rows["8102"].card
+        self.assertEqual(card.property("fresh"), "true")
+        self.assertEqual(tab.view.rows["8101"].card.property("fresh"), "false")
+        self.assertIn("rgba(", self.win.theme._fresh_css())
+        # read since (on screen, or by hand) and drawn anew: still lit
+        self.core.mark_read(["8102"])
+        tab._loaded(tab.items)
+        self.assertFalse(tab.core.unread([n.post for n in tab.items]))
+        self.assertEqual(lit(), {"8102"})
+        # a comment that comes while it is open is lit too
+        self.world.add(status("8103", NEWS, "8100", "B", minute=9, text="ещё"))
+        tab.reload()
+        self.pump(until=lambda: len(tab.items) == 4, timeout=15)
+        self.assertEqual(lit(), {"8102", "8103"})
+        # threads.highlight_new off: only the mark of the new
+        self.core.cfg["feed"]["highlight_new"] = False
+        self.addCleanup(self.core.cfg["feed"].__setitem__, "highlight_new", True)
+        tab.fresh = set()
+        tab._loaded(tab.items)
+        self.assertEqual(lit(), set())
+
     def test_thread_keys(self):
         """] / [ the next / previous top comment, - folds the branch and shows it again
         (common/postkeys: one rule with GTK, the terminal and the page) — by key presses."""

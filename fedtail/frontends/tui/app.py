@@ -652,6 +652,8 @@ class ThreadScreen(Screen, PostsMixin):
         short = core.short_ids(posts)
         unread = core.unread(posts)
         self.new |= set(unread)
+        from ..common import postkeys
+        lit = postkeys.lights_new(core.cfg)  # threads.highlight_new
         if self.stand is None:  # the first time: where it was asked to stand
             self.stand = core.thread_focus(self.status_id, items_in, self.at)
         items, focus = [], 0
@@ -671,6 +673,8 @@ class ThreadScreen(Screen, PostsMixin):
             item.depth = n.depth
             if dm in ("frame", "fill"):
                 item.add_class("dm-" + dm)
+            if i and lit and n.post.id in self.new:  # new as it opened: lit till it closes
+                item.add_class("fresh")
             items.append(item)
             if n.post.id == self.stand:
                 focus = i
@@ -1102,6 +1106,8 @@ class FedtailApp(App, PostsMixin):
     /* a private message (ui.direct_highlight): framed, or tinted */
     #posts > ListItem.dm-frame { border: round #9b6bdf; padding: 0 1; margin-bottom: 1; }
     #posts > ListItem.dm-fill { background: #9b6bdf 18%; }
+    /* a thread's comment new as it opened (threads.highlight_new) */
+    #posts > ListItem.fresh { background: $success 14%; }
     #cmd { dock: bottom; }
     .post { width: 1fr; }
     """

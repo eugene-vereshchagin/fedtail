@@ -717,7 +717,8 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
     val depth = p.indent  // the model's (INDENT_MAX), as every interface draws it
     val bg = when {
         focused -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-        p.unread -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        // new now, or new as its thread opened (threads.highlight_new): tinted
+        p.unread || p.fresh -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         else -> Color.Transparent
     }
     CompositionLocalProvider(LocalCardHold provides hold) {

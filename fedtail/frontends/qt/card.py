@@ -454,6 +454,8 @@ class PostRow(QWidget):
     # ---- building ---------------------------------------------------------------
     def _flags(self):
         _set_prop(self.card, "unread", "true" if self.spec.unread else "false")
+        # a thread's comment new as it opened: lit till the thread closes (extra "fresh")
+        _set_prop(self.card, "fresh", "true" if self.spec.extra.get("fresh") else "false")
         _set_prop(self.card, "focus", "true" if self.spec.focus else "false")
         if self.mark is not None:
             self.mark.setVisible(self.spec.unread)

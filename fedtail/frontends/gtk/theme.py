@@ -103,6 +103,12 @@ class Theme:
                 f".ft-direct-badge {{ background: {d.css()}; color: {on}; border-radius: 3px; "
                 f"padding: 0 5px; font-weight: bold; }}")
 
+    @staticmethod
+    def _fresh(c):
+        """A thread's comment new as it opened (threads.highlight_new): the card tinted
+        with the theme's colour of the new (its own "card_fresh", if it names one)."""
+        return c.get("card_fresh") or f"alpha({c['card_border_unread']}, 0.16)"
+
     def css(self, font_family="", post_scale=1.0, font_size=0, mono=""):
         """font_size: ui.font_size, points (0 — the system's); mono: the fixed-width
         family (ui.fonts / ui.mono_font) — GTK took neither, as Qt does (21.11)."""
@@ -163,6 +169,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-feed > row:hover, .ft-feed > row:focus {{ background: transparent; outline: none; }}
 .ft-card {{ {card} padding: 8px 12px; color: {c['text']}; }}
 .ft-card.ft-unread {{ border-color: {c['card_border_unread']}; }}
+.ft-card.ft-fresh {{ background: {self._fresh(c)}; }}
 {self._direct_css(c, r, rule)}
 .ft-card.ft-focus {{ background: {c['focus']}; border-color: {c['focus_border']}; }}
 .ft-card.ft-found {{ border: 2px solid {c['accent']}; }}

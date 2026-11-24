@@ -224,6 +224,37 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
             await pilot.press("q")
 
+    async def test_a_threads_new_comments_stay_lit(self):
+        """25.11: the comments new as a thread opened stay lit (the row's "fresh") while
+        it is open, read or not; threads.highlight_new off — not."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, ThreadScreen
+        core, w = self.make()
+        w.add(status("710", BOB, minute=1, text="root", vis="public"), home=True)
+        for i in (1, 2):
+            w.add(status(f"71{i}", BOB, "710", "B", minute=1 + i, text=f"c{i}"))
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            core.mark_read(["710", "711"])
+            screen = ThreadScreen("710")
+            app.push_screen(screen)
+            await self.wait(pilot, lambda: app.screen is screen and
+                            len(screen.query_one("#posts", ListView).children) == 3,
+                            timeout=30)
+            lit = lambda: {c.key for c in screen.query_one("#posts", ListView).children  # noqa: E731
+                           if c.has_class("fresh")}
+            self.assertEqual(lit(), {"712"})
+            core.mark_read(["712"])
+            await screen.fill(app.core.thread("710").result())
+            await pilot.pause()
+            self.assertEqual(lit(), {"712"})  # read since: lit till the thread closes
+            core.cfg["feed"]["highlight_new"] = False
+            await screen.fill(app.core.thread("710").result())
+            await pilot.pause()
+            self.assertEqual(lit(), set())
+
     async def test_thread_keys(self):
         """] / [ the next / previous top comment, - folds the branch and shows it again —
         pressed, as in Qt (common/postkeys); the terminal had no - (23.11)."""

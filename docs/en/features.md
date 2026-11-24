@@ -247,6 +247,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | A thread's folded branches remembered | has | next | `threads.remember_folded` | own | Voyager, Thunder (Lemmy clients) |
 | "To the next new one" in a thread | has | 0.23.4 | `threads.next_new` | own | Point, Juick (not fediverse clients) |
 | Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
+| A thread's new comments stay lit while it is open | has | next | `threads.highlight_new` | own | Point, Juick (not fediverse clients) |
 
 <details><summary>In detail</summary>
 
@@ -279,6 +280,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **"To the next new one" in a thread.** In an open thread's head — "↓ To the next new one (N)": the new comment after the one on top of the screen, none after it — the first new one above. A branched thread's news is not sought by eye. A button in the windows, on the web page and the phone, the N key in the terminal; which comment is next, the core decides.
 
 **Following the replies to all of someone's posts.** A rare one: seeing who answers some account — a bot of yours, say. With `people.watch_replies = true` a profile has "Follow replies to all their posts": their latest 10 posts' threads followed at once, each new one's as soon as a round brings it (their posts are asked every round). The replies go to the lanes of followed threads — Comments, Subscriptions. Off by default — not even the button.
+
+**A thread's new comments stay lit while it is open.** The comments that were new when a thread opened keep a tinted background until the thread is closed — though on screen they count as read at once and lose their mark of the new. Those that come while it is open are lit too. The colour is the theme's colour of the new. `false` — only the usual mark of the new.
 
 </details>
 

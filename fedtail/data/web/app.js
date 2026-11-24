@@ -2243,8 +2243,11 @@ async function openThread(id, at, show, grown) {
     folded: [...$("#side-body").querySelectorAll(".post.folded")].map((c) => c.dataset.id),
     was: [...$("#side-body").childNodes],
   } : null;
+  // the comments new as it opened (threads.highlight_new): lit while this thread is the
+  // one open — through its redraws, whatever was read since
+  const fresh = state.thread && state.thread.id === id && state.thread.fresh || new Set();
   const token = showSide(w("web_thread"));
-  state.thread = { token, id, at };  // drawn again when my answer in it is sent
+  state.thread = { token, id, at, fresh };  // drawn again when my answer in it is sent
   // "loading…" with the opossum swinging beside it, as the windows have it
   const wait = loadingBox(w("thread_loading"));
   $("#side-body").textContent = "";
@@ -2275,6 +2278,10 @@ async function openThread(id, at, show, grown) {
       // show: my answer just sent, the screen on it; else the post it opened at
       const here = show ? p.sid === show || p.id === show : p.sid === t.focus || p.id === t.focus;
       if (here) { card.classList.add("cursor"); focus = card; }
+      if (t.highlight_new && p !== t.posts[0]) {
+        if (p.unread) fresh.add(p.sid);
+        if (fresh.has(p.sid)) card.classList.add("fresh");
+      }
       if (p.branch && p.branch.length) card.append(foldButton(card, p.branch));
       body.append(card);
     }

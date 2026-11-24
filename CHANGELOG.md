@@ -7,6 +7,11 @@
 
 ## What's next
 
+- A thread's new comments stay lit. Opened on a thread with new answers, they were read on
+  screen at once and their mark of the new went before you looked — nothing said which
+  were new. Now the comments new as the thread opened (and those that come while it is
+  open) keep a tinted background until the thread is closed, in every interface and on
+  the phone. `threads.highlight_new = false` — only the mark, as before.
 - For a moderator: someone signed up on the server, someone sent a report — these come into
   Activity ("Other") now, said in words; `activity.admin = false` doesn't ask for them. The
   lanes' rules knew the word, but nothing asked the server and a row had nothing to say.

@@ -1668,6 +1668,9 @@ class Web:
                 "folded": sorted(postkeys.remembered(core, keys_in_order[0]))
                 if keys_in_order else [],
                 "remember_folded": postkeys.remembers(core.cfg),
+                # the comments new as it opened stay lit till it closes: the page and
+                # the phone keep their ids for the visit (threads.highlight_new)
+                "highlight_new": postkeys.lights_new(core.cfg),
                 # read as it opens, unless by hand: decided once (common/lane.py)
                 "read_on_open": thread_read_on_open(core.cfg, unread)}
 

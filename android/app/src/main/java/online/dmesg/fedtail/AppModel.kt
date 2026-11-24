@@ -171,6 +171,7 @@ data class PostItem(
     val visibility: String = "",     // public | unlisted | private | direct
     val lanePrivate: Boolean = false, // a lane of private messages only: none marked out
     val canBoost: Boolean = true,    // the core's word (common/actions.can_boost)
+    val fresh: Boolean = false,      // a thread's comment new as it opened: lit till it closes
     // the buttons under it, in order: the core's word (common/actions.button_words — the
     // lane's own `buttons`, else by what the post is)
     val buttons: List<String> = listOf("reply", "like", "boost", "bookmark"),
@@ -1035,6 +1036,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** threads.remember_folded: what is folded now, kept by the core for the next time
      *  this thread is opened — here or in a window (the core says whether it keeps). */
     private var threadRemember = false
+    // the comments new as the thread opened (threads.highlight_new): lit while it is open,
+    // whatever was read since — kept for the visit, as every interface does
+    private var threadFresh = emptySet<String>()
+
+    private fun lit(posts: List<PostItem>, on: Boolean): List<PostItem> {
+        if (!on) return posts
+        threadFresh = threadFresh + posts.drop(1).filter { it.unread }.map { it.sid }
+        return posts.map { if (it.sid in threadFresh) it.copy(fresh = true) else it }
+    }
     private fun keepFolds() {
         if (!threadRemember) return
         val root = threadPosts.firstOrNull()?.id ?: return
@@ -1401,6 +1411,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         places = keep + Place.Thread(postId)
         threadPosts = emptyList()
         threadFolded = emptySet()
+        threadFresh = emptySet()
         threadHead = null
         watchThreadProgress(postId)
         viewModelScope.launch {
@@ -1414,7 +1425,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             if (threadOnTop() != postId) return@launch
-            threadPosts = parsePosts(got.optJSONArray("posts"))
+            threadPosts = lit(parsePosts(got.optJSONArray("posts")),
+                              got.optBoolean("highlight_new"))
             threadHead = got.optJSONObject("head")
             // folded as it was left (threads.remember_folded), but not over the post it
             // opens at
@@ -1601,7 +1613,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private suspend fun reloadThread(focus: String) {
         val got = Core.thread(focus)
         if (Core.failed(got) == null && threadOnTop() == focus) {
-            threadPosts = parsePosts(got.optJSONArray("posts"))
+            threadPosts = lit(parsePosts(got.optJSONArray("posts")),
+                              got.optBoolean("highlight_new"))
             threadHead = got.optJSONObject("head")
             // read as it opens, unless by hand — the core's decision (common/lane.py)
             got.optJSONArray("read_on_open")?.let { arr ->

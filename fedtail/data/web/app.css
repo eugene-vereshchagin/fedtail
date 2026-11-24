@@ -155,6 +155,8 @@ button.bar-ico { display: inline-flex; align-items: center; justify-content: cen
                   padding: 0 5px; font-weight: 700; font-size: 12px; }
 .post.unread::before { content: ""; position: absolute; left: -1px; top: 10px; bottom: 10px;
                        width: 3px; background: var(--unread); border-radius: 2px; }
+/* a thread's comment new as it opened (threads.highlight_new) */
+.post.fresh { background: color-mix(in srgb, var(--unread) 14%, transparent); }
 .post .shared { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
 .post .head { display: flex; gap: 10px; align-items: center; }
 .post .head .face { display: flex; border-radius: 50%; }

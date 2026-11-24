@@ -548,6 +548,19 @@ class WebTest(TmpDir):
         self.assertIn('navigator.serviceWorker.addEventListener("message"',
                       web.static_text("app.js"))
 
+    def test_a_threads_new_comments_are_to_stay_lit(self):
+        """threads.highlight_new: the page is told, and keeps the new comments' ids for
+        the visit itself (a class "fresh", lit while this thread is the one open)."""
+        got = json.loads(self.req("/api/thread?id=001")[2])
+        self.assertTrue(got["highlight_new"])
+        self.core.cfg["feed"]["highlight_new"] = False
+        self.addCleanup(self.core.cfg["feed"].__setitem__, "highlight_new", True)
+        self.assertFalse(json.loads(self.req("/api/thread?id=001")[2])["highlight_new"])
+        js = web.static_text("app.js")
+        self.assertIn('card.classList.add("fresh")', js)
+        self.assertIn("state.thread.fresh", js)
+        self.assertIn(".post.fresh", web.static_text("app.css"))
+
     def test_the_tab_says_the_unread_number(self):
         """The windows put the unread number on the tray and the taskbar icon; the page
         had none (23.11): each lane says whether window.icon_count counts it, the page

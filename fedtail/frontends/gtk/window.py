@@ -1909,6 +1909,9 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.dock.follow(page)
             unread = self.view.unread(posts)
             page.items, page.new = items, set(unread)  # new as it opened (read at once)
+            from ..common import postkeys
+            if postkeys.lights_new(self.cfg):  # …and lit till the thread closes
+                page.fresh = getattr(page, "fresh", set()) | (set(unread) - {root})
             short = self.view.short_ids(posts)
             stand = self.view.thread_focus(root, items, at)
             focus = None
@@ -1918,6 +1921,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 card = Card(ctx, it.post.id, it.post, unread=it.post.id in unread,
                             short_id=short.get(it.post.id), depth=it.depth,
                             number=it.number, lane_private=private)
+                if it.post.id in getattr(page, "fresh", ()):
+                    card.add_css_class("ft-fresh")  # threads.highlight_new
                 if it.post.id == stand:
                     card.add_css_class("ft-focus")
                     if len(items) > 1:

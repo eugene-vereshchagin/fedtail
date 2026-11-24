@@ -251,3 +251,18 @@ others.en = "only in fedtail"
 clients = []
 details.ru = "Редкое: видеть, кто отвечает какому-то аккаунту — например своему боту. С `people.watch_replies = true` в профиле появляется «Следить за ответами на все его посты»: треды его последних 10 постов сразу в подписках, каждого нового — как только круг его принесёт (его посты спрашиваются каждый круг). Ответы идут в ленты подписанных тредов — «Комментарии», «Подписки». Выключено по умолчанию — нет и кнопки."
 details.en = "A rare one: seeing who answers some account — a bot of yours, say. With `people.watch_replies = true` a profile has \"Follow replies to all their posts\": their latest 10 posts' threads followed at once, each new one's as soon as a round brings it (their posts are asked every round). The replies go to the lanes of followed threads — Comments, Subscriptions. Off by default — not even the button."
+
+[[feature]]
+id = "thread-new-lit"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Новые комментарии в треде подсвечены, пока он открыт"
+name.en = "A thread's new comments stay lit while it is open"
+config = "`threads.highlight_new`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Point, Juick (не клиенты федиверса)"
+others.en = "Point, Juick (not fediverse clients)"
+details.ru = "Комментарии, которые были новыми в момент открытия треда, остаются подсвеченными фоном, пока тред не закрыт — хотя на экране они сразу считаются прочитанными и отметка нового с них уходит. Пришедшие, пока тред открыт, подсвечиваются тоже. Цвет — цвет нового из темы. `false` — только обычная отметка нового."
+details.en = "The comments that were new when a thread opened keep a tinted background until the thread is closed — though on screen they count as read at once and lose their mark of the new. Those that come while it is open are lit too. The colour is the theme's colour of the new. `false` — only the usual mark of the new."

@@ -2655,6 +2655,32 @@ class GtkSplitTest(_GtkBase):
         self.assertEqual(marked, [])
         self.assertNotIn("9100", self.win.threads)
 
+    def test_a_threads_new_comments_stay_lit(self):
+        """25.11: the comments new as a thread opened are read at once — they stay lit
+        (the card's "ft-fresh") till the thread closes; threads.highlight_new off — not."""
+        self.world.add(status("9200", BOB, minute=40, vis="public", text="a thread"), home=True)
+        for i in (1, 2):
+            self.world.add(status(f"920{i}", BOB, "9200", "B", minute=40 + i, vis="public"))
+        self.core.poll_once()
+        self.win.view.mark_read(["9200", "9201"])
+
+        def lit():
+            self.win.open_thread("9200")
+            self.assertTrue(pump(lambda: "9200" in self.win.threads and
+                                 getattr(self.win.threads["9200"], "new", None) is not None, 5))
+            page = self.win.threads["9200"]
+            pump(timeout=0.2)
+            cards = [w for w in _walk(page) if "ft-card" in w.get_css_classes()]
+            got = {c.post.id for c in cards if "ft-fresh" in c.get_css_classes()}
+            self.win.close_thread("9200")
+            return got
+        self.assertEqual(lit(), {"9202"})
+        self.assertIn(".ft-card.ft-fresh", self.win.theme.css())
+        self.win.cfg["feed"]["highlight_new"] = False
+        self.addCleanup(self.win.cfg["feed"].__setitem__, "highlight_new", True)
+        self.world.add(status("9203", BOB, "9200", "B", minute=49, vis="public"))
+        self.assertEqual(lit(), set())
+
     def test_the_input_line_asks_what_the_editor_asks(self):
         """Send from the line with a file that has no words (post.alt_reminder), or in
         another language than marked (post.lang_check): the editor's questions — the

@@ -96,6 +96,14 @@ class Theme:
             secs=f"{dt:%H:%M:%S}")
 
     # ---- stylesheet -------------------------------------------------------------------
+    def _fresh_css(self):
+        """A thread's comment new as it opened (threads.highlight_new): the card tinted
+        with the theme's colour of the new (its own "card_fresh", if it names one)."""
+        if "card_fresh" in self.c:
+            return self.css("card_fresh")
+        c = self.c["card_border_unread"]
+        return f"rgba({c.red()},{c.green()},{c.blue()},42)"
+
     def css(self, key):
         c = self.c[key]
         if c.alpha() < 255:
@@ -374,6 +382,7 @@ QScrollArea#feed, QWidget#feedBody {{ background: {k('view')}; border: 0; }}
 {self._view_gradient_css()}
 QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
+QFrame#card[fresh="true"] {{ background: {self._fresh_css()}; }}
 {self._direct_css(r)}
 QFrame#card[focus="true"] {{ {card_focus} }}
 QFrame#card[found="true"] {{ {card_found} }}

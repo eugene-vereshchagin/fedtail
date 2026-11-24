@@ -117,6 +117,13 @@ def unfold_for(folded, hidden, every, key, depth_of):
 
 # threads.remember_folded: which branches of which thread are folded, in the profile's
 # state — the same in every interface, through a restart. Off: nothing read or written.
+def lights_new(cfg):
+    """threads.highlight_new: a thread's comments new as it opened (and those that came
+    while it is open) are lit until it is closed — every interface keeps their ids for
+    the visit and draws them so, whatever was read since."""
+    return bool((cfg.get("feed") or {}).get("highlight_new", True))
+
+
 REMEMBERED = 300  # threads; the oldest go
 
 

@@ -722,6 +722,7 @@ class ThreadWidget(QWidget):
         self.win, self.core = win, win.ctx.view
         self.focus_id = sid
         self.at = at  # where it stands once loaded: the post, or "first_unread"
+        self.fresh = set()  # the comments new as it opened (threads.highlight_new)
         self.items = []
         self.title = _("thread_loading")
         self.info_text = ""
@@ -877,6 +878,9 @@ class ThreadWidget(QWidget):
         posts = [n.post for n in items]
         self.statuses = {p.id for p in posts}
         unread = self.core.unread(posts)
+        from ..common import postkeys
+        if postkeys.lights_new(self.core.cfg):  # new as it opened, or come since: lit
+            self.fresh |= set(unread) - {posts[0].id if posts else None}
         short = self.core.short_ids(posts)
         private = only_private(items)  # all private: none marked out (model.only_private)
         specs = [make_spec(self.core, n.post.id, n.post, depth=n.depth,
@@ -884,7 +888,8 @@ class ThreadWidget(QWidget):
                            focus=(n.post.id == self.focus_id and len(items) > 1),
                            unread=n.post.id in unread,
                            extra={"short_id": short.get(n.post.id),
-                                  "lane_private": private}) for n in items]
+                                  "lane_private": private,
+                                  "fresh": n.post.id in self.fresh}) for n in items]
         # a big thread: only the cards near the screen, as a lane (FeedView.windowed)
         self.view.windowed = len(specs) > THREAD_WINDOWED
         if not self.loaded and posts:  # threads.remember_folded: as it was left

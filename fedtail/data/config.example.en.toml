@@ -1759,6 +1759,11 @@ thread_progress = false
 # every interface of this profile. false — a thread opens whole each time.
 remember_folded = false
 
+# The comments that were new when a thread opened stay lit — a tinted background — until
+# the thread is closed: read on screen at once, their mark of the new would go before you
+# looked. Those that come while it is open are lit too. false — only the mark of the new.
+highlight_new = true
+
 # Where a thread opened from a card opens: "post" — at that post, "first_unread" — at the
 # first unread comment (none — at the post). A lane of rules may decide for itself:
 # open_at = "…" in its table ("Commented posts" — "first_unread"); the line "🔔 N new in
