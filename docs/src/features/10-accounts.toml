@@ -16,8 +16,8 @@ config.en = "`accounts.switch_closes`, the launch key `--profile`"
 others.ru = "у всех многоаккаунтных"
 others.en = "every multi-account client"
 clients = ["all"]
-details.ru = "Один профиль — один аккаунт со своим конфигом, темой, базой и окном. Правый клик по аватарке (или ≡ → «Аккаунт и сервер») — список, «Мой профиль», «О сервере…» (на нём — кнопка «Редактировать профиль»), «Добавить аккаунт…»; `switch_closes` — закрывать ли текущее окно при переключении. Какой профиль и аккаунт сейчас — слева в строке состояния: «default: @ник@сервер ★»."
-details.en = "One profile — one account with its own config, theme, database and window. A right click on the avatar (or ≡ → “Account and server”) — the list, “My profile”, “About the server…” (it has the “Edit profile” button), “Add an account…”; `switch_closes` — whether to close the current window when switching. Which profile and account this is — on the left of the status bar: “default: @nick@server ★”."
+details.ru = "Один профиль — один аккаунт со своим конфигом, темой, базой и окном. Правый клик по аватарке (или ≡ → «Аккаунт и сервер») — список, «Мой профиль», «О сервере…» (на нём — кнопка «Редактировать профиль»), «Добавить аккаунт…»; `switch_closes` — закрывать ли текущее окно при переключении. Какой профиль и аккаунт сейчас — слева в строке состояния: «default: @ник@сервер ★». На телефоне значок один, поэтому приложение открывается на том аккаунте, на который переключились в прошлый раз («Аккаунты» → «Открыть»)."
+details.en = "One profile — one account with its own config, theme, database and window. A right click on the avatar (or ≡ → “Account and server”) — the list, “My profile”, “About the server…” (it has the “Edit profile” button), “Add an account…”; `switch_closes` — whether to close the current window when switching. Which profile and account this is — on the left of the status bar: “default: @nick@server ★”. The phone has one icon, so the app opens on the account it was switched to last time (“Accounts” → “Open”)."
 
 [[feature]]
 id = "main-profile"

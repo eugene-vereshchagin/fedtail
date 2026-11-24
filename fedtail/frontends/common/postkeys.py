@@ -87,3 +87,29 @@ def fold(folded, hidden, head, below):
         folded.add(head)
         hidden.update(below)
     return True
+
+
+def hidden_under(folded, every, depth_of):
+    """A thread drawn anew (it grew, it was refreshed): the branches folded stay folded.
+    folded loses the heads that are gone (in place); → the keys not to draw — everything
+    under the heads left, the replies that came meanwhile too. The interfaces kept the
+    keys hidden before, so a new reply stood alone under a folded head (Qt), or unfolded
+    everything (the terminal)."""
+    folded.intersection_update(every)
+    hidden = set()
+    for head in folded:
+        hidden.update(branch(every, head, depth_of)[1])
+    return hidden
+
+
+def unfold_for(folded, hidden, every, key, depth_of):
+    """The post to go to (the next new one, the one asked for) lies in a folded branch:
+    the branch is shown again. → its head, or None when key was in sight already."""
+    if key not in hidden or key not in every:
+        return None
+    for head in [h for h in every if h in folded]:
+        below = branch(every, head, depth_of)[1]
+        if key in below:
+            fold(folded, hidden, head, below)
+            return head
+    return None

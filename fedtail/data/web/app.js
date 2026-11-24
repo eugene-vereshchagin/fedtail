@@ -2289,6 +2289,7 @@ function foldButton(card, branch) {
   b.type = "button";
   b.title = w("web_thread_fold_tip");
   let folded = false;
+  card.foldedBranch = branch;
   b.onclick = (e) => {
     e.stopPropagation();
     folded = !folded;
@@ -2353,6 +2354,9 @@ function threadHead(h, openedFrom) {
       const card = to ? cards[idx(to)] : null;
       if (!card) return;
       went = to;
+      // folded away with its branch: shown again (as the windows': postkeys.unfold_for)
+      for (const c of side.querySelectorAll(".post.folded"))
+        if (c.foldedBranch && c.foldedBranch.includes(to)) c.querySelector(".fold").click();
       for (const c of side.querySelectorAll(".post.cursor")) c.classList.remove("cursor");
       card.classList.add("cursor");
       card.scrollIntoView({ block: "start" });

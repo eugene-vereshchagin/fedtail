@@ -94,8 +94,17 @@
 - **Android 11 and 12: notifications come.** The permission check asked for a permission
   those versions don't have and took the answer for "no": no note ever reached the shade
   there, and the background rounds did nothing.
+- A thread's folded branch ("-", the page's and the phone's "− N") stays folded when the
+  thread is drawn anew, the replies that came meanwhile inside it: Qt left a new reply
+  alone under the folded head, the terminal unfolded everything. "To the next new one"
+  into a folded branch shows the branch again — in Qt, GTK, the terminal and on the page
+  it went to a card out of sight (the phone did it already).
+- Android: the settings page no longer sends the reader to `~/.config/fedtail/themes`,
+  the tray or `--lanes-to-config` — the theme, the number on the icon and the set of
+  lanes are explained in the phone's own words.
 - Android: the account switched to (Accounts → Open) stays after a setting is changed or
-  the config saved — the core was made anew for the first account; a link shared into
+  the config saved — the core was made anew for the first account — and is the one the
+  app opens on next time (one icon: there is no launcher per account); a link shared into
   fedtail no longer opens again when the phone is turned, nor is a login's code handed
   in twice; a button tapped twice (a vote, a like, "approve") asks once; a note being
   typed survives a turn; a doubled list of tiles no longer crashes their editor.

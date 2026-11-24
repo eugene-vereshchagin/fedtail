@@ -226,6 +226,36 @@ class FlowTest {
     }
 
     @Test
+    fun aMentionReachesTheShade() {
+        // Android 11 and 12 have no notification permission to grant: the app's check said
+        // "denied" there and no note ever came (24.11). 13 and later: granted here, as
+        // the reader's "Allow" does.
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        if (android.os.Build.VERSION.SDK_INT >= 33)
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+                .grantRuntimePermission(context.packageName,
+                                        "android.permission.POST_NOTIFICATIONS")
+        val nm = context.getSystemService(android.app.NotificationManager::class.java)
+        nm.cancelAll()
+        launch()
+        overview()
+        val words = "a word for the shade " + System.currentTimeMillis()
+        fun shown() = nm.activeNotifications.any {
+            (it.notification.extras.getCharSequence("android.text") ?: "").contains(words)
+        }
+        // (the first look at the notes after a start only remembers where they end: asked
+        // again until one is in the shade)
+        var asked = 0L
+        waitFor("the mention in the shade", 90_000) {
+            if (!shown() && System.currentTimeMillis() - asked > 8_000) {
+                asked = System.currentTimeMillis()
+                kotlinx.coroutines.runBlocking { Core.demoHappen("mention", "101", words) }
+            }
+            shown()
+        }
+    }
+
+    @Test
     fun theEditorStaysWhenThePhoneIsTurned() {
         // from the overview no lane is open; on its side the phone shows one beside the
         // overview — bringing it in closed the editor, and what was typed went out of

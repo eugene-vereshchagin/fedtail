@@ -195,7 +195,7 @@ def _make(demo):
     _s["held"] = []
     # the account switched to (Accounts → Open) stays through a rebuild: a setting changed
     # or the config saved made the core anew — for the first account again (24.11)
-    profile = _s.get("profile") or ("demo" if demo else None)
+    profile = _s.get("profile") or ("demo" if demo else _last_profile())
     where = paths.resolve(profile)
     where.ensure()
     cfg = _config(where)
@@ -227,6 +227,37 @@ def _make(demo):
         from fedtail.__main__ import merge_accounts
         core, held = merge_accounts(core, where.profile)
     _s.update(core=core, web=Web(core, None), demo=demo, profile=profile, held=held)
+
+
+LAST_FILE = "last-profile"  # in the app's files: the account switched to, for next time
+
+
+def _last_profile():
+    """The account the phone was switched to (Accounts → Open), while its folders are
+    there; None — the main one. The desktop opens another account by its own launcher or
+    --profile; the phone has one icon, so it comes back where it was left."""
+    from pathlib import Path
+
+    from fedtail.core import paths
+    try:
+        name = (Path(_s.get("files_dir") or "") / LAST_FILE).read_text("utf-8").strip()
+    except OSError:
+        return None
+    if not name or not paths._PROFILE_RE.match(name) or name == paths.MAIN_FILE:
+        return None
+    if not ((paths.config_base() / name).is_dir() or (paths.data_base() / name).is_dir()):
+        return None
+    return name
+
+
+def _keep_profile(name):
+    from pathlib import Path
+    if _s.get("demo") or not _s.get("files_dir"):
+        return
+    try:
+        (Path(_s["files_dir"]) / LAST_FILE).write_text((name or "") + "\n", "utf-8")
+    except OSError:
+        pass
 
 
 # what the phone does otherwise than the desktop: written into the config file once (the
@@ -529,7 +560,8 @@ def demo_happen(what, target, text):
     someone answers target in its thread (the thread open on screen grows by itself, as
     tests/scenario.py's watch_thread holds every interface to); "requests": text more
     follow requests come (target: their names' start); "token_refused": the server
-    refuses the token, as a round's 401 says it. → {id}."""
+    refuses the token, as a round's 401 says it; "mention": target's author writes to me
+    (a note for the shade). → {id}."""
     def go():
         if not _s.get("demo"):
             raise RuntimeError("the demo world only")
@@ -546,10 +578,19 @@ def demo_happen(what, target, text):
                 w.requests.append(acct(f"{target}{i}", f"{target}{i}@example.org"))
             _core().poll_once()
             return {"id": ""}
-        if what != "answer" or target not in w.statuses:
+        if what not in ("answer", "mention") or target not in w.statuses:
             raise ValueError(f"{what} {target}")
         parent = w.statuses[target]
         sid = str(max(int(i) for i in w.statuses if i.isdigit()) + 1)  # newer than any
+        if what == "mention":
+            me = _core().me or {}
+            st = status(sid, parent["account"], vis="public", text=text)
+            st["mentions"] = [{"id": me.get("id"), "acct": me.get("acct"),
+                               "username": me.get("username"), "url": me.get("url")}]
+            st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+            w.add(st, mention=True)
+            _core().poll_once()
+            return {"id": sid}
         st = status(sid, parent["account"], target, parent["account"]["id"], vis="public",
                     text=text)
         st["created_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
@@ -582,6 +623,7 @@ def place_act(act_json, confirmed=False, values_json=None, answer=None):
             _s["core"] = _s["web"].core._core if hasattr(_s["web"].core, "_core") \
                 else _s["web"].core
             _s["profile"] = getattr(_s["core"].paths, "profile", None) or None
+            _keep_profile(_s["profile"])
         return got
     return _answer(go)
 
@@ -1421,6 +1463,19 @@ ONLY_ON_PHONE = {
 }
 
 
+# explanations that speak of the desktop only (a themes folder in ~/.config, the tray,
+# --install-desktop, a command of the command line): the phone's own words instead
+PHONE_ABOUT = {("appearance", "theme"): "phone_about_theme",
+               ("window", "icon_count"): "phone_about_icon_count",
+               ("lanes", "preset"): "phone_about_preset"}
+
+
+def _about(o):
+    from fedtail.i18n import _
+    key = PHONE_ABOUT.get((o.section, o.key))
+    return _(key) if key else o.about
+
+
 def _on_phone(o):
     from fedtail.core.config import internal_place
     section = internal_place(o.section, o.key)[0]  # the program's section of it
@@ -1438,7 +1493,7 @@ def settings():
         out = []
         for ch in common.model(_s["web"].core):
             opts = [{"section": o.section, "key": o.key, "kind": o.kind, "title": o.title,
-                     "about": o.about, "value": o.value, "default": o.default,
+                     "about": _about(o), "value": o.value, "default": o.default,
                      "choices": [[v, w] for v, w in o.choices], "changed": o.changed,
                      "group": o.group, "minimum": o.minimum}
                     for o in ch.options if _on_phone(o)]

@@ -2131,6 +2131,18 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(deep, view._hidden)
         key(Qt.Key.Key_Minus)
         self.assertNotIn(deep, view._hidden)
+        # folded, the thread grows: the new reply is under the fold too, not alone below
+        # its head; "to the next new one" into the branch shows it again (24.11)
+        key(Qt.Key.Key_Minus)
+        self.world.add(status("8005", NEWS, "8001", "B", minute=9, text="ответ 5"))
+        tab.reload(quiet=True)
+        self.pump(until=lambda: "8005" in tab.statuses, timeout=15)
+        late = next(s.key for s in view.model if s.entry is not None and s.entry.id == "8005")
+        self.assertIn(late, view._hidden)
+        self.assertIn(deep, view._hidden)
+        tab.focus_on("8005")  # what the head's "↓ N new" does with the post the core names
+        self.assertNotIn(late, view._hidden)
+        self.assertNotIn(deep, view._hidden)
         # the keys are the config's ([keys]): another's own letter does it, the old doesn't
         self.core.cfg["keys"]["next_comment"] = "n"
         view.put_cursor(next(s.key for s in view.model

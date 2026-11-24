@@ -34,6 +34,27 @@ class ThreadKeys:
         return tabs is not None and self.page.get_root() is not None and \
             tabs.get_nth_page(tabs.get_current_page()) is self.page
 
+    def _show_hidden(self, keys):
+        """These posts' cards in or out of sight, as self.hidden says now."""
+        for k in keys:
+            place = self._place(k)
+            if place is not None:  # the card (or slot) and the list's row around it
+                row = place.get_parent()
+                for w in (place, row if isinstance(row, Gtk.ListBoxRow) else None):
+                    if w is not None:
+                        w.set_visible(k not in self.hidden)
+        window = getattr(self.page, "window", None)
+        if window is not None:
+            window.soon()
+
+    def unfold_for(self, sid):
+        """The post to go to lies in a folded branch ("to the next new one"): the branch
+        is shown again (common/postkeys)."""
+        every = self._ids()
+        head = postkeys.unfold_for(self.folded, self.hidden, every, sid, self._depth_of)
+        if head is not None:
+            self._show_hidden(postkeys.branch(every, head, self._depth_of)[1])
+
     # ---- the posts --------------------------------------------------------------------
     def _ids(self):
         return [it.post.id for it in self.page.items]
@@ -106,16 +127,7 @@ class ThreadKeys:
             head, below = postkeys.branch(every, self.cursor, self._depth_of)
             if not postkeys.fold(self.folded, self.hidden, head, below):
                 return False
-            for k in below:
-                place = self._place(k)
-                if place is not None:  # the card (or slot) and the list's row around it
-                    row = place.get_parent()
-                    for w in (place, row if isinstance(row, Gtk.ListBoxRow) else None):
-                        if w is not None:
-                            w.set_visible(k not in self.hidden)
-            window = getattr(self.page, "window", None)
-            if window is not None:
-                window.soon()
+            self._show_hidden(below)
             sid = head
         else:
             action = value

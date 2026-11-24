@@ -282,6 +282,13 @@ class GtkByHandTest(_ByHand, _GtkBase):
         xdo("key", "k")
         xdo("key", "minus")
         self.assertTrue(pump(lambda: deep.get_visible(), 2))
+        # "to the next new one" into a folded branch shows the branch again (24.11)
+        xdo("key", "minus")
+        self.assertTrue(pump(lambda: not deep.get_visible(), 2))
+        page.new = {"8003"}
+        self.win.thread_next_new("8000")
+        self.assertTrue(pump(lambda: deep.get_visible(), 2))
+        self.assertEqual(keys.hidden, set())
         # the keys are the config's ([keys]): another's own letter does it, the old doesn't
         self.win.cfg["keys"]["next_comment"] = "n"
         keys.put_cursor("8001")

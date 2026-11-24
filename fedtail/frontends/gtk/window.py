@@ -1962,6 +1962,8 @@ class MainWindow(Gtk.ApplicationWindow):
         if sid is None:
             return
         page.went = sid
+        if getattr(page, "keys", None) is not None:
+            page.keys.unfold_for(sid)  # (folded away with its branch: shown again)
         window = getattr(page, "window", None)
         target = window.bring(sid) if window is not None else \
             next((c for c in _cards(page) if real(c.entry).id == sid), None)

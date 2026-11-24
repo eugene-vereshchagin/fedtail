@@ -865,6 +865,7 @@ class ThreadWidget(QWidget):
             focus = key == sid  # a thread's keys are its posts' ids (make_spec)
             if spec is not None and spec.focus != focus:
                 self.view.update_spec(key, CardSpec(**{**spec.__dict__, "focus": focus}))
+        self.view.unfold_for(sid)  # (folded away with its branch: shown again)
         self.view.scroll_to(sid, "top")
 
     def _loaded(self, items):

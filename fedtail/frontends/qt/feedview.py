@@ -642,8 +642,7 @@ class FeedView(QScrollArea):
         """"-" in a thread: the branch under the post at the cursor folded away, or shown
         again — from however deep a reply it is pressed, its whole top comment's branch
         (common/postkeys: the same in every interface)."""
-        every = [s.key for s in self.model if s.entry is not None]
-        head, below = postkeys.branch(every, self.cursor_key, self._depth_of)
+        head, below = postkeys.branch(self._thread_keys(), self.cursor_key, self._depth_of)
         if head != self.cursor_key:
             self.put_cursor(head)
         self._folded = getattr(self, "_folded", set())
@@ -651,6 +650,17 @@ class FeedView(QScrollArea):
             return False
         self._lay_out()
         return True
+
+    def _thread_keys(self):
+        return [s.key for s in self.model if s.entry is not None]
+
+    def unfold_for(self, key):
+        """The post to go to lies in a folded branch ("to the next new one"): the branch
+        is shown again (common/postkeys)."""
+        folded = getattr(self, "_folded", None)
+        if folded and postkeys.unfold_for(folded, self._hidden, self._thread_keys(), key,
+                                          self._depth_of) is not None:
+            self._lay_out()
 
     def put_cursor(self, key):
         old = self.rows.get(self.cursor_key)
@@ -675,6 +685,9 @@ class FeedView(QScrollArea):
         self.model = list(once.values())
         self._index = {s.key: i for i, s in enumerate(self.model)}
         self.strip.set_keys(s.key for s in self.model)
+        if getattr(self, "_folded", None):  # a thread grown: its folded branches stay so
+            self._hidden = postkeys.hidden_under(self._folded, self._thread_keys(),
+                                                 self._depth_of)
         for key in [k for k in self.rows if k not in self._index]:
             self._let_go(key)
         for key in [k for k in self._kept if k not in self._index]:

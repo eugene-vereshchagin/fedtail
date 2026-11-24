@@ -176,6 +176,30 @@ class NewSwitchesTest(unittest.TestCase):
         with self.assertRaises(config.ConfigError):
             config.validate({"server": {"retry_seconds": 1}})
 
+    def test_a_folded_branch_through_a_thread_drawn_anew(self):
+        """common/postkeys: a thread drawn anew keeps its folded branches (the replies
+        that came meanwhile under them); going to a post inside one shows it again."""
+        depth = {"r": 0, "a": 1, "a1": 2, "b": 1, "b1": 2}
+        every = ["r", "a", "a1", "b", "b1"]
+        folded, hidden = set(), set()
+        self.assertTrue(postkeys.fold(folded, hidden, *postkeys.branch(every, "a1", depth.get)))
+        self.assertEqual((folded, hidden), ({"a"}, {"a1"}))
+        depth["a2"] = 2
+        grown = ["r", "a", "a1", "a2", "b", "b1"]
+        hidden = postkeys.hidden_under(folded, grown, depth.get)
+        self.assertEqual(hidden, {"a1", "a2"})
+        self.assertIsNone(postkeys.unfold_for(folded, hidden, grown, "b1", depth.get))
+        self.assertEqual(postkeys.unfold_for(folded, hidden, grown, "a2", depth.get), "a")
+        self.assertEqual((folded, hidden), (set(), set()))
+        # the head gone (deleted): nothing of it stays folded; the whole thread folded
+        # from its first post: a top comment in it is found too
+        folded = {"a", "gone"}
+        self.assertEqual(postkeys.hidden_under(folded, ["r", "b", "b1"], depth.get), set())
+        self.assertEqual(folded, set())
+        folded, hidden = {"r"}, {"a", "a1", "a2", "b", "b1"}
+        self.assertEqual(postkeys.unfold_for(folded, hidden, grown, "b", depth.get), "r")
+        self.assertEqual(hidden, set())
+
 
 if __name__ == "__main__":
     unittest.main()

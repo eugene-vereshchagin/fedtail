@@ -603,16 +603,21 @@ class ThreadScreen(Screen, PostsMixin):
         items = list(lv.children)
         if lv.index is None or not items:
             return
-        head, below = postkeys.branch(list(range(len(items))), lv.index,
-                                      lambda i: getattr(items[i], "depth", 0))
-        hidden = {i for i, it in enumerate(items) if it.disabled}
+        keys = [getattr(it, "key", None) for it in items]
+        depth = {k: getattr(it, "depth", 0) for k, it in zip(keys, items, strict=True)}
+        head, below = postkeys.branch(keys, keys[lv.index], depth.get)
+        hidden = {k for k, it in zip(keys, items, strict=True) if it.disabled}
         self._folded = getattr(self, "_folded", set())
         if not postkeys.fold(self._folded, hidden, head, below):
             return
-        for i, it in enumerate(items):
-            it.disabled = i in hidden
-            it.display = i not in hidden
-        lv.index = head
+        self._hide(items, hidden)
+        lv.index = keys.index(head)
+
+    @staticmethod
+    def _hide(items, hidden):
+        for it in items:
+            it.disabled = getattr(it, "key", None) in hidden
+            it.display = not it.disabled
 
     def action_next_new(self):
         """N: the comment the core names after the one under the cursor (common to every
@@ -620,14 +625,20 @@ class ThreadScreen(Screen, PostsMixin):
         lv = self.query_one("#posts", ListView)
         here = getattr(lv.highlighted_child, "key", None)
         sid, _n = self.app.core.thread_next_unread(self.nodes, here, new=self.new)
-        keys = [getattr(it, "key", None) for it in lv.children]
+        items = list(lv.children)
+        keys = [getattr(it, "key", None) for it in items]
+        if sid in keys and getattr(self, "_folded", None):
+            from ..common import postkeys
+            hidden = {k for k, it in zip(keys, items, strict=True) if it.disabled}
+            depth = {k: getattr(it, "depth", 0) for k, it in zip(keys, items, strict=True)}
+            if postkeys.unfold_for(self._folded, hidden, keys, sid, depth.get) is not None:
+                self._hide(items, hidden)  # (folded away with its branch: shown again)
         if sid in keys:
             lv.index = keys.index(sid)
         else:  # nothing new (or no such key): say what the key does
             self.app.notify(_("thread_next_new_tip"), timeout=3)
 
     async def fill(self, items_in):
-        self._folded = set()  # the cards made anew: none folded
         if not (self.query("#posts") and self.query("#title")):
             return  # the screen went (or isn't drawn yet) while its thread came: no place
         core = self.app.core
@@ -681,6 +692,10 @@ class ThreadScreen(Screen, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         keys = [it.key for it in items]
+        if getattr(self, "_folded", None):  # the thread anew: its folded branches stay so
+            from ..common import postkeys
+            depth = {it.key: it.depth for it in items}
+            self._hide(items, postkeys.hidden_under(self._folded, keys, depth.get))
         lv.index = keys.index(keep) if keep in keys else focus
         self.app.load_pictures(items)
         from ..common.lane import seen_read

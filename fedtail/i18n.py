@@ -476,6 +476,18 @@ _STRINGS = {
         "web_thread": "Тред", "web_cw": "Предупреждение", "web_show": "Показать",
         "web_load_error": "Не загрузилось: {err}", "web_empty": "Здесь пока пусто.",
         "web_reply_to": "Ответ на {who}", "web_cancel": "Отмена",
+        # the phone's settings page: what the config file says in the desktop's words
+        "phone_about_theme": "Тема — встроенная или своя. Свои темы на телефон приходят "
+                             "файлом: в меню ⋮ обзора лент «Добавить тему из файла…» берёт "
+                             "архив темы, сделанный на десктопе, «Сохранить тему в файл…» "
+                             "отдаёт тему отсюда.",
+        "phone_about_icon_count": "Число непрочитанного на значке приложения — там, где "
+                                  "лаунчер его показывает. Считаются ленты отсюда, кроме "
+                                  "тех, что в icon_count_except; [] — без числа.",
+        "phone_about_preset": "Каждая лента — правило; с fedtail идут наборы таких — "
+                              "выбери. Свои ленты — таблицы [[lanes.custom]] в файле "
+                              "настроек: с тем же именем встаёт на место ленты набора, с "
+                              "новым именем — добавляет ленту.",
         "web_thread_fold_tip": "Свернуть ветку этого комментария — ответы под ним; "
                                "ещё раз — развернуть",
         "web_downloads": "папка загрузок браузера",
@@ -2444,6 +2456,17 @@ _STRINGS = {
         "web_thread": "Thread", "web_cw": "Content warning", "web_show": "Show",
         "web_load_error": "Didn't load: {err}", "web_empty": "Nothing here yet.",
         "web_reply_to": "Reply to {who}", "web_cancel": "Cancel",
+        "phone_about_theme": "The theme — a built-in one or your own. Your own themes come "
+                             "to the phone as a file: in the overview's ⋮ menu “Add a theme "
+                             "from a file…” takes a theme's archive made on the desktop, "
+                             "“Save the theme to a file…” gives one out.",
+        "phone_about_icon_count": "The unread number on the app's icon — where the launcher "
+                                  "shows one. It counts the lanes from here, except those in "
+                                  "icon_count_except; [] — no number.",
+        "phone_about_preset": "Every lane is a rule; a set of them comes with fedtail — pick "
+                              "one. Lanes of your own are [[lanes.custom]] tables in the "
+                              "settings file: one of the same name takes a set's lane's "
+                              "place, a new name adds a lane.",
         "web_thread_fold_tip": "Fold this comment's branch — the answers under it; again — unfold",
         "web_downloads": "the browser's downloads folder",
         "web_cmd": "#a3f text — reply · @name — profile · ? — help",

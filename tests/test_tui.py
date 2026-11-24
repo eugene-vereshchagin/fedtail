@@ -258,6 +258,21 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             self.assertEqual(at(), "702")  # the folded one stepped over
             await pilot.press("k", "minus")
             self.assertTrue(deep.display)
+            # folded, the thread drawn anew (it grew): the branch stays folded, the new
+            # reply in it; N into the branch shows it again (it unfolded all, 24.11)
+            await pilot.press("minus")
+            w.add(status("705", BOB, "701", "B", minute=9, text="c5"))
+            await screen.fill(app.core.thread("700").result(30))
+            await pilot.pause()
+            shown = {i.key: i.display for i in lv.children}
+            self.assertEqual((shown["703"], shown["705"], shown["702"]),
+                             (False, False, True))
+            self.assertEqual(at(), "701")
+            screen.new = {"705"}
+            await pilot.press("N")
+            await pilot.pause()
+            self.assertEqual(at(), "705")
+            self.assertTrue(all(i.display for i in lv.children))
             await pilot.press("q")
 
     async def test_thread_to_the_next_new_one(self):

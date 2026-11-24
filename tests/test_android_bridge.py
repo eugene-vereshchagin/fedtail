@@ -841,6 +841,29 @@ class BridgeAccountsTest(_Base):
     """Another account on the phone: the windows' place "accounts" — switching makes
     that profile's core the bridge's, the screens start again on it."""
 
+    def test_the_settings_speak_of_the_phone(self):
+        """The settings page's explanations are the config file's — the desktop's: none
+        shown on the phone sends the reader to ~/.config, the tray or a command."""
+        self.demo()
+        abouts = {(o["section"], o["key"]): o["about"]
+                  for ch in self.call("settings")["chapters"] for o in ch["options"]}
+        for place in self.bridge.PHONE_ABOUT:
+            self.assertIn(place, abouts)  # (renamed in the file: the table goes stale)
+        for place, about in abouts.items():
+            for word in ("~/", "--install-desktop", "--lanes-to-config"):
+                self.assertNotIn(word, about, place)
+
+    def test_a_mention_is_a_note_for_the_shade(self):
+        """What the emulator's test of the shade stands on: someone writes to me — notes()
+        has it for the notification, with its lane to open."""
+        self.demo()
+        n = self.call("notes", -1)["n"]
+        self.call("demo_happen", "mention", "101", "a word for the shade")
+        got = self.call("notes", n)
+        self.assertTrue(got["enabled"])
+        self.assertTrue(any("a word for the shade" in x["body"] for x in got["notes"]), got)
+        self.assertTrue(all(x["lane"] for x in got["notes"]))
+
     def test_switching_to_another_account(self):
         self.demo()
         from fedtail.core import auth, paths
@@ -850,8 +873,10 @@ class BridgeAccountsTest(_Base):
         names = [r["key"] for r in self.call("page", "accounts")["rows"]]
         self.assertIn("second", names)
         before = self.bridge._s["core"]
+        self.assertIsNone(self.bridge._last_profile())
         got = self.call("place_act", json.dumps(["accounts", "switch", "second"]), False)
         self.assertTrue(got.get("reload"), got)
+        self.assertIsNone(self.bridge._last_profile())  # the demo's switch isn't kept
         now = self.bridge._s["core"]
         self.assertIsNot(now, before)
         self.assertEqual(now.paths.profile, "second")
@@ -860,6 +885,23 @@ class BridgeAccountsTest(_Base):
         # config saved): that made the core anew for the first account again (24.11)
         self.bridge._make(True)
         self.assertEqual(self.bridge._s["core"].paths.profile, "second")
+
+    def test_the_account_switched_to_is_the_one_next_time(self):
+        """One icon on the phone: the app closed by the system comes back on the account
+        it was switched to, not on the main one — while that account is there."""
+        self.demo()
+        from fedtail.core import auth, paths
+        where = paths.resolve("second")
+        where.ensure()
+        auth.save(where.auth_file, {"server": self.bridge.DEMO_SERVER, "token": "demo2"})
+        self.bridge._s["demo"] = False  # (a real account's switch; the world stays made up)
+        self.addCleanup(self.bridge._s.__setitem__, "demo", True)
+        got = self.call("place_act", json.dumps(["accounts", "switch", "second"]), False)
+        self.assertTrue(got.get("reload"), got)
+        self.assertEqual(self.bridge._last_profile(), "second")
+        for bad in ("gone", "../second", "main-profile", ""):
+            (self.files / self.bridge.LAST_FILE).write_text(bad + "\n", "utf-8")
+            self.assertIsNone(self.bridge._last_profile(), bad)
 
     def test_wait_never_raises_and_the_tiles_come_once_each(self):
         self.demo()
