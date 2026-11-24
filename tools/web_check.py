@@ -440,21 +440,24 @@ def keys_and_title(page, core):
         ERRORS.append(f"title: {n} unread, the tab says {title!r}")
     NOTES.append(f"title with {n} unread: {title}")
     # a thread's branch folded by a click (the windows' "-") and shown again
-    page.evaluate("() => openThread('001')")
-    try:
-        page.wait_for_selector("#side-body .post .fold", timeout=8000)
-        shown = "() => [...document.querySelectorAll('#side-body .post')]" \
-                ".filter(c => !c.hidden).length"
-        before = page.evaluate(shown)
-        page.click("#side-body .post .fold")
-        folded = page.evaluate(shown)
-        page.click("#side-body .post .fold")
-        if not (folded < before and page.evaluate(shown) == before):
-            ERRORS.append(f"thread: folding a branch showed {before} → {folded} → "
-                          f"{page.evaluate(shown)} cards")
-    except Exception as e:  # noqa: BLE001 — said as a problem of the walk
-        ERRORS.append(f"thread: no branch to fold on the page ({type(e).__name__})")
-    page.evaluate("() => closeSide()")
+    # (the fake world's thread has a branch; your account's lanes may show none — then
+    # there is nothing to fold, which is no problem of the page)
+    if not REAL:
+        page.evaluate("() => openThread('001')")
+        try:
+            page.wait_for_selector("#side-body .post .fold", timeout=8000)
+            shown = "() => [...document.querySelectorAll('#side-body .post')]" \
+                    ".filter(c => !c.hidden).length"
+            before = page.evaluate(shown)
+            page.click("#side-body .post .fold")
+            folded = page.evaluate(shown)
+            page.click("#side-body .post .fold")
+            if not (folded < before and page.evaluate(shown) == before):
+                ERRORS.append(f"thread: folding a branch showed {before} → {folded} → "
+                              f"{page.evaluate(shown)} cards")
+        except Exception as e:  # noqa: BLE001 — said as a problem of the walk
+            ERRORS.append(f"thread: no branch to fold on the page ({type(e).__name__})")
+        page.evaluate("() => closeSide()")
     items = page.evaluate("() => Object.keys(menuItems())")
     for want in ("report", "sound_test"):
         if want not in items:
@@ -806,6 +809,10 @@ def walk_places(page, out):
         labels = tabs.all_inner_texts()  # a click redraws the panel: by words, not index
         for i, label in enumerate(labels):
             tab = page.locator("#side-body .tabs button", has_text=label).first
+            try:  # (a real server answers the tab before slowly: the panel is being redrawn)
+                tab.wait_for(state="attached", timeout=8000 if REAL else 1500)
+            except Exception:  # noqa: BLE001 — said just below
+                pass
             if not tab.count():
                 ERRORS.append(f"place {n}: the tab {label!r} went after a click")
                 continue
