@@ -162,7 +162,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Content warning (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Pictures: drag, paste, description, focus | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Shrinking pictures to the server's limit | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
-| Lighter pictures before the upload: WebP, size, no EXIF | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Lighter pictures before the upload: WebP, size, no EXIF | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | A file the server won't take — said at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Completing #tags, @nicks, :emoji: | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | An emoji picker in the editor: the standard ones and the server's | ✓ |   | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
@@ -275,4 +275,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **76** features of the 211 compared.
+Only in fedtail — **75** features of the 211 compared.

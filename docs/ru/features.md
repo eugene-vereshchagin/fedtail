@@ -553,7 +553,7 @@
 | Предупреждение (CW) | есть | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | у всех |
 | Картинки: перетащить, вставить, подпись, фокус | есть | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | у всех (фокус — Mastodon web, Ivory) |
 | Ужимать картинки под лимит сервера | есть | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
-| Облегчать картинки перед отправкой: WebP, размер, без EXIF | есть | дальше | `post.photo_format`, `post.photo_quality`, `post.photo_max_side`, `post.png_format`, `post.png_quality`, `post.png_max_side` | `instance.configuration.media_attachments.supported_mime_types` | — |
+| Облегчать картинки перед отправкой: WebP, размер, без EXIF | есть | дальше | `post.photo_format`, `post.photo_quality`, `post.photo_max_side`, `post.png_format`, `post.png_quality`, `post.png_max_side` | `instance.configuration.media_attachments.supported_mime_types` | Fedilab (compression, on or off), Tusky (to the server's limit) |
 | Файл, которого сервер не примет, — сразу | есть | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | нет |
 | Дополнение #тегов, @ников, :эмодзи: | есть | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji`, `post.emoji_standard` | `accounts/search`, `custom_emojis` | у всех |
 | Выбор эмодзи в редакторе: обычные и эмодзи сервера | есть | 0.23.3 | `post.emoji_standard`, `post.complete_emoji` | `custom_emojis` | у многих |

@@ -144,8 +144,8 @@ name.ru = "Облегчать картинки перед отправкой: We
 name.en = "Lighter pictures before the upload: WebP, size, no EXIF"
 config = "`post.photo_format`, `post.photo_quality`, `post.photo_max_side`, `post.png_format`, `post.png_quality`, `post.png_max_side`"
 api = "`instance.configuration.media_attachments.supported_mime_types`"
-others = "—"
-clients = []
+others = "Fedilab (compression, on or off), Tusky (to the server's limit)"
+clients = ["Fedilab"]
 details.ru = "Фото (JPEG, HEIC, AVIF, TIFF) и PNG (скриншоты, рисунки) — каждый вид со своими настройками: во что пережать (WebP, JPEG, PNG или как есть), качество (по умолчанию 80) и длинная сторона (по умолчанию 2560 px). WebP — только если сервер говорит, что его берёт, иначе JPEG. Копия делается заново из пикселей: EXIF (где и когда снято, камера) не уходит, фото стоит так, как держали телефон, цвета (ICC) сохраняются. Фото с телефона в 4–8 МБ становится несколькими сотнями КБ. Твой файл не трогается; GIF, WebP, видео и звук — как есть."
 details.en = "Photos (JPEG, HEIC, AVIF, TIFF) and PNGs (screenshots, drawings) — each kind by its own settings: what to make it (WebP, JPEG, PNG or as it is), the quality (80 by default) and the longest side (2560 px by default). WebP only where the server says it takes it, JPEG otherwise. The copy is made anew from the pixels: no EXIF goes (where and when it was taken, the camera), the photo stands as it was held, its colours (ICC) are kept. A 4–8 MB photo off a phone becomes a few hundred KB. Your file isn't touched; GIF, WebP, video and sound go as they are."
 
