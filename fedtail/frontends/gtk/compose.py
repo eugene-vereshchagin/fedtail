@@ -988,6 +988,8 @@ class ComposeWindow(Gtk.Box):
 
     # ---- sending -------------------------------------------------------------------------
     def send(self, scheduled_at=None):
+        if not self.send_btn.get_sensitive():  # one is on its way: the key pressed again
+            return
         text = self._text().strip()
         media = [tuple(m) for m in self._media_list()]
         if self.cfg["post"].get("resize_images", True):

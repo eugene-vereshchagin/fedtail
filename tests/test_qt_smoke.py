@@ -247,6 +247,25 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("@me@example.test", dlg.windowTitle())
         dlg.reject()
 
+    def test_send_pressed_twice_sends_once(self):
+        """Ctrl+Enter again while the first is still on its way: the button was dead
+        but the shortcut called send() all the same — two posts (24.11)."""
+        from concurrent.futures import Future
+        from unittest import mock
+
+        from fedtail.frontends.qt.compose import Compose
+        dlg = Compose(self.win)
+        dlg.text.setPlainText("once")
+        held, asked = Future(), []
+        with mock.patch.object(self.core, "post", side_effect=lambda *a, **k: (
+                asked.append(a), held)[1]):
+            dlg.send(alt_checked=True, lang_checked=True)
+            dlg.send(alt_checked=True, lang_checked=True)
+        self.assertEqual(len(asked), 1)
+        held.cancel()
+        dlg.sent = True
+        dlg._leave()
+
     def test_whole_flow(self):
         from PySide6.QtWidgets import QPushButton
 

@@ -55,8 +55,11 @@ class PlaceWindow:
 
     def load(self):
         name, arg, tab, cursor = self.name, self.arg, self.tab, self.cursor
+        # the newest page asked for only: a tab's slow answer was drawn over the tab
+        # clicked after it (as Qt's, 24.11)
+        self._asked = turn = getattr(self, "_asked", 0) + 1
         self.win.call(self.view.bg.submit(lambda: self.places.page(name, arg, tab, cursor)),
-                      self.draw)
+                      lambda page: self.draw(page) if turn == self._asked else None)
 
     @staticmethod
     def _empty(box):
@@ -254,9 +257,18 @@ class PlaceWindow:
 
     def press(self, btn, confirmed=False, answer=None):
         values = self.values()
+        # one press at a time (a double click on "Approve" asked twice), as Qt's
+        going = getattr(self, "_going", None)
+        if going is None:
+            going = self._going = set()
+        mark = (tuple(btn.act), confirmed, repr(answer))
+        if mark in going:
+            return
+        going.add(mark)
         self.win.call(self.view.bg.submit(lambda: self.places.act(
             *btn.act, values=values, confirmed=confirmed, answer=answer)),
-            lambda out: self.answered(btn, out, answer))
+            lambda out: (going.discard(mark), self.answered(btn, out, answer)),
+            lambda e: (going.discard(mark), self.win.error(e)))
 
     def say(self, text, error=False):
         self.said.set_text(("⚠ " if error else "✓ ") + _plain(text))

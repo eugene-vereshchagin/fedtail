@@ -1096,6 +1096,8 @@ class Compose(QDialog):
             self.from_box.setToolTip(_("post_from_tip"))
 
     def send(self, scheduled_at=None, alt_checked=False, lang_checked=False):
+        if not self.send_btn.isEnabled():  # one is on its way: the key pressed again
+            return  # (the button was dead, the shortcut wasn't — two posts, 24.11)
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
         if self.core.cfg["post"].get("resize_images", True):

@@ -60,6 +60,14 @@
 - The terminal: a profile's posts of the kind asked before `s` don't replace the new
   kind's; "deeper" answered after a lane change isn't run there; one page of older posts
   at a time; Send works again after a file to attach turned out unreadable.
+- The editor (Qt and GTK): the Send key pressed again while the post is still on its way
+  no longer sends it twice (the button was dead, the shortcut wasn't).
+- Qt: a slow search no longer lands under the results of the words typed after it; a
+  profile's "older from their server" doesn't mix into the list switched to meanwhile;
+  after a failure "more" in people and quotes, the lane's "older" and the input line's
+  Follow work again instead of staying grey or saying "nothing older".
+- The places' windows (Qt and GTK): a tab's slow answer isn't drawn over the tab clicked
+  after it; a button double-clicked ("Approve") asks once.
 - The input line (Qt and GTK): what is typed while a post is still on its way to a slow
   server stays — the first post's answer cleared the line; Enter again meanwhile waits.
 - GTK: a thread's tab closed before its answer came no longer marks the thread read;

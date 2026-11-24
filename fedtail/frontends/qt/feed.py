@@ -617,7 +617,7 @@ class LaneWidget(QWidget):
             self.btn_older.setEnabled(False)
             self.btn_older.setText(_("loading"))
             self.win.bridge.call(fut, ok=self._older_done,
-                                 fail=lambda e: self.btn_older.setEnabled(True))
+                                 fail=lambda e: (self._older_done(1), self.win.error(e)))
 
     def _older_done(self, n):
         self.btn_older.setEnabled(True)
@@ -1146,10 +1146,16 @@ class AccountWidget(_PagedTab):
         have = [real_entry(e).uri for e in self.items if real_entry(e).uri]
 
         shown = [0]
+        # the kind of posts asked for: switched meanwhile, these answers aren't that
+        # list's — they were merged into it and wrote its button's words (24.11)
+        want = self.show
+        stale = lambda: self.show != want  # noqa: E731
 
         def listed(r):
             # the addresses come fast; my server fetching each post is the slow part
             # (seconds a post), so they come in a few at a time and show as they come
+            if stale():
+                return None
             uris, self._origin_next = r
             if not uris:
                 return done()
@@ -1160,6 +1166,8 @@ class AccountWidget(_PagedTab):
             batch, rest = left[:4], left[4:]
 
             def got(entries):
+                if stale():
+                    return
                 known = {e.id for e in self.items}
                 new = [e for e in entries if e.id not in known]
                 shown[0] += len(new)
@@ -1176,6 +1184,8 @@ class AccountWidget(_PagedTab):
             self.win.bridge.call(self.core.resolve_statuses(batch), ok=got, fail=failed)
 
         def done():
+            if stale():
+                return
             if self._origin_next:
                 self.btn_more.setText(_("older_from_origin", host=host))
                 self.btn_more.setEnabled(True)
@@ -1186,6 +1196,8 @@ class AccountWidget(_PagedTab):
                 8000)
 
         def failed(e):
+            if stale():
+                return
             self.btn_more.setText(_("older_from_origin", host=host))
             self.btn_more.setEnabled(True)
             self.win.error(e)
@@ -1208,8 +1220,11 @@ class AccountWidget(_PagedTab):
         self.header.info.setText(self.header.info.text() + " · " +
                                  _("origin_asking", host=host))
         have = [real_entry(e).uri for e in self.items]
+        want = self.show
 
         def got(entries):
+            if self.show != want:  # (another kind of posts by now)
+                return
             known = {e.id for e in self.items}
             new = [e for e in entries if e.id not in known]
             self.items = sorted(self.items + new, key=lambda e: e.sort, reverse=True)
@@ -1796,15 +1811,22 @@ class SearchWidget(QWidget):
             return
         clear(self.box_lay)
         self.view.set_specs([], keep_position=False)
+        # the newest question's answer only: a slow one for the words before was put
+        # under the results of the words typed after it (24.11)
+        self._asked = turn = getattr(self, "_asked", 0) + 1
+        mine = lambda: turn == self._asked  # noqa: E731
         if not query:
             self.header.info.setText(_("search_hint"))
-            self.win.bridge.call(self.core.followed_tags(), ok=self._followed_tags)
+            self.win.bridge.call(self.core.followed_tags(),
+                                 ok=lambda t: mine() and self._followed_tags(t))
             return
         self.title = _("search_title") + ": " + query
         self.win.retitle(self)
         self.header.info.setText(_("searching"))
-        self.win.bridge.call(self.core.search(query), ok=self._results,
-                             fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
+        self.win.bridge.call(self.core.search(query),
+                             ok=lambda r: mine() and self._results(r),
+                             fail=lambda e: mine() and self.header.info.setText(
+                                 _("load_failed", err=e)))
 
     def _followed_tags(self, tags):
         if tags:
@@ -1901,7 +1923,9 @@ class PeopleWidget(QWidget):
         self.btn_more.setText(_("loading"))
         self.win.bridge.call(
             self.core.people_from_origin(self.acc, self.which, self.shown_ids), ok=self._page,
-            fail=lambda e: (self.btn_more.setText(_("no_older")), self.win.error(e)))
+            # (a failure isn't "nothing older": the button works again)
+            fail=lambda e: (self.btn_more.setText(_("more")), self.btn_more.setEnabled(True),
+                            self.win.error(e)))
 
     def apply_read(self, ids):
         pass

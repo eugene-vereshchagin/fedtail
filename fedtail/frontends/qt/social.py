@@ -71,7 +71,9 @@ class AccountsWidget(QWidget):
         # fetch and origin may be the window's calls on the core itself: what they give
         # is made the model here
         self.win.bridge.call(fut, ok=lambda got: self._page(self.core.model_of(got)),
-                             fail=lambda e: (self.btn_more.setText(_("no_older")),
+                             # (a failure isn't "nothing older": the button works again)
+                             fail=lambda e: (self.btn_more.setText(_("more")),
+                                             self.btn_more.setEnabled(True),
                                              self.win.error(e)))
 
     def _page(self, got):
@@ -128,7 +130,9 @@ class QuotesWidget(_PagedTab):
             if not self.cursor:
                 self.btn_more.setText(_("no_older"))
         self.win.bridge.call(self.core.quotes_of(self.status, self.cursor), ok=got,
-                             fail=lambda e: (self.btn_more.setText(_("no_older")),
+                             # (a failure isn't "nothing older": the button works again)
+                             fail=lambda e: (self.btn_more.setText(_("more")),
+                                             self.btn_more.setEnabled(True),
                                              self.win.error(e)))
 
 

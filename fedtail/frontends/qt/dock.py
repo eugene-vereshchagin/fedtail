@@ -932,8 +932,9 @@ class AuthorBar(QWidget):
         rel = view.relation_known(who.id)
         on = not (rel and (rel.following or rel.requested))
         self.follow_btn.setEnabled(False)
+        # (a failure: the button stayed grey until another person came under it)
         self.win.bridge.call(view.follow(who.id, on), ok=lambda _r: self._show_relation(),
-                             fail=self.win.error)
+                             fail=lambda e: (self._show_relation(), self.win.error(e)))
 
     def _write(self):
         if self.who is not None:

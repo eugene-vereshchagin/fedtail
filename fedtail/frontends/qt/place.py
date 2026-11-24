@@ -86,8 +86,12 @@ class PlaceDialog(QDialog):
     # ---- the page, built off the GUI thread (the place asks the server) ----------------
     def load(self):
         name, arg, tab, cursor = self.name, self.arg, self.tab, self.cursor
+        # the newest page asked for only: a tab's slow answer was drawn over the tab
+        # clicked after it (24.11)
+        self._asked = turn = getattr(self, "_asked", 0) + 1
         fut = self.view.bg.submit(lambda: self.places.page(name, arg, tab, cursor))
-        self.win.bridge.call(fut, ok=self.draw, fail=self.win.error)
+        self.win.bridge.call(fut, ok=lambda page: turn == self._asked and self.draw(page),
+                             fail=lambda e: turn == self._asked and self.win.error(e))
 
     def draw(self, page):
         self.page = page
@@ -301,10 +305,20 @@ class PlaceDialog(QDialog):
     # ---- a button: the place does it; what it says is done here ------------------------
     def press(self, btn, confirmed=False, answer=None):
         values = self.values()
+        # one press at a time: a double click on "Approve" asked twice, the second
+        # answered with an error that stayed in the window
+        going = getattr(self, "_going", None)
+        if going is None:
+            going = self._going = set()
+        mark = (tuple(btn.act), confirmed, repr(answer))
+        if mark in going:
+            return
+        going.add(mark)
         fut = self.view.bg.submit(lambda: self.places.act(
             *btn.act, values=values, confirmed=confirmed, answer=answer))
-        self.win.bridge.call(fut, ok=lambda out: self.answered(btn, out, answer),
-                             fail=lambda e: self.say(e, error=True))
+        self.win.bridge.call(
+            fut, ok=lambda out: (going.discard(mark), self.answered(btn, out, answer)),
+            fail=lambda e: (going.discard(mark), self.say(e, error=True)))
 
     def answered(self, btn, out, answer):
         if out.error:
