@@ -7,6 +7,13 @@
 
 ## What's next
 
+- For a moderator: someone signed up on the server, someone sent a report — these come into
+  Activity ("Other") now, said in words; `activity.admin = false` doesn't ask for them. The
+  lanes' rules knew the word, but nothing asked the server and a row had nothing to say.
+- The quick filters' words are data of the config too (`[lanes.switches.<key>]`: title,
+  tip). The Phanpy set's filter of mentions from the people you follow had no words and
+  showed its key. "My posts" has no "unread only" filter: your own posts are never unread.
+  The event word `deleted` is gone from the rules (a post deleted is its `state`).
 - The sets of lanes live in config.toml now, not in a file of the program: its first chapter
   is "Lanes", its first option `preset`, and every set fedtail comes with — fedtail,
   mastodon, tusky, phanpy, fedilab, the "extra" lanes — is written out there, a table a

@@ -84,7 +84,7 @@ EVENTS = {"favourite", "reblog", "follow",  # ours: the rules' own words for eve
           "annual_report", "i_followed",
           # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
           "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
-          "deleted", "lost",
+          "lost",
           # a device of mine joined sync (core/sync/engine.py)
           "device",
           # a newer fedtail is out (core/updates.py)

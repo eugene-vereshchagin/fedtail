@@ -237,3 +237,46 @@ class EventsLaneByRuleTest(unittest.TestCase):
         own = [{"name": "watching", "source": "subs", "any": [{}]}]
         core = self.make({"enabled": ["home", "watching"], "custom": own})
         self.assertTrue(core._follows_threads())  # whatever the lane is called
+
+
+class ModeratorsEventsTest(unittest.TestCase):
+    """A moderator's notifications (admin.sign_up, admin.report): asked for
+    (activity.admin), taken by Activity's rule and said in words — the rules knew the
+    word "admin", nothing asked the server for them and a row had no words (25.11)."""
+
+    def test_asked_taken_and_said(self):
+        from fedtail.core import atoms, presets
+        from fedtail.frontends.common import activity as act
+        from fedtail.protocols.mastodon import adapter
+        i18n.setup("en")
+        rule = next(t for t in presets.lanes_of("fedtail") if t["name"] == "activity")
+        took = {w for c in rule["any"] for w in ([c["event"]] if isinstance(c["event"], str)
+                                                  else c["event"])}
+        self.assertEqual(took, set(atoms.EVENTS))  # every event the core knows of
+        self.assertNotIn("deleted", atoms.EVENTS)   # a post's state, never an event
+        up = adapter.activity({"id": "1", "type": "admin.sign_up", "account": BOB,
+                               "created_at": "2099-01-01T00:00:00Z"})
+        self.assertEqual((up.kind, up.details.kind), ("notice", "sign_up"))
+        self.assertEqual(i18n._("act_" + act.act_key(up)), "signed up on the server")
+        rep = adapter.activity({"id": "2", "type": "admin.report", "account": BOB,
+                                "created_at": "2099-01-01T00:00:00Z",
+                                "report": {"comment": "spam", "category": "spam",
+                                           "target_account": {"acct": "eve@x.test"}}})
+        self.assertEqual(act.act_key(rep), "admin.report")
+        self.assertEqual(act.notice_text(rep.details), "about @eve@x.test: spam")
+        for kind in act.ACT_KINDS:
+            self.assertNotEqual(i18n._("act_" + kind), "act_" + kind, kind)
+        self.assertTrue(config.DEFAULTS["activity"]["admin"])
+        # the quick filters' words are the config's ([lanes.switches]), every one the
+        # sets name — "@chip_followed" of the Phanpy set had none and showed its key
+        for tables in presets.reference()["sets"].values():
+            for t in tables:
+                for c in t.get("any") or ():
+                    key = str(c.get("switch") or "")
+                    if key.startswith("@"):
+                        title, tip = presets.switch_words(key[1:])
+                        self.assertNotEqual(title, key[1:], key)
+                        self.assertTrue(tip, key)
+        self.assertEqual(presets.switch_words("no_such")[0], "no_such")
+        mine = next(t for t in presets.lanes_of("fedtail") if t["name"] == "my_posts")
+        self.assertEqual(mine["switches"], ["posts_only"])  # one's own are never unread

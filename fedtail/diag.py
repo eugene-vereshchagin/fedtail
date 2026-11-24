@@ -1243,7 +1243,7 @@ def redact_config(text):
     return _USERINFO.sub(r"\1***@", text)
 
 
-SETS_TABLES = ("sets", "words", "sections", "renamed", "about")  # core/presets.TABLES
+SETS_TABLES = ("sets", "words", "sections", "renamed", "about", "switches")  # core/presets.TABLES
 
 
 def changed_options(cfg):

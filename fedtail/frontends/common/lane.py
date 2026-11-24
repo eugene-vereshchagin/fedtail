@@ -272,8 +272,10 @@ class LaneModel:
         if which in builtin:
             return _(builtin[which][0]), _(builtin[which][1])
         words = dict(self.chips).get(which) or which
-        if words.startswith("@"):  # a built-in lane's: an i18n key
-            return _(words[1:]), _(words[1:] + "_tip")
+        if words.startswith("@"):  # named by a key: the config's words for it
+            from ...core import presets  # ([lanes.switches.<key>]: title, tip)
+            title, tip = presets.switch_words(words[1:])
+            return title, tip or _("chip_tip", words=title)
         return words, _("chip_tip", words=words)
 
     def current_filter(self):

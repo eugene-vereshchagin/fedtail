@@ -24,6 +24,7 @@ except ImportError:
     Image = None
 
 from fedtail import i18n
+from fedtail.core import presets
 from fedtail.core.app import Core
 
 from . import fakes
@@ -572,7 +573,7 @@ class ActivityRequestsTest(Base):
             chips = [f for f in m.filters if f.startswith("chip:")]
             self.assertTrue(chips)
             follows = next(f for f in chips if m.filter_words(f)[0] ==
-                           i18n._("actf_follows"))
+                           presets.switch_words("actf_follows")[0])
             app.action_lane_choices()
             await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
             self.assertTrue(any(it != "-" and it[0].endswith(i18n._("activity_clear") + " …")

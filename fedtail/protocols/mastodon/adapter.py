@@ -392,6 +392,15 @@ def _details(raw):
         return Notice("severed", target=_str(ev.get("target_name")),
                       lost=_int(ev.get("followers_count")) + _int(ev.get("following_count")),
                       reason=_str(ev.get("type")) or "domain_block")
+    # a moderator's own: someone signed up, someone reported someone (admin.sign_up,
+    # admin.report — the server gives them to those it lets moderate)
+    if raw.get("type") == "admin.sign_up":
+        return Notice("sign_up")
+    if raw.get("type") == "admin.report":
+        rep = _dict(raw.get("report"))
+        about = _dict(rep.get("target_account"))
+        return Notice("report", target=_str(about.get("acct")), text=_str(rep.get("comment")),
+                      reason=_str(rep.get("category")))
     return None
 
 

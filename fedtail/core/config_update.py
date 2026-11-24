@@ -93,7 +93,7 @@ def _has(have, sec, key):
 # [lanes.sections.<section>], [lanes.renamed]) are not options: tables read whole. What
 # follows adds, refreshes and rebuilds options a line at a time — so the sets are cut out
 # first and put back in one piece: the file's own when it has any, else the reference's.
-_SETS = re.compile(r"^\s*\[\[?lanes\.(?:sets|words|sections|renamed|about)"
+_SETS = re.compile(r"^\s*\[\[?lanes\.(?:sets|words|sections|renamed|about|switches)"
                    r"(?:\.[A-Za-z0-9_.]+)?\]\]?")
 
 

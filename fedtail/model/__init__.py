@@ -318,7 +318,8 @@ class Notice:
     "severed" — follows cut by a block (target: the server or account, lost: how many,
     reason: domain_block, user_domain_block, account_suspension); "warning" — the
     moderators about my account (action: none, disable, silence, suspend…, text);
-    "other" — anything else."""
+    for a moderator: "sign_up" — someone joined the server, "report" — a report (target:
+    whom it is about, text: what it says, reason: its category); "other" — anything else."""
     kind: str = "other"
     target: str = ""
     lost: int = 0

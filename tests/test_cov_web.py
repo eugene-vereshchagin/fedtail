@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from fedtail import i18n
-from fedtail.core import auth, config, paths
+from fedtail.core import auth, config, paths, presets
 from fedtail.core.app import Core
 from fedtail.frontends.web import server as web
 from fedtail.model import (
@@ -325,10 +325,12 @@ class WebEventLanesTest(WebBase):
         got = self.web.lane("activity")
         self.assertEqual(len(got["events"]), 2)
         chips = {words: key for key, words, _tip in got["filters"]}
-        self.web.lane_set({"name": "activity", "filter": chips[i18n._("actf_follows")]})
+        self.web.lane_set({"name": "activity",
+                           "filter": chips[presets.switch_words("actf_follows")[0]]})
         kinds = {e["event"]["kind"] for e in self.web.lane("activity")["events"]}
         self.assertEqual(kinds, {"follow"})
-        self.web.lane_set({"name": "activity", "filter": chips[i18n._("actf_reactions")]})
+        self.web.lane_set({"name": "activity",
+                           "filter": chips[presets.switch_words("actf_reactions")[0]]})
         kinds = {e["event"]["kind"] for e in self.web.lane("activity")["events"]}
         self.assertEqual(kinds, {"favourite"})
 

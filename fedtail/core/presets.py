@@ -17,7 +17,7 @@ DEFAULT = "fedtail"
 EXTRA = "extra"  # lanes no set shows, any config may turn on
 OLD_NAMES = {"own": DEFAULT}  # before every lane was a rule: "own" was your [lanes] as it was
 # the tables of [lanes] that are the sets and their words (not options)
-TABLES = ("sets", "words", "sections", "renamed", "about")
+TABLES = ("sets", "words", "sections", "renamed", "about", "switches")
 _active = None  # the tables of the config at work (use)
 
 
@@ -42,7 +42,8 @@ def merged(own):
            "words": {n: dict(w) for n, w in ref["words"].items()},
            "sections": own.get("sections") or ref["sections"],
            "renamed": {**ref["renamed"], **(own.get("renamed") or {})},
-           "about": {**ref["about"], **(own.get("about") or {})}}
+           "about": {**ref["about"], **(own.get("about") or {})},
+           "switches": {**ref["switches"], **(own.get("switches") or {})}}
     for name, words in (own.get("words") or {}).items():
         if isinstance(words, dict):
             out["words"][name] = {**out["words"].get(name, {}), **words}
@@ -60,7 +61,7 @@ def problems(own):
             out.append(f"lanes.sets.{name}: tables [[lanes.sets.{name}]], a lane each")
         elif name in TABLES:
             out.append(f"lanes.sets.{name}: a set can't be called {name}")
-    for key in ("words", "sections", "renamed", "about"):
+    for key in ("words", "sections", "renamed", "about", "switches"):
         got = (own or {}).get(key)
         if got is not None and not isinstance(got, dict):
             out.append(f"lanes.{key}: tables [lanes.{key}.<name>]")
@@ -122,6 +123,14 @@ def words(name, cfg=None):
 def about(name, cfg=None, lang=None):
     """What a set is, in a line ([lanes.about]); "" — nothing said (a set of one's own)."""
     return in_language(_all(cfg)["about"].get(name), lang)
+
+
+def switch_words(name, lang=None):
+    """(title, tip) of a quick filter named by its key (a condition's switch = "@<key>"):
+    the config's words for it ([lanes.switches.<key>]); no such table — the key itself."""
+    got = _all()["switches"].get(name)
+    got = got if isinstance(got, dict) else {}
+    return in_language(got.get("title"), lang) or name, in_language(got.get("tip"), lang)
 
 
 def shipped():

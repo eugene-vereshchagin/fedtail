@@ -441,6 +441,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `activity.unlikes_days` | `3` |  |
 | `activity.unlikes_posts` | `20` |  |
 | `activity.server_notices` | `true` | The server's own notices (Mastodon 4.3+): your server (or another) blocked another one — and your follows and followers from there were cut, how many and why; a warning from the moderators. They come here too. false — don't show. |
+| `activity.admin` | `true` | For a moderator: someone signed up on the server, someone sent a report — the server gives these only to those it lets moderate; to everyone else nothing comes. They stand under "Other" in Activity. false — don't ask for them. |
 | `activity.server_groups` | `true` | The server's own groups of notifications (Mastodon 4.3+): 300 likes of one post come as one group with its count — one request instead of eight pages, one row "and 297 more"; × dismisses the whole group on the server. Where the server can't (GoToSocial, older Mastodon), fedtail groups them itself. false — always itself. |
 
 ## 12. Several accounts

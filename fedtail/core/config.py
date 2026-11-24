@@ -303,6 +303,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "unlikes_days": 3,
         "unlikes_posts": 20,
         "server_notices": True,
+        "admin": True,            # a moderator's own: sign-ups and reports (if the server gives)
         "server_groups": True,
     },
     "lists": {
@@ -708,7 +709,7 @@ FILE_LAYOUT = (
                              "player min_gap_seconds")),
     ("activity", _keys("activity", "types approvals requests my_follows names_shown unfollows "
                                    "unfollows_minutes unfollows_max unfollows_mass unlikes "
-                                   "unlikes_days unlikes_posts server_notices "
+                                   "unlikes_days unlikes_posts server_notices admin "
                                    "server_groups")),
     ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
     ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds device_name "

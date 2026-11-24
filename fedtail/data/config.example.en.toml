@@ -347,7 +347,7 @@ any = [{ author = "bot" }]
 
 [[lanes.sets.fedtail]]
 name = "my_posts"
-switches = ["posts_only", "unread_only"]
+switches = ["posts_only"]
 group = "personal"
 source = "mine"
 any = [{}]
@@ -417,7 +417,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release", "admin"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -493,7 +493,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release", "admin"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -562,7 +562,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release", "admin"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -652,7 +652,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release", "admin"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -738,7 +738,7 @@ any = [
   { event = ["follow", "unfollow", "unfollowed_back", "gone", "lost", "moved"], switch = "@actf_follows" },
   { event = ["follow_request", "pending"], switch = "@actf_requests" },
   { event = "i_followed", switch = "@actf_mine" },
-  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release"], switch = "@actf_other" },
+  { event = ["poll", "update", "status", "quoted_update", "severed", "warning", "annual_report", "removed_follower", "device", "release", "admin"], switch = "@actf_other" },
 ]
 none = [{ event = "follow_request", apart = "requests" }]
 
@@ -859,6 +859,56 @@ source = "mentions"
 sort = "post_time"
 any = [{ me = "mention", author = ["stranger", "not_follower"] }]
 none = [{ author = ["followed", "follower", "me"] }]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# The quick filters' words: a condition with switch = "@<name>" is a button over the lane,
+# called as its table here says (title) and explained so (tip). A switch written as plain
+# words — switch = "Pictures" — is called by them.
+
+[lanes.switches.chip_tags]
+title = { ru = "Теги", en = "Tags" }
+tip = { ru = "Только то, что принесли подписанные теги", en = "Only what the tags you follow brought" }
+
+[lanes.switches.chip_boosts]
+title = { ru = "Бусты", en = "Boosts" }
+tip = { ru = "Только бусты", en = "Only boosts" }
+
+[lanes.switches.chip_threads_new]
+title = { ru = "Треды с новым", en = "Threads with news" }
+tip = { ru = "Посты, в тредах которых есть непрочитанные ответы (сами ответы — в треде)", en = "Posts whose threads have unread replies (the replies — in the thread)" }
+
+[lanes.switches.chip_replies]
+title = { ru = "Ответы", en = "Replies" }
+tip = { ru = "Ответы на мои посты и комменты", en = "Replies to my posts and comments" }
+
+[lanes.switches.chip_mentions]
+title = { ru = "Упоминания", en = "Mentions" }
+tip = { ru = "Где меня упомянули, не отвечая мне", en = "Where I'm mentioned, not answered" }
+
+[lanes.switches.actf_reactions]
+title = { ru = "Лайки и бусты", en = "Likes & boosts" }
+tip = { ru = "Лайки, бусты, цитаты, реакции на твоё", en = "Likes, boosts, quotes, reactions to yours" }
+
+[lanes.switches.actf_follows]
+title = { ru = "Подписчики", en = "Followers" }
+tip = { ru = "Кто подписался и кто отписался", en = "Who followed you and who stopped" }
+
+[lanes.switches.actf_requests]
+title = { ru = "Заявки", en = "Requests" }
+tip = { ru = "Ждут твоего ответа: заявки в подписчики, ответы, лайки, бусты", en = "Waiting for your answer: follow requests, replies, likes, boosts" }
+
+[lanes.switches.actf_mine]
+title = { ru = "Моё", en = "Mine" }
+tip = { ru = "Что делал ты: на кого подписался", en = "What you did: whom you followed" }
+
+[lanes.switches.actf_other]
+title = { ru = "Прочее", en = "Other" }
+tip = { ru = "Опросы, правки, новые посты важных людей, сообщения сервера", en = "Polls, edits, important people's new posts, the server's notices" }
+
+[lanes.switches.chip_followed]
+title = { ru = "От своих", en = "Followed" }
+tip = { ru = "Упоминания от тех, на кого ты подписан", en = "Mentions from the people you follow" }
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -2285,6 +2335,11 @@ unlikes_posts = 20
 # and your follows and followers from there were cut, how many and why; a warning from
 # the moderators. They come here too. false — don't show.
 server_notices = true
+
+# For a moderator: someone signed up on the server, someone sent a report — the server
+# gives these only to those it lets moderate; to everyone else nothing comes. They stand
+# under "Other" in Activity. false — don't ask for them.
+admin = true
 
 # The server's own groups of notifications (Mastodon 4.3+): 300 likes of one post come
 # as one group with its count — one request instead of eight pages, one row "and 297

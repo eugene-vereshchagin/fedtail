@@ -219,7 +219,8 @@ class DocsBuildTest(unittest.TestCase):
                     if isinstance(table, dict) for key in table
                     # the sets of lanes and their words: tables, not options
                     if (sec, key) not in {("lanes", t) for t in
-                                          ("sets", "words", "sections", "renamed", "about")}]
+                                          ("sets", "words", "sections", "renamed", "about",
+                                           "switches")}]
             self.assertEqual(sorted(rows[lang]), sorted(live), lang)
         self.assertEqual(rows["ru"], rows["en"])
 

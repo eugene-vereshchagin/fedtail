@@ -20,6 +20,8 @@ class ActivityMixin(CoreState):
             types += ["pending.reply", "pending.favourite", "pending.reblog"]
         if self.cfg["activity"].get("server_notices", True):  # Mastodon 4.3+
             types += ["severed_relationships", "moderation_warning"]
+        if self.cfg["activity"].get("admin", True):  # a moderator's: sign-ups, reports
+            types += ["admin.sign_up", "admin.report"]
         fc = self.cfg["feed"]
         newest, _sort = self.store.activity_newest(server=True)
         if newest is None:
