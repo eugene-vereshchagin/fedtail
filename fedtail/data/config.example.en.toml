@@ -2173,6 +2173,31 @@ redraft = true
 # — PNG) — under its byte limit. Your file isn't touched. false — send as is.
 resize_images = true
 
+# Pictures made lighter before the upload — a photo off a phone or a camera weighs megabytes
+# the server stores and every reader downloads. Each kind of picture by its own settings:
+# photo_* — JPEG, HEIC, AVIF, TIFF; png_* — PNG and BMP (screenshots, drawings).
+#   *_format: what the copy is made as —
+#     "webp" — WebP (the lightest; the slowest, smallest encoding where the library has
+#              one); where the server doesn't say it takes WebP, or this interface can't
+#              write it (GTK without webp-pixbuf-loader) — JPEG
+#     "jpeg" — JPEG (a picture with transparency — PNG: JPEG would make it black)
+#     "png"  — PNG, without loss (quality not used)
+#     ""     — not made anew: goes as it is, unless it's longer than *_max_side or
+#              bigger than the server takes (resize_images)
+#   *_quality: 1–100 (80 — hard to tell from the original by eye, several times lighter)
+#   *_max_side: the longest side at most this, pixels (2560 — sharp on a big screen when
+#               opened); 0 — any
+# The copy is made anew from the pixels: the photo's metadata (EXIF — where and when it
+# was taken, the camera) doesn't go, and it stands as it was held. Your file isn't
+# touched. GIF and WebP go as they are (they may move: an animation is never flattened),
+# video and sound too (no converter for them here).
+photo_format = "webp"
+photo_quality = 80
+photo_max_side = 2560
+png_format = "webp"
+png_quality = 80
+png_max_side = 2560
+
 # A file the server won't take (it says itself which types it takes: usually pictures,
 # video, sound) — said at once, before the upload: "the server doesn't take book.pdf (it
 # takes: pictures, video, sound)", not a "422" after the wait. false — send as is, the

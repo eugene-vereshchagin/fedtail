@@ -1,3 +1,7 @@
+**What's next:**
+
+- Lighter pictures before the upload: WebP, size, no EXIF
+
 **0.24.0:**
 
 - Sidebar sections of your own, in your order

@@ -302,50 +302,102 @@ MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
              ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
 
 
-def fit_for_server(path, caps, folder, images):
-    """A picture bigger than the server takes (caps.image_bytes, caps.image_pixels) as a
-    smaller copy, so it isn't refused after the upload: scaled down to the pixel limit,
-    saved as JPEG (PNG when it has transparency) until it's under the size. Anything
-    else — a video, a picture that fits, a server that doesn't say — goes as it is.
+# the kinds of picture made lighter before the upload, each by its own settings
+# (post.<kind>_format, _quality, _max_side): a photo, and a PNG — screenshots, drawings.
+# A GIF or a WebP (it may move: an animation is never flattened), a video, a sound go
+# as they are.
+PICTURE_KINDS = {"photo": (".jpg", ".jpeg", ".jfif", ".heic", ".heif", ".avif", ".tif",
+                           ".tiff"),
+                 "png": (".png", ".bmp")}
+FORMAT_EXT = {"webp": ".webp", "jpeg": ".jpg", "png": ".png"}
+PICTURE_KEYS = {"photo": ("photo_format", "photo_quality", "photo_max_side"),
+                "png": ("png_format", "png_quality", "png_max_side")}  # [post]'s
+
+
+def picture_kind(path):
+    """"photo", "png" — the kind of picture by its name; None — not one made lighter."""
+    low = str(path).lower()
+    return next((k for k, exts in PICTURE_KINDS.items() if low.endswith(exts)), None)
+
+
+def takes_webp(caps):
+    """Does the server say it takes WebP? Not said — no: a JPEG goes, any server's."""
+    types = [str(x).lower() for x in (getattr(caps, "media_types", None) or [])]
+    return "image/webp" in types or "image/*" in types
+
+
+def fit_for_server(path, caps, folder, images, fmt="", quality=90, max_side=0,
+                   limits=True):
+    """A picture as the server will take it, and as light as it was asked to be — a
+    copy in `folder` (your file isn't touched), or the path itself when nothing is to
+    be done.
+
+    limits (post.resize_images): bigger than the server takes (caps.image_bytes,
+    caps.image_pixels) — under its pixel limit, then its byte limit (the quality
+    lowered, a PNG made smaller). fmt (post.<kind>_format): "webp", "jpeg", "png" — made
+    anew in it at `quality`, its metadata gone (EXIF: where it was taken, the camera),
+    standing as it was taken; WebP only where the server takes it and the toolkit can
+    write it, else JPEG; a picture with transparency never as JPEG (PNG). "" — not made
+    anew for that. max_side: the longest side at most that (0 — any). A GIF and a WebP
+    go as they are: they may move, and an animation is never flattened.
 
     images: the toolkit's pictures — size(path) -> (w, h) or None, load(path) -> img or
-    None, scaled(img, w, h), dims(img) -> (w, h), alpha(img), save(img, out, kind,
-    quality) -> bool (qt/compose.py _QtImages, gtk/compose.py _PixbufImages)."""
+    None (turned as the camera said), scaled(img, w, h), dims(img) -> (w, h),
+    alpha(img), save(img, out, kind, quality) -> bool, can(kind) -> bool (WebP: may it
+    be written) — qt/compose.py _QtImages, gtk/compose.py _PixbufImages, PilImages."""
+    import hashlib
     import logging
     import os
     from pathlib import Path
-    max_b, max_px = int(caps.image_bytes or 0), int(caps.image_pixels or 0)
-    if not max_b and not max_px or str(path).lower().endswith((".gif", ".webp")):
-        return path  # nothing said; or it may move: never flatten an animation
+    max_b, max_px = (int(caps.image_bytes or 0), int(caps.image_pixels or 0)) if limits \
+        else (0, 0)
+    if str(path).lower().endswith((".gif", ".webp")):
+        return path  # it may move: never flatten an animation
+    if fmt not in FORMAT_EXT:
+        fmt = ""
     size = images.size(path)
     if size is None:
         return path
     big_px = max_px and size[0] * size[1] > max_px
     big_b = max_b and os.path.getsize(path) > max_b
-    if not big_px and not big_b:
+    long = max_side and max(size) > max_side
+    if not (big_px or big_b or long or fmt):
         return path
+    if fmt == "webp":
+        can = getattr(images, "can", None)
+        if not takes_webp(caps) or can is None or not can("webp"):
+            fmt = "jpeg"  # the server or the toolkit without WebP: the next lightest
     img = images.load(path)
     if img is None:
         return path
     w, h = images.dims(img)
-    if big_px:
+    k = 1.0
+    if max_side and max(w, h) > max_side:
+        k = max_side / float(max(w, h))
+    if max_px and w * h * k * k > max_px:
         k = (max_px / float(w * h)) ** 0.5 * 0.98
+    if k < 1:
         img = images.scaled(img, int(w * k), int(h * k))
     alpha = images.alpha(img)
-    out = Path(folder) / ("upload-" + Path(path).stem + (".png" if alpha else ".jpg"))
-    quality = 90
+    kind = fmt or ("png" if alpha else "jpeg")
+    if kind == "jpeg" and alpha:
+        kind = "png"  # JPEG has no transparency: what's see-through would go black
+    quality = max(1, min(100, int(quality))) if fmt else 90
+    # one copy per file: two IMG_0001.jpg from two folders in one post are two
+    tag = hashlib.sha1(os.path.abspath(str(path)).encode("utf-8")).hexdigest()[:6]
+    out = Path(folder) / f"upload-{Path(path).stem}-{tag}{FORMAT_EXT[kind]}"
     while True:
-        if not images.save(img, str(out), "png" if alpha else "jpeg", quality):
+        if not images.save(img, str(out), kind, quality):
             return path
         if not max_b or out.stat().st_size <= max_b or quality <= 40:
             break
-        if alpha:  # a PNG can't get lighter by quality: smaller instead
+        if kind == "png":  # a PNG can't get lighter by quality: smaller instead
             w, h = images.dims(img)
             img = images.scaled(img, int(w * 0.8), int(h * 0.8))
         else:
             quality -= 15
-    logging.getLogger(__name__).info("%s made to fit the server: %d KB → %d KB",
-                                     Path(path).name, os.path.getsize(path) // 1024,
+    logging.getLogger(__name__).info("%s → %s: %d KB → %d KB", Path(path).name, out.name,
+                                     os.path.getsize(path) // 1024,
                                      out.stat().st_size // 1024)
     return str(out)
 
@@ -370,9 +422,18 @@ class PilImages:
         from PIL import Image, ImageOps
         try:
             with Image.open(path) as im:
-                return ImageOps.exif_transpose(im)  # a phone's photo stands as taken
+                img = ImageOps.exif_transpose(im)  # a phone's photo stands as taken
+                img.load()
         except Exception:  # noqa: BLE001
             return None
+        img.info = PilImages._kept(img.info)  # its colours, not its EXIF
+        return img
+
+    @staticmethod
+    def _kept(info):
+        """Of a picture's info what is the picture's own: its colours (the ICC profile)
+        and its see-through colour — not the EXIF, the comments, the dates."""
+        return {k: v for k, v in info.items() if k in ("icc_profile", "transparency")}
 
     @staticmethod
     def dims(img):
@@ -381,19 +442,40 @@ class PilImages:
     @staticmethod
     def scaled(img, w, h):
         from PIL import Image
-        return img.resize((max(1, w), max(1, h)), Image.LANCZOS)
+        info = PilImages._kept(img.info)
+        if img.mode == "P":  # a palette can't be smoothed: its colours first
+            img = img.convert("RGBA" if "transparency" in info else "RGB")
+            info.pop("transparency", None)
+        img = img.resize((max(1, w), max(1, h)), Image.LANCZOS)
+        img.info = info
+        return img
 
     @staticmethod
     def alpha(img):
         return img.mode in ("RGBA", "LA", "PA") or "transparency" in img.info
 
     @staticmethod
+    def can(kind):
+        if kind != "webp":
+            return True
+        from PIL import features
+        return bool(features.check("webp"))
+
+    @staticmethod
     def save(img, out, kind, quality):
+        # nothing of the original's metadata but its colours (the ICC profile): the
+        # EXIF — where, when, which camera — stays home
+        icc = {"icc_profile": img.info["icc_profile"]} if img.info.get("icc_profile") \
+            else {}
         try:
             if kind == "jpeg":
-                img.convert("RGB").save(out, "JPEG", quality=quality, optimize=True)
+                img.convert("RGB").save(out, "JPEG", quality=quality, optimize=True, **icc)
+            elif kind == "webp":
+                rgba = img.mode in ("RGBA", "LA", "PA") or "transparency" in img.info
+                img.convert("RGBA" if rgba else "RGB").save(
+                    out, "WEBP", quality=quality, method=6, **icc)  # the smallest it makes
             else:
-                img.save(out, "PNG", optimize=True)
+                img.save(out, "PNG", optimize=True, **icc)
             return True
         except Exception:  # noqa: BLE001
             return False
@@ -408,17 +490,35 @@ def pil_images():
     return PilImages
 
 
+def picture_rule(cfg, path):
+    """What post.* says for this file: (format, quality, longest side) — its kind's
+    (post.photo_*, post.png_*); ("", 90, 0) for any other."""
+    keys = PICTURE_KEYS.get(picture_kind(path))
+    post = (cfg or {}).get("post") or {}
+    if keys is None:
+        return "", 90, 0
+    fmt, quality, side = keys
+    return (str(post.get(fmt, "") or ""), int(post.get(quality, 80) or 80),
+            int(post.get(side, 0) or 0))
+
+
 def fit_media(media, cfg, caps, folder, images=None):
     """The editor's media tuples (path, …) with each picture made to fit the server
-    (fit_for_server) when post.resize_images says so; images: the toolkit's, else
-    Pillow's when it is there."""
+    (post.resize_images) and as light as its kind asks (post.photo_*, post.png_*) —
+    fit_for_server; images: the toolkit's, else Pillow's when it is there. One rule
+    for every editor: the windows', their input lines, the terminal's, the page's and
+    the phone's."""
     media = [tuple(m) for m in media]
-    if not (cfg.get("post") or {}).get("resize_images", True):
+    limits = bool(((cfg or {}).get("post") or {}).get("resize_images", True))
+    rules = [picture_rule(cfg, m[0]) for m in media]
+    if not limits and not any(r[0] or r[2] for r in rules):
         return media
     images = images or pil_images()
     if images is None:
         return media
-    return [(fit_for_server(m[0], caps, folder, images),) + m[1:] for m in media]
+    return [(fit_for_server(m[0], caps, folder, images, fmt=r[0], quality=r[1],
+                            max_side=r[2], limits=limits),) + m[1:]
+            for m, r in zip(media, rules, strict=True)]
 
 
 # ---- the post's language --------------------------------------------------------------

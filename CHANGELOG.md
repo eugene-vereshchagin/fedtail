@@ -7,6 +7,18 @@
 
 ## What's next
 
+- **Pictures made lighter before the upload** (an idea from a reader): a photo straight off a
+  phone or a camera weighed megabytes the server stored and every reader downloaded. Now
+  each kind of picture has its own settings — `post.photo_*` (JPEG, HEIC, AVIF, TIFF) and
+  `post.png_*` (PNG, BMP: screenshots, drawings): `_format` — `"webp"` (by default; JPEG
+  where the server doesn't say it takes WebP), `"jpeg"`, `"png"` or `""` (as it is),
+  `_quality` (80), `_max_side` (2560 px, 0 — any). The copy is made anew from the pixels:
+  the EXIF (where and when, the camera) doesn't go, a phone's photo stands as it was held,
+  its colours are kept. Your file isn't touched; GIF, WebP, video and sound go as they are.
+  Every editor: the windows', their input lines, the terminal's, the page's, the phone's.
+- The windows' shrinking of a picture too big for the server turned a phone's photo on its
+  side: Qt and GTK read its pixels without the EXIF's "how it was held" (Pillow did).
+
 ## 0.24.0 — 2026-11-24
 
 - In config.toml the sets of lanes say what may be written: after every line that takes

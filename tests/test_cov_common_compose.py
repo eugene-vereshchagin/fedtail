@@ -119,9 +119,13 @@ class Pictures:
     """The toolkit's pictures for fit_for_server: a picture is (w, h, alpha); its file
     as big as w * h * quality / 1000 bytes."""
 
-    def __init__(self, size=(4000, 3000), alpha=False, loads=True, saves=True):
+    def __init__(self, size=(4000, 3000), alpha=False, loads=True, saves=True, webp=True):
         self._size, self._alpha, self.loads, self.saves = size, alpha, loads, saves
+        self.webp = webp
         self.saved = []
+
+    def can(self, kind):
+        return kind != "webp" or self.webp
 
     def size(self, path):
         return self._size
@@ -154,11 +158,11 @@ class FitTest(unittest.TestCase):
         self.pic = self.dir / "photo.jpg"
         self.pic.write_bytes(b"x" * 200_000)
 
-    def caps(self, b=0, px=0):
-        return types.SimpleNamespace(image_bytes=b, image_pixels=px)
+    def caps(self, b=0, px=0, types_=("image/jpeg", "image/png", "image/webp")):
+        return types.SimpleNamespace(image_bytes=b, image_pixels=px, media_types=types_)
 
-    def fit(self, caps, imgs, path=None):
-        return compose.fit_for_server(str(path or self.pic), caps, self.dir, imgs)
+    def fit(self, caps, imgs, path=None, **kw):
+        return compose.fit_for_server(str(path or self.pic), caps, self.dir, imgs, **kw)
 
     def test_left_as_it_is(self):
         self.assertEqual(self.fit(self.caps(), Pictures()), str(self.pic))  # says nothing
@@ -175,7 +179,7 @@ class FitTest(unittest.TestCase):
     def test_too_many_pixels(self):
         imgs = Pictures()
         out = self.fit(self.caps(px=1_000_000), imgs)
-        self.assertTrue(out.endswith("upload-photo.jpg"))
+        self.assertRegex(out, r"upload-photo-[0-9a-f]{6}\.jpg$")
         _k, _q, w, h = imgs.saved[0]
         self.assertLessEqual(w * h, 1_000_000)
 
@@ -193,6 +197,72 @@ class FitTest(unittest.TestCase):
         self.assertTrue(out.endswith(".png"))
         self.assertTrue(all(k == "png" for k, *_r in imgs.saved))
         self.assertLess(imgs.saved[-1][2], 1000)
+
+
+    # ---- lighter by its kind: post.photo_*, post.png_* (25.11) -----------------------
+    def test_a_photo_made_webp_and_smaller(self):
+        imgs = Pictures(size=(4000, 3000))
+        out = self.fit(self.caps(), imgs, fmt="webp", quality=80, max_side=2560)
+        self.assertTrue(out.endswith(".webp"))
+        self.assertEqual(imgs.saved, [("webp", 80, 2560, 1920)])
+
+    def test_made_anew_though_it_fits(self):
+        """The format asked: made anew even when nothing is too big — that is what
+        leaves the EXIF home."""
+        imgs = Pictures(size=(800, 600))
+        out = self.fit(self.caps(), imgs, fmt="jpeg", quality=80, max_side=2560)
+        self.assertTrue(out.endswith(".jpg"))
+        self.assertEqual(imgs.saved, [("jpeg", 80, 800, 600)])
+        imgs = Pictures(size=(800, 600))  # nothing asked, nothing too big: as it is
+        self.assertEqual(self.fit(self.caps(), imgs, fmt="", max_side=2560), str(self.pic))
+        self.assertEqual(imgs.saved, [])
+
+    def test_webp_only_where_it_is_taken_and_written(self):
+        imgs = Pictures()
+        out = self.fit(self.caps(types_=["image/jpeg", "image/png"]), imgs, fmt="webp",
+                       quality=80)
+        self.assertTrue(out.endswith(".jpg"))  # the server doesn't say WebP
+        self.assertEqual(imgs.saved[0][:2], ("jpeg", 80))
+        imgs = Pictures(webp=False)  # the toolkit can't write it (GTK without the loader)
+        self.assertTrue(self.fit(self.caps(), imgs, fmt="webp").endswith(".jpg"))
+        imgs = Pictures()
+        self.assertTrue(self.fit(self.caps(types_=["image/*"]), imgs,
+                                 fmt="webp").endswith(".webp"))
+
+    def test_transparency_never_as_jpeg(self):
+        imgs = Pictures(size=(800, 600), alpha=True)
+        self.assertTrue(self.fit(self.caps(), imgs, fmt="jpeg").endswith(".png"))
+        imgs = Pictures(size=(800, 600), alpha=True)  # WebP keeps it
+        self.assertTrue(self.fit(self.caps(), imgs, fmt="webp").endswith(".webp"))
+
+    def test_two_files_of_one_name_two_copies(self):
+        other = self.dir / "sub"
+        other.mkdir()
+        (other / "photo.jpg").write_bytes(b"x")
+        one = self.fit(self.caps(), Pictures(), fmt="jpeg")
+        two = self.fit(self.caps(), Pictures(), other / "photo.jpg", fmt="jpeg")
+        self.assertNotEqual(one, two)
+
+    def test_each_kind_by_its_own_settings(self):
+        cfg = {"post": {"resize_images": True,
+                        "photo_format": "webp", "photo_quality": 70, "photo_max_side": 1000,
+                        "png_format": "png", "png_quality": 80, "png_max_side": 0}}
+        png, gif, video = self.dir / "shot.PNG", self.dir / "a.gif", self.dir / "v.mp4"
+        for p in (png, gif, video):
+            p.write_bytes(b"x")
+        imgs = Pictures(size=(4000, 3000))
+        media = [(str(self.pic), "alt"), (str(png), ""), (str(gif), ""), (str(video), "")]
+        out = compose.fit_media(media, cfg, self.caps(), self.dir, imgs)
+        self.assertTrue(out[0][0].endswith(".webp"))
+        self.assertEqual(out[0][1], "alt")  # the description goes with it
+        self.assertTrue(out[1][0].endswith(".png"))
+        self.assertEqual(out[2:], media[2:])  # an animation, a video: as they are
+        self.assertEqual(imgs.saved, [("webp", 70, 1000, 750), ("png", 80, 4000, 3000)])
+        # every switch off: nothing touched, the toolkit not even asked
+        off = {"post": {"resize_images": False, "photo_format": "", "photo_max_side": 0,
+                        "png_format": "", "png_max_side": 0}}
+        self.assertEqual(compose.fit_media(media, off, self.caps(1, 1), self.dir, None),
+                         media)
 
 
 if __name__ == "__main__":

@@ -109,8 +109,10 @@ class _QtImages:
 
     @staticmethod
     def load(path):
-        from PySide6.QtGui import QImage
-        img = QImage(str(path))
+        from PySide6.QtGui import QImageReader
+        reader = QImageReader(str(path))
+        reader.setAutoTransform(True)  # a phone's photo stands as taken (its EXIF)
+        img = reader.read()
         return None if img.isNull() else img
 
     @staticmethod
@@ -127,14 +129,16 @@ class _QtImages:
         return img.hasAlphaChannel()
 
     @staticmethod
+    def can(kind):
+        from PySide6.QtGui import QImageWriter
+        return kind.encode() in [bytes(x).lower() for x in
+                                 QImageWriter.supportedImageFormats()]
+
+    @staticmethod
     def save(img, out, kind, quality):
-        return img.save(out, "PNG" if kind == "png" else "JPG",
-                        -1 if kind == "png" else quality)
-
-
-def fit_for_server(path, caps, folder):
-    """common/compose.fit_for_server with Qt's pictures."""
-    return rules.fit_for_server(path, caps, folder, _QtImages)
+        # Qt writes the pixels alone: no EXIF goes with them
+        fmt = {"png": "PNG", "webp": "WEBP"}.get(kind, "JPG")
+        return img.save(out, fmt, -1 if kind == "png" else min(quality, 99))
 
 
 def media_paths(mime):
@@ -1100,9 +1104,10 @@ class Compose(QDialog):
             return  # (the button was dead, the shortcut wasn't — two posts, 24.11)
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
-        if self.core.cfg["post"].get("resize_images", True):
-            media = [(fit_for_server(m[0], self.core.caps, self.core.paths.cache_dir),) +
-                     tuple(m[1:]) for m in media]
+        # made to fit the server, and lighter by its kind (post.resize_images, photo_*,
+        # png_*): one rule for every editor
+        media = rules.fit_media(media, self.core.cfg, self.core.caps,
+                                self.core.paths.cache_dir, _QtImages)
         if not text and not media and not (self.edit and self.media_changes()):
             return
         bare = [i for i in range(self.media.count())

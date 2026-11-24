@@ -992,9 +992,10 @@ class ComposeWindow(Gtk.Box):
             return
         text = self._text().strip()
         media = [tuple(m) for m in self._media_list()]
-        if self.cfg["post"].get("resize_images", True):
-            media = [(rules.fit_for_server(m[0], self.view.caps, self.view.paths.cache_dir,
-                                           _PixbufImages),) + tuple(m[1:]) for m in media]
+        # made to fit the server, and lighter by its kind (post.resize_images, photo_*,
+        # png_*): one rule for every editor
+        media = rules.fit_media(media, self.cfg, self.view.caps, self.view.paths.cache_dir,
+                                _PixbufImages)
         if not text and not media and not (self.edit and self.media_changes()):
             return
         if any(not m[1] for m in media) and not getattr(self, "_alt_ok", False) and \
@@ -1254,9 +1255,11 @@ class _PixbufImages:
     def load(path):
         from gi.repository import GdkPixbuf
         try:
-            return GdkPixbuf.Pixbuf.new_from_file(path)
+            pic = GdkPixbuf.Pixbuf.new_from_file(path)
         except Exception:  # noqa: BLE001
             return None
+        # a phone's photo stands as taken (its EXIF says how it was held)
+        return pic.apply_embedded_orientation() or pic
 
     @staticmethod
     def dims(img):
@@ -1272,10 +1275,17 @@ class _PixbufImages:
         return img.get_has_alpha()
 
     @staticmethod
+    def can(kind):
+        from gi.repository import GdkPixbuf
+        return any(f.get_name() == kind and f.is_writable()
+                   for f in GdkPixbuf.Pixbuf.get_formats())
+
+    @staticmethod
     def save(img, out, kind, quality):
+        # GdkPixbuf writes the pixels alone: no EXIF goes with them
         try:
-            if kind == "jpeg":
-                return img.savev(out, "jpeg", ["quality"], [str(quality)])
+            if kind in ("jpeg", "webp"):  # (webp: webp-pixbuf-loader)
+                return img.savev(out, kind, ["quality"], [str(quality)])
             return img.savev(out, "png", [], [])
         except Exception:  # noqa: BLE001
             return False

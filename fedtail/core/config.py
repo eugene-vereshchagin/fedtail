@@ -258,6 +258,15 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "drafts_place": True,      # "Drafts" in the ≡ menu: every kept draft
         "redraft": True,
         "resize_images": True,
+        # pictures made lighter before the upload, each kind its own way: a photo (JPEG,
+        # HEIC, AVIF, TIFF) and a PNG (BMP: screenshots, drawings) — the format, its
+        # quality, the longest side; the copy loses its metadata (EXIF: place, camera)
+        "photo_format": "webp",
+        "photo_quality": 80,
+        "photo_max_side": 2560,
+        "png_format": "webp",
+        "png_quality": 80,
+        "png_max_side": 2560,
         "check_media_types": True,
         "chain": True,
         "preview": True,
@@ -470,6 +479,8 @@ CHOICES = {
     ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
     ("post", "format_bar"): {"left", "right", "top", "bottom", "off"},
+    ("post", "photo_format"): {"", "webp", "jpeg", "png"},
+    ("post", "png_format"): {"", "webp", "jpeg", "png"},
     ("post", "reply_warning"): {"copy", "none"},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
@@ -539,6 +550,8 @@ SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
              "lane_rules", "people")  # sync.<each>
 MINIMUM = {
     ("net", "retry_seconds"): 5,
+    ("post", "photo_quality"): 1, ("post", "png_quality"): 1,  # (over 100: 100)
+    ("post", "photo_max_side"): 0, ("post", "png_max_side"): 0,
     ("ui", "video_max_mb"): 1,
     ("web", "login_days"): 1,
     ("lanes", "browse_start_hours"): 1,
@@ -700,7 +713,9 @@ FILE_LAYOUT = (
                            "report_forward quote_policy quote_action quote_link quote_prefix "
                            "invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
-                           "redraft resize_images check_media_types focus_point chain preview "
+                           "redraft resize_images photo_format photo_quality photo_max_side "
+                           "png_format png_quality png_max_side check_media_types focus_point "
+                           "chain preview "
                            "format_bar lang_check "
                            "link_quote send_in_background scheduled_to_draft drafts_place")
      + _keys("account", "markdown")),

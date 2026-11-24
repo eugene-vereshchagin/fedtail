@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**What's next:**
+
+- Lighter pictures before the upload: WebP, size, no EXIF
+
 **0.24.0:**
 
 - Sidebar sections of your own, in your order
