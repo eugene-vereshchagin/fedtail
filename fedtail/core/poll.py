@@ -192,13 +192,21 @@ class PollMixin(CoreState):
     def pause_polling(self, on=True):
         """Out of sight (a phone's app in the background): no rounds until resumed; a
         resume polls at once, and syncs: the read marks of the other devices came while
-        the app was away (25.11: up to a minute of their counts before). The desktop
-        never pauses."""
+        the app was away (25.11: up to a minute of their counts before). Going out of
+        sight, what was read here goes out at once, not after the debounce: the phone
+        put away right after reading may be frozen before it — and the office's desktop
+        showed it all unread again. The desktop never pauses."""
         self._paused = on
+        sync = getattr(self, "sync", None)
         if not on:
             self.poll_now()
-            if getattr(self, "sync", None) is not None:
-                self.sync.wake()
+            if sync is not None:
+                sync.wake()
+        elif sync is not None:
+            try:
+                self.bg.submit(sync.step, False)  # out only: no need to read back now
+            except RuntimeError:  # shut down: its last round sends it
+                pass
 
     def _poll_loop(self):
         while not self._stop.is_set():

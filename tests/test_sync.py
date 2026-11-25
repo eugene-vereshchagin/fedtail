@@ -2,6 +2,7 @@
 
 import io
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -183,6 +184,24 @@ class FolderSyncTest(Devices):
             wake.assert_not_called()
             self.phone.pause_polling(False)
             wake.assert_called_once_with()
+
+    def test_the_phone_put_away_sends_what_was_read_at_once(self):
+        """25.11: read on the phone, the phone put away at once — frozen before the
+        debounce was over, its marks stayed on it, and the office's desktop showed the
+        posts unread again. Going out of sight sends them right then."""
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.phone.mark_read(["42"])
+        self.assertTrue(self.phone.store.sync_pending_count())
+        self.phone.pause_polling(True)
+        self.phone.bg.submit(lambda: None).result()
+        deadline = time.monotonic() + 5
+        while self.phone.store.sync_pending_count() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertEqual(self.phone.store.sync_pending_count(), 0)
+        self.desk.sync_now()
+        self.assertEqual(self.desk.store.read_set(["42"]), {"42"})
 
     def test_nothing_recorded_when_not_wanted(self):
         core = self.device("quiet", self.world, read=False)

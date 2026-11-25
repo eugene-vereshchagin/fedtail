@@ -15,7 +15,9 @@
   latest 50 000, posts no longer kept too), and every device sends its own once more after
   the update — the marks lost before come back.
 - The phone back in sight syncs at once, as it polls: the other devices' reading showed
-  there only at the next sync round, up to a minute later.
+  there only at the next sync round, up to a minute later. And put away, it sends what was
+  just read right then: a phone put in the pocket straight after reading could be frozen
+  before its marks went, and the office's desktop showed the same posts unread again.
 - **A server's emoji passed on without its picture**: GoToSocial lists some emoji of a
   remote post with an empty address, and every interface left `:acceptable:` as text, in
   the post and its warning. Now the picture comes from the author's server's own list of
