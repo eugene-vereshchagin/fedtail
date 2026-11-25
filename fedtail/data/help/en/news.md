@@ -5,22 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.24.1:**
 
 - A thread as a flat list: by time, the newest at the bottom
 - Lighter pictures before the upload: WebP, size, no EXIF
-
-**0.24.0:**
-
-- Sidebar sections of your own, in your order
-- A lane marks itself: notes, sound, the count on the icon
-- A set of lanes of your own, the sets in the config itself
-- A thread's folded branches remembered
-- A thread's new comments stay lit while it is open
-- The Thread button counts the whole thread's comments
-- The buttons under a post follow the lane and what the item is
-- Quote as a link — where quoting isn't
-- Keys of your own
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

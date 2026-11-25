@@ -5,7 +5,7 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.24.1 — 2026-11-25
 
 - **Sync lost read marks of a device that was away**: a device packing its journal put
   into the snapshot only the read marks of the newest 5000 posts it kept — about a week of

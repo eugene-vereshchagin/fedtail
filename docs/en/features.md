@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.24.0 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.24.1**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -245,7 +245,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Comments: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` and `threads_shown` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
 | A thread's folded branches remembered | has | 0.24.0 | `threads.remember_folded` | own | Voyager, Thunder (Lemmy clients) |
-| A thread as a flat list: by time, the newest at the bottom | has | next | `threads.thread_layout` | own | Point, Juick, forums |
+| A thread as a flat list: by time, the newest at the bottom | has | 0.24.1 | `threads.thread_layout` | own | Point, Juick, forums |
 | "To the next new one" in a thread | has | 0.23.4 | `threads.next_new` | own | Point, Juick (not fediverse clients) |
 | Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
 | A thread's new comments stay lit while it is open | has | 0.24.0 | `threads.highlight_new` | own | Point, Juick (not fediverse clients) |
@@ -554,7 +554,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Content warning (CW) | has | 0.2.0 | `post.cw_field`, `post.reply_warning` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
 | Shrinking pictures to the server's limit | has | 0.14.0 | `post.resize_images` | `instance.configuration.media_attachments` | Fedilab |
-| Lighter pictures before the upload: WebP, size, no EXIF | has | next | `post.photo_format`, `post.photo_quality`, `post.photo_max_side`, `post.png_format`, `post.png_quality`, `post.png_max_side` | `instance.configuration.media_attachments.supported_mime_types` | Fedilab (compression, on or off), Tusky (to the server's limit) |
+| Lighter pictures before the upload: WebP, size, no EXIF | has | 0.24.1 | `post.photo_format`, `post.photo_quality`, `post.photo_max_side`, `post.png_format`, `post.png_quality`, `post.png_max_side` | `instance.configuration.media_attachments.supported_mime_types` | Fedilab (compression, on or off), Tusky (to the server's limit) |
 | A file the server won't take — said at once | has | 0.22.6 | `post.check_media_types` | `instance.configuration.media_attachments.supported_mime_types` | none |
 | Completing #tags, @nicks, :emoji: | has | 0.7.0 | `post.complete_tags`, `post.complete_mentions`, `post.complete_emoji`, `post.emoji_standard` | `accounts/search`, `custom_emojis` | everyone |
 | An emoji picker in the editor: the standard ones and the server's | has | 0.23.3 | `post.emoji_standard`, `post.complete_emoji` | `custom_emojis` | many have it |
