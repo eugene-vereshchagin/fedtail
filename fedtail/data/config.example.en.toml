@@ -1224,6 +1224,11 @@ emoji = true
 # false — leave them as text :blobcat: (and don't fetch their pictures).
 custom_emoji = true
 
+# An emoji your server passed on without its picture (`:acceptable:` left as text): the
+# picture from the author's server — its list of emoji, asked once a week, without your
+# token (it sees only the IP). false — such an emoji stays text.
+emoji_from_origin = true
+
 # ~~text~~ — struck out, as the author meant: their client or server (Mastodon) knows no
 # Markdown, and the tildes came as they were. Not in links and not in code. false — tildes as they came.
 text_markup = true

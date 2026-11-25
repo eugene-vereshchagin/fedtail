@@ -361,7 +361,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Open every CW in a thread at once | has | 0.18.0 | — | own | Sengi, Megalodon (the same CW across a thread) |
 | Sensitive pictures | has | 0.8.0 | `card.sensitive_media` | `status.sensitive` | everyone |
 | Link cards | has | 0.8.0 | `card.link_cards` | `status.card` | everyone |
-| Servers' emoji as pictures | has | 0.8.0 | `appearance.custom_emoji` | `emojis` of the post and the account | everyone |
+| Servers' emoji as pictures | has | 0.8.0 | `appearance.custom_emoji`, `appearance.emoji_from_origin` | `emojis` of the post and the account; `custom_emojis` of the author's server | everyone |
 | No emoji at all | has | 0.15.0 | `appearance.emoji = false` — no server pictures, no Unicode ones, no reactions; a name made only of emoji shows the login | — | Tusky (animation only), Fedilab (only servers' own emoji) |
 | Quotes: showing them | has | 0.8.0 | `card.quotes` | `status.quote` | Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Polls: seeing and voting | has | 0.3.0 | — | `polls/:id`, `polls/:id/votes` | everyone |
@@ -401,7 +401,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Link cards.** The title, description and picture of the page a post links to (the server collects them): `"full"` — with the picture, `"text"` — a line or two, `"off"` — not shown. A post with its own pictures has no card.
 
-**Servers' emoji as pictures.** `:blobcat:` and the rest — as pictures in posts and names. `false` — leave them as text and don't fetch the pictures.
+**Servers' emoji as pictures.** `:blobcat:` and the rest — as pictures in posts, their warnings and names. `false` — leave them as text and don't fetch the pictures. An emoji your server passed on without its picture (GoToSocial does) is taken from the author's server's list of emoji — once a week, without your token (`emoji_from_origin`); every interface and the phone.
 
 **Quotes: showing them.** A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `"card"` — framed inside, `"link"` — a line with a link, `"off"` — as the server sent it (usually “RE: link”). A quote that quotes too — a line “❝ quotes …'s post” under it, a link to its thread, as Mastodon shows it (since 0.22.0).
 

@@ -16,6 +16,10 @@
   the update — the marks lost before come back.
 - The phone back in sight syncs at once, as it polls: the other devices' reading showed
   there only at the next sync round, up to a minute later.
+- **A server's emoji passed on without its picture**: GoToSocial lists some emoji of a
+  remote post with an empty address, and every interface left `:acceptable:` as text, in
+  the post and its warning. Now the picture comes from the author's server's own list of
+  emoji (asked once a week, without your token; `appearance.emoji_from_origin`).
 - **A thread as a flat list** (`threads.thread_layout = "flat"`): every comment in the
   order written, the newest at the bottom, no branches — a late answer to the first
   comment no longer stands above the ones written before it. `"tree"` stays the default.

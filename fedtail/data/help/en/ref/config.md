@@ -130,6 +130,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `appearance.accessibility` | `"auto"` | The GTK interface: talking to screen readers (Orca) over the accessibility bus. "auto" — only while a screen reader is on: KDE runs the bus always, and with no reader GTK went to it for every widget — a menu took two seconds to open. "on" — always, "off" — never. |
 | `appearance.emoji` | `true` | Emoji in the feed at all. false — turn off every last one: servers' pictures (:blobcat:), ordinary Unicode ones (🔥 😂 🇬🇪), and the reactions line under a post. A name made only of emoji shows the login. fedtail's own glyphs (⚠ ↔ ❯) aren't touched. |
 | `appearance.custom_emoji` | `true` | Servers' own emoji (:blobcat: and the rest) — as pictures in posts and names. false — leave them as text :blobcat: (and don't fetch their pictures). |
+| `appearance.emoji_from_origin` | `true` | An emoji your server passed on without its picture (`:acceptable:` left as text): the picture from the author's server — its list of emoji, asked once a week, without your token (it sees only the IP). false — such an emoji stays text. |
 | `appearance.text_markup` | `true` | ~~text~~ — struck out, as the author meant: their client or server (Mastodon) knows no Markdown, and the tildes came as they were. Not in links and not in code. false — tildes as they came. |
 
 ## 3. Window and layout

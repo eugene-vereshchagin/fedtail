@@ -51,6 +51,7 @@ from .lists import ListsMixin
 from .markers import MarkersMixin
 from .model import real
 from .origin import OriginMixin
+from .origin_emoji import OriginEmojiMixin
 from .people import PeopleMixin
 from .poll import PollMixin
 from .proto import Capabilities, raw
@@ -222,12 +223,12 @@ def _counted(before, got, what, on):
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
            CountsMixin, ThreadSizeMixin,
-           OriginMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
+           OriginMixin, OriginEmojiMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
            TranslateMixin, SocialMixin, CoreState):
     """The core the frontends talk to: one account, its store, its rounds. Its parts
     live in modules of their own, mixed in here — poll.py (the rounds, the stream),
     people.py, thread_ops.py, writing.py, silence.py, lists.py, activity.py, syncing.py,
-    origin.py, translate.py, push.py, markers.py, social.py — and this file keeps the
+    origin.py, origin_emoji.py, translate.py, push.py, markers.py, social.py — and this file keeps the
     connection, the lanes (their rules, reading them, the notifications) and the rest."""
 
 

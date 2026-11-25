@@ -100,3 +100,7 @@ class CoreState:
         # ---- translations (translate.py) -----------------------------------------------
         self._translated = OrderedDict()  # post id → its translation ({} — it failed)
         self._translating = set()      # posts being translated now
+        # ---- emoji without a picture, from the author's server (origin_emoji.py) --------
+        self._origin_emoji = {"lists": {},   # host → {"at", "emojis": {shortcode: url}}
+                              "asked": set(),  # hosts being asked now
+                              "lock": threading.Lock()}

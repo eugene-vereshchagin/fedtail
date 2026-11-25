@@ -258,6 +258,11 @@ def public_url(host, max_id="", local=True, limit=20):
             + ("&local=true" if local else "") + (f"&max_id={quote(max_id)}" if max_id else ""))
 
 
+def emojis_url(host):
+    """A stranger's server: its own emoji, with their pictures (public)."""
+    return f"https://{host}/api/v1/custom_emojis"
+
+
 def tag_url(host, tag, limit=40):
     """A stranger's server: a tag's public lane there (what that server knows of it)."""
     from urllib.parse import quote

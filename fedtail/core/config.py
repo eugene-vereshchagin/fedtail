@@ -153,6 +153,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "stats": False,            # "Statistics" in the ≡ menu: the week, day by day
         "link_cards": 'full',
         "custom_emoji": True,
+        "emoji_from_origin": True,  # an emoji with no picture: from the author's server
         "emoji": True,
         "quotes": 'card',
         "remote_profiles": True,
@@ -659,7 +660,7 @@ FILE_LAYOUT = (
     ("appearance", _keys("ui", "language theme font_size fonts font mono_font max_width "
                                "faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
-     + _keys("feed", "emoji custom_emoji text_markup")),
+     + _keys("feed", "emoji custom_emoji emoji_from_origin text_markup")),
     ("window", _keys("ui", "frontend hung_copy_seconds "
                            "layout open_columns columns column_width default_columns "
                            "message_percent "

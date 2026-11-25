@@ -99,6 +99,7 @@ fedtail/
     activity.py      events (notifications): fetched, put into the lanes that take them, seen
     syncing.py       the Core's side of sync (the engine: core/sync/)
     origin.py        other servers without my token: honest counts, profiles, public lanes
+    origin_emoji.py  an emoji passed on without its picture: from the author's server's list
     counts.py        the posts on screen (on_screen) asked again: fresh counts, threads woken
     threadsize.py    the Thread button's number: a thread's comments for the posts on screen
     state.py         the Core's working state declared: what each part keeps, its lock (CoreState)

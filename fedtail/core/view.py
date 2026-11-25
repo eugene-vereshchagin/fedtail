@@ -286,6 +286,9 @@ class View:
         auto = getattr(self._core, "auto_translation", None)
         if auto is not None and isinstance(raw, dict):
             raw = auto(raw) or raw
+        filled = getattr(self._core, "emoji_filled", None)  # bare emoji: the author's server's
+        if filled is not None and isinstance(raw, dict):
+            raw = filled(raw) or raw
         sized = getattr(self._core, "thread_sized", None)  # the Thread button's number
         if sized is not None and isinstance(raw, dict):
             raw = sized(raw) or raw
