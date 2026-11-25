@@ -77,7 +77,8 @@ cache_dir = "tmp/.mypy_cache"
 [[tool.mypy.overrides]]
 module = [
     "fedtail.core.activity", "fedtail.core.counts", "fedtail.core.lists",
-    "fedtail.core.markers", "fedtail.core.origin", "fedtail.core.people",
+    "fedtail.core.markers", "fedtail.core.origin", "fedtail.core.origin_emoji",
+    "fedtail.core.people",
     "fedtail.core.poll", "fedtail.core.push", "fedtail.core.silence",
     "fedtail.core.social", "fedtail.core.syncing", "fedtail.core.thread_ops",
     "fedtail.core.threadsize", "fedtail.core.translate", "fedtail.core.updates",

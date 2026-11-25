@@ -14,6 +14,7 @@ import time
 
 from . import proto
 from .proto import raw
+from .state import CoreState
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def _bare(emojis):
             and e.get("shortcode") and not (e.get("url") or e.get("static_url"))}
 
 
-class OriginEmojiMixin:
+class OriginEmojiMixin(CoreState):
     def emoji_filled(self, st):
         """The post with the pictures of its bare emoji (and its author's, its booster's)
         from the authors' servers, when known; None — nothing to fill (then the servers

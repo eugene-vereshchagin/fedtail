@@ -222,14 +222,14 @@ def _counted(before, got, what, on):
 
 
 class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, PushMixin,
-           CountsMixin, ThreadSizeMixin,
-           OriginMixin, OriginEmojiMixin, SyncMixin, UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin,
-           TranslateMixin, SocialMixin, CoreState):
+           CountsMixin, ThreadSizeMixin, OriginMixin, OriginEmojiMixin, SyncMixin,
+           UpdatesMixin, ActivityMixin, ListsMixin, SilenceMixin, TranslateMixin, SocialMixin,
+           CoreState):
     """The core the frontends talk to: one account, its store, its rounds. Its parts
     live in modules of their own, mixed in here — poll.py (the rounds, the stream),
     people.py, thread_ops.py, writing.py, silence.py, lists.py, activity.py, syncing.py,
-    origin.py, origin_emoji.py, translate.py, push.py, markers.py, social.py — and this file keeps the
-    connection, the lanes (their rules, reading them, the notifications) and the rest."""
+    origin.py, origin_emoji.py, translate.py, push.py, markers.py, social.py — and this file
+    keeps the connection, the lanes (their rules, reading them, the notifications) and the rest."""
 
 
     def __init__(self, cfg, paths, api_class=None):

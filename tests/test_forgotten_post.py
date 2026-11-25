@@ -42,7 +42,7 @@ class ForgottenPostTest(FreeBase):
     def test_a_post_gone_everywhere_still_fails(self):
         core, w = self.make([])
         core.connect().result()
-        old = self.forgotten(w)
+        self.forgotten(w)
         core.poll_once()
         st = core.store.get_status("01OLD")
         del w.statuses["01OLD"]  # gone from its home too: nothing to fetch

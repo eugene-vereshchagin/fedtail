@@ -12,6 +12,7 @@ or a link does is the windows' (common/links.py, common/profile.py) through TuiH
 
 import asyncio
 import contextlib
+import functools
 import inspect
 import logging
 import os
@@ -50,6 +51,27 @@ from .model import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def one_fill_at_a_time(fill):
+    """A screen's async fill that clears its list and adds the rows anew, one at a time:
+    a second call while one is drawing waits, and the newest call's rows are drawn once
+    the drawing ends (the ones between are dropped). Two at once went in turns over
+    their awaits — both cleared, both added: every post twice in a thread (CI, 25.11),
+    as the lanes' list was (28.10, refresh_lanes)."""
+    @functools.wraps(fill)
+    async def one(self, *args, **kw):
+        self._fill_next = (args, kw)
+        if getattr(self, "_filling", False):
+            return
+        self._filling = True
+        try:
+            while self._fill_next is not None:
+                (a, k), self._fill_next = self._fill_next, None
+                await fill(self, *a, **k)
+        finally:
+            self._filling = False
+    return one
 
 STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
@@ -640,6 +662,7 @@ class ThreadScreen(Screen, PostsMixin):
         else:  # nothing new (or no such key): say what the key does
             self.app.notify(_("thread_next_new_tip"), timeout=3)
 
+    @one_fill_at_a_time
     async def fill(self, items_in):
         if not (self.query("#posts") and self.query("#title")):
             return  # the screen went (or isn't drawn yet) while its thread came: no place
@@ -1046,6 +1069,7 @@ class ProfileScreen(Screen, PostsMixin):
         from .screens import profile_line
         self.query_one("#buttons", Static).update(profile_line(self.buttons()))
 
+    @one_fill_at_a_time
     async def fill(self, page, at=None):
         core = self.app.core
         lv = self.query_one("#posts", ListView)

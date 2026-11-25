@@ -32,6 +32,10 @@
   order written, the newest at the bottom, no branches — a late answer to the first
   comment no longer stands above the ones written before it. `"tree"` stays the default.
   Every interface and the phone.
+- The terminal's thread (and a profile's posts) could show every post twice: loaded again
+  while its first load was still being drawn — a post liked, a reply come — the two drawings
+  went in turns, each clearing the list and adding its rows. Now one draws at a time, the
+  newest last.
 - The phone's thread: the post's first words aren't said twice over the post — the count
   and Follow moved up into the bar, by "Thread #id".
 - **Pictures made lighter before the upload** (an idea from a reader): a photo straight off a

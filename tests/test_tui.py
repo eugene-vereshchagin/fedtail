@@ -224,6 +224,34 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                 await pilot.pause(0.1)
             await pilot.press("q")
 
+    async def test_a_thread_loaded_twice_at_once_is_drawn_once(self):
+        """A thread loaded again while its first load was still being drawn (a post
+        changed, a reply came: load() again) — the two fills went in turns over their
+        awaits, both cleared, both added: every post twice (CI, 25.11)."""
+        import asyncio
+
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, ThreadScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, text="open", vis="public"), home=True)
+        w.add(status("002", ME, "001", "B", minute=2, text="reply"))
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            screen = ThreadScreen("002")
+            app.push_screen(screen)
+            await self.wait(pilot, lambda: app.screen is screen and
+                            len(screen.query_one("#posts", ListView).children) == 2,
+                            timeout=30)
+            nodes = list(screen.nodes)
+            await asyncio.gather(screen.fill(nodes), screen.fill(nodes))
+            await pilot.pause(0.1)
+            self.assertEqual(
+                [i.key for i in screen.query_one("#posts", ListView).children],
+                ["001", "002"])
+            await pilot.press("q")
+
     async def test_a_threads_new_comments_stay_lit(self):
         """25.11: the comments new as a thread opened stay lit (the row's "fresh") while
         it is open, read or not; threads.highlight_new off — not."""
