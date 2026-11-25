@@ -7,6 +7,21 @@
 
 ## What's next
 
+- **Sync lost read marks of a device that was away**: a device packing its journal put
+  into the snapshot only the read marks of the newest 5000 posts it kept — about a week of
+  reading. A device away longer, or one that joined after the packing, never learnt what
+  had been read before: hundreds of posts unread on the phone that the desktops had read,
+  the counts apart for good. Now the snapshot carries all the user's read marks (up to the
+  latest 50 000, posts no longer kept too), and every device sends its own once more after
+  the update — the marks lost before come back.
+- The phone back in sight syncs at once, as it polls: the other devices' reading showed
+  there only at the next sync round, up to a minute later.
+- **A thread as a flat list** (`threads.thread_layout = "flat"`): every comment in the
+  order written, the newest at the bottom, no branches — a late answer to the first
+  comment no longer stands above the ones written before it. `"tree"` stays the default.
+  Every interface and the phone.
+- The phone's thread: the post's first words aren't said twice over the post — the count
+  and Follow moved up into the bar, by "Thread #id".
 - **Pictures made lighter before the upload** (an idea from a reader): a photo straight off a
   phone or a camera weighed megabytes the server stored and every reader downloaded. Now
   each kind of picture has its own settings — `post.photo_*` (JPEG, HEIC, AVIF, TIFF) and

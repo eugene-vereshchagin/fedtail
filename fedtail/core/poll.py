@@ -191,10 +191,14 @@ class PollMixin(CoreState):
 
     def pause_polling(self, on=True):
         """Out of sight (a phone's app in the background): no rounds until resumed; a
-        resume polls at once. The desktop never pauses."""
+        resume polls at once, and syncs: the read marks of the other devices came while
+        the app was away (25.11: up to a minute of their counts before). The desktop
+        never pauses."""
         self._paused = on
         if not on:
             self.poll_now()
+            if getattr(self, "sync", None) is not None:
+                self.sync.wake()
 
     def _poll_loop(self):
         while not self._stop.is_set():

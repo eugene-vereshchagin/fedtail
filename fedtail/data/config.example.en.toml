@@ -1797,6 +1797,11 @@ thread_recheck_for_minutes = 30
 # so the tree holds together). false — every reply.
 thread_followed_only = false
 
+# How a thread's comments stand: "tree" — each under the one it answers, branch by branch;
+# "flat" — all in the order they were written, the newest at the bottom, no indent (who
+# answers whom — by the @name in the text). Every interface and the phone.
+thread_layout = "tree"
+
 # While replies come from the author's server — "⇣ fetching replies: 3 of 12" in the
 # thread's head, then "replies fetched: N" (for a few seconds). Every interface and the phone.
 thread_progress = false

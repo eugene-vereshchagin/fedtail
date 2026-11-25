@@ -66,6 +66,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ✓ |   |   | ✓ |   |   |   |   | ✓ |   |   |   | ✓ |   |
 | Where a thread opens: at the post or at the first new comment | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A thread's folded branches remembered | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A thread as a flat list: by time, the newest at the bottom | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | "To the next new one" in a thread | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Following the replies to all of someone's posts | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
@@ -275,4 +276,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **75** features of the 211 compared.
+Only in fedtail — **76** features of the 212 compared.

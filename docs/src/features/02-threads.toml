@@ -220,6 +220,23 @@ details.ru = "Ветка комментария сворачивается: `-` 
 details.en = "A comment's branch folds: `-` in the windows and the terminal, “− N” on the web page and the phone. While the thread is open it stays folded, even as the thread grows; “to the next new one” into a folded branch shows it again. With `remember_folded = true` (off by default) what is folded is remembered between runs too, one for every interface of the profile; kept for the last 300 threads."
 
 [[feature]]
+id = "thread-flat"
+status = "has"
+android = "has"
+since = "next"
+name.ru = "Тред плоским списком: по времени, новые внизу"
+name.en = "A thread as a flat list: by time, the newest at the bottom"
+config.ru = "`threads.thread_layout`"
+config.en = "`threads.thread_layout`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Point, Juick, форумы"
+others.en = "Point, Juick, forums"
+clients = []
+details.ru = "`thread_layout = \"flat\"` — все комментарии треда в порядке написания, на одном уровне под постом, новые всегда внизу; кто кому отвечает — по @имени в тексте, номера (/3) те же, что в дереве. `\"tree\"` (по умолчанию) — ветками, каждый под тем, на который отвечает. Решает ядро — во всех интерфейсах и на телефоне."
+details.en = "`thread_layout = \"flat\"` — every comment of a thread in the order written, one level under the post, the newest always at the bottom; who answers whom — by the @name in the text, the numbers (/3) the same as in the tree. `\"tree\"` (the default) — branches, each under the one it answers. The core decides — every interface and the phone."
+
+[[feature]]
 id = "thread-next-new"
 status = "has"
 android = "has"

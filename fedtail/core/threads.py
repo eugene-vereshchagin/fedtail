@@ -12,11 +12,14 @@ class Node:
     number: int  # 0 for the root, then /1 /2 … in reading order, like Point
 
 
-def build(focus, context):
+def build(focus, context, flat=False):
     """Flatten a thread into tree order.
 
     Children are sorted by time. Replies whose parent we can't see (deleted,
     private, blocked) are hung under the root so nothing silently disappears.
+    flat (feed.thread_layout = "flat"): every reply right under the root, all by time —
+    the newest at the bottom, no branches (NOTES/21: a late answer to an early comment
+    stood above the comments written before it).
     """
     ancestors = (context or {}).get("ancestors", [])
     descendants = (context or {}).get("descendants", [])
@@ -38,6 +41,8 @@ def build(focus, context):
         else:
             orphans.append(s)
     children.setdefault(root["id"], []).extend(orphans)
+    if flat:
+        children = {root["id"]: [s for lst in children.values() for s in lst]}
     for lst in children.values():
         lst.sort(key=lambda s: s.get("created_at", ""))
 

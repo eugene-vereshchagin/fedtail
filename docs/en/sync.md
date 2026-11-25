@@ -48,11 +48,10 @@ beats that first picture). The place is either
 
 A journal only grows, so every device packs its own now and then: once what it has sent
 is past a megabyte and several times what a snapshot of it would be, it sends the
-snapshot — every setting with the time and the device it came from, the read marks of
-the newest 5000 posts kept, how far events are seen, what was dismissed — and drops its
-older files (a folder, WebDAV) or blobs (a fedtail-sync server of 0.22 and later). A
-device away for a while reads the snapshot instead: the same state, but for read marks of
-posts older than those.
+snapshot — every setting with the time and the device it came from, all your read
+marks (up to the latest 50 000), how far events are seen, what was dismissed — and drops
+its older files (a folder, WebDAV) or blobs (a fedtail-sync server of 0.22 and later). A
+device away for a while reads the snapshot instead: the same state.
 
 The journals are encrypted (AES-256-GCM) with a key only your devices have. The server
 or the folder sees opaque blobs: who sent them, how big, when — not what you read, not

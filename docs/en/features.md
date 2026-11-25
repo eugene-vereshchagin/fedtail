@@ -245,6 +245,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Comments: a thread a card, opened at the first new comment | has | 0.21.0 | the `commented` lane in fedtail's set (the others: the extra set); `view = "threads"` and `threads_shown` on a lane of your own | own | Point (subscriptions), Juick |
 | Where a thread opens: at the post or at the first new comment | has | 0.21.0 | `threads.open_at`; a lane of rules — its own `open_at` | own | Point, Juick (not fediverse clients) |
 | A thread's folded branches remembered | has | 0.24.0 | `threads.remember_folded` | own | Voyager, Thunder (Lemmy clients) |
+| A thread as a flat list: by time, the newest at the bottom | has | next | `threads.thread_layout` | own | Point, Juick, forums |
 | "To the next new one" in a thread | has | 0.23.4 | `threads.next_new` | own | Point, Juick (not fediverse clients) |
 | Following the replies to all of someone's posts | has | 0.22.0 | `people.watch_replies` | own (their posts and their threads' `/context`) | only in fedtail |
 | A thread's new comments stay lit while it is open | has | 0.24.0 | `threads.highlight_new` | own | Point, Juick (not fediverse clients) |
@@ -276,6 +277,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Where a thread opens: at the post or at the first new comment.** One setting for every card: `"post"` — the thread stands at the post, `"first_unread"` — at the first unread comment (none — at the post). A lane of rules may decide for itself ("Commented posts" — at the first new one); "🔔 N new in the thread" always goes to the first new one. Every interface and the phone.
 
 **A thread's folded branches remembered.** A comment's branch folds: `-` in the windows and the terminal, “− N” on the web page and the phone. While the thread is open it stays folded, even as the thread grows; “to the next new one” into a folded branch shows it again. With `remember_folded = true` (off by default) what is folded is remembered between runs too, one for every interface of the profile; kept for the last 300 threads.
+
+**A thread as a flat list: by time, the newest at the bottom.** `thread_layout = "flat"` — every comment of a thread in the order written, one level under the post, the newest always at the bottom; who answers whom — by the @name in the text, the numbers (/3) the same as in the tree. `"tree"` (the default) — branches, each under the one it answers. The core decides — every interface and the phone.
 
 **"To the next new one" in a thread.** In an open thread's head — "↓ To the next new one (N)": the new comment after the one on top of the screen, none after it — the first new one above. A branched thread's news is not sought by eye. A button in the windows, on the web page and the phone, the N key in the terminal; which comment is next, the core decides.
 

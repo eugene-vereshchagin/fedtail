@@ -672,6 +672,15 @@ class Store:
                 "SELECT r.status_id FROM read_shared r JOIN statuses s ON s.id = r.status_id "
                 "ORDER BY s.created_at DESC LIMIT ?", (int(limit),))]
 
+    def shared_read(self, limit):
+        """Every read mark sync may carry (read_shared), the latest made first, at most
+        `limit` — posts this store no longer keeps (or never had) too: another device
+        may still show them."""
+        with self._reading() as db:
+            return [r[0] for r in db.execute(
+                "SELECT status_id FROM read_shared ORDER BY rowid DESC LIMIT ?",
+                (int(limit),))]
+
     def get_status(self, sid):
         with self._reading() as db:
             row = db.execute("SELECT data FROM statuses WHERE id=?", (sid,)).fetchone()

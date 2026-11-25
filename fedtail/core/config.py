@@ -141,6 +141,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "thread_recheck_minutes": 0,
         "thread_recheck_for_minutes": 30,
         "thread_followed_only": False,
+        "thread_layout": "tree",   # a thread's comments: a tree, or "flat" — by time, no branches
         "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
         "remember_folded": False,  # a thread's folded branches kept for the next time
         "highlight_new": True,     # a thread's comments new as it opened: lit till it closes
@@ -456,6 +457,7 @@ CHOICES = {
     ("feed", "thread_from"): {"local", "mixed", "remote"},
     ("feed", "open_at"): {"post", "first_unread"},
     ("feed", "comment_ids"): {"post", "own"},
+    ("feed", "thread_layout"): {"tree", "flat"},
     ("feed", "tag_click"): {"menu", "author", "everywhere"},
     ("ui", "code_click"): {"auto", "thread", "line"},
     ("ui", "number_keys"): {"alt", "ctrl", "both"},
@@ -688,7 +690,8 @@ FILE_LAYOUT = (
                      "translate_key fact_check fact_check_private")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
                               "thread_recheck_for_minutes "
-                              "thread_followed_only thread_progress remember_folded highlight_new "
+                              "thread_followed_only thread_layout thread_progress "
+                              "remember_folded highlight_new "
                               "open_at "
                               "next_new "
                               "comment_ids")

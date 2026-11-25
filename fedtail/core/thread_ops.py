@@ -346,7 +346,8 @@ class ThreadsMixin(CoreState):
         nums = self.store.number_comments(root["id"], everything + rest)
         if self.cfg["feed"].get("thread_followed_only"):
             rest = self._followed_only(root, rest)
-        nodes = threads.build(root, {"ancestors": [], "descendants": rest})
+        nodes = threads.build(root, {"ancestors": [], "descendants": rest},
+                              flat=self.cfg["feed"].get("thread_layout") == "flat")
         for n in nodes:  # the kept numbers, not the place in the tree: /2 is always /2
             n.number = 0 if n.status["id"] == root["id"] else nums.get(n.status["id"],
                                                                       n.number)

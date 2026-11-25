@@ -39,6 +39,22 @@ class ThreadsTest(FreeBase):
         # the friend's reply stays, and the stranger's it answers; the other one goes
         self.assertEqual(sorted(flat(some)), ["100", "101", "102"])
 
+    def test_flat_layout_by_time_in_every_interface(self):
+        """feed.thread_layout = "flat" (NOTES/21): the core gives every interface the
+        replies by time, one level under the post; the kept numbers stay as they were."""
+        core, w = self.make([])
+        core.connect().result()
+        root, a, b, c = self.thread(core, w)
+        w.add(status("104", FRIEND, "101", "B", minute=5))  # late, to the first comment
+        tree = core._thread_nodes("100")
+        self.assertEqual([n.status["id"] for n in tree], ["100", "101", "102", "104", "103"])
+        numbers = {n.status["id"]: n.number for n in tree}
+        core.cfg["feed"]["thread_layout"] = "flat"
+        flat = core._thread_nodes("100")
+        self.assertEqual([(n.status["id"], n.depth) for n in flat],
+                         [("100", 0), ("101", 1), ("102", 1), ("103", 1), ("104", 1)])
+        self.assertEqual({n.status["id"]: n.number for n in flat}, numbers)
+
     def test_an_open_thread_grows_by_itself(self):
         core, w = self.make([])
         core.connect().result()

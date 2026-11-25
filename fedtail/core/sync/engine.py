@@ -34,15 +34,19 @@ What travels — a switch for each in `[sync]`:
 A journal only grows, so each device packs its own now and then (`_compact`): when what it
 has sent since the last time is past COMPACT_BYTES and several times what a snapshot of it
 all would be, it sends that snapshot — every newest-wins value with its own time and device,
-the read marks of the newest posts, how far events are seen, what was dismissed — and has
+the user's read marks, how far events are seen, what was dismissed — and has
 the store drop its older blobs (a folder: its older files; a fedtail-sync that says
 `compact`). A device that was away reads the snapshot instead of what it replaced: the
-same state, but the read marks of posts older than the newest SNAPSHOT_READ.
+same state. The read marks in it are all the user's (read_shared, up to SNAPSHOT_READ, the
+latest made first) — not only those of the newest posts this device keeps: 5000 of those
+were a week of reading, and a device away longer (or one that joined after the packing)
+never learnt what was read before it (25.11: hundreds unread on the phone, read on the
+desktops).
 
 What a device already knows when it first syncs under a key goes out once too (`_snapshot`):
 the settings carried whole (not `lane_rules`), stamped time 0 so any real change anywhere
 beats them; how
-far events are seen; the user's read marks of the posts it keeps (the store's read_shared:
+far events are seen; the user's read marks (the store's read_shared:
 made here by hand or got from another device — never the first run's "all read", which
 made a new phone mark the desktop's lanes read, 31.10). A device that joins later
 gets the state, not only what changed after it came.
@@ -287,14 +291,18 @@ class Sync:
             self.store.sync_newer(f"d:{dkey}", at, self.device, json.dumps(value))
             self.store.sync_record({"dr": dkey, "v": value, "at": at})
 
-    SNAPSHOT_READ = 5000  # read marks of the newest posts kept, sent with the snapshot
+    SNAPSHOT_READ = 50000  # the user's read marks sent with a snapshot (~0.7 MB sealed)
+    # what a snapshot carries changed: each device sends its own once more (0.24.1: all
+    # the user's read marks, not the 5000 newest posts' — those lost before come back)
+    SNAPSHOT_VERSION = 2
 
     def _snapshot(self, key, where=""):
         """Once per key: what this device knows already goes into the journal — so a
         device joining later gets the state, not only the changes made after it came."""
         # once per key and per store: a journal moved (another server, protocol 2's
         # journals by key) gets what this device knows again
-        kid = crypto.key_id(key).hex() + (f" {where}" if where else "")
+        kid = crypto.key_id(key).hex() + (f" {where}" if where else "") + \
+            f" v{self.SNAPSHOT_VERSION}"
         if self.store.kv_get("sync.snapshot") == kid:
             return
         for k, switch in SETTINGS.items():
@@ -308,7 +316,10 @@ class Sync:
         if "activity" in self.what:
             self.record_activity_seen(self.store.kv_get("activity_seen"))
         if "read" in self.what:
-            self.record_read(self.store.recent_read(self.SNAPSHOT_READ))
+            going = {i for _seq, op in self.store.sync_pending(10 ** 6)
+                     for i in op.get("r") or ()}  # recorded already: not twice
+            self.record_read([i for i in self.store.shared_read(self.SNAPSHOT_READ)
+                              if i not in going])
         self.store.kv_set("sync.snapshot", kid)
         log.info("sync: what this device knows sent once for key %s", kid)
 
@@ -439,6 +450,11 @@ class Sync:
             return
         self._thread = threading.Thread(target=self._loop, name="fedtail-sync", daemon=True)
         self._thread.start()
+
+    def wake(self):
+        """A round soon (after DEBOUNCE), not at the next interval: the phone's app back in
+        sight — what the other devices read meanwhile shows at once."""
+        self._wake.set()
 
     def stop(self, wait=5):
         self._stop.set()
@@ -679,7 +695,7 @@ class Sync:
             rows = [list(r) for r in self.store.activity_hidden_rows()]
             ops += [{"h": rows[i:i + READ_CHUNK]} for i in range(0, len(rows), READ_CHUNK)]
         if "read" in self.what:
-            ids = [str(i) for i in self.store.recent_read(self.SNAPSHOT_READ)]
+            ids = [str(i) for i in self.store.shared_read(self.SNAPSHOT_READ)]
             ops += [{"r": ids[i:i + READ_CHUNK]} for i in range(0, len(ids), READ_CHUNK)]
         return ops
 

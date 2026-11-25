@@ -54,6 +54,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | `userthemes.py` | your own themes from `~/.config/fedtail/themes`: the tours check them, the gallery never shows them | imported by the other tools |
 | `make_sounds.py` | fedtail's own sound sets, synthesized (no samples), so they're ours under GPL-3 | `python3 tools/make_sounds.py`, `--check` |
 | `model_check.py` | runs the Mastodon adapter over every post a profile has stored, read-only, and says how the model came out | `python3 tools/model_check.py [PROFILE]` |
+| `sync_check.py` | the sync journal (read only, with the profile's key) held against this profile's store: each device's batches and read marks, marks not applied here, marks no journal holds any more, each lane's unread and why — why the counts differ between devices | `python3 tools/sync_check.py [PROFILE]` |
 | `push_probe.py` | does your server push? Web Push from it to an ntfy topic, decrypted here | `python3 tools/push_probe.py` |
 | `android_icons.py` | the Android app's launcher icons (adaptive, round, themed) from `fedtail/data/icons/fedtail.png` | `python3 tools/android_icons.py` |
 | `swing_frames.py` | the swinging opossum's frames for GTK (a sheet and their times) from `fedtail/data/icons/fedtail-swing.gif` | `python3 tools/swing_frames.py` |

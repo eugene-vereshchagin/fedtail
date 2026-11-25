@@ -600,6 +600,21 @@ class ThreadTest(unittest.TestCase):
         self.assertEqual([(n.status["id"], n.depth, n.number) for n in nodes],
                          [("r", 0, 0), ("a", 1, 1), ("b", 2, 2), ("c", 1, 3), ("z", 1, 4)])
 
+    def test_flat_by_time_newest_at_the_bottom(self):
+        """NOTES/21: a late answer to the first comment stood above the comments written
+        before it; flat — every reply by time under the post, no branches."""
+        root = status("r", ME, minute=1)
+        a = status("a", BOB, "r", "ME", minute=2)
+        c = status("c", BOB, "r", "ME", minute=3)
+        b = status("b", ME, "a", "B", minute=4)  # answers a, written after c
+        lost = status("z", BOB, "gone", "X", minute=5)
+        nodes = threads.build(root, {"ancestors": [], "descendants": [b, a, lost, c]},
+                              flat=True)
+        self.assertEqual([(n.status["id"], n.depth) for n in nodes],
+                         [("r", 0), ("a", 1), ("c", 1), ("b", 1), ("z", 1)])
+        tree = threads.build(root, {"ancestors": [], "descendants": [b, a, lost, c]})
+        self.assertEqual([n.status["id"] for n in tree], ["r", "a", "b", "c", "z"])
+
     def test_deep_thread(self):
         chain = [status("0", ME)] + [status(str(i), BOB, str(i - 1), "X") for i in range(1, 3000)]
         nodes = threads.build(chain[-1], {"ancestors": chain[:-1], "descendants": []})

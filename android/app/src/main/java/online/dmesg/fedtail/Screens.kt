@@ -46,6 +46,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -298,12 +299,20 @@ fun PlaceScaffold(
     title: String, model: AppModel, snack: SnackbarHostState,
     actions: @Composable () -> Unit = {},
     onRefresh: (() -> Unit)? = null, // ⟳ in the bar: the place asked anew, the server too
+    subtitle: String = "",  // a small line under the title (a thread: how many posts)
     content: @Composable (Modifier) -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Column {
+                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (subtitle.isNotBlank()) Text(subtitle, fontSize = 12.sp, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { model.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
@@ -395,8 +404,21 @@ private fun ThreadPlace(
     val head = model.threadHead
     val scope = rememberCoroutineScope()
     val nextWent = remember(head) { mutableStateOf<String?>(null) }  // the last press's
-    PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
-        ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }, actions = {
+    val alias = root?.alias?.takeIf { it.isNotBlank() }
+    // NOTES/21: the head's count and Follow sit in the bar, by "Thread #id"; the post's
+    // first words aren't said again over the post itself (they read as a post the first
+    // one only answers)
+    PlaceScaffold(stringResource(R.string.thread) + (alias?.let { " #$it" } ?: ""), model,
+        snack, onRefresh = { model.refreshTop() },
+        subtitle = head?.optString("info")?.removeSuffix(alias?.let { " · #$it" } ?: "") ?: "",
+        actions = {
+        head?.let { h ->
+            val words = h.optString("sub")
+            if (h.optBoolean("subscribed")) OutlinedButton(onClick = { model.toggleThreadSub() },
+                contentPadding = PaddingValues(horizontal = 12.dp)) { Text(words, maxLines = 1) }
+            else Button(onClick = { model.toggleThreadSub() },
+                contentPadding = PaddingValues(horizontal = 12.dp)) { Text(words, maxLines = 1) }
+        }
         // every warning of the thread open at once (and closed again)
         if (model.threadPosts.any { it.warning.isNotBlank() }) {
             val cwWords = stringResource(R.string.open_warnings)
@@ -449,7 +471,7 @@ private fun ThreadPlace(
                         if (i < 0) return@ThreadHead
                         nextWent.value = to
                         scope.launch { state.animateScrollToItem(i + 1) }
-                    }) { model.toggleThreadSub() } } })
+                    } } })
             // a reply to the thread, by the thumb (09.11): whom it answers and who will see
             // it said; a tap — the editor, the post answered above its text. Any comment is
             // answered from its own ↩.
@@ -476,38 +498,21 @@ private fun ThreadPlace(
     }
 }
 
-/** The windows' head over a thread: how many answers and its #id, why it reaches me
- *  when not followed, and Follow — a button that says what it is now. */
+/** The windows' head over a thread, what of it isn't in the bar (the count and Follow
+ *  are there): why it reaches me when not followed, "to the next new one", the replies
+ *  being fetched. None of these — nothing: the thread starts with its post. */
 @Composable
-private fun ThreadHead(head: org.json.JSONObject, progress: String, onNext: () -> Unit,
-                       onSub: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                head.optString("title").takeIf { it.isNotBlank() }?.let {
-                    Text(it, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2,
-                        overflow = TextOverflow.Ellipsis)
-                }
-                head.optString("info").takeIf { it.isNotBlank() }?.let {
-                    Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            val on = head.optBoolean("subscribed")
-            val words = head.optString("sub")
-            if (on) OutlinedButton(onClick = onSub) { Text(words) }
-            else Button(onClick = onSub) { Text(words) }
-        }
-        head.optString("via").takeIf { it.isNotBlank() }?.let {
-            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp))
-        }
-        if ((head.optJSONObject("next_new")?.length() ?: 0) > 0)
-            TextButton(onClick = onNext, modifier = Modifier.padding(top = 4.dp)) {
-                Text(head.optString("next_new_label"))
-            }
+private fun ThreadHead(head: org.json.JSONObject, progress: String, onNext: () -> Unit) {
+    val via = head.optString("via")
+    val next = (head.optJSONObject("next_new")?.length() ?: 0) > 0
+    if (via.isBlank() && !next && progress.isBlank()) return
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+        if (via.isNotBlank()) Text(via, fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (next) TextButton(onClick = onNext) { Text(head.optString("next_new_label")) }
         if (progress.isNotBlank()) Text(progress, fontSize = 12.sp,  // threads.thread_progress
             color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
-        HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(Modifier.padding(top = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

@@ -1,5 +1,6 @@
 **What's next:**
 
+- A thread as a flat list: by time, the newest at the bottom
 - Lighter pictures before the upload: WebP, size, no EXIF
 
 **0.24.0:**

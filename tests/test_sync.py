@@ -173,6 +173,17 @@ class FolderSyncTest(Devices):
         self.desk.sync.stop()  # its last round sends what came just now
         self.assertEqual(self.desk.store.sync_pending_count(), 0)
 
+    def test_the_phone_back_in_sight_syncs_at_once(self):
+        """25.11: the app out of sight and back: the poller resumed at once, sync waited
+        its minute — the desktop's reading showed late."""
+        from unittest import mock
+        with mock.patch.object(self.phone.sync, "wake") as wake, \
+                mock.patch.object(self.phone, "poll_now"):
+            self.phone.pause_polling(True)
+            wake.assert_not_called()
+            self.phone.pause_polling(False)
+            wake.assert_called_once_with()
+
     def test_nothing_recorded_when_not_wanted(self):
         core = self.device("quiet", self.world, read=False)
         core.mark_read(["7"])
@@ -435,6 +446,45 @@ class FolderSyncTest(Devices):
         # the phone, which read the old files already, takes the snapshot as nothing new
         self.phone.sync_now()
         self.assertFalse(self.phone.subscribed(root))
+
+    def test_a_packed_journal_keeps_the_read_marks_of_older_posts(self):
+        """25.11: a snapshot carried only the read marks of the newest 5000 posts the
+        packing device kept (a week of reading): a device that came after the packing
+        saw hundreds of posts unread, read long ago elsewhere. Now every mark goes —
+        a post the packing device no longer keeps too."""
+        from unittest import mock
+        self.desk.store.put_items("home", [(f"{i}", status(f"{i}", BOB, minute=i), "")
+                                           for i in range(1, 30)])
+        self.desk.sync_now()
+        for i in range(1, 30):
+            self.desk.mark_read([f"{i}"])
+            self.desk.sync_now()
+        self.desk.store.mark_read(["gone"], shared=True)  # from another device, not kept
+        mine = self.tmp / "meet" / self.desk.sync.device
+        self.assertGreater(len(list(mine.iterdir())), 20)
+        with mock.patch.object(engine, "COMPACT_BYTES", 1), \
+                mock.patch.object(engine.Sync, "SNAPSHOT_READ", 1000):
+            self.desk.sync_now()
+        self.assertEqual(len(list(mine.iterdir())), 1)
+        late = self.device("late", self.world)
+        late.sync_join(self.desk.sync_key())
+        late.sync_now()
+        ids = [str(i) for i in range(1, 30)] + ["gone"]
+        self.assertEqual(late.store.read_set(ids), set(ids))
+
+    def test_a_device_sends_what_it_knows_again_after_the_update(self):
+        """The marks the old snapshots lost come back: a device whose snapshot went out
+        from an older fedtail (no version in its mark) sends its own once more — what
+        it has only from a device that packed them away too."""
+        self.desk.sync_now()
+        mark = self.desk.store.kv_get("sync.snapshot")
+        self.desk.store.mark_read(["7"], shared=True)  # got from a device, packed away since
+        self.desk.store.kv_set("sync.snapshot", mark.rsplit(" v", 1)[0])  # 0.24.0's
+        self.desk.sync_now()
+        self.assertEqual(self.desk.store.kv_get("sync.snapshot"), mark)
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.assertEqual(self.phone.store.read_set(["7"]), {"7"})
 
     def test_folder_backend_pages_and_skips_its_own(self):
         b = backends.FolderBackend(self.tmp / "meet")
