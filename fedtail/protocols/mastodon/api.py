@@ -348,7 +348,10 @@ class Api:
         # "no such thing here" (404, 405, 410, 501) is how a server says it lacks a
         # feature — the core learns it (Capabilities): said, not warned of
         # a feature the server hasn't, or its "wait" (the core says that once itself)
-        absent = r.status_code in (404, 405, 410, 429, 501)
+        # …on a read: a like, a boost, a bookmark answered "not found" is a failure, said
+        # with its path (25.11: buttons "not pressing" — 404s on writes, at INFO, unseen)
+        absent = r.status_code in (405, 429, 501) or \
+            (r.status_code in (404, 410) and method == "GET")
         bad = took > SLOW_SECONDS or (r.status_code >= 400 and not absent)
         level = logging.WARNING if bad else logging.INFO if absent else logging.DEBUG
         log.log(level, "%s %s %s -> %s %.2f s %d B", method, path, shown,

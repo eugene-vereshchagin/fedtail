@@ -560,6 +560,37 @@ class WritingMixin(CoreState):
             from ..i18n import _
             raise ValueError(_("rss_local_only"))
 
+    def _act_on(self, s, call):
+        """call(id) on my server for the post s. "Not found" for another server's post:
+        mine has forgotten it (GoToSocial drops old remote posts, 25.11: a bot's posts of
+        a week ago — every like and boost a 404, the buttons looked dead), so it is fetched
+        again by its address and asked once more under the id it has now. The answer
+        keeps the id the lanes know it by."""
+        from urllib.parse import urlsplit
+        try:
+            return call(s["id"])
+        except ApiError as e:
+            uri = s.get("uri") or ""
+            if e.status not in (404, 410) or not uri.startswith("https://") or \
+                    (urlsplit(uri).hostname or "").lower() in self._own_hosts():
+                raise
+            try:
+                found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
+            except ApiError:
+                raise e from None
+            fresh = next((x for x in (found or {}).get("statuses") or ()
+                          if x.get("uri") == uri and x.get("id") != s["id"]), None)
+            if fresh is None:
+                raise
+            log.info("post %s: gone from my server, fetched again as %s", s["id"],
+                     fresh["id"])
+            got = call(fresh["id"])
+        inner = raw.boosted(got) if isinstance(got, dict) else None
+        if isinstance(inner, dict) and inner.get("id") == fresh["id"]:
+            return raw.with_boosted(got, dict(inner, id=s["id"]))
+        return dict(got, id=s["id"]) if isinstance(got, dict) and \
+            got.get("id") == fresh["id"] else got
+
     def redraft(self, status):
         """Delete my post and give back what it was made of, for a new draft: its text as
         I typed it (the source, not the server's HTML), CW, who sees it, language, what it

@@ -105,6 +105,19 @@ class PlumbingTest(unittest.TestCase):
         with self.assertRaisesRegex(ApiError, "plain words"):
             a.get("/p")
 
+    def test_a_write_not_found_is_warned_with_its_path(self):
+        """A read's 404 is a feature the server hasn't (said quietly); a like's or a
+        boost's is a failure: warned, with the path — the post's id in it (25.11)."""
+        a, _s = make(Resp(404, {"error": "Not Found: target status not found"}))
+        with self.assertLogs("fedtail.api", "WARNING") as logs, \
+                self.assertRaises(ApiError):
+            a.favourite("01ABC", True)
+        self.assertIn("/api/v1/statuses/01ABC/favourite", logs.output[0])
+        a, _s = make(Resp(404, {"error": "nope"}))
+        with self.assertNoLogs("fedtail.api", "WARNING"), \
+                self.assertRaises(ApiError):
+            a.get("/api/v1/whatever")
+
     def test_markers_wait_less_than_the_rest(self):
         """A server stuck on markers once an hour held the whole round 30 s (31.10)."""
         a, s = make(Resp(body={}))

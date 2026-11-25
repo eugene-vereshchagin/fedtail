@@ -498,7 +498,13 @@ class FakeApi:
         self.w.statuses.pop(sid, None)
         self.w.home = [s for s in self.w.home if s["id"] != sid]
 
+    def _known(self, sid):
+        """A post my server has — or its 404 (a remote one it has forgotten)."""
+        if sid not in self.w.statuses:
+            raise ApiError(404, "Not Found: target status not found")
+
     def favourite(self, sid, on=True):
+        self._known(sid)
         st = dict(self.w.statuses[sid], favourited=on)
         self.w.statuses[sid] = st
         return st
@@ -575,6 +581,7 @@ class FakeApi:
         return poll
 
     def bookmark(self, sid, on=True):
+        self._known(sid)
         st = dict(self.w.statuses[sid], bookmarked=on)
         self.w.statuses[sid] = st
         return st
@@ -603,6 +610,7 @@ class FakeApi:
         return {"id": acc_id, "following": True, "notifying": on}
 
     def reblog(self, sid, on=True):
+        self._known(sid)
         st = dict(self.w.statuses[sid], reblogged=on)
         self.w.statuses[sid] = st
         return {"id": "rb" + sid, "reblog": st, "account": ME}

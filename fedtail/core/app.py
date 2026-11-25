@@ -2315,7 +2315,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         self._on_server(s)
         def job():
             on = not raw.liked(s)
-            got = self._update(_counted(s, self.api.favourite(s["id"], on), "liked", on))
+            got = self._update(_counted(
+                s, self._act_on(s, lambda sid: self.api.favourite(sid, on)), "liked", on))
             if not raw.liked(s):  # liked now: threads.auto = "likes"
                 self._follow_for("likes", s)
             return got
@@ -2492,7 +2493,8 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
         def job():
             # an RSS item lives only here: its bookmark too
             st = dict(s, bookmarked=on) if rss.is_rss(s) else \
-                self.api.bookmark(s["id"], on) or dict(s, bookmarked=on)
+                self._act_on(s, lambda sid: self.api.bookmark(sid, on)) or \
+                dict(s, bookmarked=on)
             self.store.put_statuses([st])
             if on:
                 self.store.put_items("bookmarks", [(st["id"], st, now_iso())])
@@ -2509,7 +2511,7 @@ class Core(WritingMixin, ThreadsMixin, PeopleMixin, PollMixin, MarkersMixin, Pus
 
         def job():
             on = not raw.shared(s)
-            res = self.api.reblog(s["id"], on)
+            res = self._act_on(s, lambda sid: self.api.reblog(sid, on))
             got = self._update(_counted(s, raw.boosted(res or {}) or self.api.status(s["id"]),
                                         "shared", on))
             if not raw.shared(s):  # boosted now: threads.auto = "boosts"

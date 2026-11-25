@@ -18,6 +18,12 @@
   there only at the next sync round, up to a minute later. And put away, it sends what was
   just read right then: a phone put in the pocket straight after reading could be frozen
   before its marks went, and the office's desktop showed the same posts unread again.
+- **Like, boost and bookmark work on old posts from other servers again.** GoToSocial
+  drops old posts of other servers; fedtail still showed them, and every button on them
+  got "not found" — a bot's posts of a week ago looked as if their buttons didn't press.
+  Now such a post is fetched again by its address and the action goes to it there. And a
+  like, a boost or a bookmark the server answers "not found" is in the log with its path
+  (it was left out as a feature the server lacks).
 - **A server's emoji passed on without its picture**: GoToSocial lists some emoji of a
   remote post with an empty address, and every interface left `:acceptable:` as text, in
   the post and its warning. Now the picture comes from the author's server's own list of
