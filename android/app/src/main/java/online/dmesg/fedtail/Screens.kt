@@ -471,7 +471,7 @@ private fun ThreadPlace(
                         if (i < 0) return@ThreadHead
                         nextWent.value = to
                         scope.launch { state.animateScrollToItem(i + 1) }
-                    } } })
+                    }) } })
             // a reply to the thread, by the thumb (09.11): whom it answers and who will see
             // it said; a tap — the editor, the post answered above its text. Any comment is
             // answered from its own ↩.
