@@ -721,7 +721,7 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         and run by the keys, as a person does."""
         from textual.widgets import Input
 
-        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem, PostItem
         core, w = self.make()
         w.add(status("001", BOB, minute=1, vis="public"), home=True)
         app = FedtailApp(core)
@@ -729,6 +729,11 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             core.poll_once()
             await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
                                                for i in app.query_one("#lanes").children))
+            # the lane filled first: filled later, it took the focus mid-line and "1"
+            # switched lanes (CI 26.11, Python 3.13 twice running)
+            await self.wait(pilot, lambda: any(isinstance(i, PostItem)
+                                               for i in app.query_one("#posts").children))
+            await pilot.pause(0.2)
             cmd = app.query_one("#cmd", Input)
             for line in ("#zzz1 one", "#zzz2 two"):
                 cmd.focus()
@@ -850,7 +855,7 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         editor with the post's address, the cursor on the line below it."""
         from textual.widgets import TextArea
 
-        from fedtail.frontends.tui.app import FedtailApp, LaneItem
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem, PostItem
         from fedtail.frontends.tui.screens import ComposeScreen, MenuScreen
         core, w = self.make()
         w.add(status("001", BOB, minute=1, vis="public"), home=True)
@@ -859,6 +864,10 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             core.poll_once()
             await self.wait(pilot, lambda: any(isinstance(i, LaneItem)
                                                for i in app.query_one("#lanes").children))
+            # the post there before "." (CI 26.11: pressed on an empty list, no menu)
+            await self.wait(pilot, lambda: any(isinstance(i, PostItem)
+                                               for i in app.query_one("#posts").children))
+            await pilot.pause(0.2)
             app.query_one("#posts").focus()
             await pilot.press("full_stop")
             await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
