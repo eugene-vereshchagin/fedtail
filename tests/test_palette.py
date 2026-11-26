@@ -59,6 +59,24 @@ class ResolveTest(unittest.TestCase):
                 self.assertEqual(set(c), set(data["colors"]), name)
                 self.assertTrue(all(isinstance(v, Color) for v in c.values()), name)
 
+    def test_fresh_comment_tint_shows_in_every_theme(self):
+        """26.11: Point's colour of the unread is its plain border's grey — a thread's new
+        comments, tinted a sixth of it on white, could not be told apart. Every built-in
+        theme's tint differs from its card by enough to see; Point's is its accent."""
+        for name in sorted(p.stem for p in themefile.BUILTIN_DIR.glob("*.toml")):
+            data, _w = themefile.load(name)
+            for desk in (LIGHT, DARK):
+                c = palette.resolve(data["colors"], desk)
+                tint, card = palette.fresh(c), c["card"]
+                t = tint.a / 255
+                seen = max(abs(round(getattr(tint, ch) * t + getattr(card, ch) * (1 - t))
+                               - getattr(card, ch)) for ch in "rgb")
+                self.assertGreaterEqual(seen, 10, name)
+        point = palette.resolve(themefile.load("point")[0]["colors"], LIGHT)
+        self.assertEqual(palette.fresh(point).name(), point["accent"].name())
+        own = dict(point, card_fresh=Color(1, 2, 3, 40))
+        self.assertEqual(palette.fresh(own), Color(1, 2, 3, 40))
+
     def test_follows_and_tints(self):
         c = palette.resolve({"text": "#010203", "sidebar_text": "auto", "view": "#000000",
                              "accent": "#ffffff", "header": "auto", "header_end": "auto"},

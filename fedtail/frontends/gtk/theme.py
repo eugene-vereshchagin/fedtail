@@ -103,11 +103,10 @@ class Theme:
                 f".ft-direct-badge {{ background: {d.css()}; color: {on}; border-radius: 3px; "
                 f"padding: 0 5px; font-weight: bold; }}")
 
-    @staticmethod
-    def _fresh(c):
+    def _fresh(self, _c=None):
         """A thread's comment new as it opened (threads.highlight_new): the card tinted
-        with the theme's colour of the new (its own "card_fresh", if it names one)."""
-        return c.get("card_fresh") or f"alpha({c['card_border_unread']}, 0.16)"
+        with the theme's colour of the new — palette.fresh decides which, as in Qt."""
+        return palette.fresh(self.c).css()
 
     def css(self, font_family="", post_scale=1.0, font_size=0, mono=""):
         """font_size: ui.font_size, points (0 — the system's); mono: the fixed-width

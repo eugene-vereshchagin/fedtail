@@ -118,6 +118,28 @@ def mix(a, b, t):
                  round(a.b * (1 - t) + b.b * t))
 
 
+FRESH_ALPHA = 42  # of 255: how strongly a thread's new comment is tinted
+
+
+def fresh(colors):
+    """A thread's comment new as it opened (threads.highlight_new): the tint of its card,
+    from resolved colours ({key: Color}). The theme's own "card_fresh" if it names one;
+    else its colour of the unread — unless that is no colour of its own (the same as a
+    plain card's border, as Point has it, or near the card itself): then the accent. Point
+    drew a grey a sixth strong on white, and nobody saw the new comments (26.11)."""
+    if "card_fresh" in colors:
+        return colors["card_fresh"]
+    unread, card = colors.get("card_border_unread"), colors.get("card")
+    border = colors.get("card_border")
+
+    def apart(a, b):
+        return max(abs(a.r - b.r), abs(a.g - b.g), abs(a.b - b.b))
+    if unread is None or (border is not None and apart(unread, border) < 24) or \
+            (card is not None and apart(unread, card) < 64):
+        unread = colors.get("accent") or colors.get("link") or unread or GREY
+    return unread.with_alpha(FRESH_ALPHA)
+
+
 def readable_on(bg):
     """Black or white, whichever reads better on bg."""
     lum = 0.2126 * bg.r / 255 + 0.7152 * bg.g / 255 + 0.0722 * bg.b / 255

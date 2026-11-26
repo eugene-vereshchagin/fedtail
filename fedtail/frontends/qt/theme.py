@@ -98,11 +98,11 @@ class Theme:
     # ---- stylesheet -------------------------------------------------------------------
     def _fresh_css(self):
         """A thread's comment new as it opened (threads.highlight_new): the card tinted
-        with the theme's colour of the new (its own "card_fresh", if it names one)."""
-        if "card_fresh" in self.c:
-            return self.css("card_fresh")
-        c = self.c["card_border_unread"]
-        return f"rgba({c.red()},{c.green()},{c.blue()},42)"
+        with the theme's colour of the new — palette.fresh decides which, for GTK and the
+        web page too."""
+        c = palette.fresh({k: palette.Color(v.red(), v.green(), v.blue(), v.alpha())
+                           for k, v in self.c.items()})
+        return f"rgba({c.r},{c.g},{c.b},{c.a})"
 
     def css(self, key):
         c = self.c[key]

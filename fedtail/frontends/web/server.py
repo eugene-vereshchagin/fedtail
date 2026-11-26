@@ -1063,6 +1063,14 @@ class Web:
             if "direct" in out and "on-direct" not in out:
                 out["on-direct"] = palette.readable_on(
                     palette.Color.parse(out["direct"])).name()
+            # a thread's comment new as it opened: the windows' tint (palette.fresh)
+            known = {}
+            for k, v in colors.items():
+                try:
+                    known[k] = palette.Color.parse(v)
+                except (ValueError, TypeError, AttributeError):
+                    continue
+            out["fresh"] = palette.fresh(known).css()
         family = (theme.get("font") or {}).get("family") or ""
         family = family if re.fullmatch(r"[\w\s,\"'-]*", family) else ""
         return out, _light(colors), family

@@ -7,6 +7,12 @@
 
 ## What's next
 
+- **A thread's new comments unseen in the Point theme**: the windows and the web page tint
+  them with the theme's colour of the unread, and Point's is the grey of its plain border
+  — a sixth of it on white could not be told from the rest. A theme whose colour of the
+  unread is no colour of its own now tints them with its accent (a theme may name its own
+  `card_fresh`); the same rule in Qt, GTK and the web page.
+
 ## 0.24.1 — 2026-11-25
 
 - **Sync lost read marks of a device that was away**: a device packing its journal put
