@@ -868,6 +868,16 @@ class WebTest(TmpDir):
         host.error("x")
         self.assertEqual(host.out, {"error": "x"})
 
+    def test_profile_posts_say_who_sees_them(self):
+        """26.11: a profile's posts came without the card's words — the phone, which
+        reads "who sees it" from them, showed none there (nor edited, bot…)."""
+        self.w.add(status("010", BOB, minute=10, text="own"))
+        got = json.loads(self.req("/api/account?id=B")[2])
+        self.assertTrue(got["posts"])
+        for p in got["posts"]:
+            kinds = [b.get("kind") for b in p["words"]["meta"]]
+            self.assertIn("vis", kinds, p["id"])
+
     def test_profile_buttons_are_the_windows(self):
         """A profile's buttons (common/profile.py), done through the server: mute
         asks how long first, a note asked for first, Mention opens the editor."""

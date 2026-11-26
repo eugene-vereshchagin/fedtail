@@ -25,6 +25,7 @@ import base64
 import logging
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -436,9 +437,15 @@ class DavTree:
         from urllib.parse import quote
         try:
             most = kw.pop("most", ANSWER_MAX)
+            sent = len(kw.get("data") or b"")
+            began = time.monotonic()
             r = self.s.request(method, self.url + quote(path), timeout=TIMEOUT,
                                allow_redirects=False, stream=True, **kw)
             _capped(r, most)  # someone's server: no answer bigger than it should be
+            # each exchange, as the API's lines (no password: it is in the session's auth)
+            # — WebDAV stalled at work with nothing in the log to say how (26.11)
+            log.debug("webdav %s /%s -> %s %.2f s, sent %d B, got %d B", method, path,
+                      r.status_code, time.monotonic() - began, sent, len(r.content))
             return r
         except requests.RequestException as e:
             from urllib.parse import urlsplit

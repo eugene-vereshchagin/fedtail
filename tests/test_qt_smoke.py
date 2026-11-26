@@ -3543,6 +3543,38 @@ class QtSmokeTest(unittest.TestCase):
                     worst.append((start, _step, moved[0], step))
         self.assertEqual(worst, [])
 
+    def test_middle_button_closes_a_tab(self):
+        """26.11 (Windows): the middle button on a tab closed nothing — only the
+        messenger layout's chips knew it. A press and release on the thread's tab closes
+        it; on the lanes' own tab — nothing."""
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QMouseEvent
+        from PySide6.QtWidgets import QApplication
+
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.pump(0.5)
+        self.win.show()
+        self.win.open_thread("013")
+        self.pump(0.4)
+        bar = self.win.tabs.tabBar()
+        n = self.win.tabs.count()
+        self.assertGreater(n, 1)
+
+        def middle(i):
+            at = QPointF(bar.tabRect(i).center())
+            for kind in (QMouseEvent.Type.MouseButtonPress, QMouseEvent.Type.MouseButtonRelease):
+                QApplication.sendEvent(bar, QMouseEvent(
+                    kind, at, bar.mapToGlobal(at), Qt.MouseButton.MiddleButton,
+                    Qt.MouseButton.MiddleButton if kind == QMouseEvent.Type.MouseButtonPress
+                    else Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier))
+            self.pump(0.1)
+        middle(n - 1)
+        self.assertEqual(self.win.tabs.count(), n - 1)
+        middle(0)  # the lanes stay
+        self.assertEqual(self.win.tabs.count(), n - 1)
+
     def test_tabs_opened_and_closed_leave_no_widgets(self):
         """A day of opening threads and profiles and closing them: the widgets go with
         the tab (a leak here is a few hundred widgets per tab, pictures and all)."""

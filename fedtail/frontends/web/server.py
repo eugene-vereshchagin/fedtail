@@ -452,6 +452,14 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
         out["item"] = spec.key
         if spec.extra.get("lane_private"):  # a lane of private messages only: none marked
             out["lane_private"] = True
+    else:  # a profile's, a tag's, a thread's card: the windows' words too — the phone drew
+        # no "who sees it", edited, bot… there, they come only with them (26.11)
+        from ..common.lane import CardSpec, make_spec
+        in_thread = number is not None or depth is not None
+        made = make_spec(view, entry.id, entry, in_thread=in_thread, unread=bool(unread)) \
+            if hasattr(view, "via") else \
+            CardSpec(key=entry.id, entry=entry, in_thread=in_thread, unread=bool(unread))
+        out["words"] = words_json(view, made, web_date)
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
         out["indent"] = indent_of(view.cfg, depth)  # how far in it is drawn, as the windows

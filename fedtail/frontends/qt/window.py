@@ -440,6 +440,7 @@ class MainWindow(QMainWindow):
         if not split_layout:
             self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.tabBar().installEventFilter(self)  # the middle button closes a tab
         if self.cfg["ui"].get("pin_tabs"):  # a right click on a tab: pinned, or not
             bar = self.tabs.tabBar()
             bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1189,6 +1190,13 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, obj, e):
         if e.type() == e.Type.MouseButtonRelease:
+            if obj is self.tabs.tabBar() and e.button() == Qt.MouseButton.MiddleButton:
+                # as its ×: QTabBar has no such click of its own (only the messenger
+                # layout's chips had one — 26.11, "on Windows it doesn't close")
+                i = obj.tabAt(e.position().toPoint())
+                if i >= 0:
+                    self.close_tab(i)
+                return True
             if obj in (self.account_avatar, self.account_name, self.account_sub):
                 self.open_my_profile()
                 return True

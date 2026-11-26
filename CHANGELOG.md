@@ -7,6 +7,14 @@
 
 ## What's next
 
+- **The phone showed no "who sees it" in a profile**, nor in a tag, a search or a
+  thread: those cards came without the card's words (who sees it, edited, bot, how old),
+  which only a lane's cards had. Every card has them now, wherever it is.
+- **The middle button closes a tab** in the plain layout too, in Qt (Windows included)
+  and GTK — only the messenger layout's tabs knew it. A pinned tab stays.
+- **Each WebDAV exchange in the log** (with debugging on): the method, the file, the
+  server's answer, how long it took and how much went each way — the password never.
+  A sync that stalls without an error can now be followed request by request.
 - **A thread's new comments unseen in the Point theme**: the windows and the web page tint
   them with the theme's colour of the unread, and Point's is the grey of its plain border
   — a sixth of it on white could not be told from the rest. A theme whose colour of the

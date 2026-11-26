@@ -485,6 +485,7 @@ class MainWindow(Gtk.ApplicationWindow):
             tip(close, _("close_tab"))
             close.connect("clicked", lambda _b, n=name: self.close_lane_tab(n))
             label.append(close)
+            _middle_closes(label, lambda n=name: self.close_lane_tab(n))
             self.tabs.append_page(lv, label)
             self.tabs.set_tab_reorderable(lv, True)
             self.lane_tabs[name] = lv
@@ -522,6 +523,7 @@ class MainWindow(Gtk.ApplicationWindow):
             tip(close, _("close_tab"))
             close.connect("clicked", lambda _b: self.close_extra(key))
             tab.append(close)
+            _middle_closes(tab, lambda: self.close_extra(key))
             self.tabs.append_page(page, tab)
             self.extra_tabs[key] = page
         self.tabs.set_current_page(self.tabs.page_num(page))
@@ -2042,6 +2044,7 @@ class MainWindow(Gtk.ApplicationWindow):
         tip(close, _("close_tab"))
         close.connect("clicked", lambda _b: close_fn())
         tab.append(close)
+        _middle_closes(tab, close_fn, page)
         if self.cfg["ui"].get("pin_tabs"):  # a right click on the tab: pinned, or not
             pin = Gtk.GestureClick(button=3)
             pin.connect("pressed", lambda *_a: self._toggle_pin(page, title, close))
@@ -2612,6 +2615,18 @@ class MainWindow(Gtk.ApplicationWindow):
 # GTK header bar is at home; elsewhere the desktop's frame is (and stays usable even if
 # fedtail hangs: a frozen header bar can hold the pointer, as it did on KDE)
 CSD_DESKTOPS = ("gnome", "budgie", "pantheon", "unity", "phosh")
+
+
+def _middle_closes(tab, close, page=None):
+    """A tab's label: the middle button closes it, as its × does — the messenger
+    layout's chips did, the plain tabs didn't (26.11). A pinned one (ui.pin_tabs) stays."""
+    click = Gtk.GestureClick(button=2)
+
+    def released(*_a):
+        if not getattr(page, "_ft_pinned", False):
+            close()
+    click.connect("released", released)
+    tab.add_controller(click)
 
 
 def own_titlebar(cfg):

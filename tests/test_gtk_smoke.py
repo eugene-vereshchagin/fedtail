@@ -532,6 +532,27 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(all(isinstance(s, Slot) for s in window.slots))
         self.win.close_thread("8000")
 
+    def test_middle_button_closes_a_tab(self):
+        """26.11, as Qt's: the middle button on a thread's tab closes it (only the
+        messenger layout's chips knew it); a pinned tab stays."""
+        self.world.add(status("7100", BOB, minute=1, text="корень"), home=True)
+        self.core.poll_once()
+        self.win.open_thread("7100")
+        self.assertTrue(pump(lambda: "7100" in self.win.threads, 5))
+        page = self.win.threads["7100"]
+        tab = self.win.tabs.get_tab_label(page)
+        middle = [c for c in list(tab.observe_controllers())
+                  if isinstance(c, Gtk.GestureClick) and c.get_button() == 2]
+        self.assertEqual(len(middle), 1)
+        n = self.win.tabs.get_n_pages()
+        page._ft_pinned = True
+        middle[0].emit("released", 1, 5.0, 5.0)
+        pump(timeout=0.2)
+        self.assertEqual(self.win.tabs.get_n_pages(), n)
+        page._ft_pinned = False
+        middle[0].emit("released", 1, 5.0, 5.0)
+        self.assertTrue(pump(lambda: self.win.tabs.get_n_pages() == n - 1, 2))
+
     def test_thread_to_the_next_new_one(self):
         """NOTES/15, as Qt's: "↓ To the next new one (N)" in the thread's head goes to
         the comments new as it opened (it marks them read at once), one after another."""

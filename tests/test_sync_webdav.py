@@ -48,6 +48,17 @@ class DavBackendTest(Devices):
         puts = [c for c in self.dav.calls if c[0] == "PUT" and "/media/" in c[1]]
         self.assertEqual(len(puts), 1)
 
+    def test_each_exchange_in_the_log(self):
+        """26.11: WebDAV stalled at work and the log had nothing to show: each request
+        has its line now — method, path, status, time, sizes; never the password."""
+        with self.assertLogs("fedtail.core.sync.backends", "DEBUG") as logs:
+            self.backend().push(b"blob", "a" * 16)
+        text = "\n".join(logs.output)
+        self.assertIn("webdav PUT /", text)
+        self.assertIn("-> 201", text)
+        self.assertIn("sent 4 B", text)
+        self.assertNotIn("secret", text)
+
     def test_no_mkcol_for_a_folder_that_is_there(self):
         """Every round has a new backend: a folder that is there is asked about, not made
         again (nginx logs each MKCOL of an existing folder as an error)."""
