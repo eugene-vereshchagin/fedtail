@@ -5,7 +5,7 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
-## What's next
+## 0.24.2 — 2026-11-26
 
 - **The Sync page spun for minutes on the phone** (a WebDAV folder or a folder): each
   time it opened it read the whole journal from its start, twice, looking for the key

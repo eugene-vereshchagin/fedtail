@@ -5,10 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**0.24.1:**
-
-- A thread as a flat list: by time, the newest at the bottom
-- Lighter pictures before the upload: WebP, size, no EXIF
+No new features yet.
 <!-- /include -->
 
 Everything that changed, fixes included, is in the
