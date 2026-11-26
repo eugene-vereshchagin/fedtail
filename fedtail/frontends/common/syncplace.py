@@ -171,6 +171,7 @@ class SyncPlaces:
         # done: how it goes, and what one does with it from here
         last = (st or {}).get("last") or {}
         nothing = _("sync_nothing")
+        escrow = v.sync_has_escrow(look=False)  # what the rounds saw: no walk of the store
         page.hint = _("sync_done_hint")
         page.rows += [
             Row("text", _("sync_f_pending"), str((st or {}).get("pending", 0))),
@@ -179,9 +180,9 @@ class SyncPlaces:
             Row("item", _("sync_next_device_title"), _("sync_next_device_line"),
                 key="show", buttons=(self._btn(_("sync_key_show_btn"), "sync", "show"),)),
             Row("item", _("sync_escrow_title"),
-                _("sync_escrow_set") if v.sync_has_escrow() else _("sync_escrow_line"),
+                _("sync_escrow_set") if escrow else _("sync_escrow_line"),
                 key="escrow", buttons=(self._btn(
-                    _("sync_escrow_change") if v.sync_has_escrow() else _("sync_escrow_btn"),
+                    _("sync_escrow_change") if escrow else _("sync_escrow_btn"),
                     "sync", "goto", "escrow"),)),
             Row("item", _("sync_what_title"), _("sync_what_line"), key="what",
                 buttons=(self._btn(_("sync_what_btn"), "sync", "what"),

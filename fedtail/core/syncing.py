@@ -77,11 +77,16 @@ class SyncMixin(CoreState):
         from .sync import engine
         return engine.fresh_key(self)
 
-    def sync_has_escrow(self):
+    def sync_has_escrow(self, look=True):
         """Is the key in the journal under a password (seen, or found there now)? None:
-        can't be told — a server keeps it under what the password makes."""
+        can't be told — a server keeps it under what the password makes. look=False:
+        only what the rounds have seen (they keep it as they pull it), nothing asked of
+        the store — a journal without one was read from its start at every look, the sync
+        page waited minutes on a slow WebDAV folder (26.11, the phone's spinner)."""
         if self.sync is not None and self.sync.kind() == "server":
             return None
+        if not look:
+            return self.sync is not None and bool(self.store.kv_get("sync.escrow"))
         try:
             return self.sync is not None and self.sync.find_escrow() is not None
         except Exception as e:  # noqa: BLE001 — the store away: not known, so no

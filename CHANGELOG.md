@@ -7,6 +7,11 @@
 
 ## What's next
 
+- **The Sync page spun for minutes on the phone** (a WebDAV folder or a folder): each
+  time it opened it read the whole journal from its start, twice, looking for the key
+  under a password — when none was ever put there, to the very end. The page now says
+  what the sync rounds have seen (they keep that key as they meet it) and asks the
+  store nothing; it opens at once in every interface.
 - **The phone showed no "who sees it" in a profile**, nor in a tag, a search or a
   thread: those cards came without the card's words (who sees it, edited, bot, how old),
   which only a lane's cards had. Every card has them now, wherever it is.

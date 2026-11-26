@@ -6,6 +6,7 @@ steps; a wrong password, a folder without a parent."""
 import os
 import stat
 
+from fedtail import i18n
 from fedtail.core.sync import backends, crypto, engine
 from fedtail.core.view import View
 from fedtail.frontends.common.places import Places
@@ -117,6 +118,28 @@ class DavBackendTest(Devices):
         self.assertEqual(self.phone.store.read_set(["101", "102"]), {"101", "102"})
         self.assertTrue(crypto.blob_key_id(next(
             (self.tmp / "dav" / "fedtail" / self.desk.sync.device).iterdir()).read_bytes()))
+
+    @need_crypto
+    def test_the_sync_page_asks_nothing_of_the_folder(self):
+        """26.11: the phone's Sync page spun for minutes — at every opening it read the
+        whole journal from its start (twice) looking for the key under a password, which
+        nobody had put there. The page says what the rounds saw; a round that meets the
+        sealed key keeps it, and the page says so then."""
+        core = self.desk
+        core.cfg["sync"]["folder"] = ""
+        core.sync_setup(webdav=self.dav.url + "fedtail")
+        core.sync_webdav_login("me", "secret")
+        for i in range(5):
+            core.mark_read([f"10{i}"])
+            core.sync_now()
+        p = Places(View(core))
+        before = len(self.dav.calls)
+        page = p.page("sync")
+        self.assertEqual(page.tab, "done")
+        self.assertEqual(self.dav.calls[before:], [])
+        self.assertIn(i18n._("sync_escrow_line"), [r.line for r in page.rows])
+        core.sync_put_escrow("long enough password 1")
+        self.assertIn(i18n._("sync_escrow_set"), [r.line for r in p.page("sync").rows])
 
     @need_crypto
     def test_the_place_asks_the_user_and_password(self):
