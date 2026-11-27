@@ -13,6 +13,11 @@
   window for that thread's. Seeks are spaced now: the first at once, those within
   0.3 s after it as one, to the last place (the slider, ← and →, the audio bar). That
   makes the hang much rarer; the lock itself is Qt's and PySide's (6.8).
+- **The mouse onto a post crashed the window on Windows** (a stack overflow, twice in a
+  morning; on Linux a freeze of a second and a half): the post made its tools anew and
+  showed them under the cursor, Qt said again that the mouse came in — the tools it
+  was over just gone — and the post made them anew, without end. They are made once a
+  visit now.
 - **Ctrl+C ends a hung program too** (`window.ctrl_c_force`, on): a window stuck that
   way didn't hear Ctrl+C at all, only `kill -9` ended it. A tiny process beside it
   hears it: the program still there 3 s after Ctrl+C, it says so, and one more Ctrl+C

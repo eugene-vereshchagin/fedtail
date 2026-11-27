@@ -230,6 +230,59 @@ class QtSmokeTest(unittest.TestCase):
         ed.text.textCursor().insertText("вот это да")
         ed.reject()
 
+    def test_hover_tools_come_once(self):
+        """27.11 (Windows: the stack overflowed, twice in a morning; Linux: 1.5 s frozen):
+        the mouse onto a post made its tools anew and showed them under the cursor; Qt
+        said "the mouse came in" again along the whole chain (the tools before, under the
+        mouse, gone) — the post made them anew, showed them… without end. Once per entry
+        now; out and in again — anew."""
+        from PySide6.QtCore import QEvent, QPoint, QPointF
+        from PySide6.QtGui import QCursor, QEnterEvent
+        from PySide6.QtWidgets import QApplication, QToolButton, QWidget
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = self.world.add(status("041", BOB, minute=41, vis="public", text="наведи"))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        top = QWidget()
+        self.addCleanup(top.close)
+        top.resize(600, 300)
+        row = PostRow(CardSpec(key="041", entry=E(st)), self.win.ctx)
+        row.setParent(top)
+        row.setGeometry(0, 0, 600, 300)
+        QCursor.setPos(QPoint(5000, 5000))  # the mouse away as it comes up
+        top.show()
+        self.pump(0.2)
+        made = []
+        real = row._own_tools
+
+        def counted():
+            made.append(1)
+            if len(made) > 20:
+                raise RecursionError("the tools made without end")
+            real()
+        row._own_tools = counted
+        host = row.card if row.card is not None else row
+        QCursor.setPos(host.mapToGlobal(QPoint(host.width() - 20, 12)))  # where they come
+
+        def enter():
+            at = QPointF(host.width() - 20, 12)
+            QApplication.sendEvent(row, QEnterEvent(at, at, QPointF(row.mapToGlobal(at))))
+            self.pump(0.1)
+        enter()
+        self.assertEqual(len(made), 1)
+        self.assertTrue(row.own_tools.isVisible())
+        self.assertTrue(row.own_tools.findChildren(QToolButton))
+        enter()  # still over it: nothing anew
+        self.assertEqual(len(made), 1)
+        QApplication.sendEvent(row, QEvent(QEvent.Type.Leave))
+        self.assertFalse(row.own_tools.isVisible())
+        enter()  # in again: made anew (the thread followed meanwhile, say)
+        self.assertEqual(len(made), 2)
+        QCursor.setPos(QPoint(5000, 5000))
+        top.close()
+        self.pump(0.1)
+
     def test_editor_with_two_accounts_opens(self):
         """All accounts in one window: the editor's "From" counted against the server's
         limit before the counter was made — Send and Reply did nothing (issue #3)."""

@@ -782,17 +782,33 @@ class PostRow(QWidget):
         box.move(max(0, right - box.width()), 4)
         box.raise_()
 
+    _hovered = False  # the mouse is over it: its tools made for this visit
+    _lighting = False  # inside _lit: what Qt says meanwhile is its own doing
+
     def enterEvent(self, e):  # noqa: N802 — Qt's name
         super().enterEvent(e)
-        self._lit(True)
+        if not self._hovered and not self._lighting:
+            self._lit(True)
 
     def leaveEvent(self, e):  # noqa: N802 — Qt's name
         super().leaveEvent(e)
-        self._lit(False)
+        if not self._lighting:
+            self._lit(False)
 
     def _lit(self, on):
         """The post under the mouse: its tools seen (ui.hover_tools) and, with
-        ui.additional_highlight, its buttons brighter (the stylesheet's [hover="true"])."""
+        ui.additional_highlight, its buttons brighter (the stylesheet's [hover="true"]).
+        The tools made once a visit: shown under the cursor, Qt says "the mouse came in"
+        again — along the whole chain, the tools it was over just gone — and the post
+        made them anew, showed them… without end (27.11: Windows' stack overflowed)."""
+        self._lighting = True
+        try:
+            self._hovered = on
+            self._lit_now(on)
+        finally:
+            self._lighting = False
+
+    def _lit_now(self, on):
         if on:
             self._own_tools()
         if self.own_tools is not None:
