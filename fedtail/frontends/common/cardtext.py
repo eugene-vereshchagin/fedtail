@@ -240,6 +240,15 @@ def quote_bit(quote, mode="card"):
     return Bit("❝ " + words, f"fedtail:thread/{q.id}")
 
 
+def late_bit(spec, date):
+    """A post that came late, put at the lane's end (feed.late_at_end): when it came;
+    the tip says why it isn't where its time would put it. None — not one of those."""
+    came = spec.extra.get("late") if spec is not None else None
+    if not came:
+        return None
+    return Bit("⏱ " + _("late_mark", when=date(came)), tip=_("late_mark_tip"), kind="late")
+
+
 def card_words(spec, cfg, date, in_thread=None):
     """The words of a card (spec: a CardSpec). date: a datetime in the theme's words."""
     entry = spec.entry
@@ -265,6 +274,8 @@ def card_words(spec, cfg, date, in_thread=None):
         tag = spec.extra["via_tag"]
         w.meta.append(Bit("# " + _("via_tag", tag=tag), f"fedtail:tag/{tag}",
                           _("via_tag_tip", tag=tag), kind="via_tag"))
+    if spec.extra.get("late"):  # came late, put at the lane's end (feed.late_at_end)
+        w.meta.append(late_bit(spec, date))
     if spec.extra.get("deleted"):  # gone from its server, kept here
         w.meta.append(Bit("🗑 " + _("deleted_mark"), tip=_("deleted_mark_tip"), kind="deleted"))
     days = age_days(p, cfg)

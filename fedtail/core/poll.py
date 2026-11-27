@@ -659,7 +659,8 @@ class PollMixin(CoreState):
                     if not first_run and self._late_due(name):
                         late = sources.late_arrivals(
                             self.store, self.sources[name], fc["page_size"],
-                            _iso_ago(float(fc.get("late_hours", 12)) * 3600))
+                            _iso_ago(float(fc.get("late_hours", 12)) * 3600),
+                            at_end=bool(fc.get("late_at_end", True)))
                         if late:
                             log.info("%s: %d came late (numbered back among the fetched)",
                                      name, len(late))

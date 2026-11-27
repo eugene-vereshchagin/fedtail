@@ -198,6 +198,17 @@ def sort_key(created_at, item_id):
     return f"{created_at or ''}|{str(item_id).rjust(32, '0')}"
 
 
+LATE = "|late"  # a sort key's tail: placed by when it came, not when it was written
+
+
+def late_key(arrived, item_id):
+    """The sort key of a post that came late (feed.late_at_end): where it came in time,
+    at the lane's end then — not hours back among what was read (27.11). The tail keeps
+    it out of the server's place to page from (newest_item, oldest_item)."""
+    # "~" after every id's character: at the same moment it follows what it came after
+    return f"{arrived or ''}|~{str(item_id).rjust(32, '0')}{LATE}"
+
+
 HIDDEN_KEEP = 2000  # notifications hidden by hand, remembered
 GROUPS_KEEP = 2000  # the server's notification groups: key → the row standing for it
 
@@ -841,14 +852,15 @@ class Store:
                                    (sid,)).fetchone() is not None
 
     # ---- source items ---------------------------------------------------------
-    def put_items(self, source, entries):
-        """entries: [(item_id, status, created_at)]. Returns ids that were new."""
+    def put_items(self, source, entries, arrived=None):
+        """entries: [(item_id, status, created_at)]. Returns ids that were new. arrived
+        (ISO): they came late — placed by this time (late_key), not by when written."""
         if not entries:
             return []
         self.put_statuses([st for _, st, _ in entries])
-        return self.link_items(source, entries)
+        return self.link_items(source, entries, arrived)
 
-    def link_items(self, source, entries):
+    def link_items(self, source, entries, arrived=None):
         """put_items for posts stored already (a free lane takes them from its feeds,
         core/custom.py): only the items, the posts aren't written again. Each entry's
         status needs no more than its "id" and its boost's "id" (light_status). Rewriting
@@ -861,8 +873,9 @@ class Store:
         with self._tx() as db:
             # oldest first: where a post came in first is where it stays
             for item_id, st, created in sorted(entries, key=lambda e: sort_key(e[2], e[0])):
+                key = late_key(arrived, item_id) if arrived else sort_key(created, item_id)
                 cur = db.execute("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)",
-                                 (source, item_id, st["id"], sort_key(created, item_id)))
+                                 (source, item_id, st["id"], key))
                 if cur.rowcount:
                     new.append(item_id)
                 self._first_seen(db, source, item_id, st)
@@ -903,27 +916,46 @@ class Store:
     # + the post's id) are no place in the server's list to page from
     LOCAL_ITEM = "mine:%"
 
+    # the server's own order: a late one (late_key) stands by when it came, an id older
+    # than its neighbours — no place to page from
+    SERVER_ORDER = "AND item_id NOT LIKE ? AND sort NOT LIKE ? "
+
     def newest_item(self, source):
         """The server's id to ask for newer ones from (None — nothing of its yet)."""
         with self._reading() as db:
-            row = db.execute("SELECT item_id FROM items WHERE source=? "
-                                  "AND item_id NOT LIKE ? ORDER BY sort DESC LIMIT 1",
-                                  (source, self.LOCAL_ITEM)).fetchone()
+            row = db.execute("SELECT item_id FROM items WHERE source=? " + self.SERVER_ORDER
+                             + "ORDER BY sort DESC LIMIT 1",
+                             (source, self.LOCAL_ITEM, "%" + LATE)).fetchone()
+        return row[0] if row else None
+
+    def newest_sort(self, source):
+        """The sort key of a source's newest item in the server's order, or None."""
+        with self._reading() as db:
+            row = db.execute("SELECT MAX(sort) FROM items WHERE source=? " + self.SERVER_ORDER,
+                             (source, self.LOCAL_ITEM, "%" + LATE)).fetchone()
         return row[0] if row else None
 
     def oldest_sort(self, source):
         """The sort key (sort_key) of a source's oldest stored item, or None."""
         with self._reading() as db:
-            row = db.execute("SELECT MIN(sort) FROM items WHERE source=? AND item_id NOT LIKE ?",
-                             (source, self.LOCAL_ITEM)).fetchone()
+            row = db.execute("SELECT MIN(sort) FROM items WHERE source=? " + self.SERVER_ORDER,
+                             (source, self.LOCAL_ITEM, "%" + LATE)).fetchone()
         return row[0] if row else None
 
     def oldest_item(self, source):
         with self._reading() as db:
-            row = db.execute("SELECT item_id FROM items WHERE source=? "
-                                  "AND item_id NOT LIKE ? ORDER BY sort ASC LIMIT 1",
-                                  (source, self.LOCAL_ITEM)).fetchone()
+            row = db.execute("SELECT item_id FROM items WHERE source=? " + self.SERVER_ORDER
+                             + "ORDER BY sort ASC LIMIT 1",
+                             (source, self.LOCAL_ITEM, "%" + LATE)).fetchone()
         return row[0] if row else None
+
+    def late_items(self, source):
+        """{item id: when it came (ISO)} — a source's posts that came late, placed at
+        its end (late_key)."""
+        with self._reading() as db:
+            return {r[0]: r[1].split("|")[0] for r in db.execute(
+                "SELECT item_id, sort FROM items WHERE source=? AND sort LIKE ?",
+                (source, "%" + LATE))}
 
     def threads_with_news(self):
         """Roots of followed threads with an unread reply in them (the Subscriptions

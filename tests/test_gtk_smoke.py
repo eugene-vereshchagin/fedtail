@@ -482,6 +482,26 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(lane.order[:len(before)], before)
         self.assertEqual(lane.rows[lane.order[-1]].post.id, "020")
 
+    def test_a_late_post_comes_last_and_says_so(self):
+        """27.11, as Qt's: a post the server delivered late (older than the newest one
+        here) goes to the lane's end, not back among what was read, and its card says it
+        came late (feed.late_at_end)."""
+        from fedtail.frontends.gtk.textblock import TextBlock
+        lane = self._lane("home")
+        pump(lambda: lane.positioned and not lane._pending(), 5)
+        self.world.add(status("020", BOB, minute=20, text="новое"), home=True)
+        self.core.poll_once()
+        self.core.poll_once()
+        self.world.add(status("015", BOB, minute=15, text="опоздал"), home=True)
+        self.core._late_checked["home"] -= 3600  # feed.late_minutes later
+        self.core.poll_once()
+        pump(lambda: lane.order and lane.order[-1] == "015", 5)
+        self.assertEqual(lane.order[-2:], ["020", "015"])
+        card = lane.rows["015"]
+        text = " ".join(w.get_label() if isinstance(w, Gtk.Label) else w.layout.get_text()
+                        for w in _walk(card) if isinstance(w, (Gtk.Label, TextBlock)))
+        self.assertIn(i18n._("late_mark", when="").strip(" ,"), text)
+
     def test_a_big_thread_builds_only_near_the_screen(self):
         """12.11, as Qt's: a thread of more than THREAD_WINDOWED posts builds the cards
         near the screen only; the focus is built where the tab opens; "open every

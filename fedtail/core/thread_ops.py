@@ -298,6 +298,11 @@ class ThreadsMixin(CoreState):
         """Posts their server no longer has (marked when fetched again)."""
         return self.store.deleted_set()
 
+    def late_items(self, source):
+        """{item id: when it came} — the lane's posts that came late, put at its end
+        (feed.late_at_end): their cards say so."""
+        return self.store.late_items(source)
+
     def _thread_nodes(self, sid):
         """The whole conversation, the same from whichever post it is opened: a
         server's context of a post holds its ancestors and *its* descendants only —

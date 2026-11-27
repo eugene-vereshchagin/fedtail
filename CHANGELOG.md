@@ -18,6 +18,11 @@
   showed them under the cursor, Qt said again that the mouse came in — the tools it
   was over just gone — and the post made them anew, without end. They are made once a
   visit now.
+- **A post that came late goes to the lane's end** (`feed.late_at_end`, on): a server
+  numbers a post by when it was written, so one delivered hours late (two boosts held
+  five hours by their server, 27.11) stood back among what was read, above the end one
+  read on, and went unseen. Now it goes to the end, by when it came, and its card says
+  "came late, at 15:12" (every interface); false — back by its time, as before.
 - **The booster's name was black on a dark theme** (Qt): its link asked for the line's
   colour as "inherit", which Qt's rich text doesn't know; it is the line's grey now.
 - **Ctrl+C ends a hung program too** (`window.ctrl_c_force`, on): a window stuck that

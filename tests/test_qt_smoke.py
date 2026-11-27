@@ -213,6 +213,30 @@ class QtSmokeTest(unittest.TestCase):
         row.deleteLater()
         self.pump(0.1)
 
+    def test_a_late_post_says_so(self):
+        """27.11: a post put at the lane's end because it came late (feed.late_at_end)
+        says so on its card, the tip why; the others say nothing of it."""
+        from datetime import UTC, datetime
+
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = self.world.add(status("052", BOB, minute=52, vis="public", text="опоздал"))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        came = datetime(2026, 11, 27, 11, 12, tzinfo=UTC)
+        row = PostRow(CardSpec(key="052", entry=E(st), extra={"late": came}), self.win.ctx)
+        said = [x for x in row.findChildren(QLabel)
+                if x.toolTip() == i18n._("late_mark_tip")]
+        self.assertEqual(len(said), 1)
+        self.assertIn(self.win.ctx.theme.date(came), said[0].text())
+        plain = PostRow(CardSpec(key="052", entry=E(st)), self.win.ctx)
+        self.assertFalse([x for x in plain.findChildren(QLabel)
+                          if x.toolTip() == i18n._("late_mark_tip")])
+        row.deleteLater()
+        plain.deleteLater()
+        self.pump(0.1)
+
     def test_a_boosted_comment_counts_its_whole_thread(self):
         """A boost of a comment deep in a thread: its Thread button said the comment's
         own direct replies — none (23.11); once on screen, the whole thread's comments."""

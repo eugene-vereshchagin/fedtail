@@ -1518,6 +1518,11 @@ catch_up_limit = 400
 late_hours = 12
 late_minutes = 10
 
+# Where a late post goes: true — at the lane's end, by when it came, marked "came late" (seen
+# where you read); false — back by when it was written, among what was read (the lane strictly
+# in order, but it is easy to miss).
+late_at_end = true
+
 # How many latest posts to keep on screen in a lane (older ones — with the "older" button);
 # where you stopped reading stays in, with a page above it, however many came since.
 render_limit = 300

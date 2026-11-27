@@ -41,6 +41,7 @@ from ..common.cardtext import (
     fold,
     indent_of,
     inner_quote_bit,
+    late_bit,
     link_card,
     newcomer_bit,
     only_counts_differ,
@@ -428,7 +429,8 @@ class PostRow(QWidget):
                 or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")) \
                 or _conv_key(old) != _conv_key(spec) \
                 or old.extra.get("thread_news") != spec.extra.get("thread_news") \
-                or old.extra.get("deleted") != spec.extra.get("deleted"):
+                or old.extra.get("deleted") != spec.extra.get("deleted") \
+                or old.extra.get("late") != spec.extra.get("late"):
             self._build()
         elif counts_only:
             self._new_actions()
@@ -566,6 +568,11 @@ class PostRow(QWidget):
             gone = self._label("🗑 " + esc(_("deleted_mark")), "newcomer")
             gone.setToolTip(_("deleted_mark_tip"))
             v.addWidget(gone)
+        late = late_bit(spec, self.theme.date)  # came late, put at the lane's end
+        if late is not None:
+            lab = self._label(esc(late.text), "newcomer")
+            lab.setToolTip(late.tip)
+            v.addWidget(lab)
         new = newcomer_bit(p, spec.parent)  # someone new in a private talk
         if new is not None:
             lab = self._label(esc(new.text), "newcomer")

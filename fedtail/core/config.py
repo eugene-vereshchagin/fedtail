@@ -127,6 +127,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "catch_up_limit": 400,
         "late_hours": 12,         # how far back a lane is looked through for late posts
         "late_minutes": 10,       # …how often (0 — never)
+        "late_at_end": True,      # a late post at the lane's end, said so (not back by time)
         "render_limit": 300,
         "older_ahead": False,     # the end of a lane in sight: a page older by itself
         "repeat_boosts": False,
@@ -675,7 +676,7 @@ FILE_LAYOUT = (
                            "refresh close_tab quit next_post previous_post reply like boost "
                            "bookmark open_thread next_comment previous_comment fold_branch")),
     ("reading", _keys("feed", "order start_at on_new count_filtered page_size catch_up_limit "
-                              "late_hours late_minutes render_limit "
+                              "late_hours late_minutes late_at_end render_limit "
                               "older_ahead remember_choices first_run_mark_read "
                               "stats")
      + _keys("read", "mark_read read_button dwell_ms unfocused_seconds replied_is_read")),

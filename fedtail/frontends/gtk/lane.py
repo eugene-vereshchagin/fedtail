@@ -29,7 +29,7 @@ from ... import diag
 from ...core import keys as keymap
 from ...i18n import _
 from ...model import Share, real
-from ..common.cardtext import thread_news_bit
+from ..common.cardtext import late_bit, thread_news_bit
 from ..common.lane import (
     MEDIA_KINDS,
     SEPARATOR,
@@ -679,6 +679,9 @@ class LaneView(Gtk.Box):
                 from ..common.cardtext import Bit
                 card.add_thread_news(Bit("🗑 " + _("deleted_mark"), "",
                                          _("deleted_mark_tip")))
+            late = late_bit(sp, self.ctx.theme.date)  # came late, put at the lane's end
+            if late is not None:
+                card.add_thread_news(late)
         if self.sep_above and k == self.sep_above[0]:
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
             box.append(Separator(self.sep_above[1]))

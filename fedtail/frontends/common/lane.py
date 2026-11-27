@@ -47,6 +47,15 @@ class CardSpec:
         return real(self.entry) if self.entry is not None else None
 
 
+def _when(iso):
+    """An ISO time of the store as the model's: an aware datetime (None if unreadable)."""
+    from datetime import datetime
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+
+
 def make_spec(view, key, entry, extra=None, **kw):
     """A CardSpec for a lane entry (Post | Share) of the View: with which account of
     mine got it, when the window shows several."""
@@ -422,6 +431,12 @@ class LaneModel:
             for s in specs:
                 if s.entry is not None and (s.entry.id in gone or real(s.entry).id in gone):
                     s.extra["deleted"] = True
+        late = getattr(view, "late_items", None)
+        late = late(self.name) if callable(late) else {}
+        if late:  # came late, put at the end (feed.late_at_end): said on its card
+            for s in specs:
+                if s.key in late:
+                    s.extra["late"] = _when(late[s.key])
         news = getattr(view, "thread_news", None)
         news = news() if news else {}
         if news:  # a followed thread with new replies: said under its post

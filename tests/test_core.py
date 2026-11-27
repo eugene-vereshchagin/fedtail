@@ -2308,6 +2308,50 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertIsNone(core.store.get_status("126"))
 
+    def test_a_late_post_goes_to_the_end(self):
+        """27.11: two boosts came five hours late (their server held them) and stood back
+        by their time, among what was read — "the boost again there" at the end, the new
+        ones above it, unseen. feed.late_at_end: a late one goes to the lane's end, by
+        when it came, its card says "came late"; the server's place to ask newer from
+        stays the newest by the server's order; one newer than all is simply new."""
+        from fedtail.core.view import View
+        from fedtail.frontends.common.cardtext import card_words
+        from fedtail.frontends.common.lane import LaneModel
+        core, w = self.make(feed={"page_size": 40})
+        core.connect().result()
+        for i in (100, 110, 120, 130, 140, 150):
+            w.add(status(str(i), BOB, minute=i // 10), home=True)
+        core.poll_once()
+        core.poll_once()
+        w.add(status("125", BOB, minute=12, text="late"), home=True)
+        core._late_checked["home"] -= 3600
+        core.poll_once()
+
+        def order():
+            return [k for k, _e in core.lane_entries("home")]
+        self.assertEqual(order()[-2:], ["150", "125"])  # at the end, not between 120 and 130
+        self.assertEqual(core.store.newest_item("home"), "150")  # asked newer than 150
+        self.assertEqual(set(core.late_items("home")), {"125"})
+        self.assertIn("125", core.unread_ids(core.lane_entries("home")))
+        w.add(status("160", BOB, minute=16), home=True)
+        core.poll_once()
+        self.assertEqual(order()[-3:], ["150", "125", "160"])
+        self.assertEqual(core.store.oldest_item("home"), "100")
+        # its card says so, in every interface's words
+        specs = LaneModel(View(core), "home").build(positioned=False).specs
+        spec = next(s for s in specs if s.key == "125")
+        words = card_words(spec, core.cfg, lambda d: d.strftime("%H:%M"))
+        self.assertIn("late", [b.kind for b in words.meta])
+        self.assertFalse(any(b.kind == "late" for s in specs if s.key != "125"
+                             for b in card_words(s, core.cfg, lambda d: "").meta))
+        # off: back by its time, as before
+        core.cfg["feed"]["late_at_end"] = False
+        w.add(status("135", BOB, minute=13, text="late too"), home=True)
+        core._late_checked["home"] -= 3600
+        core.poll_once()
+        self.assertEqual(order().index("135"), order().index("130") + 1)
+        self.assertNotIn("135", core.late_items("home"))
+
     def test_first_start_keeps_the_server_marker(self):
         """A new machine's first start: what another client left unread (newer than the
         server's home marker) stays unread, and the marker isn't pushed to "all read"."""

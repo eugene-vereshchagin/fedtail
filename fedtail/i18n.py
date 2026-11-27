@@ -791,6 +791,10 @@ _STRINGS = {
         "why_before_rules": "правило берёт, но пост убран раньше правил: человек в списке, "
                             "язык, тег «не в Ленте»",
         "deleted_mark": "удалён на сервере",
+        "late_mark": "пришёл с опозданием, в {when}",
+        "late_mark_tip": "Сервер доставил этот пост позже, чем его написали, — когда лента "
+                         "уже ушла дальше. Он поставлен в конец, где его видно, а не назад "
+                         "по времени, среди прочитанного (feed.late_at_end).",
         "deleted_mark_tip": "Сервер автора этого поста больше не отдаёт: он удалён, здесь "
                             "осталась копия",
         "le_title": "Ленты",
@@ -2743,6 +2747,10 @@ _STRINGS = {
         "why_before_rules": "the rule takes it, but it went before the rules: a list's person, "
                             "a language, a tag “not in Home”",
         "deleted_mark": "deleted on its server",
+        "late_mark": "came late, at {when}",
+        "late_mark_tip": "The server delivered this post later than it was written — when "
+                         "the lane had gone on. It is put at the end, where it is seen, not "
+                         "back by its time among what was read (feed.late_at_end).",
         "deleted_mark_tip": "Its author's server no longer gives this post: it was deleted, a "
                             "copy stays here",
         "le_title": "Lanes",
