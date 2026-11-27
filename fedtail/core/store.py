@@ -201,12 +201,25 @@ def sort_key(created_at, item_id):
 LATE = "|late"  # a sort key's tail: placed by when it came, not when it was written
 
 
-def late_key(arrived, item_id):
-    """The sort key of a post that came late (feed.late_at_end): where it came in time,
-    at the lane's end then — not hours back among what was read (27.11). The tail keeps
-    it out of the server's place to page from (newest_item, oldest_item)."""
-    # "~" after every id's character: at the same moment it follows what it came after
-    return f"{arrived or ''}|~{str(item_id).rjust(32, '0')}{LATE}"
+def late_key(arrived, item_id, end=None):
+    """The sort key of a post that came late (feed.late_at_end): right after `end` — the
+    sort key of what was last in the lane when it came — not hours back among what was
+    read (27.11). Placed by when it came instead, a post written after it but delivered
+    later (the same held-up server's next boosts, brought by "newer than the newest")
+    stood above it, by its own time: the lane jumbled. `arrived` (ISO) rides along for
+    its card ("came late, at …"). The tail keeps it out of the server's place to page
+    from (newest_item, oldest_item)."""
+    place = (end or arrived or "").split("|")[0]
+    # "~" after every id's and time's character: it follows what it came after, and of
+    # two placed after the same post the one that came later goes below
+    return f"{place}|~{arrived or ''}|{str(item_id).rjust(32, '0')}{LATE}"
+
+
+def late_arrival(key):
+    """When a late post came (ISO), from its sort key (late_key; the 27.11 one-day form
+    "came|~id|late" too)."""
+    parts = key.split("|")
+    return parts[1][1:] if len(parts) == 4 else parts[0]
 
 
 HIDDEN_KEEP = 2000  # notifications hidden by hand, remembered
@@ -852,15 +865,16 @@ class Store:
                                    (sid,)).fetchone() is not None
 
     # ---- source items ---------------------------------------------------------
-    def put_items(self, source, entries, arrived=None):
+    def put_items(self, source, entries, arrived=None, end=None):
         """entries: [(item_id, status, created_at)]. Returns ids that were new. arrived
-        (ISO): they came late — placed by this time (late_key), not by when written."""
+        (ISO): they came late — placed after `end`, the lane's last sort key then
+        (late_key), not by when written."""
         if not entries:
             return []
         self.put_statuses([st for _, st, _ in entries])
-        return self.link_items(source, entries, arrived)
+        return self.link_items(source, entries, arrived, end)
 
-    def link_items(self, source, entries, arrived=None):
+    def link_items(self, source, entries, arrived=None, end=None):
         """put_items for posts stored already (a free lane takes them from its feeds,
         core/custom.py): only the items, the posts aren't written again. Each entry's
         status needs no more than its "id" and its boost's "id" (light_status). Rewriting
@@ -873,7 +887,7 @@ class Store:
         with self._tx() as db:
             # oldest first: where a post came in first is where it stays
             for item_id, st, created in sorted(entries, key=lambda e: sort_key(e[2], e[0])):
-                key = late_key(arrived, item_id) if arrived else sort_key(created, item_id)
+                key = late_key(arrived, item_id, end) if arrived else sort_key(created, item_id)
                 cur = db.execute("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)",
                                  (source, item_id, st["id"], key))
                 if cur.rowcount:
@@ -935,6 +949,14 @@ class Store:
                              (source, self.LOCAL_ITEM, "%" + LATE)).fetchone()
         return row[0] if row else None
 
+    def last_sort(self, source):
+        """The sort key of what stands last in a source's lane — a late one too (None:
+        empty). A late post is placed after it (late_key)."""
+        with self._reading() as db:
+            row = db.execute("SELECT MAX(sort) FROM items WHERE source=?",
+                             (source,)).fetchone()
+        return row[0] if row else None
+
     def oldest_sort(self, source):
         """The sort key (sort_key) of a source's oldest stored item, or None."""
         with self._reading() as db:
@@ -953,7 +975,7 @@ class Store:
         """{item id: when it came (ISO)} — a source's posts that came late, placed at
         its end (late_key)."""
         with self._reading() as db:
-            return {r[0]: r[1].split("|")[0] for r in db.execute(
+            return {r[0]: late_arrival(r[1]) for r in db.execute(
                 "SELECT item_id, sort FROM items WHERE source=? AND sort LIKE ?",
                 (source, "%" + LATE))}
 

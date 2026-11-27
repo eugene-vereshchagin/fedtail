@@ -1518,8 +1518,8 @@ catch_up_limit = 400
 late_hours = 12
 late_minutes = 10
 
-# Where a late post goes: true — at the lane's end, by when it came, marked "came late" (seen
-# where you read); false — back by when it was written, among what was read (the lane strictly
+# Where a late post goes: true — at the lane's end as it was when it came, marked "came late"
+# (seen where you read); false — back by when it was written, among what was read (the lane strictly
 # in order, but it is easy to miss).
 late_at_end = true
 

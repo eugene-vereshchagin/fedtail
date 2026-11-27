@@ -229,14 +229,15 @@ def late_arrivals(store, source, page_size, since, max_pages=10, at_end=False):
     newest back to `since` (ISO) — at most max_pages — what's not stored goes in.
     Only holes are filled: nothing older than the oldest post stored (that would be
     history, not a late post — "Older" brings it). at_end (feed.late_at_end): one older
-    than the newest stored is placed by when it came — at the lane's end, where it is
-    seen — not back among what was read; one newer simply new. Returns the new item ids."""
+    than the newest stored is placed where the lane ended when it came — seen where you
+    read, not back among what was read — its card says when it came; one newer simply
+    new. Returns the new item ids."""
     floor = store.oldest_sort(source.name)
     if floor is None:
         return []
     top = store.newest_sort(source.name) if at_end else None
-    # when it came; never before the newest it follows (a server's clock ahead of ours)
-    came = max(now_iso(), top.split("|")[0]) if top else now_iso()
+    end = store.last_sort(source.name) if at_end else None
+    came = now_iso()
     new, page, pages = [], source.fetch(limit=page_size), 1
     while page:
         entries = _entries(source, page)
@@ -248,7 +249,7 @@ def late_arrivals(store, source, page_size, since, max_pages=10, at_end=False):
                                    [e for e in holes if sort_key(e[2], e[0]) >= top])
             new += store.put_items(source.name,
                                    [e for e in holes if sort_key(e[2], e[0]) < top],
-                                   arrived=came)
+                                   arrived=came, end=end)
         if len(page) < page_size or pages >= max_pages or not entries:
             break
         oldest = min(entries, key=lambda e: sort_key(e[2], e[0]))
