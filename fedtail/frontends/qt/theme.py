@@ -535,8 +535,8 @@ def _real_desktop_font(app):
     → what was set, for the log; "" when the font was a real one already."""
     f = app.font()
     have = {x.lower() for x in QFontDatabase.families()}
-    if f.family().lower() in have:
-        return ""
+    if not have or f.family().lower() in have:
+        return ""  # a real one already, or no fonts to tell (Qt offscreen on Windows)
     from ... import sysenv
     got = sysenv.desktop_font()
     if got and got[0].lower() in have:

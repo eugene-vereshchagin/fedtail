@@ -23,6 +23,8 @@ class DesktopFontTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
+        if not QFontDatabase.families():  # Qt offscreen on Windows knows no fonts
+            raise unittest.SkipTest("no fonts in this Qt")
 
     def setUp(self):
         from fedtail.frontends.qt import theme
@@ -64,6 +66,12 @@ class DesktopFontTest(unittest.TestCase):
         self.app.setFont(QFont(real, 11))
         self.assertEqual(self.theme._real_desktop_font(self.app), "")
         self.assertEqual(self.app.font().family(), real)
+
+    def test_no_fonts_known_leaves_it(self):
+        self.app.setFont(QFont("Sans", 10))
+        with mock.patch.object(self.theme.QFontDatabase, "families", return_value=[]):
+            self.assertEqual(self.theme._real_desktop_font(self.app), "")
+        self.assertEqual(self.app.font().family(), "Sans")
 
 
 if __name__ == "__main__":
