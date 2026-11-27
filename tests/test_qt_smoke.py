@@ -2732,9 +2732,9 @@ class QtSmokeTest(unittest.TestCase):
         for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
             self.app.sendEvent(box, QKeyEvent(kind, Qt.Key.Key_Return,
                                               Qt.KeyboardModifier.NoModifier))
-        self.pump(0.05)
+        # the search tab comes in a moment (0.05 s was too short on Windows' CI)
+        self.pump(until=lambda: isinstance(self.win.tabs.currentWidget(), SearchWidget))
         self.assertFalse(self.win.curtain_shown())
-        self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
         # the sidebar built again behind the search tab: the search stays in front
         self.win._rebuild_sidebar()
         self.pump(0.05)
