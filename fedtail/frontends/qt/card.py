@@ -537,8 +537,11 @@ class PostRow(QWidget):
         if isinstance(entry, Share):
             # the booster's name opens their profile (a relay bot: who is behind it)
             booster = entry.by
-            name = (f'<a href="fedtail:account/{esc(booster.id)}" style="color:inherit;'
-                    f'text-decoration:none;">{display_name(booster)}</a>')
+            # the line's own colour, said: Qt's rich text knows no "inherit" — it drew
+            # the name black, on a dark theme too (27.11)
+            name = (f'<a href="fedtail:account/{esc(booster.id)}" '
+                    f'style="color:{self.theme.css("muted")};text-decoration:none;">'
+                    f'{display_name(booster)}</a>')
             line = self._emoji_label(
                 _("boosted_by", name=name) + " · " +
                 _("boost_time", when=self.theme.date(entry.created)),

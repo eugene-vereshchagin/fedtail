@@ -181,6 +181,38 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=fut.done)
         return fut.result()
 
+    def test_the_boosters_name_in_the_lines_colour(self):
+        """27.11: the booster's name was black on a dark theme — its link said
+        "color:inherit", which Qt's rich text doesn't know. Drawn, its letters are the
+        line's grey: no pixel of the name darker than the theme's muted colour by far."""
+        from PySide6.QtGui import QColor, QImage
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        w = self.world
+        w.add(status("050", BOB, minute=50, vis="public", text="пост"))
+        w.add(dict(status("051", NEWS, minute=51, vis="public"), reblog=w.statuses["050"]))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        theme = self.win.ctx.theme
+        row = PostRow(CardSpec(key="051", entry=E(w.statuses["051"])), self.win.ctx)
+        line = next(x for x in row.findChildren(QLabel) if x.objectName() == "boost")
+        self.assertNotIn("inherit", line.text())
+        self.assertIn(theme.css("muted"), line.text().split("</a>")[0])
+        link = line.text()[line.text().index("<a "):line.text().index("</a>") + 4]
+        line.setText(link)  # the name alone, drawn as the line draws it
+        line.setStyleSheet("QLabel { background: white; }")
+        line.adjustSize()
+        img = QImage(line.size(), QImage.Format.Format_RGB32)
+        img.fill(QColor("white"))
+        line.render(img)
+        muted = QColor(theme.css("muted"))
+        darkest = min((QColor(img.pixel(x, y)).lightness(), (x, y))
+                      for x in range(img.width()) for y in range(img.height()))
+        self.assertGreaterEqual(darkest[0], muted.lightness() - 40, darkest)
+        row.deleteLater()
+        self.pump(0.1)
+
     def test_a_boosted_comment_counts_its_whole_thread(self):
         """A boost of a comment deep in a thread: its Thread button said the comment's
         own direct replies — none (23.11); once on screen, the whole thread's comments."""

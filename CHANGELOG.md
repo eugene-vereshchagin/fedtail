@@ -18,6 +18,8 @@
   showed them under the cursor, Qt said again that the mouse came in — the tools it
   was over just gone — and the post made them anew, without end. They are made once a
   visit now.
+- **The booster's name was black on a dark theme** (Qt): its link asked for the line's
+  colour as "inherit", which Qt's rich text doesn't know; it is the line's grey now.
 - **Ctrl+C ends a hung program too** (`window.ctrl_c_force`, on): a window stuck that
   way didn't hear Ctrl+C at all, only `kill -9` ended it. A tiny process beside it
   hears it: the program still there 3 s after Ctrl+C, it says so, and one more Ctrl+C
