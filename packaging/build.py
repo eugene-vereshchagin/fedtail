@@ -36,7 +36,7 @@ if os.name != "nt":
     for sub in ("platforms", "wayland-shell-integration", "wayland-decoration-client",
                 "wayland-graphics-integration-client", "platforminputcontexts",
                 "xcbglintegrations", "egldeviceintegrations", "platformthemes",
-                "iconengines", "imageformats"):
+                "iconengines", "imageformats", "multimedia"):
         folder = os.path.join(plugins, sub)
         if os.path.isdir(folder):
             extra += [(os.path.join(folder, f), os.path.join("PySide6", "Qt", "plugins", sub))

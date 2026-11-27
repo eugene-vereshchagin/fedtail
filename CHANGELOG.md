@@ -7,6 +7,9 @@
 
 ## What's next
 
+- **Video and sound in the AppImage and the one-file builds** (Linux, Windows): they
+  were built without QtMultimedia (it lives in PySide6-Addons), so videos opened in
+  the browser. CI now fails a Linux build that lacks it.
 - **The window hung for good on seeking a video by clicks** (Qt): every click and move
   of the time slider was a seek, and Qt's FFmpeg backend took one while its audio
   thread still tore down the one before — that thread waited for Python's lock, the

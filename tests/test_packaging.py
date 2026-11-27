@@ -175,6 +175,18 @@ class AppImageTest(unittest.TestCase):
 
 
 class FilesTest(unittest.TestCase):
+    def test_binaries_carry_qt_multimedia(self):
+        """QtMultimedia lives in PySide6-Addons, not Essentials: every PyInstaller build
+        (the exe, the Linux binary, the AppImage) installs both, or video and sound in
+        the window are gone (0.24.2's AppImage)."""
+        text = (ROOT / ".github/workflows/ci.yml").read_text("utf-8")
+        builds = [x for x in text.splitlines() if "pyinstaller" in x and "pip install" in x]
+        self.assertEqual(len(builds), 3)
+        for line in builds:
+            self.assertIn("PySide6-Addons", line)
+        spec = (ROOT / "packaging/build.py").read_text("utf-8")
+        self.assertIn('"multimedia"', spec)  # its FFmpeg backend is a plugin
+
     def test_flatpak_pins(self):
         text = (ROOT / "packaging/flatpak" / f"{APP_ID}.yml").read_text("utf-8")
         self.assertIn(f"\nid: {APP_ID}\n", text)

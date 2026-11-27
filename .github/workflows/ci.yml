@@ -174,9 +174,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+      # PySide6-Addons: QtMultimedia (video and sound in the window) is there, not in
+      # Essentials — 0.24.2's binaries played nothing
       # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): as the Linux
       # binary, the exe died on old processors. 6.9 is the last for every x86-64.
-      - run: pip install requests "PySide6-Essentials<6.10" "textual>=0.86" pyinstaller cryptography
+      - run: pip install requests "PySide6-Essentials<6.10" "PySide6-Addons<6.10" "textual>=0.86" pyinstaller cryptography
       - run: python -c "from PySide6 import QtCore; v = QtCore.qVersion(); print(v); assert tuple(map(int, v.split('.')[:2])) < (6, 10), v"
       - run: python packaging/build.py
       - name: Starts
@@ -240,7 +242,7 @@ jobs:
             # Qt's wheels from 6.10 on are built for x86-64-v2 (SSE4.2, POPCNT): the binary
             # died with SIGILL on a Phenom II. 6.9 is the last for every x86-64.
             # textual: the terminal interface goes in too (--ui tui; 11.11: "No module 'rich'")
-            /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'textual>=0.86' pyinstaller cryptography &&
+            /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'PySide6-Addons<6.10' 'textual>=0.86' pyinstaller cryptography &&
             /tmp/venv/bin/python packaging/build.py &&
             ./dist/fedtail --version
           } 2>&1 | tee build.log
@@ -248,6 +250,9 @@ jobs:
           /tmp/venv/bin/pyi-archive_viewer -l dist/fedtail > contents.txt || true
           if grep -iE 'libfontconfig|libfreetype' contents.txt; then
             echo "::error::fontconfig/freetype got into the one-file build"; exit 1
+          fi
+          if ! grep -q 'QtMultimedia' contents.txt; then
+            echo "::error::no QtMultimedia in the one-file build: no video or sound"; exit 1
           fi
           if ! grep -q 'libqwayland' contents.txt; then
             echo "::warning::no Wayland platform plugin in the one-file build"
@@ -462,8 +467,9 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 -m venv /tmp/venv
-          /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'textual>=0.86' pyinstaller cryptography
+          /tmp/venv/bin/pip install requests 'PySide6-Essentials<6.10' 'PySide6-Addons<6.10' 'textual>=0.86' pyinstaller cryptography
           /tmp/venv/bin/python packaging/build.py --onedir
+          ls dist/onedir/fedtail/_internal/PySide6/QtMultimedia.* >/dev/null  # video, sound
           curl -sSLo /tmp/appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
           echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /tmp/appimagetool" | sha256sum -c
           chmod +x /tmp/appimagetool
