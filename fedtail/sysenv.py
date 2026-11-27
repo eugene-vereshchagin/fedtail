@@ -6,6 +6,9 @@ the browser, the text editor for the config, notify-send, KDE's own "open with" 
 would load our Qt instead of the system's and fail or ask what to open the file
 with. So everything we start gets the environment as it was before we were
 unpacked. From the source, nothing changes.
+
+Also the desktop's font where Qt can't ask for it (desktop_font): a GTK desktop's
+settings, read with the desktop's own gsettings.
 """
 
 import os
@@ -61,3 +64,52 @@ def open_external(url, always=False):
                              start_new_session=True)
             return True
     return False
+
+
+# the GTK desktops' interface settings, by XDG_CURRENT_DESKTOP; GNOME's for the rest
+FONT_SCHEMAS = (("CINNAMON", "org.cinnamon.desktop.interface"),
+                ("MATE", "org.mate.interface"),
+                ("", "org.gnome.desktop.interface"))
+
+
+def parse_font_name(raw):
+    """GTK's font name ("'Ubuntu Bold 11'", as gsettings prints it) → (family, size
+    in points) — the style words after the family are dropped; None for nonsense."""
+    words = raw.strip().strip("'\"").split()
+    if len(words) < 2:
+        return None
+    try:
+        size = float(words[-1])
+    except ValueError:
+        return None
+    styles = {"bold", "italic", "oblique", "light", "medium", "regular", "semi-bold",
+              "semibold", "thin", "heavy", "black", "condensed", "book", "ultra-light",
+              "extra-light", "semi-light", "ultra-bold", "extra-bold", "demi-bold"}
+    family = words[:-1]
+    while len(family) > 1 and family[-1].lower() in styles:
+        family.pop()
+    if size <= 0 or not family:
+        return None
+    return " ".join(family), size
+
+
+def desktop_font(run=subprocess.run):
+    """The interface font a GTK desktop (Cinnamon, MATE, GNOME, Xfce with GNOME's
+    schemas) is set to, as (family, points); None when it can't be told. For Qt
+    without the desktop's integration (the one-file build, the AppImage): it gets a
+    bare "Sans" otherwise."""
+    if not sys.platform.startswith("linux"):
+        return None
+    exe = shutil.which("gsettings")
+    if not exe:
+        return None
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+    schema = next(s for key, s in FONT_SCHEMAS if key in desktop)
+    try:
+        out = run([exe, "get", schema, "font-name"], capture_output=True, text=True,
+                  timeout=5, env=child_env(), stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return parse_font_name(out.stdout)

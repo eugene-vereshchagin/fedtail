@@ -7,6 +7,12 @@
 
 ## What's next
 
+- **The AppImage on Cinnamon, GNOME and other non-KDE desktops came up in a font that
+  wasn't one** — letters far apart, the settings and login windows wider than the
+  screen (a tester's report). Qt without the desktop's integration names its font a
+  bare "Sans", which no font is called; the colour emoji fonts fedtail puts after it
+  won the match. The window now takes the desktop's own font from its settings
+  (gsettings: Cinnamon, MATE, GNOME), else the face fontconfig makes of "Sans".
 - **Video and sound in the AppImage and the one-file builds** (Linux, Windows): they
   were built without QtMultimedia (it lives in PySide6-Addons), so videos opened in
   the browser. CI now fails a Linux build that lacks it.

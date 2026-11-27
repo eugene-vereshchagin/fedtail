@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QFontInfo, QPalette
 
 from ...i18n import months
 from .. import palette, themefile
@@ -526,6 +526,33 @@ def _load_fonts(theme_files):
                                          ", ".join(fams) or "not readable")
 
 
+def _real_desktop_font(app):
+    """Qt without the desktop's integration (the AppImage on Cinnamon, GNOME, MATE…)
+    gives the application a bare "Sans", a name no font has. Put after it, the colour
+    emoji fonts (apply) won the match: every letter in Noto Color Emoji's metrics, the
+    windows wider than the screen (a tester's report, 28.11). So the desktop's font
+    from its own settings, or the face fontconfig makes of "Sans", by its real name.
+    → what was set, for the log; "" when the font was a real one already."""
+    f = app.font()
+    have = {x.lower() for x in QFontDatabase.families()}
+    if f.family().lower() in have:
+        return ""
+    from ... import sysenv
+    got = sysenv.desktop_font()
+    if got and got[0].lower() in have:
+        family, size = got
+        how = "the desktop's settings"
+    else:
+        family, size = QFontInfo(f).family(), f.pointSizeF()
+        how = f"what fontconfig makes of {f.family()!r}"
+    new = QFont(f)
+    new.setFamilies([family])
+    if size > 0:
+        new.setPointSizeF(size)
+    app.setFont(new)
+    return f"{family} {size:g}pt ({how})"
+
+
 # the desktop's own palette and font, as they were before any theme touched them: a
 # theme tried from the menu (≡ → Try a theme) starts from these, not from the last one
 _desktop = None
@@ -543,6 +570,10 @@ def apply(app, cfg, name=None):
             import logging
             logging.getLogger(__name__).info("Qt has no KDE integration here (one-file "
                                              "build?): %s from kdeglobals", adopted)
+        named = _real_desktop_font(app)
+        if named:
+            import logging
+            logging.getLogger(__name__).info("desktop font: %s", named)
         themefile.install_copies()
         _desktop = (QPalette(app.palette()), QFont(app.font()),
                     {c: QFont(app.font(c)) for c in CLASS_FONTS})
