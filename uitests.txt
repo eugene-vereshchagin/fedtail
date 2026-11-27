@@ -1,0 +1,206 @@
+ok   FlowTest.theOverviewOpensALaneAndAThread (2.76 s)
+ok   FlowTest.aRefusedTokenSaysSoAndLeadsToLoggingInAgain (1.154 s)
+ok   FlowTest.anAnsweredRequestKeepsThePlace (22.493 s)
+ok   FlowTest.aMentionReachesTheShade (0.556 s)
+ok   FlowTest.aLongPressOnAPictureGivesItsMenu (0.841 s)
+ok   FlowTest.theEditorsEmojiAndPollAreThereAndLeadToTheSettings (1.713 s)
+ok   FlowTest.theOverviewIsStillThereAfterATurn (1.238 s)
+ok   FlowTest.anAnswerFromElsewhereGrowsTheOpenThread (0.728 s)
+ok   FlowTest.allReadInTwoLanesInARowKeepsBoth (7.029 s)
+ok   FlowTest.aLongPressOnACardOpensItsMenu (0.781 s)
+ok   FlowTest.aReplyInAThreadStaysInSight (1.384 s)
+FAIL FlowTest.aSelectionLetsGoOnATapAndOnBack:
+java.lang.AssertionError: waited 0 s for a selection; the screen:
+К
+Кот Учёный
+21:29
+− 2 [Fold or unfold this comment's branch]
+/1
+🔒 Followers only
+@mira перед тем как менять — протри контакты и поставь умную розетку на мониторинг. У меня ровно так же было: дело оказалось в блоке питания.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+М
+Мира
+21:31
+/2
+🔒 Followers only
+@kot а розетку какую взял? Чтобы без облака, только по локальной сети.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+К
+Кот Учёный
+21:34
+/3
+🔒 Followers only
+@mira обычную на Zigbee, прошитую. Облака там нет вообще.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+О
+Остап
+21:51
+/4
+🔒 Followers only
+@mira а я свой просто перевернул вверх ногами — перестал греться. Десять лет работает.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+Reply to @mira…
+who sees it: as the post
+[Back]
+Thread #d82cn
+post and 4 replies
+[Refresh]
+Following
+
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:125)
+at online.dmesg.fedtail.FlowTest.aSelectionLetsGoOnATapAndOnBack$select(FlowTest.kt:197)
+at online.dmesg.fedtail.FlowTest.aSelectionLetsGoOnATapAndOnBack(FlowTest.kt:202)
+... 53 trimmed
+Caused by: androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 1 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:116)
+... 56 more
+
+
+FAIL FlowTest.aThreadsBranchFoldsAndUnfolds:
+java.lang.AssertionError: waited 10 s for the branch folded away; the screen:
+К
+Кот Учёный
+21:29
+− 2 [Fold or unfold this comment's branch]
+/1
+🔒 Followers only
+@mira перед тем как менять — протри контакты и поставь умную розетку на мониторинг. У меня ровно так же было: дело оказалось в блоке питания.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+М
+Мира
+21:31
+/2
+🔒 Followers only
+@kot а розетку какую взял? Чтобы без облака, только по локальной сети.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+К
+Кот Учёный
+21:34
+/3
+🔒 Followers only
+@mira обычную на Zigbee, прошитую. Облака там нет вообще.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+О
+Остап
+21:51
+/4
+🔒 Followers only
+@mira а я свой просто перевернул вверх ногами — перестал греться. Десять лет работает.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+Reply to @mira…
+who sees it: as the post
+[Back]
+Thread #d82cn
+post and 4 replies
+[Refresh]
+Following
+
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:125)
+at online.dmesg.fedtail.FlowTest.aThreadsBranchFoldsAndUnfolds(FlowTest.kt:313)
+... 53 trimmed
+Caused by: androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 10000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:116)
+... 55 more
+
+
+ok   FlowTest.aSettingGoesIntoTheConfigFile (1.688 s)
+ok   FlowTest.theInterfaceLanguageIsTheAppsToo (7.1 s)
+ok   FlowTest.theMenuOpensAPlaceOfTheWindows (0.79 s)
+ok   FlowTest.theSwitcherFindsALaneByName (1.135 s)
+ok   FlowTest.myProfileIsInTheMenu (0.707 s)
+ok   FlowTest.aRefreshKeepsThePlaceInTheLane (4.69 s)
+ok   FlowTest.theEditorStaysWhenThePhoneIsTurned (1.41 s)
+ok   FlowTest.theTilesCanBeChanged (0.755 s)
+ok   FlowTest.aLikeTappedTwiceIsAskedOnce (5.618 s)
+FAIL FlowTest.aFoldedBranchIsRememberedWhenAsked:
+java.lang.AssertionError: waited 10 s for the branch folded away; the screen:
+К
+Кот Учёный
+21:30
+− 2 [Fold or unfold this comment's branch]
+/1
+🔒 Followers only
+@mira перед тем как менять — протри контакты и поставь умную розетку на мониторинг. У меня ровно так же было: дело оказалось в блоке питания.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+М
+Мира
+21:32
+/2
+🔒 Followers only
+@kot а розетку какую взял? Чтобы без облака, только по локальной сети.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+К
+Кот Учёный
+21:35
+/3
+🔒 Followers only
+@mira обычную на Zigbee, прошитую. Облака там нет вообще.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+О
+Остап
+21:52
+/4
+🔒 Followers only
+@mira а я свой просто перевернул вверх ногами — перестал греться. Десять лет работает.
+[Reply]
+[Like]
+[Bookmark]
+[More]
+Reply to @mira…
+who sees it: as the post
+[Back]
+Thread #d82cn
+post and 4 replies
+[Refresh]
+Following
+
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:125)
+at online.dmesg.fedtail.FlowTest.aFoldedBranchIsRememberedWhenAsked(FlowTest.kt:338)
+... 53 trimmed
+Caused by: androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 10000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at online.dmesg.fedtail.FlowTest.waitFor(FlowTest.kt:116)
+... 55 more
+
+
+ok   FlowTest.theArrowStaysAfterMarkAllRead (0.779 s)
+ok   FlowTest.aCardsMenuIsTheWindowsAndLeadsToTheProfile (0.653 s)
