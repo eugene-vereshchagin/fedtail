@@ -265,6 +265,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ✓ |   |   | ✓ |   |   | ✓ |   | ✓ |   |   |   |   |   |
 | `fedtail --check`: what the system lacks — and one apt line | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A hung copy doesn't stop a start | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Ctrl+C ends a hung program too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Interfaces
 
@@ -276,4 +277,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **76** features of the 212 compared.
+Only in fedtail — **77** features of the 213 compared.

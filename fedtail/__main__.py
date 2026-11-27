@@ -342,6 +342,10 @@ def main(argv=None):
     if not getattr(sys, "frozen", False):  # from the source: say where to look
         print(f"fedtail: logs in {folder} (latest.log)", file=sys.stderr)
     diag.start_stats(cfg)
+    if ui != "tui":  # the terminal interface reads Ctrl+C as a key, no signal comes
+        from .i18n import _
+        diag.watch_ctrl_c(cfg["ui"].get("ctrl_c_force", True),
+                          _("ctrl_c_hung", s=int(diag.CTRL_C_WAIT)), _("ctrl_c_ended"))
 
     if not deps.at_start(ui):  # the interface's own pieces, said with the command
         return 3

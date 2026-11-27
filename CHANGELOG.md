@@ -7,6 +7,17 @@
 
 ## What's next
 
+- **The window hung for good on seeking a video by clicks** (Qt): every click and move
+  of the time slider was a seek, and Qt's FFmpeg backend took one while its audio
+  thread still tore down the one before — that thread waited for Python's lock, the
+  window for that thread's. Seeks are spaced now: the first at once, those within
+  0.3 s after it as one, to the last place (the slider, ← and →, the audio bar). That
+  makes the hang much rarer; the lock itself is Qt's and PySide's (6.8).
+- **Ctrl+C ends a hung program too** (`window.ctrl_c_force`, on): a window stuck that
+  way didn't hear Ctrl+C at all, only `kill -9` ended it. A tiny process beside it
+  hears it: the program still there 3 s after Ctrl+C, it says so, and one more Ctrl+C
+  dumps the threads' stacks into `stacks.log` and ends it. Only in a terminal.
+
 ## 0.24.2 — 2026-11-26
 
 - **The Sync page spun for minutes on the phone** (a WebDAV folder or a folder): each

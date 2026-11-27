@@ -26,6 +26,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "tiles": "none",          # the curtain's tiles (common/sidebar.overview)
         "frontend": "auto",
         "hung_copy_seconds": 20,  # a running copy's window hung this long: a start ends it
+        "ctrl_c_force": True,     # Ctrl+C twice ends a hung run (diag.watch_ctrl_c)
         "adwaita": "auto",
         "accessibility": "auto",
         "gtk_headerbar": "auto",
@@ -661,7 +662,7 @@ FILE_LAYOUT = (
                                "faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
      + _keys("feed", "emoji custom_emoji emoji_from_origin text_markup")),
-    ("window", _keys("ui", "frontend hung_copy_seconds "
+    ("window", _keys("ui", "frontend hung_copy_seconds ctrl_c_force "
                            "layout open_columns columns column_width default_columns "
                            "message_percent "
                            "themes_by_layout roster_on_top roster_threads split_tabs "

@@ -55,6 +55,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
 | `fedtail --check`: what the system lacks — and one apt line | · | the app has it all inside |
 | A hung copy doesn't stop a start | · | on a phone the system keeps the one copy |
+| Ctrl+C ends a hung program too | · | a phone has no terminal |
 
 ### Interfaces
 

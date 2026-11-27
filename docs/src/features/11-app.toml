@@ -462,3 +462,21 @@ clients = []
 details.ru = "fedtail у профиля одна копия: второй запуск поднимает окно первой. Если окно первой не отвечает `window.hung_copy_seconds` секунд (20), новый запуск её завершает — сначала просьбой, потом силой — и встаёт на её место; раньше не открывалось ничего, пока процесс не убьёшь руками. 0 — не трогать зависшую."
 details.en = "A profile has one copy of fedtail: a second start raises the first one's window. When the first one's window hasn't answered for `window.hung_copy_seconds` seconds (20), the new start ends it — asked, then made to — and takes its place; before, nothing opened till the process was killed by hand. 0 — leave a hung one be."
 
+[[feature]]
+id = "ctrl-c-force"
+status = "has"
+android = "na"
+android_note.ru = "на телефоне нет терминала"
+android_note.en = "a phone has no terminal"
+since = "next"
+name.ru = "Ctrl+C закрывает и зависшую программу"
+name.en = "Ctrl+C ends a hung program too"
+config = "`window.ctrl_c_force`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Запущенная из терминала программа, зависшая намертво (окно стоит внутри Qt), Ctrl+C не слышит: обработчик Python ждёт того же зависшего потока. Рядом с ней — крошечный процесс, который Ctrl+C слышит: если через 3 секунды программа ещё тут, он скажет, что она зависла, а второй Ctrl+C снимет стеки потоков в `stacks.log` и закроет её силой. Без терминала и в терминальном интерфейсе его нет."
+details.en = "Started from a terminal and hung for good (the window stuck inside Qt), the program doesn't hear Ctrl+C: Python's handler waits for that same stuck thread. A tiny process beside it does: the program still there 3 seconds later, it says it hangs, and a second Ctrl+C dumps the threads' stacks into `stacks.log` and ends it by force. Not without a terminal, nor in the terminal interface."
+

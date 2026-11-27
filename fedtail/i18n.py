@@ -1536,6 +1536,9 @@ _STRINGS = {
         "player_keys_many": "PgUp/PgDn — соседнее видео · пробел — пауза · ← → — 5 секунд · "
                             "M — звук · S — скачать · Esc — закрыть",
         "player_prev_tip": "Предыдущее в посте (←, PgUp)",
+        "ctrl_c_hung": "fedtail: за {s} с после Ctrl+C программа не закрылась — похоже, "
+                       "зависла. Ещё раз Ctrl+C — закрыть её сразу (несохранённое пропадёт).",
+        "ctrl_c_ended": "fedtail: закрыта силой; стеки потоков — в stacks.log в папке логов.",
         "player_next_tip": "Следующее в посте (→, PgDn)",
         "player_mute_tip": "Звук (M)",
         "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · S — скачать · "
@@ -3476,6 +3479,10 @@ _STRINGS = {
         "player_keys_many": "PgUp/PgDn next video · Space pause · ← → 5 seconds · M sound · "
                             "S download · Esc close",
         "player_prev_tip": "Previous in the post (←, PgUp)",
+        "ctrl_c_hung": "fedtail: still here {s} s after Ctrl+C — it seems to hang. Ctrl+C "
+                       "once more ends it at once (what isn't saved is lost).",
+        "ctrl_c_ended": "fedtail: ended by force; its threads' stacks are in stacks.log "
+                        "in the logs folder.",
         "player_next_tip": "Next in the post (→, PgDn)",
         "player_mute_tip": "Sound (M)",
         "player_keys": "Space pause · ← → 5 seconds · M sound · S download · O browser · "

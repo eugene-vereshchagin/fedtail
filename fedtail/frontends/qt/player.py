@@ -39,6 +39,44 @@ MAX_LOOPS = 3      # ui.gifv_max: gifvs playing at once (on screen; the rest a s
 VISIBLE_CHECK_MS = 600
 FRAME_FPS = 12     # ui.gifv_fps: a gifv in a card draws at most this many frames a second
 SEEK_MS = 5000
+SEEK_GAP_MS = 300  # one seek in this long at most: the rest go as one, to the last place
+
+
+class Seeker(QObject):
+    """A player's seeks, spaced: the first at once, those that follow within SEEK_GAP_MS
+    as one, to the last place asked for. A slider clicked and dragged sent a seek at
+    every move, and Qt's FFmpeg backend took a seek while its audio thread was still
+    tearing down the one before: that thread waited for Python's lock, the window
+    waited for that thread's — the program hung for good, Ctrl+C included (27.11,
+    PySide 6.8). Fewer seeks, apart, give that much less of a chance."""
+
+    def __init__(self, player, parent=None):
+        super().__init__(parent)
+        self.player = player
+        self.pending = None
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(SEEK_GAP_MS)
+        self.timer.timeout.connect(self._later)
+
+    def to(self, ms):
+        ms = max(0, int(ms))
+        if self.timer.isActive():
+            self.pending = ms  # one went a moment ago: this one waits, the newest wins
+            return
+        self.player.setPosition(ms)
+        self.timer.start()
+
+    def by(self, ms):
+        """From where it is going (a seek still waiting), else from where it is."""
+        at = self.pending if self.pending is not None else self.player.position()
+        self.to(at + ms)
+
+    def _later(self):
+        if self.pending is not None:
+            ms, self.pending = self.pending, None
+            self.player.setPosition(ms)
+            self.timer.start()
 
 
 class SeekSlider(QSlider):
@@ -264,7 +302,6 @@ class VideoOverlay(QWidget):
         # clicked, it kept the keys: ← → moved it a millisecond, PgUp/PgDn went nowhere
         # (21.11) — the player's keys are the player's, as its buttons' are
         self.slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.slider.seek.connect(lambda v: self.player.setPosition(v))
         bar.addWidget(self.slider, 1)
         self.time = QLabel("0:00")
         bar.addWidget(self.time)
@@ -289,6 +326,8 @@ class VideoOverlay(QWidget):
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.player.setVideoOutput(self.video)
+        self.seeker = Seeker(self.player, self)
+        self.slider.seek.connect(self.seeker.to)
         self.gif = loop
         if loop:
             # a gif: just the picture, big and looping — no player bar, no sound;
@@ -455,9 +494,9 @@ class VideoOverlay(QWidget):
         elif k in (Qt.Key.Key_Space, Qt.Key.Key_K):
             self.toggle()
         elif k == Qt.Key.Key_Left:
-            self.player.setPosition(max(0, self.player.position() - SEEK_MS))
+            self.seeker.by(-SEEK_MS)
         elif k == Qt.Key.Key_Right:
-            self.player.setPosition(self.player.position() + SEEK_MS)
+            self.seeker.by(SEEK_MS)
         elif k == Qt.Key.Key_M:
             self.toggle_mute()
         elif k == Qt.Key.Key_O:
@@ -668,7 +707,8 @@ class AudioBar(QWidget):
             self.player.errorOccurred.connect(
                 lambda _e, t="": self.time.setText(_("player_failed",
                                                      err=t or self.player.errorString())))
-            self.slider.seek.connect(lambda v: self.player.setPosition(v))
+            self.seeker = Seeker(self.player, self)
+            self.slider.seek.connect(self.seeker.to)
             self.slider.setEnabled(True)
             self.player.setSource(source(self.m))
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:

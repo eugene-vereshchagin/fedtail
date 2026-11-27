@@ -832,6 +832,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | has | 0.21.0 | `server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key`, `server.retry_seconds`, `web.login_days` | `/api/v1/statuses/:id/translate` or LibreTranslate's `/translate` | Tokodon (a proxy before login), FastSMRW (Ctrl+digit, pinned lanes), iMast (the stream on Wi-Fi only), Ivory (statistics), Fedilab and Scatto (translating by itself, another translator) |
 | `fedtail --check`: what the system lacks — and one apt line | has | 0.21.0 | `fedtail --check` | own | only in fedtail |
 | A hung copy doesn't stop a start | has | 0.22.0 | `window.hung_copy_seconds` | own | only in fedtail |
+| Ctrl+C ends a hung program too | has | next | `window.ctrl_c_force` | own | only in fedtail |
 
 <details><summary>In detail</summary>
 
@@ -886,6 +887,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **`fedtail --check`: what the system lacks — and one apt line.** What is a must, what each interface needs and what the extras give (the emoji font, WebP, the language check…) — whether it's there, and a ready `sudo apt install …` line for what's missing. Started without a must-have — the same line instead of a traceback.
 
 **A hung copy doesn't stop a start.** A profile has one copy of fedtail: a second start raises the first one's window. When the first one's window hasn't answered for `window.hung_copy_seconds` seconds (20), the new start ends it — asked, then made to — and takes its place; before, nothing opened till the process was killed by hand. 0 — leave a hung one be.
+
+**Ctrl+C ends a hung program too.** Started from a terminal and hung for good (the window stuck inside Qt), the program doesn't hear Ctrl+C: Python's handler waits for that same stuck thread. A tiny process beside it does: the program still there 3 seconds later, it says it hangs, and a second Ctrl+C dumps the threads' stacks into `stacks.log` and ends it by force. Not without a terminal, nor in the terminal interface.
 
 </details>
 
@@ -1073,6 +1076,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
 | `fedtail --check`: what the system lacks — and one apt line | · | the app has it all inside |
 | A hung copy doesn't stop a start | · | on a phone the system keeps the one copy |
+| Ctrl+C ends a hung program too | · | a phone has no terminal |
 
 ### Interfaces
 

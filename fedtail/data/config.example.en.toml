@@ -1251,6 +1251,11 @@ frontend = "auto"
 # this one starts in its place. 0 — never: the hung one stays, nothing opens.
 hung_copy_seconds = 20
 
+# Ctrl+C in the terminal and the program still there 3 seconds later (hung): it says
+# so, and one more Ctrl+C ends it by force (the threads' stacks into stacks.log first).
+# A hung window doesn't hear Ctrl+C itself — a tiny process beside it does. false — none.
+ctrl_c_force = true
+
 # How the window opens:
 #   "single" — one window: the lanes on the left, one lane on the right (or several side by
 #              side, in columns — open_columns below, and the ❯ button at the top left);

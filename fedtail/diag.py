@@ -362,6 +362,78 @@ def setup(paths, cfg, console_debug=False):
     return folder
 
 
+_CTRL_C_WATCH = r"""
+import os, signal, sys, threading, time
+pid, wait, hint, gone = int(sys.argv[1]), float(sys.argv[2]), sys.argv[3], sys.argv[4]
+first = []
+done = threading.Event()
+
+def ends():  # the program's end of the pipe closes as it ends, however it ends
+    try:
+        while sys.stdin.buffer.read(4096):
+            pass
+    finally:
+        done.set()
+
+def say():
+    if not done.is_set():
+        sys.stderr.write(hint + "\n")
+        sys.stderr.flush()
+
+def ctrl_c(*_a):
+    now = time.monotonic()
+    if not first:
+        first.append(now)
+        threading.Timer(wait, say).start()
+    elif now - first[0] >= wait and not done.is_set():
+        if hasattr(signal, "SIGUSR1"):  # its threads' stacks into stacks.log first
+            try:
+                os.kill(pid, signal.SIGUSR1)
+                time.sleep(0.3)
+            except OSError:
+                pass
+        sys.stderr.write(gone + "\n")
+        sys.stderr.flush()
+        try:
+            os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
+        except OSError:
+            pass
+        os._exit(0)
+
+signal.signal(signal.SIGINT, ctrl_c)
+threading.Thread(target=ends, daemon=True).start()
+while not done.wait(0.5):
+    pass
+os._exit(0)
+"""
+CTRL_C_WAIT = 3.0  # Ctrl+C, and the program still there this long: hung, say so
+
+
+def watch_ctrl_c(on, hint, gone, wait=CTRL_C_WAIT):
+    """Ctrl+C that works on a hung program (ui.ctrl_c_force). Python's own handler runs
+    only in the main thread, holding Python's lock: a window stuck inside Qt with that
+    lock held (a seek in the video player, 27.11) ignored Ctrl+C and the terminal's
+    close alike, and only kill -9 ended it. A tiny process of its own beside it gets
+    the terminal's Ctrl+C too: the program not gone `wait` seconds after the first, it
+    says so (hint); one more Ctrl+C then dumps the stacks (stacks.log) and ends it
+    (gone is said). It ends with the program — the pipe to it closes. Only in a
+    terminal, and not from a one-file build (its Python can't run a script). The
+    process, or None."""
+    if not on or getattr(sys, "frozen", False) or sys.stdin is None or \
+            not sys.stdin.isatty():
+        return None
+    import subprocess
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-I", "-S", "-c", _CTRL_C_WATCH, str(os.getpid()), str(wait),
+             hint, gone], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, close_fds=True)
+    except OSError as e:
+        log.debug("Ctrl+C watch: %s", e)
+        return None
+    _state["ctrl_c"] = proc  # held: its stdin is the pipe that ends it with us
+    return proc
+
+
 def quiet_console():
     """No more log lines on the terminal: a full-screen terminal interface (the TUI) owns
     it, and a traceback printed over it scrambles the screen. The log file keeps them."""

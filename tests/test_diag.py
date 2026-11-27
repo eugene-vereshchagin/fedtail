@@ -443,3 +443,70 @@ class MemoryMapTest(unittest.TestCase):
         class Nothing:
             pass
         self.assertFalse(diag._give_back(Nothing()))
+
+
+@unittest.skipUnless(os.name == "posix" and sys.platform.startswith("linux"),
+                     "signals to a process by hand; /proc to see it is ready")
+class CtrlCWatchTest(unittest.TestCase):
+    """27.11: the window stuck inside Qt holding Python's lock heard no Ctrl+C — only
+    kill -9 ended it. The watch beside it (diag.watch_ctrl_c) hears the terminal's
+    Ctrl+C: after a while it says the program hangs, one more ends it. Here a program
+    that ignores Ctrl+C plays the hung one; the signals are sent as the terminal would."""
+
+    def start(self, wait="0.4"):
+        import signal
+        import subprocess
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.stacks = Path(tmp.name) / "stacks.log"
+        hung = subprocess.Popen([sys.executable, "-c",
+                                 "import faulthandler, signal, sys, time\n"
+                                 "signal.signal(signal.SIGINT, signal.SIG_IGN)\n"
+                                 "f = open(sys.argv[1], 'w')\n"
+                                 "faulthandler.register(signal.SIGUSR1, file=f)\n"
+                                 "time.sleep(60)", str(self.stacks)])
+        self.addCleanup(lambda: hung.poll() is None and hung.kill())
+        watch = subprocess.Popen([sys.executable, "-I", "-S", "-c", diag._CTRL_C_WATCH,
+                                  str(hung.pid), wait, "HUNG", "ENDED"],
+                                 stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.addCleanup(lambda: watch.poll() is None and watch.kill())
+        end = time.monotonic() + 10
+        while time.monotonic() < end:  # its handler in place, as the terminal finds it
+            status = Path(f"/proc/{watch.pid}/status").read_text()
+            caught = int(next(x for x in status.splitlines()
+                              if x.startswith("SigCgt:")).split()[1], 16)
+            if caught & (1 << (signal.SIGINT - 1)):
+                break
+            time.sleep(0.02)
+        return hung, watch
+
+    def test_twice_ends_a_hung_one(self):
+        import signal
+        hung, watch = self.start()
+        watch.send_signal(signal.SIGINT)
+        time.sleep(0.1)
+        watch.send_signal(signal.SIGINT)  # too soon: it may be closing as it should
+        time.sleep(0.6)
+        self.assertIsNone(hung.poll())
+        watch.send_signal(signal.SIGINT)
+        self.assertEqual(hung.wait(5), -signal.SIGKILL)
+        watch.wait(5)
+        err = watch.stderr.read().decode()
+        self.assertIn("HUNG", err)
+        self.assertIn("ENDED", err)
+        self.assertIn("File", self.stacks.read_text())  # its stacks, before it went
+
+    def test_it_goes_with_the_program(self):
+        import signal
+        hung, watch = self.start()
+        watch.send_signal(signal.SIGINT)
+        watch.stdin.close()  # the program ended (its end of the pipe closed)
+        self.assertEqual(watch.wait(5), 0)
+        self.assertIsNone(hung.poll())
+        self.assertNotIn("HUNG", watch.stderr.read().decode())
+
+    def test_not_without_a_terminal(self):
+        with mock.patch.object(sys, "stdin", None):
+            self.assertIsNone(diag.watch_ctrl_c(True, "h", "g"))
+        with mock.patch.object(sys.stdin, "isatty", lambda: True):
+            self.assertIsNone(diag.watch_ctrl_c(False, "h", "g"))

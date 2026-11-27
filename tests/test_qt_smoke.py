@@ -4621,6 +4621,58 @@ class QtSmokeTest(unittest.TestCase):
         self.assertLess(got[-1], 15000)
         sl.close()
 
+    def test_seeks_are_spaced(self):
+        """27.11: clicks along the time slider, each a seek at once — Qt's FFmpeg backend
+        took one while its audio thread still tore down the one before, and the window
+        hung for good. The first goes at once, the rest within player.SEEK_GAP_MS as one,
+        to the last place; ← → count from where it is going."""
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QMouseEvent
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt import player
+
+        class Fake:
+            def __init__(self):
+                self.at, self.went = 0, []
+
+            def setPosition(self, ms):  # noqa: N802
+                self.at = ms
+                self.went.append(ms)
+
+            def position(self):
+                return self.at
+
+        fake = Fake()
+        sl = player.SeekSlider()
+        sl.resize(400, 24)
+        sl.setRange(0, 100000)
+        seeker = player.Seeker(fake, sl)
+        sl.seek.connect(seeker.to)
+        sl.show()
+
+        def click(x):
+            at = QPointF(x, 12)
+            for kind in (QMouseEvent.Type.MouseButtonPress, QMouseEvent.Type.MouseButtonRelease):
+                QApplication.sendEvent(sl, QMouseEvent(
+                    kind, at, sl.mapToGlobal(at), Qt.MouseButton.LeftButton,
+                    Qt.MouseButton.LeftButton if kind == QMouseEvent.Type.MouseButtonPress
+                    else Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier))
+        for x in (40, 120, 200, 280, 360):
+            click(x)
+        self.assertEqual(len(fake.went), 1)  # the first, at once
+        self.assertLess(fake.went[0], 15000)
+        self.pump(player.SEEK_GAP_MS / 1000 + 0.3)
+        self.assertEqual(len(fake.went), 2)  # the rest as one, to the last place
+        self.assertGreater(fake.went[1], 85000)
+        self.pump(player.SEEK_GAP_MS / 1000 + 0.1)
+        seeker.by(-5000)  # at once again: the gap is over
+        seeker.by(-5000)
+        self.assertEqual(fake.went[2], fake.went[1] - 5000)
+        self.pump(player.SEEK_GAP_MS / 1000 + 0.3)
+        self.assertEqual(fake.went[3:], [fake.went[1] - 10000])
+        sl.close()
+
     def test_video_decoding_choice(self):
         import os
 

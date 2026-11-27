@@ -1,1 +1,3 @@
-No new features yet.
+**What's next:**
+
+- Ctrl+C ends a hung program too
