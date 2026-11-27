@@ -805,6 +805,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Themes as files | has | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | a TOML format of its own | others — light and dark, Ice Cubes and Megalodon — colours of your own |
+| Line spacing in posts | has | next | `appearance.line_spacing` | own | Ice Cubes |
 | Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
 | A theme as one file: take it out, change it, bring it in | has | 0.22.7 | ≡ → “Try a theme” → “Save the theme to a file…” / “Add a theme from a file…” (on the phone — in ≡ itself); `fedtail --theme-export NAME FILE.zip`, `--theme-import FILE.zip` | a zip laid out as the themes folder | no |
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
@@ -837,6 +838,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 <details><summary>In detail</summary>
 
 **Themes as files.** Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (for weak eyes), `pink`, `nord`, `solarized`, `paper`, `qip-retro`, `qip-modern`, `mra`, `mra-blue`, `mra-green`, `mra-violet`, `psi` (in the spirit of messengers: “Name (time)” over a post, `card_header = "chat"`; with `window.layout = "split"` the theme sets the layout too: the faces — `shape.faces`, the roster's items — `roster_rows`, tabs in more rows — `tab_rows`), `debug` (for debugging: each state of a post — unread, the j/k cursor, found, “not seen whole yet, not read yet”, the keyboard focus — in a loud frame of its own; `shape.debug = true` turns the same on in any theme of your own). Your own — a file in `~/.config/fedtail/themes/`. A theme sets the card's layout too: the avatar's shape (`avatar_shape`), the header in a line or the name over the date (`card_header = "stacked"`), where the #id stands (`short_id`: by the name or under the post with the reply count), which side the buttons are on (`actions_align`), the line between posts (`rule`: solid or dashed), a hatched band under the titles of the lane and the post window (`header_stripes`) and a dark strip over it (`header_bar`), the colour of the main buttons, of the lane's title strip and of names. A theme sets the look of the whole app, not only colours; that's why separate card templates aren't needed (see Won't do). Fonts — `appearance.fonts`: the theme’s (the built-in ones bring their own with fedtail: PT Serif, PT Sans, IBM Plex, Source Sans, Open Sans, Arimo, Comfortaa, Nunito, Fira Mono — all with Cyrillic), the system’s, or your own (`appearance.font`, `appearance.mono_font`); a theme of yours can bring fonts (`[font] files`), and .ttf/.otf files in `~/.config/fedtail/fonts/` are picked up without installing them system-wide. The width of the posts column — `max_width` (`0` — the full width; the ↔ button at the top left switches it for now and remembers the choice until the next start), labels on buttons — `actions`.
+
+**Line spacing in posts.** In percent of the font's own spacing: `100` — as the font has it, `130` — roomier, `150` — one and a half. A post's text only, in the Qt and GTK windows and on the web page; the terminal writes in its own lines.
 
 **A theme as one file: take it out, change it, bring it in.** Any theme, a built-in one too, into a zip: its `.toml`, pictures and sounds, fonts, the themes of yours it rests on, and a manual (`README.ru.md`, `README.en.md`): how to change it, rename it so it stands next to the one it came from, and bring it back. That is how a theme gets onto a phone and off it, where the themes folder is shut to a file manager. Only a theme's kinds of files are taken from an archive, paths only inside the themes folder, 64 MB at most; a theme of the same name is replaced only on a “yes”.
 
@@ -1014,6 +1017,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (editor size, tracing). Android: nothing to hover with |
 | What shows the notifications (`notify.backend`: the desktop or the tray) | ✓ | ◐ | · | · | · | GTK shows them through the desktop (Gio, else notify-send): its tray icon (StatusNotifierItem) has no balloons. Android: a phone's notifications are its shade |
 | Fonts of your own and their size (`appearance.fonts`, `font`, `mono_font`, `font_size`) | ✓ | ✓ | · | ✓ | — | The terminal writes in the terminal's own font and size. Android: the phone takes the theme's font, and the size from Android's settings |
+| Line spacing in posts (`appearance.line_spacing`) | ✓ | ✓ | · | ✓ | — | A terminal's lines are its own: no spacing between them can be set. Android: not yet: the phone takes the theme font's own spacing |
 | The buttons' pictures: the system's, the theme's or your own (`appearance.icons`) | ✓ | ✓ | · | — | ✓ | The web page draws its buttons as signs (↩ ★ ♻ 🔖): a browser can't see the desktop's icons. The terminal is text. |
 | The window's hang watchdog (`debug.watchdog_seconds`, `debug.stall_ms`) | ✓ | ✓ | · | · | · | The watchdog minds the main loop of the Qt and GTK window; the terminal and the web page have no window that freezes that way. Android: Android itself watches an app for hangs (ANR) |
 
@@ -1067,6 +1071,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
+| Line spacing in posts | — | not yet: the phone takes the theme font's own spacing |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Keys of your own | · | a phone has no keyboard |
 | A bug report straight into your private repository | — | the phone hands the report's archive on through Share: git is beyond it |

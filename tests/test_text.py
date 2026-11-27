@@ -208,6 +208,23 @@ class LooksSentTest(unittest.TestCase):
         self.assertFalse(looks_sent(st, text, "50", now + 3600))  # made long before
 
 
+class LineSpacingTest(unittest.TestCase):
+    """appearance.line_spacing in QLabel's rich text: on every block, as Qt doesn't
+    pass line-height down from a wrapping one."""
+
+    def test_every_block_gets_it(self):
+        from fedtail.frontends.richtext import spaced
+        self.assertEqual(spaced("<p>a</p>", 100), "<p>a</p>")  # the font's own: as it was
+        self.assertEqual(spaced("", 150), "")
+        got = spaced('<p>a</p><ul><li>b</li></ul><blockquote style="color:red">c'
+                     "</blockquote>plain", 150)
+        self.assertTrue(got.startswith('<div style="line-height:150%">'))
+        self.assertIn('<p style="line-height:150%">a</p>', got)
+        self.assertIn('<li style="line-height:150%">b</li>', got)
+        self.assertIn('<blockquote style="line-height:150%;color:red">c', got)
+        self.assertNotIn("<ul style", got)  # a list's items carry it, not the list
+
+
 if __name__ == "__main__":
     unittest.main()
 

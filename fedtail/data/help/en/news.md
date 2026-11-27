@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **What's next:**
 
+- Line spacing in posts
 - Ctrl+C ends a hung program too
 <!-- /include -->
 

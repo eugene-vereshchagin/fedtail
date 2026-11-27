@@ -250,6 +250,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Themes as files | ✓ |   |   |   |   |   |   | ✓ |   |   | ✓ |   |   |   |
+| Line spacing in posts | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | Trying a theme without a restart | ✓ |   |   |   | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
 | A theme as one file: take it out, change it, bring it in | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The config as a file in chapters | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
@@ -277,4 +278,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **77** features of the 213 compared.
+Only in fedtail — **77** features of the 214 compared.

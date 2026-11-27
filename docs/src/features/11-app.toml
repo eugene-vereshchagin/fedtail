@@ -21,6 +21,24 @@ details.ru = "Встроенные: `system` (как в KDE), `terminal`, `juick
 details.en = "Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (for weak eyes), `pink`, `nord`, `solarized`, `paper`, `qip-retro`, `qip-modern`, `mra`, `mra-blue`, `mra-green`, `mra-violet`, `psi` (in the spirit of messengers: “Name (time)” over a post, `card_header = \"chat\"`; with `window.layout = \"split\"` the theme sets the layout too: the faces — `shape.faces`, the roster's items — `roster_rows`, tabs in more rows — `tab_rows`), `debug` (for debugging: each state of a post — unread, the j/k cursor, found, “not seen whole yet, not read yet”, the keyboard focus — in a loud frame of its own; `shape.debug = true` turns the same on in any theme of your own). Your own — a file in `~/.config/fedtail/themes/`. A theme sets the card's layout too: the avatar's shape (`avatar_shape`), the header in a line or the name over the date (`card_header = \"stacked\"`), where the #id stands (`short_id`: by the name or under the post with the reply count), which side the buttons are on (`actions_align`), the line between posts (`rule`: solid or dashed), a hatched band under the titles of the lane and the post window (`header_stripes`) and a dark strip over it (`header_bar`), the colour of the main buttons, of the lane's title strip and of names. A theme sets the look of the whole app, not only colours; that's why separate card templates aren't needed (see Won't do). Fonts — `appearance.fonts`: the theme’s (the built-in ones bring their own with fedtail: PT Serif, PT Sans, IBM Plex, Source Sans, Open Sans, Arimo, Comfortaa, Nunito, Fira Mono — all with Cyrillic), the system’s, or your own (`appearance.font`, `appearance.mono_font`); a theme of yours can bring fonts (`[font] files`), and .ttf/.otf files in `~/.config/fedtail/fonts/` are picked up without installing them system-wide. The width of the posts column — `max_width` (`0` — the full width; the ↔ button at the top left switches it for now and remembers the choice until the next start), labels on buttons — `actions`."
 
 [[feature]]
+id = "line-spacing"
+status = "has"
+android = "no"
+android_note.ru = "пока нет: телефон берёт интервал шрифта темы"
+android_note.en = "not yet: the phone takes the theme font's own spacing"
+since = "next"
+name.ru = "Межстрочный интервал в постах"
+name.en = "Line spacing in posts"
+config = "`appearance.line_spacing`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Ice Cubes"
+others.en = "Ice Cubes"
+clients = ["Ice Cubes"]
+details.ru = "В процентах от собственного интервала шрифта: `100` — как у шрифта, `130` — свободнее, `150` — полуторный. Только текст постов, в окнах Qt и GTK и на веб-странице; терминал пишет своими строками."
+details.en = "In percent of the font's own spacing: `100` — as the font has it, `130` — roomier, `150` — one and a half. A post's text only, in the Qt and GTK windows and on the web page; the terminal writes in its own lines."
+
+[[feature]]
 id = "try-theme"
 status = "has"
 android = "has"

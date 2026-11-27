@@ -96,10 +96,11 @@ def last_click(within=1.0):
 
 class TextBlock(Gtk.Widget):
     """markup: Pango markup with <a href> links; link_color: "#rrggbb";
-    on_link(url): a link clicked."""
+    on_link(url): a link clicked; line_spacing: appearance.line_spacing, percent of the
+    font's own (100 — as it is)."""
 
     def __init__(self, markup, link_color="#3584e4", on_link=None, css=(), on_select=None,
-                 emojis=None, load=None, one_line=False):
+                 emojis=None, load=None, one_line=False, line_spacing=100):
         super().__init__()
         for c in css:
             self.add_css_class(c)
@@ -115,6 +116,8 @@ class TextBlock(Gtk.Widget):
             self.layout.set_ellipsize(Pango.EllipsizeMode.END)
         else:
             self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+            if line_spacing != 100:  # Pango 1.44+: a factor of the font's height
+                self.layout.set_line_spacing(line_spacing / 100)
         try:
             self.layout.set_markup(shown, -1)
         except Exception:  # noqa: BLE001 — markup Pango won't take: the text as it is

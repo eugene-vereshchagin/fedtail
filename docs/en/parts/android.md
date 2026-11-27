@@ -46,6 +46,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
+| Line spacing in posts | — | not yet: the phone takes the theme font's own spacing |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Keys of your own | · | a phone has no keyboard |
 | A bug report straight into your private repository | — | the phone hands the report's archive on through Share: git is beyond it |

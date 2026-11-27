@@ -944,6 +944,19 @@ note.en = "The terminal writes in the terminal's own font and size."
 keys = []
 
 [[capability]]
+id = "line-spacing"
+area = "app"
+android = "no"
+android_note.ru = "пока нет: телефон берёт интервал шрифта темы"
+android_note.en = "not yet: the phone takes the theme font's own spacing"
+name.ru = "Межстрочный интервал в постах (`appearance.line_spacing`)"
+name.en = "Line spacing in posts (`appearance.line_spacing`)"
+tui = "na"
+note.ru = "В терминале строки — его собственные: интервала между ними не задать."
+note.en = "A terminal's lines are its own: no spacing between them can be set."
+keys = []
+
+[[capability]]
 id = "actions-look"
 area = "reading"
 android = "no"

@@ -34,6 +34,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "language": "auto",
         "theme": "system",
         "font_size": 0,
+        "line_spacing": 100,
         "fonts": "theme",
         "font": "",
         "mono_font": "",
@@ -618,6 +619,7 @@ MINIMUM = {
     ("feed", "late_minutes"): 0,
     ("feed", "render_limit"): 20,
     ("ui", "font_size"): 0,
+    ("ui", "line_spacing"): 50,
     ("ui", "roster_threads"): 0,
     ("ui", "max_width"): 0,
     ("ui", "column_width"): 280,
@@ -659,8 +661,8 @@ FILE_LAYOUT = (
                              "extra_minutes extra_posts rss_items rss_summary_chars "
                              "tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_posts hide_in refresh_minutes")),
-    ("appearance", _keys("ui", "language theme font_size fonts font mono_font max_width "
-                               "faces icons app_icon themed_icon adwaita gtk_headerbar "
+    ("appearance", _keys("ui", "language theme font_size line_spacing fonts font mono_font "
+                               "max_width faces icons app_icon themed_icon adwaita gtk_headerbar "
                                "accessibility")
      + _keys("feed", "emoji custom_emoji emoji_from_origin text_markup")),
     ("window", _keys("ui", "frontend hung_copy_seconds ctrl_c_force "

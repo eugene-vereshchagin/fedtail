@@ -1087,7 +1087,8 @@ class Web:
         """The page's colours from the theme (themes/*.toml, the same files the windows
         read): "" for system (the browser's light or dark) or a theme that won't load.
         Its fonts as the windows' (ui.fonts, ui.font, ui.mono_font, ui.font_size) — the
-        page took the theme's family whatever they said (21.11)."""
+        page took the theme's family whatever they said (21.11); a post's line spacing
+        (ui.line_spacing: percent of the font's own, which a browser takes as ~1.2)."""
         colors, light, family = self.theme_colors()
         ui = self.core.cfg["ui"]
         mode = ui.get("fonts", "theme")
@@ -1107,6 +1108,9 @@ class Web:
                       f"{{ font-family: {mono}, ui-monospace, monospace; }}\n")
         if size:
             extra += f".post .body {{ font-size: {size}pt; }}\n"
+        spacing = int(ui.get("line_spacing") or 100)
+        if spacing != 100:
+            extra += f".post .body {{ line-height: {1.2 * spacing / 100:.2f}; }}\n"
         if not lines and not family:
             return extra
         css = ":root, :root:root {\n" + "\n".join(lines) + "\n  --shadow: none;\n}\n" \

@@ -58,7 +58,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
 )
 from ..common.lane import true_kind as _true_kind
 from ..common.links import THREAD_AT, file_link
-from ..richtext import link_chars, plain_tip
+from ..richtext import link_chars, plain_tip, spaced
 from .gone import drop
 from .text import clean, display_name, emojify, esc, link
 
@@ -509,8 +509,9 @@ class PostRow(QWidget):
         """"Show all" (feed.fold_chars): the whole text in the folded one's place."""
         self.unfolded = True
         mk = self.ctx.cfg["feed"].get("text_markup", True)
-        whole = self._emoji_label(clean(html, self.theme.css("link"), mk,
-                                        link_chars(self.ctx.cfg)), emojis, "postText",
+        whole = self._emoji_label(spaced(clean(html, self.theme.css("link"), mk,
+                                               link_chars(self.ctx.cfg)),
+                                         self.ctx.cfg["ui"]["line_spacing"]), emojis, "postText",
                                   selectable=True)
         box = text.parentWidget().layout()
         box.replaceWidget(text, whole)
@@ -614,6 +615,7 @@ class PostRow(QWidget):
                 fold(html, self.ctx.cfg, bool(self.spec.in_thread))
             shown = clean(folded[0] if folded else html, self.theme.css("link"), mk,
                           link_chars(self.ctx.cfg))
+            shown = spaced(shown, self.ctx.cfg["ui"]["line_spacing"])  # appearance.line_spacing
             text = self._emoji_label(shown, p.emojis, "postText", selectable=True)
             cv.addWidget(text)
             if folded:  # feed.fold_chars: the beginning, and the rest on a press

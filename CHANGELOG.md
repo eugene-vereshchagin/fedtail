@@ -16,6 +16,9 @@
 - **Video and sound in the AppImage and the one-file builds** (Linux, Windows): they
   were built without QtMultimedia (it lives in PySide6-Addons), so videos opened in
   the browser. CI now fails a Linux build that lacks it.
+- **Line spacing in posts** — `appearance.line_spacing`, percent of the font's own
+  (130 — roomier, 150 — one and a half): the Qt and GTK windows and the web page.
+  Asked for by a tester.
 - **The window hung for good on seeking a video by clicks** (Qt): every click and move
   of the time slider was a seek, and Qt's FFmpeg backend took one while its audio
   thread still tore down the one before — that thread waited for Python's lock, the

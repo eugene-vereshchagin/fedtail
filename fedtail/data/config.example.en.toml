@@ -1157,6 +1157,10 @@ theme = "system"
 # The font size of posts in points, 0 = the system's.
 font_size = 0
 
+# The space between the lines of a post's text, in percent of the font's own: 100 — as the
+# font has it, 130 — roomier, 150 — one and a half. Not in the terminal (its own lines).
+line_spacing = 100
+
 # Whose fonts:
 #   "theme"  — the theme's: the built-in ones bring their own with fedtail (PT Serif in
 #              paper, IBM Plex in terminal and nord, Source Sans in night and

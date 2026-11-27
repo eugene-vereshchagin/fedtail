@@ -622,7 +622,8 @@ class Card(Gtk.Box):
                                     lambda uri: self._link(None, uri), css=("ft-body",),
                                     on_select=self._selection_menu,
                                     emojis=emoji_urls(self.ctx, p.emojis),
-                                    load=picture_loader(self.ctx))
+                                    load=picture_loader(self.ctx),
+                                    line_spacing=cfg["ui"]["line_spacing"])
         self.body_block.view = self.ctx.view  # a tag's menu: followed, muted — as now
         return self.body_block
 

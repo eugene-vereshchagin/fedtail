@@ -662,6 +662,24 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(body.link_at(x, y), "https://e.test/")
         self.assertIsNone(body.link_at(0, 0))  # "привет": no link
 
+    def test_line_spacing_in_a_post(self):
+        """appearance.line_spacing: the post's one layout spaced by it; names not."""
+        from fedtail.frontends.gtk.textblock import TextBlock
+        self.assertEqual(TextBlock("a b c").layout.get_line_spacing(), 0)  # the font's own
+        self.assertAlmostEqual(TextBlock("a b c", line_spacing=150).layout.get_line_spacing(),
+                               1.5)
+        self.assertEqual(TextBlock("name", one_line=True, line_spacing=150)
+                         .layout.get_line_spacing(), 0)
+        ui = self.win.ctx.cfg["ui"]
+        ui["line_spacing"] = 130
+        try:
+            lane = self._lane("home")
+            card = next(c for c in lane.rows.values() if c.post.id == "011")
+            body = card._body(card.post)
+        finally:
+            ui["line_spacing"] = 100
+        self.assertAlmostEqual(body.layout.get_line_spacing(), 1.3, places=3)
+
     def test_like_updates_the_card(self):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")

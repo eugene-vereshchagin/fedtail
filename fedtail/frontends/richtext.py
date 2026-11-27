@@ -267,6 +267,28 @@ def clean(content, link_color=None, markup=False, link_chars=LINK_TEXT):
     return h.replace("<a ", f'<a style="{style}" ')
 
 
+_BLOCK_TAG = re.compile(r"<(p|div|li|blockquote|pre|h[1-6])\b([^>]*)>", re.I)
+
+
+def spaced(h, percent):
+    """appearance.line_spacing for QLabel's rich text: line-height on every block of
+    its own, in a block wrapping it all — Qt doesn't pass it down to the paragraphs
+    inside (a <div> around <p>s gave a third of it). 100 (the font's own): as it was."""
+    if not h or percent == 100:
+        return h
+
+    def put(m):
+        attrs = m.group(2)
+        style = re.search(r'style="([^"]*)"', attrs)
+        if style:
+            attrs = attrs.replace(style.group(0),
+                                  f'style="line-height:{percent}%;{style.group(1)}"')
+        else:
+            attrs += f' style="line-height:{percent}%"'
+        return f"<{m.group(1)}{attrs}>"
+    return f'<div style="line-height:{percent}%">{_BLOCK_TAG.sub(put, h)}</div>'
+
+
 _TAG_SPLIT = re.compile(r"(<[^>]+>)")
 _SHORTCODE = re.compile(r":([A-Za-z0-9_]{2,}):")
 

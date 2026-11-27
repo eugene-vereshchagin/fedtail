@@ -1435,6 +1435,29 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse([b for b in thread.findChildren(QPushButton)
                           if b.text().startswith("Показать")])
 
+    def test_line_spacing_in_a_post(self):
+        """appearance.line_spacing (28.11, a tester's wish): a post's text taller by it,
+        the folded one's whole text too."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("097", BOB, minute=1, text="<p>" + "слово " * 80 + "</p>")
+        ui = self.win.ctx.cfg["ui"]
+
+        def height(percent):
+            ui["line_spacing"] = percent
+            row = PostRow(CardSpec(key="097", entry=E(st)), self.win.ctx)
+            lab = row.findChildren(QLabel, "postText")[0]
+            return lab.heightForWidth(300), lab.text()
+        try:
+            plain, html = height(100)
+            roomy, spaced_html = height(150)
+        finally:
+            ui["line_spacing"] = 100
+        self.assertNotIn("line-height", html)
+        self.assertIn("line-height:150%", spaced_html)
+        self.assertGreater(roomy, plain * 1.3)
+
     def test_link_card(self):
         """A post with a link gets the page's card; feed.link_cards turns it down or off."""
         from PySide6.QtWidgets import QFrame, QLabel

@@ -288,6 +288,10 @@ class WebWritingTest(TmpDir):
         css = webs.theme_css()
         self.assertNotIn("Inter", css)
         self.assertNotIn("font-size", css)
+        self.assertNotIn("line-height", css)  # appearance.line_spacing = 100: the font's own
+        ui["line_spacing"] = 150
+        self.assertIn(".post .body { line-height: 1.80; }", webs.theme_css())
+        ui["line_spacing"] = 100
         ui.update(font="x; } body { color: red")  # a font name, nothing else
         ui["fonts"] = "custom"
         self.assertNotIn("color: red", webs.theme_css())
