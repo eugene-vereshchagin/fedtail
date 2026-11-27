@@ -2,7 +2,7 @@
 
 [English](/docs/en/features.md)
 
-Состояние на версию **0.24.2 и то, что сделано после неё**. Это полный перечень возможностей fedtail: что делает
+Состояние на версию **0.24.3**. Это полный перечень возможностей fedtail: что делает
 каждая, чем включается и выключается, с какой версии есть, на каком API или протоколе стоит и
 как то же самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с
 причинами.
@@ -807,7 +807,7 @@
 | Что | Статус | С версии | Конфиг | API / протокол | У других |
 |---|---|---|---|---|---|
 | Темы файлами | есть | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | свой формат TOML | у других — светлая и тёмная, у Ice Cubes и Megalodon — свои цвета |
-| Межстрочный интервал в постах | есть | дальше | `appearance.line_spacing` | своё | Ice Cubes |
+| Межстрочный интервал в постах | есть | 0.24.3 | `appearance.line_spacing` | своё | Ice Cubes |
 | Попробовать тему без перезапуска | есть | 0.15.0 | ≡ → «Попробовать тему»; насовсем — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (их немного) |
 | Тема одним файлом: достать, переделать, загрузить | есть | 0.22.7 | ≡ → «Попробовать тему» → «Сохранить тему в файл…» / «Добавить тему из файла…» (на телефоне — прямо в ≡); `fedtail --theme-export ИМЯ ФАЙЛ.zip`, `--theme-import ФАЙЛ.zip` | zip, устроенный как папка тем | нет |
 | Конфиг файлом по главам | есть | 0.6.1 | ключи запуска `--update-config`, `--rebuild-config` | — | tut — тоже TOML, но без сборки по главам |
@@ -835,7 +835,7 @@
 | Прокси, Ctrl+1…9, закреплённые вкладки, поток только на Wi‑Fi, статистика, LibreTranslate и автоперевод | есть | 0.21.0 | `server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key`, `server.retry_seconds`, `web.login_days` | `/api/v1/statuses/:id/translate` или LibreTranslate `/translate` | Tokodon (прокси до входа), FastSMRW (Ctrl+цифра, закреплённые ленты), iMast (поток только на Wi‑Fi), Ivory (статистика), Fedilab и Scatto (автоперевод, свой переводчик) |
 | `fedtail --check`: чего не хватает в системе — и одна строка apt | есть | 0.21.0 | `fedtail --check` | своё | только в fedtail |
 | Зависшая копия не мешает запуску | есть | 0.22.0 | `window.hung_copy_seconds` | своё | только в fedtail |
-| Ctrl+C закрывает и зависшую программу | есть | дальше | `window.ctrl_c_force` | своё | только в fedtail |
+| Ctrl+C закрывает и зависшую программу | есть | 0.24.3 | `window.ctrl_c_force` | своё | только в fedtail |
 
 <details><summary>Подробнее</summary>
 

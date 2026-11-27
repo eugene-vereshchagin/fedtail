@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.24.2 and what is done after it**. This is the full list of fedtail's features: what each one does,
+As of version **0.24.3**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -805,7 +805,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Themes as files | has | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | a TOML format of its own | others — light and dark, Ice Cubes and Megalodon — colours of your own |
-| Line spacing in posts | has | next | `appearance.line_spacing` | own | Ice Cubes |
+| Line spacing in posts | has | 0.24.3 | `appearance.line_spacing` | own | Ice Cubes |
 | Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
 | A theme as one file: take it out, change it, bring it in | has | 0.22.7 | ≡ → “Try a theme” → “Save the theme to a file…” / “Add a theme from a file…” (on the phone — in ≡ itself); `fedtail --theme-export NAME FILE.zip`, `--theme-import FILE.zip` | a zip laid out as the themes folder | no |
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
@@ -833,7 +833,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | has | 0.21.0 | `server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key`, `server.retry_seconds`, `web.login_days` | `/api/v1/statuses/:id/translate` or LibreTranslate's `/translate` | Tokodon (a proxy before login), FastSMRW (Ctrl+digit, pinned lanes), iMast (the stream on Wi-Fi only), Ivory (statistics), Fedilab and Scatto (translating by itself, another translator) |
 | `fedtail --check`: what the system lacks — and one apt line | has | 0.21.0 | `fedtail --check` | own | only in fedtail |
 | A hung copy doesn't stop a start | has | 0.22.0 | `window.hung_copy_seconds` | own | only in fedtail |
-| Ctrl+C ends a hung program too | has | next | `window.ctrl_c_force` | own | only in fedtail |
+| Ctrl+C ends a hung program too | has | 0.24.3 | `window.ctrl_c_force` | own | only in fedtail |
 
 <details><summary>In detail</summary>
 

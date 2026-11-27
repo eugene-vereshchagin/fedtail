@@ -5,7 +5,7 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-**What's next:**
+**0.24.3:**
 
 - Line spacing in posts
 - Ctrl+C ends a hung program too
