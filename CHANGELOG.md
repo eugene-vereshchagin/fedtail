@@ -5,6 +5,8 @@
      or a bigger one): call that page "What's next" / "Что будет дальше", never by a
      version number. -->
 
+## What's next
+
 ## 0.24.3 — 2026-11-28
 
 - **The AppImage on Cinnamon, GNOME and other non-KDE desktops came up in a font that
