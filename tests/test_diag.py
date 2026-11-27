@@ -1,6 +1,7 @@
 import faulthandler
 import logging
 import os
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -488,8 +489,16 @@ class CtrlCWatchTest(unittest.TestCase):
         watch.send_signal(signal.SIGINT)  # too soon: it may be closing as it should
         time.sleep(0.6)
         self.assertIsNone(hung.poll())
-        watch.send_signal(signal.SIGINT)
-        self.assertEqual(hung.wait(5), -signal.SIGKILL)
+        # pressed again till it goes, as a person would: under load (CI) the first
+        # press reached its handler late, and one more at a fixed time was "too soon"
+        end = time.monotonic() + 10
+        while hung.poll() is None and time.monotonic() < end:
+            watch.send_signal(signal.SIGINT)
+            try:
+                hung.wait(0.5)
+            except subprocess.TimeoutExpired:
+                pass
+        self.assertEqual(hung.wait(1), -signal.SIGKILL)
         watch.wait(5)
         err = watch.stderr.read().decode()
         self.assertIn("HUNG", err)

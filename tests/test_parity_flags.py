@@ -118,6 +118,8 @@ ALL_EXEMPT = {
     ("tui", "ui.mono_font"): "a terminal's own font and size (fonts-settings)",
     ("android", "ui.font_size"): "Android's own text size (fonts-settings)",
     ("android", "ui.mono_font"): "the theme's fonts on the phone (fonts-settings)",
+    ("tui", "ui.line_spacing"): "a terminal's lines are its own (line-spacing)",
+    ("android", "ui.line_spacing"): "not yet on the phone (line-spacing)",
     ("tui", "ui.compose"): "the terminal's editor is a screen of its own",
     ("tui", "ui.account_colors"): "the terminal marks the account with its name",
     ("tui", "ui.column_width"): "a terminal is one column wide",
